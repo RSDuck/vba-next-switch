@@ -374,76 +374,14 @@ int const blip_default_length = 250; // 1/4 second
 #define mixed_type	wave_type | noise_type
 #define type_index_mask	0xFF
 
-/* MULTI BUFFER */
-
 typedef struct channel_t {
 	Blip_Buffer* center;
 	Blip_Buffer* left;
 	Blip_Buffer* right;
 };
 
-// Interface to one or more Blip_Buffers mapped to one or more channels
-// consisting of left, center, and right buffers.
-class Multi_Buffer {
-	public:
-		Multi_Buffer( int samples_per_frame );
-		virtual ~Multi_Buffer() { }
-
-		// Sets the number of channels available and optionally their types
-		// (type information used by Effects_Buffer)
-		virtual const char * set_channel_count( int, int const* types = 0 );
-		int channel_count() const { return channel_count_; }
-
-		// Gets indexed channel, from 0 to channel count - 1
-		virtual channel_t channel( int index ) BLARGG_PURE( ; )
-
-			// See Blip_Buffer.h
-			virtual const char * set_sample_rate( long rate, int msec = blip_default_length ) BLARGG_PURE( ; )
-			virtual void clock_rate( long ) BLARGG_PURE( { } )
-			virtual void bass_freq( int ) BLARGG_PURE( { } )
-			virtual void clear() BLARGG_PURE( { } )
-			long sample_rate() const;
-
-		// Length of buffer, in milliseconds
-		int length() const;
-
-		// See Blip_Buffer.h
-		virtual void end_frame( int32_t ) BLARGG_PURE( { } )
-
-			// Number of samples per output frame (1 = mono, 2 = stereo)
-			int samples_per_frame() const;
-
-		// Count of changes to channel configuration. Incremented whenever
-		// a change is made to any of the Blip_Buffers for any channel.
-		unsigned channels_changed_count() { return channels_changed_count_; }
-
-		// See Blip_Buffer.h
-		virtual long read_samples( int16_t*, long ) BLARGG_PURE( { return 0; } )
-			//virtual long samples_avail() const BLARGG_PURE( { return 0; } )
-
-	public:
-			BLARGG_DISABLE_NOTHROW
-				void disable_immediate_removal() { immediate_removal_ = false; }
-	protected:
-			bool immediate_removal() const { return immediate_removal_; }
-			int const* channel_types() const { return channel_types_; }
-			void channels_changed() { channels_changed_count_++; }
-	private:
-			// noncopyable
-			Multi_Buffer( const Multi_Buffer& );
-			Multi_Buffer& operator = ( const Multi_Buffer& );
-
-			unsigned channels_changed_count_;
-			long sample_rate_;
-			int length_;
-			int channel_count_;
-			int samples_per_frame_;
-			int const* channel_types_;
-			bool immediate_removal_;
-};
-
 // Uses three buffers (one for center) and outputs stereo sample pairs.
-class Stereo_Buffer : public Multi_Buffer {
+class Stereo_Buffer {
 	public:
 		Stereo_Buffer();
 		~Stereo_Buffer();
@@ -451,6 +389,8 @@ class Stereo_Buffer : public Multi_Buffer {
 		void clock_rate( long );
 		void bass_freq( int );
 		void clear();
+
+		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );
 
@@ -460,41 +400,36 @@ class Stereo_Buffer : public Multi_Buffer {
 		enum { bufs_size = 3 };
 		typedef Blip_Buffer buf_t;
 		buf_t bufs_buffer [bufs_size];
+		bool immediate_removal_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
 		blargg_long mixer_samples_read;
 		channel_t chan;
 		long samples_avail_;
+
+		//from Multi_Buffer
+
+		// Count of changes to channel configuration. Incremented whenever
+		// a change is made to any of the Blip_Buffers for any channel.
+		unsigned channels_changed_count_;
+		long sample_rate_;
+		// Length of buffer, in milliseconds
+		int length_;
+		int channel_count_;
+		// Number of samples per output frame (1 = mono, 2 = stereo)
+		int samples_per_frame_;
+		int const* channel_types_;
 };
 
-inline const char * Multi_Buffer::set_sample_rate( long rate, int msec )
-{
-	sample_rate_ = rate;
-	length_ = msec;
-	return 0;
-}
-
-inline int Multi_Buffer::samples_per_frame() const { return samples_per_frame_; }
-
-inline long Multi_Buffer::sample_rate() const { return sample_rate_; }
-
-inline int Multi_Buffer::length() const { return length_; }
-
-inline const char * Multi_Buffer::set_channel_count( int n, int const* types )
-{
-        channel_count_ = n;
-        channel_types_ = types;
-        return 0;
-}
 
 // See Simple_Effects_Buffer (below) for a simpler interface
 
-class Effects_Buffer : public Multi_Buffer {
+class Effects_Buffer {
 	public:
 		// To reduce memory usage, fewer buffers can be used (with a best-fit
 		// approach if there are too few), and maximum echo delay can be reduced
 		Effects_Buffer( int max_bufs = 32, long echo_size = 24 * 1024L );
-		~Effects_Buffer();
+		virtual ~Effects_Buffer();
 
 		struct pan_vol_t
 		{
@@ -527,19 +462,31 @@ class Effects_Buffer : public Multi_Buffer {
 
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
+		void clear();
 		const char * set_sample_rate( long samples_per_sec, int msec = blip_default_length );
+
+		// Sets the number of channels available and optionally their types
+		// (type information used by Effects_Buffer)
 		const char * set_channel_count( int, int const* = 0 );
 		void clock_rate( long );
 		void bass_freq( int );
-		channel_t channel( int );
+
+		// Gets indexed channel, from 0 to channel count - 1
+		channel_t channel( int i);
 		void end_frame( int32_t );
 		long read_samples( int16_t*, long );
 		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
 		enum { stereo = 2 };
 		typedef blargg_long fixed_t;
 		void mixer_read_pairs( int16_t* out, int count );
+		bool immediate_removal_;
+		long sample_rate_;
+		int length_;
+		int channel_count_;
+		int const* channel_types_;
 	protected:
 		enum { extra_chans = stereo * stereo };
+		void channels_changed() { channels_changed_count_++; }
 	private:
 		config_t config_;
 		long clock_rate_;
@@ -586,6 +533,9 @@ class Effects_Buffer : public Multi_Buffer {
 
 		void mix_effects( int16_t* out, int pair_count );
 		const char * new_bufs( int size );
+		//from Multi_Buffer
+		unsigned channels_changed_count_;
+		int samples_per_frame_;
 };
 
 // Simpler interface and lower memory usage

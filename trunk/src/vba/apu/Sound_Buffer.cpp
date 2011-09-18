@@ -223,24 +223,6 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
         __builtin_memcpy( buffer_, in.buf, sizeof in.buf );
 }
 
-/* MULTI BUFFER */
-
-Multi_Buffer::Multi_Buffer( int spf )
-{
-   samples_per_frame_      = spf;
-        length_                 = 0;
-        sample_rate_            = 0;
-        channels_changed_count_ = 1;
-        channel_types_          = 0;
-        channel_count_          = 0;
-        immediate_removal_      = true;
-}
-
-channel_t Multi_Buffer::channel( int /*index*/ )
-{
-        static channel_t const ch = { 0, 0, 0 };
-        return ch;
-}
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 uint32_t Blip_Buffer::non_silent() const
@@ -253,8 +235,16 @@ uint32_t Blip_Buffer::non_silent() const
 
 int const stereo = 2;
 
-Stereo_Buffer::Stereo_Buffer() : Multi_Buffer( 2 )
+Stereo_Buffer::Stereo_Buffer()
 {
+	samples_per_frame_      = 2;
+	length_                 = 0;
+	sample_rate_            = 0;
+	channels_changed_count_ = 1;
+	channel_types_          = 0;
+	channel_count_          = 0;
+	immediate_removal_      = true;
+
         chan.center = mixer_bufs [2] = &bufs_buffer [2];
         chan.left   = mixer_bufs [0] = &bufs_buffer [0];
         chan.right  = mixer_bufs [1] = &bufs_buffer [1];
@@ -268,7 +258,9 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
         mixer_samples_read = 0;
         for ( int i = bufs_size; --i >= 0; )
                 RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
-        return Multi_Buffer::set_sample_rate( bufs_buffer [0].sample_rate(), bufs_buffer [0].length() );
+	sample_rate_ = bufs_buffer[0].sample_rate();
+	length_ = bufs_buffer[0].length();
+        return 0; 
 }
 
 void Stereo_Buffer::clock_rate( long rate )
@@ -281,6 +273,10 @@ void Stereo_Buffer::bass_freq( int bass )
 {
         for ( int i = bufs_size; --i >= 0; )
                 bufs_buffer [i].bass_freq( bass );
+}
+
+void Effects_Buffer::clear()
+{
 }
 
 void Stereo_Buffer::clear()
@@ -305,13 +301,13 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
         {
                 mixer_read_pairs( out, pair_count );
 
-                if ( samples_avail() <= 0 || immediate_removal() )
+                if ( samples_avail() <= 0 || immediate_removal_ )
                 {
                         for ( int i = bufs_size; --i >= 0; )
                         {
                                 buf_t& b = bufs_buffer [i];
             #ifndef FASTER_SOUND_HACK_NON_SILENCE
-                                // TODO: might miss non-silence settling since it checks END of last read
+                                // TODO: might miss non-silence setting since it checks END of last read
                                 if ( !b.non_silent() )
             {
                                         blip_buffer_remove_silence( mixer_samples_read );
@@ -528,8 +524,17 @@ int const fixed_shift = 12;
 
 int const max_read = 2560; // determines minimum delay
 
-Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ ) : Multi_Buffer( stereo )
+Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 {
+	//from Multi_Buffer
+	samples_per_frame_      = stereo;
+	length_                 = 0;
+	sample_rate_            = 0;
+	channels_changed_count_ = 1;
+	channel_types_          = 0;
+	channel_count_          = 0;
+	immediate_removal_      = true;
+
         echo_size   = max( max_read * (long) stereo, echo_size_ & ~1 );
         clock_rate_ = 0;
         bass_freq_  = 90;
@@ -592,7 +597,9 @@ const char * Effects_Buffer::set_sample_rate( long rate, int msec )
         // extra to allow farther past-the-end pointers
         mixer_samples_read = 0;
         RETURN_ERR( echo.resize( echo_size + stereo ) );
-        return Multi_Buffer::set_sample_rate( rate, msec );
+	sample_rate_ = rate;
+	length_ = msec;
+	return 0;
 }
 
 void Effects_Buffer::clock_rate( long rate )
@@ -611,7 +618,8 @@ void Effects_Buffer::bass_freq( int freq )
 
 const char * Effects_Buffer::set_channel_count( int count, int const* types )
 {
-        RETURN_ERR( Multi_Buffer::set_channel_count( count, types ) );
+	channel_count_ = count;
+	channel_types_ = types;
 
         if ( bufs_buffer )
         {
@@ -629,7 +637,7 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
         RETURN_ERR( new_bufs( min( bufs_max, count + extra_chans ) ) );
 
         for ( int i = bufs_size; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( sample_rate(), length() ) );
+                RETURN_ERR( bufs_buffer [i].set_sample_rate( sample_rate_, length_ ));
 
         for ( int i = chans.size(); --i >= 0; )
         {
@@ -699,7 +707,7 @@ void Simple_Effects_Buffer::apply_config()
                 c.side_chans [0].pan = -sep;
                 c.side_chans [1].pan = +sep;
 
-                for ( int i = channel_count(); --i >= 0; )
+                for ( int i = channel_count_; --i >= 0; )
                 {
                         chan_config_t& ch = Effects_Buffer::chan_config( i );
 
@@ -707,7 +715,7 @@ void Simple_Effects_Buffer::apply_config()
                         ch.surround = config_.surround;
                         ch.echo     = false;
 
-                        int const type = (channel_types() ? channel_types() [i] : 0);
+                        int const type = (channel_types_ ? channel_types_ [i] : 0);
                         if ( !(type & noise_type) )
                         {
                                 int index = (type & type_index_mask) % 6 - 3;
@@ -753,7 +761,7 @@ void Effects_Buffer::apply_config()
         // delays
         for ( i = stereo; --i >= 0; )
         {
-                long delay = config_.delay [i] * sample_rate() / 1000 * stereo;
+                long delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
                 delay = max( delay, long (max_read * stereo) );
                 delay = min( delay, long (echo_size - max_read * stereo) );
                 if ( s.delay [i] != delay )
@@ -964,7 +972,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
                         while ( pairs_remain );
                 }
 
-                if ( samples_avail() <= 0 || immediate_removal() )
+                if ( samples_avail() <= 0 || immediate_removal_ )
                 {
                         for ( int i = bufs_size; --i >= 0; )
                         {
