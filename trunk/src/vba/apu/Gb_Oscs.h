@@ -15,28 +15,27 @@
         #error "GB_APU_OVERCLOCK must be a power of 2"
 #endif
 
+#define	clk_mul	GB_APU_OVERCLOCK
+#define dac_bias 7
+
 class Gb_Osc
 {
 	public:
-
-	enum { clk_mul  = GB_APU_OVERCLOCK };
-	enum { dac_bias = 7 };
-
-	Blip_Buffer*    outputs [4];// NULL, right, left, center
-	Blip_Buffer*    output;     // where to output sound
-	BOOST::uint8_t* regs;       // osc's 5 registers
-	int             mode;       // mode_dmg, mode_cgb, mode_agb
-	int             dac_off_amp;// amplitude when DAC is off
-	int             last_amp;   // current amplitude in Blip_Buffer
+	Blip_Buffer* outputs [4];	// NULL, right, left, center
+	Blip_Buffer* output;		// where to output sound
+	uint8_t * regs;			// osc's 5 registers
+	int mode;			// mode_dmg, mode_cgb, mode_agb
+	int dac_off_amp;		// amplitude when DAC is off
+	int last_amp;			// current amplitude in Blip_Buffer
 	typedef Blip_Synth<blip_good_quality,1> Good_Synth;
 	typedef Blip_Synth<blip_med_quality ,1> Med_Synth;
 	Good_Synth const* good_synth;
 	Med_Synth  const* med_synth;
 
-	int         delay;      // clocks until frequency timer expires
-	int         length_ctr; // length counter
-	unsigned    phase;      // waveform phase (or equivalent)
-	bool        enabled;    // internal enabled flag
+	int delay;			// clocks until frequency timer expires
+	int length_ctr;			// length counter
+	unsigned phase;			// waveform phase (or equivalent)
+	bool enabled;			// internal enabled flag
 
 	void clock_length();
 	void reset();
@@ -119,7 +118,6 @@ class Gb_Sweep_Square : public Gb_Square
 class Gb_Noise : public Gb_Env
 {
 	public:
-
 	int divider; // noise has more complex frequency divider setup
 
 	void run( int32_t, int32_t );
@@ -142,7 +140,9 @@ class Gb_Noise : public Gb_Env
 class Gb_Wave : public Gb_Osc
 {
 	public:
-	int sample_buf; // last wave RAM byte read (hardware has this as well)
+	int sample_buf;		// last wave RAM byte read (hardware has this as well)
+	int agb_mask;		// 0xFF if AGB features enabled, 0 otherwise
+	uint8_t* wave_ram;	// 32 bytes (64 nybbles), stored in APU
 
 	void write_register( int frame_phase, int reg, int old_data, int data );
 	void run( int32_t, int32_t );
@@ -161,9 +161,6 @@ class Gb_Wave : public Gb_Osc
 	enum { bank40_mask = 0x40 };
 	enum { bank_size   = 32 };
 
-	int agb_mask;               // 0xFF if AGB features enabled, 0 otherwise
-	BOOST::uint8_t* wave_ram;   // 32 bytes (64 nybbles), stored in APU
-
 	friend class Gb_Apu;
 
 	// Frequency timer period
@@ -174,7 +171,7 @@ class Gb_Wave : public Gb_Osc
 
 	void corrupt_wave();
 
-	BOOST::uint8_t* wave_bank() const { return &wave_ram [(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
+	uint8_t* wave_bank() const { return &wave_ram [(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
 
 	// Wave index that would be accessed, or -1 if no access would occur
 	int access( unsigned addr ) const;

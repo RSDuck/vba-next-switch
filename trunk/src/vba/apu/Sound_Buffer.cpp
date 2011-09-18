@@ -236,7 +236,7 @@ Multi_Buffer::Multi_Buffer( int spf )
         immediate_removal_      = true;
 }
 
-Multi_Buffer::channel_t Multi_Buffer::channel( int /*index*/ )
+channel_t Multi_Buffer::channel( int /*index*/ )
 {
         static channel_t const ch = { 0, 0, 0 };
         return ch;
@@ -659,7 +659,7 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
         return 0;
 }
 
-Effects_Buffer::channel_t Effects_Buffer::channel( int i )
+channel_t Effects_Buffer::channel( int i )
 {
         i += extra_chans;
         return chans [i].channel;

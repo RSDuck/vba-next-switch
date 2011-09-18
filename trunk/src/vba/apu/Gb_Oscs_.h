@@ -18,8 +18,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 bool const cgb_02 = false; // enables bug in early CGB units that causes problems in some games
 bool const cgb_05 = false; // enables CGB-05 zombie behavior
 
-int const trigger_mask   = 0x80;
-int const length_enabled = 0x40;
+#define trigger_mask 0x80
+#define length_enabled 0x40
 
 void Gb_Osc::reset()
 {
@@ -71,12 +71,10 @@ void Gb_Env::clock_envelope()
         }
 }
 
-inline void Gb_Sweep_Square::reload_sweep_timer()
-{
-        sweep_delay = (regs [0] & period_mask) >> 4;
-        if ( !sweep_delay )
+#define reload_sweep_timer() \
+        sweep_delay = (regs [0] & period_mask) >> 4; \
+        if ( !sweep_delay ) \
                 sweep_delay = 8;
-}
 
 void Gb_Sweep_Square::calc_sweep( bool update )
 {
@@ -116,7 +114,7 @@ int Gb_Wave::access( unsigned addr ) const
         if ( enabled )
         {
                 addr = phase & (bank_size - 1);
-                if ( mode == Gb_Apu::mode_dmg )
+                if ( mode == mode_dmg )
                 {
                         addr++;
                         if ( delay > clk_mul )
@@ -159,7 +157,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 inline void Gb_Env::zombie_volume( int old, int data )
 {
         int v = volume;
-        if ( mode == Gb_Apu::mode_agb || cgb_05 )
+        if ( mode == mode_agb || cgb_05 )
         {
                 // CGB-05 behavior, very close to AGB behavior as well
                 if ( (old ^ data) & 8 )
@@ -197,37 +195,37 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
         int const max_len = 64;
 
         switch ( reg )
-        {
-        case 1:
-                length_ctr = max_len - (data & (max_len - 1));
-                break;
+	{
+		case 1:
+			length_ctr = max_len - (data & (max_len - 1));
+			break;
 
-        case 2:
-                if ( !dac_enabled() )
-                        enabled = false;
+		case 2:
+			if ( !dac_enabled() )
+				enabled = false;
 
-                zombie_volume( old, data );
+			zombie_volume( old, data );
 
-                if ( (data & 7) && env_delay == 8 )
-                {
-                        env_delay = 1;
-                        clock_envelope(); // TODO: really happens at next length clock
-                }
-                break;
+			if ( (data & 7) && env_delay == 8 )
+			{
+				env_delay = 1;
+				clock_envelope(); // TODO: really happens at next length clock
+			}
+			break;
 
-        case 4:
-                if ( write_trig( frame_phase, max_len, old ) )
-                {
-                        volume = regs [2] >> 4;
-                        reload_env_timer();
-                        env_enabled = true;
-                        if ( frame_phase == 7 )
-                                env_delay++;
-                        if ( !dac_enabled() )
-                                enabled = false;
-                        return true;
-                }
-        }
+		case 4:
+			if ( write_trig( frame_phase, max_len, old ) )
+			{
+				volume = regs [2] >> 4;
+				reload_env_timer();
+				env_enabled = true;
+				if ( frame_phase == 7 )
+					env_delay++;
+				if ( !dac_enabled() )
+					enabled = false;
+				return true;
+			}
+	}
         return false;
 }
 
@@ -276,53 +274,51 @@ void Gb_Wave::corrupt_wave()
 
 inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int data )
 {
-        int const max_len = 256;
-
         switch ( reg )
-        {
-        case 0:
-                if ( !dac_enabled() )
-                        enabled = false;
-                break;
+	{
+		case 0:
+			if ( !dac_enabled() )
+				enabled = false;
+			break;
 
-        case 1:
-                length_ctr = max_len - data;
-                break;
+		case 1:
+			length_ctr = 256 - data;
+			break;
 
-        case 4:
-                bool was_enabled = enabled;
-                if ( write_trig( frame_phase, max_len, old_data ) )
-                {
-                        if ( !dac_enabled() )
-                                enabled = false;
-                        else if ( mode == Gb_Apu::mode_dmg && was_enabled &&
-                                        (unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
-                                corrupt_wave();
+		case 4:
+			bool was_enabled = enabled;
+			if ( write_trig( frame_phase, 256, old_data ) )
+			{
+				if ( !dac_enabled() )
+					enabled = false;
+				else if ( mode == mode_dmg && was_enabled &&
+						(unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
+					corrupt_wave();
 
-                        phase = 0;
-                        delay    = period() + 6 * clk_mul;
-                }
-        }
+				phase = 0;
+				delay    = period() + 6 * clk_mul;
+			}
+	}
 }
 
 void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 {
         reg -= index * 5;
         switch ( index )
-        {
-        case 0:
-		square1.write_register( frame_phase, reg, old_data, data );
-		break;
-        case 1:
-		square2.write_register( frame_phase, reg, old_data, data );
-		break;
-        case 2:
-		wave   .write_register( frame_phase, reg, old_data, data );
-		break;
-        case 3:
-		noise  .write_register( frame_phase, reg, old_data, data );
-		break;
-        }
+	{
+		case 0:
+			square1.write_register( frame_phase, reg, old_data, data );
+			break;
+		case 1:
+			square2.write_register( frame_phase, reg, old_data, data );
+			break;
+		case 2:
+			wave   .write_register( frame_phase, reg, old_data, data );
+			break;
+		case 3:
+			noise  .write_register( frame_phase, reg, old_data, data );
+			break;
+	}
 }
 
 // Synthesis
@@ -333,9 +329,9 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         static byte const duty_offsets [4] = { 1, 1, 3, 7 };
         static byte const duties       [4] = { 1, 2, 4, 6 };
         int const duty_code = regs [1] >> 6;
-        int duty_offset = duty_offsets [duty_code];
-        int duty = duties [duty_code];
-        if ( mode == Gb_Apu::mode_agb )
+        int32_t duty_offset = duty_offsets [duty_code];
+        int32_t duty = duties [duty_code];
+        if ( mode == mode_agb )
         {
                 // AGB uses inverted duty
                 duty_offset -= duty;
@@ -355,7 +351,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 vol = volume;
 
                         amp = -dac_bias;
-                        if ( mode == Gb_Apu::mode_agb )
+                        if ( mode == mode_agb )
                                 amp = -(vol >> 1);
 
                         // Play inaudible frequencies as constant amplitude
@@ -414,8 +410,6 @@ void Gb_Square::run( int32_t time, int32_t end_time )
 // no sound.
 static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 {
-	//bool const optimized = true; // set to false to use only unoptimized loop in middle
-
 	// optimization used in several places:
 	// ((s & (1 << b)) << n) ^ ((s & (1 << b)) << (n + 1)) = (s & (1 << b)) * (3 << n)
 
@@ -504,7 +498,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                                 vol = volume;
 
                         amp = -dac_bias;
-                        if ( mode == Gb_Apu::mode_agb )
+                        if ( mode == mode_agb )
                                 amp = -(vol >> 1);
 
                         if ( !(phase & 1) )
@@ -515,7 +509,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
 
                 // AGB negates final output
-                if ( mode == Gb_Apu::mode_agb )
+                if ( mode == mode_agb )
                 {
                         vol = -vol;
                         amp    = -amp;
@@ -580,11 +574,14 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         }
 }
 
+#define volume_shift	2
+#define volume_shift_plus_four	6
+#define size20_mask 0x20
+
 void Gb_Wave::run( int32_t time, int32_t end_time )
 {
         // Calc volume
         static byte const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
-        int const volume_shift = 2;
         int const volume_idx = regs [2] >> 5 & (agb_mask | 3); // 2 bits on DMG/CGB, 3 on AGB
         int const volume_mul = volumes [volume_idx];
 
@@ -608,7 +605,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 amp = (sample_buf << (phase << 2 & 4) & 0xF0) * playing;
                         }
 
-                        amp = ((amp * volume_mul) >> (volume_shift + 4)) - dac_bias;
+                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - dac_bias;
                 }
                 update_amp( time, amp );
         }
@@ -620,7 +617,6 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 byte const* wave = wave_ram;
 
                 // wave size and bank
-                int const size20_mask = 0x20;
                 int const flags = regs [0] & agb_mask;
                 int const wave_mask = (flags & size20_mask) | 0x1F;
                 int swap_banks = 0;
@@ -652,7 +648,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 ph = (ph + 1) & wave_mask;
 
                                 // Scale by volume
-                                int amp = (nybble * volume_mul) >> (volume_shift + 4);
+                                int amp = (nybble * volume_mul) >> (volume_shift_plus_four);
 
                                 int delta = amp - lamp;
                                 if ( delta )

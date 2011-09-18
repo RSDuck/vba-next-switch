@@ -89,7 +89,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 	// Click reduction makes DAC off generate same output as volume 0
 	int dac_off_amp = 0;
 	if ( reduce && wave.mode != mode_agb ) // AGB already eliminates clicks
-		dac_off_amp = -Gb_Osc::dac_bias;
+		dac_off_amp = -dac_bias;
 
 	oscs [0]->dac_off_amp = dac_off_amp;
 	oscs [1]->dac_off_amp = dac_off_amp;
@@ -98,10 +98,10 @@ void Gb_Apu::reduce_clicks( bool reduce )
 
 	// AGB always eliminates clicks on wave channel using same method
 	if ( wave.mode == mode_agb )
-		wave.dac_off_amp = -Gb_Osc::dac_bias;
+		wave.dac_off_amp = -dac_bias;
 }
 
-void Gb_Apu::reset( mode_t mode, bool agb_wave )
+void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 {
 	// Hardware mode
 	if ( agb_wave )
@@ -198,7 +198,7 @@ void Gb_Apu::run_until_( int32_t end_time )
 			break;
 
 		// run frame sequencer
-		frame_time += frame_period * Gb_Osc::clk_mul;
+		frame_time += frame_period * clk_mul;
 		switch ( frame_phase++ )
 		{
 		case 2:
@@ -397,26 +397,7 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 // Gb_Apu_State.cpp
 //////////////////////////////////////////
 
-#if GB_APU_CUSTOM_STATE
-	#define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
-#else
-	#define REFLECT( x, y ) (save ? set_val( io->y, x ) : (void) ((x) = get_val( io->y )))
-
-	static blargg_ulong get_val( byte const* p )
-	{
-		return  p [3] * 0x1000000 + p [2] * 0x10000 + p [1] * 0x100 + p [0];
-	}
-
-	static void set_val( byte* p, blargg_ulong n )
-	{
-		p [0] = (byte) (n      );
-		p [1] = (byte) (n >>  8);
-		p [2] = (byte) (n >> 16);
-		p [3] = (byte) (n >> 24);
-	}
-#endif
-
-
+#define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
 
 inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
@@ -475,10 +456,6 @@ void Gb_Apu::save_state( gb_apu_state_t* out )
 {
 	(void) save_load( out, true );
 	save_load2( out, true );
-
-	#if !GB_APU_CUSTOM_STATE
-		__builtin_memset( out->unused, 0, sizeof out->unused );
-	#endif
 }
 
 const char * Gb_Apu::load_state( gb_apu_state_t const& in )

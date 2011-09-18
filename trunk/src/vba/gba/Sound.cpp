@@ -568,7 +568,7 @@ static void apply_muting()
 #if 0
 static void reset_apu()
 {
-	gb_apu->reset( gb_apu->mode_agb, true );
+	gb_apu->reset( mode_agb, true );
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();
@@ -606,7 +606,7 @@ static void remake_stereo_buffer()
 	{
 		gb_apu = new Gb_Apu; // TODO: handle out of memory
 		//Begin of Reset APU
-		gb_apu->reset( gb_apu->mode_agb, true );
+		gb_apu->reset( mode_agb, true );
 
 		if ( stereo_buffer )
 			stereo_buffer->clear();
@@ -679,7 +679,7 @@ void soundReset()
 
 	remake_stereo_buffer();
 	//Begin of Reset APU
-	gb_apu->reset( gb_apu->mode_agb, true );
+	gb_apu->reset( mode_agb, true );
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();
@@ -996,7 +996,7 @@ void soundReadGame( gzFile in, int version )
 	// Prepare APU and default state
 
 	//Begin of Reset APU
-	gb_apu->reset( gb_apu->mode_agb, true );
+	gb_apu->reset( mode_agb, true );
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();
@@ -1078,7 +1078,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	// Prepare APU and default state
 
 	//Begin of Reset APU
-	gb_apu->reset( gb_apu->mode_agb, true );
+	gb_apu->reset( mode_agb, true );
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();

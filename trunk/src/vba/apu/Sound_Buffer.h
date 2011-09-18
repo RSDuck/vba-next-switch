@@ -369,7 +369,18 @@ inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( c
 int const blip_max_length = 0;
 int const blip_default_length = 250; // 1/4 second
 
+#define	wave_type	0x100
+#define noise_type	0x200
+#define mixed_type	wave_type | noise_type
+#define type_index_mask	0xFF
+
 /* MULTI BUFFER */
+
+typedef struct channel_t {
+	Blip_Buffer* center;
+	Blip_Buffer* left;
+	Blip_Buffer* right;
+};
 
 // Interface to one or more Blip_Buffers mapped to one or more channels
 // consisting of left, center, and right buffers.
@@ -380,17 +391,10 @@ class Multi_Buffer {
 
 		// Sets the number of channels available and optionally their types
 		// (type information used by Effects_Buffer)
-		enum { type_index_mask = 0xFF };
-		enum { wave_type = 0x100, noise_type = 0x200, mixed_type = wave_type | noise_type };
 		virtual const char * set_channel_count( int, int const* types = 0 );
 		int channel_count() const { return channel_count_; }
 
 		// Gets indexed channel, from 0 to channel count - 1
-		struct channel_t {
-			Blip_Buffer* center;
-			Blip_Buffer* left;
-			Blip_Buffer* right;
-		};
 		virtual channel_t channel( int index ) BLARGG_PURE( ; )
 
 			// See Blip_Buffer.h

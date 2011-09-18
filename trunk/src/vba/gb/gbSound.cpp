@@ -65,7 +65,7 @@ static void apply_effects()
 
 	for ( int i = 0; i < chan_count; i++ )
 	{
-		Multi_Buffer::channel_t ch = { 0, 0, 0 };
+		channel_t ch = { 0, 0, 0 };
 		if ( prevSoundEnable >> i & 1 )
 			ch = stereo_buffer->channel( i );
 		gb_apu->set_output( ch.center, ch.left, ch.right, i );
@@ -106,11 +106,11 @@ void gbSoundTick()
 
 static void reset_apu()
 {
-	Gb_Apu::mode_t mode = Gb_Apu::mode_dmg;
+	uint32_t mode = mode_dmg;
 	if ( gbHardware & 2 )
-		mode = Gb_Apu::mode_cgb;
+		mode = mode_cgb;
 	if ( gbHardware & 8 || declicking )
-		mode = Gb_Apu::mode_agb;
+		mode = mode_agb;
 	gb_apu->reset( mode );
 	gb_apu->reduce_clicks( declicking );
 
@@ -132,8 +132,8 @@ static void remake_stereo_buffer()
 
 	// APU
 	static int const chan_types [chan_count] = {
-		Multi_Buffer::wave_type+1, Multi_Buffer::wave_type+2,
-		Multi_Buffer::wave_type+3, Multi_Buffer::mixed_type+1
+		wave_type+1, wave_type+2,
+		wave_type+3, mixed_type+1
 	};
 	if ( stereo_buffer->set_channel_count( chan_count, chan_types ) ) { } // TODO: handle errors
 

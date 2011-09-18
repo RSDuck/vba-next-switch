@@ -10,6 +10,15 @@ struct gb_apu_state_t;
 
 #define osc_count 4
 
+// Resets hardware to initial power on state BEFORE boot ROM runs. Mode selects
+// sound hardware. Additional AGB wave features are enabled separately.
+//mode_dmg = Game Boy monochrome
+//mode_cgb = Game Boy Color
+//mode_agb = Game Boy Advance
+#define mode_dmg	0
+#define mode_cgb	1
+#define mode_agb	2
+
 class Gb_Apu
 {
 	public:
@@ -23,14 +32,7 @@ class Gb_Apu
 	void set_output( Blip_Buffer* center, Blip_Buffer* left = NULL, Blip_Buffer* right = NULL,
 			int chan = osc_count );
 
-	// Resets hardware to initial power on state BEFORE boot ROM runs. Mode selects
-	// sound hardware. Additional AGB wave features are enabled separately.
-	enum mode_t {
-		mode_dmg,   // Game Boy monochrome
-		mode_cgb,   // Game Boy Color
-		mode_agb    // Game Boy Advance
-	};
-	void reset( mode_t mode = mode_cgb, bool agb_wave = false );
+	void reset( uint32_t mode = mode_cgb, bool agb_wave = false );
 
 	// Reads and writes must be within the start_addr to end_addr range, inclusive.
 	// Addresses outside this range are not mapped to the sound hardware.
