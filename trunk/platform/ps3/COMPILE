@@ -1,0 +1,49 @@
+==============================================
+How to compile profiled builds for PS3:
+==============================================
+
+GCC uses gcov for profiling.
+Performance profiling is generally performed in steps:
+
+1. Compile all object files with profiling enabling flags. These include:
+   -fprofile-generate -fprofile-arcs, etc. Check your GCC.
+
+2. Also remember to link final executable with these flags as well. _VERY_ important. Also, link in -lgcov.
+
+3. Now, the final .self (make_fself) executable will have to run in a debugging environment. (Debug PS3). Test various games and situations to get a good, and not biased profile.
+
+4. When executable exits, profiling data will be dumped (these are *.gcda files, and need to be dumped to same directories that your object files got compiled.) PS3 will try output to a path that is actually your PC's data path!!! The debugging environment will hook this and make sure files end up where they're supposed to.
+
+5. With the *.gcda files in place, do a make clean, remove the old profiling flags and enable -fprofile-use. This will optimize the final executable in terms of statistics generated in the *.gcda files. You have to generate profiles and compile the final executable in THE EXACT SAME DIRECTORIES!!! Otherwise GCOV will bitch. Again, this seems to be a PS3 limitation and not regular GCOV.
+
+
+=========================
+Profile data paths:
+=========================
+
+This is the hardest part, and requires careful execution to get right. GCOV is very sensitive to directory paths.
+
+GCOV relies on absolute paths all the way. With regular GCOV on a PC, you can easily tweak paths to properly do stuff, however, we do not have this option on PS3.
+
+
+Assuming we're in /tmp/foo (or C:/tmp/foo if in wine or win32) and we have a C-file called bar.c:
+
+Compiling the object file like this:
+ppu-lv2-gcc -c bar.c -o obj/bar.o -fprofile-generate
+
+This will generate obj/bar.gcno as well along with obj/bar.o. However, do notice that the _absolute path_ is associated in the object file, e.g. /tmp/foo/obj/bar.o! Thus, no matter from where the final executable is run, the executable will output its profiling data to /tmp/foo/obj/bar.gcda! (This might be C:/tmp/foo/obj/bar.gcda on windows). On a PC, you're able to tweak these paths, but not PS3 sadly.
+
+So, this means that the PS3 will try to output its final profiling data to this absolute path. Thus it is necessary for the debugging enviroment to have the same directory layout available. PS3 GCOV will fail if it has to create new folders!
+
+When *.gcda files are obtained, they are also associated with the absolute path. If you compiled and profiled on the same computer, the *.gcda files should have ended up in the proper place automatically.
+
+If not, transfer these *.gcda files to same directories you compiled the profiling executable. Each *.gcda file has to go in the same folder the corresponding *.o and *.gcno file is. When all *.gcda files are in place, do a make clean, set proper flags and pray :)
+
+E.g.: In our example, the *.gcda file has to go in /tmp/foo/obj/bar.gcda.
+
+
+==========================
+Experimenting:
+==========================
+
+Can profiling work without proper debugger? (E.g. dumping data to PS3 HDD...) Will perhaps need to hack the .elf to use different paths, and pray.
