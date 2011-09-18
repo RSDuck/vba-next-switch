@@ -40,16 +40,8 @@ inline int Gb_Apu::calc_output( int osc ) const
 
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
-   #if 0
-	if ( !center || !left || !right )
-	{
-		left  = center;
-		right = center;
-	}
-   #endif
 
-   int i = osc;
-	//int i = (unsigned) osc % osc_count;
+	int i = osc;
 	do
 	{
 		Gb_Osc& o = *oscs [i];
@@ -57,7 +49,7 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 		o.outputs [2] = left;
 		o.outputs [3] = center;
 		o.output = o.outputs [calc_output( i )];
-      ++i;
+		++i;
 	}
 	while ( i < osc );
 }
@@ -136,10 +128,10 @@ void Gb_Apu::reset( mode_t mode, bool agb_wave )
 
 	apply_volume();
 
-   square1.length_ctr = 64;
-   square2.length_ctr = 64;
-   wave   .length_ctr = 256;
-   noise  .length_ctr = 64;
+	square1.length_ctr = 64;
+	square2.length_ctr = 64;
+	wave   .length_ctr = 256;
+	noise  .length_ctr = 64;
 
 	// Load initial wave RAM
 	static byte const initial_wave [2] [16] = {
@@ -179,13 +171,9 @@ Gb_Apu::Gb_Apu()
 	}
 
 	reduce_clicks_ = false;
-   //begin set Tempo ( 1.0)
+	//begin set Tempo ( 1.0)
 	frame_period = 4194304 / 512; // 512 Hz
-   #if 0
-	if ( t != 1.0 )
-		frame_period = int32_t (frame_period / t);
-   #endif
-   //end set Tempo ( 1.0)
+	//end set Tempo ( 1.0)
 
 	volume_ = 1.0;
 	reset();
@@ -268,7 +256,6 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 
 void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 {
-
 	int reg = addr - start_addr;
 	if ( (unsigned) reg >= register_count )
 		return;
@@ -312,16 +299,16 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 		else if ( addr == stereo_reg )
 		{
 			// Stereo panning
-         for ( int i = osc_count; --i >= 0; )
-         {
-            Gb_Osc& o = *oscs [i];
-            Blip_Buffer* out = o.outputs [calc_output( i )];
-            if ( o.output != out )
-            {
-               silence_osc( o );
-               o.output = out;
-            }
-         }
+			for ( int i = osc_count; --i >= 0; )
+			{
+				Gb_Osc& o = *oscs [i];
+				Blip_Buffer* out = o.outputs [calc_output( i )];
+				if ( o.output != out )
+				{
+					silence_osc( o );
+					o.output = out;
+				}
+			}
 		}
 		else if ( addr == status_reg && (data ^ old_data) & power_mask )
 		{
@@ -330,23 +317,23 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			for ( int i = osc_count; --i >= 0; )
 				silence_osc( *oscs [i] );
 
-         for ( int i = 0; i < 0x20; i++ )
-            regs [i] = 0;
+			for ( int i = 0; i < 0x20; i++ )
+				regs [i] = 0;
 
-         square1.reset();
-         square2.reset();
-         wave   .reset();
-         noise  .reset();
+			square1.reset();
+			square2.reset();
+			wave   .reset();
+			noise  .reset();
 
-         apply_volume();
+			apply_volume();
 
 			if ( wave.mode != mode_dmg )
-         {
-            square1.length_ctr = 64;
-            square2.length_ctr = 64;
-            wave   .length_ctr = 256;
-            noise  .length_ctr = 64;
-         }
+			{
+				square1.length_ctr = 64;
+				square2.length_ctr = 64;
+				wave   .length_ctr = 256;
+				noise  .length_ctr = 64;
+			}
 
 			regs [status_reg - start_addr] = data;
 		}
@@ -355,16 +342,16 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 
 void Gb_Apu::apply_stereo()
 {
-       for ( int i = osc_count; --i >= 0; )
-       {
-               Gb_Osc& o = *oscs [i];
-               Blip_Buffer* out = o.outputs [calc_output( i )];
-               if ( o.output != out )
-               {
-                       silence_osc( o );
-                       o.output = out;
-               }
-       }
+	for ( int i = osc_count; --i >= 0; )
+	{
+		Gb_Osc& o = *oscs [i];
+		Blip_Buffer* out = o.outputs [calc_output( i )];
+		if ( o.output != out )
+		{
+			silence_osc( o );
+			o.output = out;
+		}
+	}
 }
 
 

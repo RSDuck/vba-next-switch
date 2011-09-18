@@ -341,18 +341,18 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                 duty_offset -= duty;
                 duty = 8 - duty;
         }
-        int ph = (this->phase + duty_offset) & 7;
+        int ph = (phase + duty_offset) & 7;
 
         // Determine what will be generated
         int vol = 0;
-        Blip_Buffer* const out = this->output;
+        Blip_Buffer* const out = output;
         if ( out )
         {
                 int amp = dac_off_amp;
                 if ( dac_enabled() )
                 {
                         if ( enabled )
-                                vol = this->volume;
+                                vol = volume;
 
                         amp = -dac_bias;
                         if ( mode == Gb_Apu::mode_agb )
@@ -378,7 +378,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         time += delay;
         if ( time < end_time )
         {
-                int const per = this->period();
+                int const per = period();
                 if ( !vol )
                 {
                         // Maintain phase when not playing
@@ -405,7 +405,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                         if ( delta != vol )
                                 last_amp -= delta;
                 }
-                this->phase = (ph - duty_offset) & 7;
+                phase = (ph - duty_offset) & 7;
         }
         delay = time - end_time;
 }
@@ -494,14 +494,14 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
 {
         // Determine what will be generated
         int vol = 0;
-        Blip_Buffer* const out = this->output;
+        Blip_Buffer* const out = output;
         if ( out )
         {
                 int amp = dac_off_amp;
                 if ( dac_enabled() )
                 {
                         if ( enabled )
-                                vol = this->volume;
+                                vol = volume;
 
                         amp = -dac_bias;
                         if ( mode == Gb_Apu::mode_agb )
@@ -529,7 +529,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         int const period1 = period1s [regs [3] & 7] * clk_mul;
         {
                 int extra = (end_time - time) - delay;
-                int const per2 = this->period2();
+                int const per2 = period2();
                 time += delay + ((divider ^ (per2 >> 1)) & (per2 - 1)) * period1;
 
                 int count = (extra < 0 ? 0 : (extra + period1 - 1) / period1);
@@ -540,8 +540,8 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         // Generate wave
         if ( time < end_time )
         {
-                unsigned const mask = this->lfsr_mask();
-                unsigned bits = this->phase;
+                unsigned const mask = lfsr_mask();
+                unsigned bits = phase;
 
                 int per = period2( period1 * 8 );
                 if ( period2_index() >= 0xE )
@@ -576,7 +576,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         if ( delta == vol )
                                 last_amp += delta;
                 }
-                this->phase = bits;
+                phase = bits;
         }
 }
 
@@ -590,7 +590,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
 
         // Determine what will be generated
         int playing = false;
-        Blip_Buffer* const out = this->output;
+        Blip_Buffer* const out = output;
         if ( out )
         {
                 int amp = dac_off_amp;
@@ -617,7 +617,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
         time += delay;
         if ( time < end_time )
         {
-                byte const* wave = this->wave_ram;
+                byte const* wave = wave_ram;
 
                 // wave size and bank
                 int const size20_mask = 0x20;
@@ -630,10 +630,10 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                         wave += bank_size/2 - (swap_banks >> 1);
                 }
 
-                int ph = this->phase ^ swap_banks;
+                int ph = phase ^ swap_banks;
                 ph = (ph + 1) & wave_mask; // pre-advance
 
-                int const per = this->period();
+                int const per = period();
                 if ( !playing )
                 {
                         // Maintain phase when not playing
@@ -644,7 +644,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 else
                 {
                         // Output amplitude transitions
-                        int lamp = this->last_amp + dac_bias;
+                        int lamp = last_amp + dac_bias;
                         do
                         {
                                 // Extract nybble
@@ -663,7 +663,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 time += per;
                         }
                         while ( time < end_time );
-                        this->last_amp = lamp - dac_bias;
+                        last_amp = lamp - dac_bias;
                 }
                 ph = (ph - 1) & wave_mask; // undo pre-advance and mask position
 
@@ -671,7 +671,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 if ( enabled )
                         sample_buf = wave [ph >> 1];
 
-                this->phase = ph ^ swap_banks; // undo swapped banks
+                phase = ph ^ swap_banks; // undo swapped banks
         }
         delay = time - end_time;
 }

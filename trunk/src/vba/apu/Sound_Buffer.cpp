@@ -148,21 +148,16 @@ void Blip_Buffer::end_frame( int32_t t )
 void Blip_Buffer::remove_samples( long count )
 {
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
-        if ( (last_non_silence -= count) < 0 )
-                last_non_silence = 0;
+	if ( (last_non_silence -= count) < 0 )
+		last_non_silence = 0;
 #endif
 
-   #if 0
-        if ( count )
-        {
-   #endif
-           offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
+	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
-                // copy remaining samples to beginning and clear old samples
-                long remain = samples_avail() + blip_buffer_extra_;
-                memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
-                __builtin_memset( buffer_ + remain, 0, count * sizeof *buffer_ );
-        //}
+	// copy remaining samples to beginning and clear old samples
+	long remain = samples_avail() + blip_buffer_extra_;
+	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
+	__builtin_memset( buffer_ + remain, 0, count * sizeof *buffer_ );
 }
 
 // Blip_Synth_
@@ -181,45 +176,33 @@ void Blip_Synth_Fast_::volume_unit( double new_unit )
 
 long Blip_Buffer::read_samples( int16_t * out, long count)
 {
-   #if 0
-   long max_samples = count;
-   //begin of Blip Buffer read_samples
-        count = samples_avail();
-        if ( count > max_samples )
-                count = max_samples;
-   #endif
+	int const bass = BLIP_READER_BASS( *this );
+	BLIP_READER_BEGIN( reader, *this );
+	BLIP_READER_ADJ_( reader, count );
+	int16_t * BLIP_RESTRICT out_tmp = out + count;
+	int32_t offset = (int32_t) -count;
 
-   #if 0
-        if ( count )
-        {
-   #endif
-                int const bass = BLIP_READER_BASS( *this );
-                BLIP_READER_BEGIN( reader, *this );
-                BLIP_READER_ADJ_( reader, count );
-                int16_t * BLIP_RESTRICT out_tmp = out + count;
-                int32_t offset = (int32_t) -count;
+	do
+	{
+		int32_t s = BLIP_READER_READ( reader );
+		BLIP_READER_NEXT_IDX_( reader, bass, offset );
+		BLIP_CLAMP( s, s );
+		out_tmp [offset] = (int16_t) s;
+	}
+	while ( ++offset );
 
-                        do
-                        {
-                                int32_t s = BLIP_READER_READ( reader );
-                                BLIP_READER_NEXT_IDX_( reader, bass, offset );
-                                BLIP_CLAMP( s, s );
-                                out_tmp [offset] = (int16_t) s;
-                        }
-                        while ( ++offset );
+	BLIP_READER_END( reader, *this );
 
-                BLIP_READER_END( reader, *this );
-
-                remove_samples( count );
-        //}
-   //end of Blip Buffer read_samples
+	remove_samples( count );
+	//}
+		//end of Blip Buffer read_samples
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
-        if ( (last_non_silence -= count) < 0 )
-                last_non_silence = 0;
+		if ( (last_non_silence -= count) < 0 )
+			last_non_silence = 0;
 #endif
 
-        return count;
+		return count;
 }
 
 uint32_t const subsample_mask = (1L << BLIP_BUFFER_ACCURACY) - 1;
