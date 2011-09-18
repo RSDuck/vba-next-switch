@@ -183,7 +183,7 @@ Gb_Apu::Gb_Apu()
 	frame_period = 4194304 / 512; // 512 Hz
    #if 0
 	if ( t != 1.0 )
-		frame_period = blip_time_t (frame_period / t);
+		frame_period = int32_t (frame_period / t);
    #endif
    //end set Tempo ( 1.0)
 
@@ -191,12 +191,12 @@ Gb_Apu::Gb_Apu()
 	reset();
 }
 
-void Gb_Apu::run_until_( blip_time_t end_time )
+void Gb_Apu::run_until_( int32_t end_time )
 {
    do
 	{
 		// run oscillators
-		blip_time_t time = end_time;
+		int32_t time = end_time;
 		if ( time > frame_time )
 			time = frame_time;
 
@@ -236,13 +236,13 @@ void Gb_Apu::run_until_( blip_time_t end_time )
 	}while(1);
 }
 
-inline void Gb_Apu::run_until( blip_time_t time )
+inline void Gb_Apu::run_until( int32_t time )
 {
 	if ( time > last_time )
 		run_until_( time );
 }
 
-void Gb_Apu::end_frame( blip_time_t end_time )
+void Gb_Apu::end_frame( int32_t end_time )
 {
 	if ( end_time > last_time )
 		run_until( end_time );
@@ -266,7 +266,7 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 	}
 }
 
-void Gb_Apu::write_register( blip_time_t time, unsigned addr, int data )
+void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 {
 
 	int reg = addr - start_addr;
@@ -368,7 +368,7 @@ void Gb_Apu::apply_stereo()
 }
 
 
-int Gb_Apu::read_register( blip_time_t time, unsigned addr )
+int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
 	run_until( time );
 
@@ -494,7 +494,7 @@ void Gb_Apu::save_state( gb_apu_state_t* out )
 	#endif
 }
 
-blargg_err_t Gb_Apu::load_state( gb_apu_state_t const& in )
+const char * Gb_Apu::load_state( gb_apu_state_t const& in )
 {
 	RETURN_ERR( save_load( CONST_CAST(gb_apu_state_t*,&in), false ) );
 	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );

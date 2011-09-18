@@ -45,7 +45,7 @@ class Gb_Osc
 	// 11-bit frequency in NRx3 and NRx4
 	int frequency() const { return (regs [4] & 7) * 0x100 + regs [3]; }
 
-	void update_amp( blip_time_t, int new_amp );
+	void update_amp( int32_t, int new_amp );
 	int write_trig( int frame_phase, int max_len, int old_data );
 };
 
@@ -77,7 +77,7 @@ class Gb_Square : public Gb_Env
 {
 	public:
 	bool write_register( int frame_phase, int reg, int old_data, int data );
-	void run( blip_time_t, blip_time_t );
+	void run( int32_t, int32_t );
 
 	void reset()
 	{
@@ -122,7 +122,7 @@ class Gb_Noise : public Gb_Env
 
 	int divider; // noise has more complex frequency divider setup
 
-	void run( blip_time_t, blip_time_t );
+	void run( int32_t, int32_t );
 	void write_register( int frame_phase, int reg, int old_data, int data );
 
 	void reset()
@@ -145,7 +145,7 @@ class Gb_Wave : public Gb_Osc
 	int sample_buf; // last wave RAM byte read (hardware has this as well)
 
 	void write_register( int frame_phase, int reg, int old_data, int data );
-	void run( blip_time_t, blip_time_t );
+	void run( int32_t, int32_t );
 
 	// Reads/writes wave RAM
 	int read( unsigned addr ) const;

@@ -42,14 +42,14 @@ class Gb_Apu
 	// current time frame.
 
 	// Emulates CPU write of data to addr at specified time.
-	void write_register( blip_time_t time, unsigned addr, int data );
+	void write_register( int32_t time, unsigned addr, int data );
 
 	// Emulates CPU read from addr at specified time.
-	int read_register( blip_time_t time, unsigned addr );
+	int read_register( int32_t time, unsigned addr );
 
 	// Emulates sound hardware up to specified time, ends current time frame, then
 	// starts a new frame at time 0.
-	void end_frame( blip_time_t frame_length );
+	void end_frame( int32_t frame_length );
 
 	// Sound adjustments
 
@@ -83,7 +83,7 @@ class Gb_Apu
 	void save_state( gb_apu_state_t* state_out );
 
 	// Loads state. You should call reset() BEFORE this.
-	blargg_err_t load_state( gb_apu_state_t const& in );
+	const char * load_state( gb_apu_state_t const& in );
 
 	public:
 	Gb_Apu();
@@ -100,8 +100,8 @@ class Gb_Apu
 	Gb_Apu& operator = ( const Gb_Apu& );
 
 	Gb_Osc*     oscs [osc_count];
-	blip_time_t last_time;          // time sound emulator has been run to
-	blip_time_t frame_period;       // clocks between each frame sequencer step
+	int32_t last_time;          // time sound emulator has been run to
+	int32_t frame_period;       // clocks between each frame sequencer step
 	double      volume_;
 	bool        reduce_clicks_;
 
@@ -109,7 +109,7 @@ class Gb_Apu
 	Gb_Square       square2;
 	Gb_Wave         wave;
 	Gb_Noise        noise;
-	blip_time_t     frame_time;     // time of next frame sequencer action
+	int32_t     frame_time;     // time of next frame sequencer action
 	int             frame_phase;    // phase of next frame sequencer step
 	enum { regs_size = register_count + 0x10 };
 	BOOST::uint8_t  regs [regs_size];// last values written to registers
@@ -122,8 +122,8 @@ class Gb_Apu
 	void apply_stereo();
 	void apply_volume();
 	void synth_volume( int );
-	void run_until_( blip_time_t );
-	void run_until( blip_time_t );
+	void run_until_( int32_t );
+	void run_until( int32_t );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
 	const char* save_load( gb_apu_state_t*, bool save );

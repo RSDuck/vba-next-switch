@@ -30,7 +30,7 @@ void Gb_Osc::reset()
         enabled  = false;
 }
 
-inline void Gb_Osc::update_amp( blip_time_t time, int new_amp )
+inline void Gb_Osc::update_amp( int32_t time, int new_amp )
 {
         output->set_modified();
         int delta = new_amp - last_amp;
@@ -327,7 +327,7 @@ void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 
 // Synthesis
 
-void Gb_Square::run( blip_time_t time, blip_time_t end_time )
+void Gb_Square::run( int32_t time, int32_t end_time )
 {
         // Calc duty and phase
         static byte const duty_offsets [4] = { 1, 1, 3, 7 };
@@ -384,7 +384,7 @@ void Gb_Square::run( blip_time_t time, blip_time_t end_time )
                         // Maintain phase when not playing
                         int count = (end_time - time + per - 1) / per;
                         ph += count; // will be masked below
-                        time += (blip_time_t) count * per;
+                        time += (int32_t) count * per;
                 }
                 else
                 {
@@ -490,7 +490,7 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 	return s;
 }
 
-void Gb_Noise::run( blip_time_t time, blip_time_t end_time )
+void Gb_Noise::run( int32_t time, int32_t end_time )
 {
         // Determine what will be generated
         int vol = 0;
@@ -552,7 +552,7 @@ void Gb_Noise::run( blip_time_t time, blip_time_t end_time )
                 {
                         // Maintain phase when not playing
                         int count = (end_time - time + per - 1) / per;
-                        time += (blip_time_t) count * per;
+                        time += (int32_t) count * per;
                         bits = run_lfsr( bits, ~mask, count );
                 }
                 else
@@ -580,7 +580,7 @@ void Gb_Noise::run( blip_time_t time, blip_time_t end_time )
         }
 }
 
-void Gb_Wave::run( blip_time_t time, blip_time_t end_time )
+void Gb_Wave::run( int32_t time, int32_t end_time )
 {
         // Calc volume
         static byte const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
@@ -639,7 +639,7 @@ void Gb_Wave::run( blip_time_t time, blip_time_t end_time )
                         // Maintain phase when not playing
                         int count = (end_time - time + per - 1) / per;
                         ph += count; // will be masked below
-                        time += (blip_time_t) count * per;
+                        time += (int32_t) count * per;
                 }
                 else
                 {

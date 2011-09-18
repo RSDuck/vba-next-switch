@@ -463,7 +463,7 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 {
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples!
-	int numSamples = buffer->read_samples( (blip_sample_t*) soundFinalWave, buffer->samples_avail() );
+	int numSamples = buffer->read_samples( (int16_t*) soundFinalWave, buffer->samples_avail() );
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
@@ -501,7 +501,7 @@ void psoundTickfn()
 
 		// dump all the samples available
 		// VBA will only ever store 1 frame worth of samples!
-		int numSamples = stereo_buffer->read_samples( (blip_sample_t*) soundFinalWave, stereo_buffer->samples_avail() );
+		int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail() );
 		systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 
 #ifdef USE_SOUND_FILTERING

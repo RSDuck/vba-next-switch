@@ -25,7 +25,7 @@ static bool declicking     = false;
 #define chan_count 4
 int const ticks_to_time = 2 * GB_APU_OVERCLOCK;
 
-static inline blip_time_t blip_time()
+static inline int32_t blip_time()
 {
 	return (SOUND_CLOCK_TICKS - soundTicks) * ticks_to_time;
 }
@@ -46,7 +46,7 @@ void gbSoundEvent(register uint16_t address, register int data)
 		gb_apu->write_register( blip_time(), address, data );
 }
 
-static void end_frame( blip_time_t time )
+static void end_frame( int32_t time )
 {
 	gb_apu       ->end_frame( time );
 	stereo_buffer->end_frame( time );
