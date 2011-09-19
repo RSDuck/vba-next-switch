@@ -17,10 +17,10 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #include "blargg_source.h"
 
-unsigned const vol_reg    = 0xFF24;
-unsigned const stereo_reg = 0xFF25;
-unsigned const status_reg = 0xFF26;
-unsigned const wave_ram   = 0xFF30;
+#define vol_reg 0xFF24
+#define stereo_reg 0xFF25
+#define status_reg 0xFF26
+#define wave_ram 0xFF30
 
 int const power_mask = 0x80;
 
@@ -50,8 +50,7 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 		o.outputs [3] = center;
 		o.output = o.outputs [calc_output( i )];
 		++i;
-	}
-	while ( i < osc );
+	}while ( i < osc );
 }
 
 void Gb_Apu::synth_volume( int iv )
@@ -68,8 +67,6 @@ void Gb_Apu::apply_volume()
 	int data  = regs [vol_reg - start_addr];
 	int left  = data >> 4 & 7;
 	int right = data & 7;
-	//if ( data & 0x88 ) dprintf( "Vin: %02X\n", data & 0x88 );
-	//if ( left != right ) dprintf( "l: %d r: %d\n", left, right );
 	synth_volume( max( left, right ) + 1 );
 }
 
@@ -134,7 +131,7 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 	noise  .length_ctr = 64;
 
 	// Load initial wave RAM
-	static byte const initial_wave [2] [16] = {
+	static unsigned char const initial_wave[2][16] = {
 		{0x84,0x40,0x43,0xAA,0x2D,0x78,0x92,0x3C,0x60,0x59,0x59,0xB0,0x34,0xB8,0x2E,0xDA},
 		{0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF},
 	};
@@ -143,14 +140,14 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 		// Init both banks (does nothing if not in AGB mode)
 		// TODO: verify that this works
 		write_register( 0, 0xFF1A, b * 0x40 );
-		for ( unsigned i = 0; i < sizeof initial_wave [0]; i++ )
+		for ( uint32_t i = 0; i < sizeof(initial_wave[0]); i++ )
 			write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
 	}
 }
 
 Gb_Apu::Gb_Apu()
 {
-	wave.wave_ram = &regs [wave_ram - start_addr];
+	wave.m_wave_ram = &regs [wave_ram - start_addr];
 
 	oscs [0] = &square1;
 	oscs [1] = &square2;
@@ -367,7 +364,7 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 		return wave.read( addr );
 
 	// Value read back has some bits always set
-	static byte const masks [] = {
+	static unsigned char const masks [] = {
 		0x80,0x3F,0x00,0xFF,0xBF,
 		0xFF,0x3F,0x00,0xFF,0xBF,
 		0x7F,0xFF,0x9F,0xFF,0xBF,
@@ -401,9 +398,9 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 
 inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
-	int format = io->format0;
+	int format = format0;
 	REFLECT( format, format );
-	if ( format != io->format0 )
+	if (format != format0)
 		return "Unsupported sound save state format";
 
 	int version = 0;

@@ -49,7 +49,7 @@ public:
 	size_t size() const { return size_; }
 	T* begin() const { return begin_; }
 	T* end() const { return begin_ + size_; }
-	blargg_err_t resize( size_t n )
+	const char * resize( size_t n )
 	{
 		// TODO: blargg_common.cpp to hold this as an outline function, ugh
 		void* p = realloc( begin_, n * sizeof (T) );

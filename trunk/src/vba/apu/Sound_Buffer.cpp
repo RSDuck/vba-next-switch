@@ -74,7 +74,7 @@ void Blip_Buffer::clear( int entire_buffer )
         if ( buffer_ )
         {
                 long count = (entire_buffer ? buffer_size_ : samples_avail());
-                __builtin_memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof (buf_t_) );
+                __builtin_memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof(int32_t) );
         }
 }
 
@@ -97,7 +97,7 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
                 void* p = realloc( buffer_, (new_size + blip_buffer_extra_) * sizeof *buffer_ );
                 if ( !p )
                         return "Out of memory";
-                buffer_ = (buf_t_*) p;
+                buffer_ = (int32_t *) p;
         }
 
         buffer_size_ = new_size;
@@ -194,8 +194,6 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	BLIP_READER_END( reader, *this );
 
 	remove_samples( count );
-	//}
-		//end of Blip Buffer read_samples
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 		if ( (last_non_silence -= count) < 0 )
@@ -258,8 +256,8 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
         mixer_samples_read = 0;
         for ( int i = bufs_size; --i >= 0; )
                 RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
-	sample_rate_ = bufs_buffer[0].sample_rate();
-	length_ = bufs_buffer[0].length();
+	sample_rate_ = bufs_buffer[0].sample_rate_;
+	length_ = bufs_buffer[0].length_;
         return 0; 
 }
 
@@ -565,6 +563,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 
         for ( int i = bufs_size; --i >= 0; )
                 bufs_buffer [i].clear();
+
         if ( echo.size() )
                 __builtin_memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
 }
@@ -575,6 +574,7 @@ Effects_Buffer::~Effects_Buffer()
         {
                 for ( int i = bufs_size; --i >= 0; )
                         bufs_buffer [i].~buf_t();
+
                 free( bufs_buffer );
                 bufs_buffer = 0;
         }
@@ -625,6 +625,7 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
         {
                 for ( int i = bufs_size; --i >= 0; )
                         bufs_buffer [i].~buf_t();
+
                 free( bufs_buffer );
                 bufs_buffer = 0;
         }
@@ -679,8 +680,7 @@ channel_t Effects_Buffer::channel( int i )
 // 3 wave positions with/without surround, 2 multi (one with same config as wave)
 int const simple_bufs = 3 * 2 + 2 - 1;
 
-Simple_Effects_Buffer::Simple_Effects_Buffer() :
-        Effects_Buffer( extra_chans + simple_bufs, 18 * 1024L )
+Simple_Effects_Buffer::Simple_Effects_Buffer() : Effects_Buffer( extra_chans + simple_bufs, 18 * 1024L )
 {
         config_.echo     = 0.20f;
         config_.stereo   = 0.20f;
@@ -788,7 +788,7 @@ void Effects_Buffer::apply_config()
                         ch.vol [0] = -ch.vol [0];
         }
 
-   //Begin of assign buffers
+   	//Begin of assign buffers
         // assign channels to buffers
         int buf_count = 0;
         for ( int i = 0; i < (int) chans.size(); i++ )
@@ -862,7 +862,7 @@ void Effects_Buffer::apply_config()
                 //dprintf( "ch %d->buf %d\n", x, b );
                 ch.channel.center = &bufs_buffer [b];
         }
-   //End of assign buffers
+   	//End of assign buffers
 
         // set side channels
         for ( i = chans.size(); --i >= 0; )

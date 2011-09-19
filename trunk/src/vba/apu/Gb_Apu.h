@@ -22,6 +22,8 @@ struct gb_apu_state_t;
 class Gb_Apu
 {
 	public:
+	Gb_Apu();
+
 	// Clock rate that sound hardware runs at.
 	enum { clock_rate = 4194304 * GB_APU_OVERCLOCK };
 
@@ -86,16 +88,6 @@ class Gb_Apu
 
 	// Loads state. You should call reset() BEFORE this.
 	const char * load_state( gb_apu_state_t const& in );
-
-	public:
-	Gb_Apu();
-
-	// Use set_output() in place of these
-	BLARGG_DEPRECATED void output    (        Blip_Buffer* c                                 ) { set_output( c, c, c    ); }
-	BLARGG_DEPRECATED void output    (        Blip_Buffer* c, Blip_Buffer* l, Blip_Buffer* r ) { set_output( c, l, r    ); }
-	BLARGG_DEPRECATED void osc_output( int i, Blip_Buffer* c                                 ) { set_output( c, c, c, i ); }
-	BLARGG_DEPRECATED void osc_output( int i, Blip_Buffer* c, Blip_Buffer* l, Blip_Buffer* r ) { set_output( c, l, r, i ); }
-
 	private:
 	// noncopyable
 	Gb_Apu( const Gb_Apu& );
@@ -114,7 +106,7 @@ class Gb_Apu
 	int32_t     frame_time;     // time of next frame sequencer action
 	int             frame_phase;    // phase of next frame sequencer step
 	enum { regs_size = register_count + 0x10 };
-	BOOST::uint8_t  regs [regs_size];// last values written to registers
+	uint8_t  regs [regs_size];// last values written to registers
 
 	// large objects after everything else
 	Gb_Osc::Good_Synth  good_synth;
@@ -130,8 +122,9 @@ class Gb_Apu
 	void write_osc( int index, int reg, int old_data, int data );
 	const char* save_load( gb_apu_state_t*, bool save );
 	void save_load2( gb_apu_state_t*, bool save );
-	//friend class Gb_Apu_Tester;
 };
+
+#define format0 0x50414247
 
 // Format of save state. Should be stable across versions of the library,
 // with earlier versions properly opening later save states. Includes some
@@ -148,7 +141,6 @@ struct gb_apu_state_t
 	typedef unsigned char val_t [4];
 #endif
 
-	enum { format0 = 0x50414247 };
 
 	val_t format;   // format of all following data
 	val_t version;  // later versions just add fields to end

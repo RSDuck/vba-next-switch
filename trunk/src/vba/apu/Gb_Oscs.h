@@ -142,7 +142,7 @@ class Gb_Wave : public Gb_Osc
 	public:
 	int sample_buf;		// last wave RAM byte read (hardware has this as well)
 	int agb_mask;		// 0xFF if AGB features enabled, 0 otherwise
-	uint8_t* wave_ram;	// 32 bytes (64 nybbles), stored in APU
+	uint8_t* m_wave_ram;	// 32 bytes (64 nybbles), stored in APU
 
 	void write_register( int frame_phase, int reg, int old_data, int data );
 	void run( int32_t, int32_t );
@@ -161,8 +161,6 @@ class Gb_Wave : public Gb_Osc
 	enum { bank40_mask = 0x40 };
 	enum { bank_size   = 32 };
 
-	friend class Gb_Apu;
-
 	// Frequency timer period
 	int period() const { return (2048 - frequency()) * (2 * clk_mul); }
 
@@ -171,7 +169,7 @@ class Gb_Wave : public Gb_Osc
 
 	void corrupt_wave();
 
-	uint8_t* wave_bank() const { return &wave_ram [(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
+	uint8_t* wave_bank() const { return &m_wave_ram[(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
 
 	// Wave index that would be accessed, or -1 if no access would occur
 	int access( unsigned addr ) const;

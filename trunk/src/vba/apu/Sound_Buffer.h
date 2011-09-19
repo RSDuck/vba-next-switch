@@ -11,13 +11,15 @@
 /* BLIP BUFFER */
 
 // Output samples are 16-bit signed, with a range of -32768 to 32767
-enum { blip_sample_max = 32767 };
+#define blip_sample_max	32767
 
 struct blip_buffer_state_t;
 
 class Blip_Buffer
 {
 	public:
+	Blip_Buffer();
+	~Blip_Buffer();
 	uint32_t non_silent() const;
 
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
@@ -39,8 +41,6 @@ class Blip_Buffer
 	// easy interleving of two channels into a stereo output buffer.
 	long read_samples( int16_t* dest, long count);
 
-	// Additional features
-
 	// Removes all available samples and clear buffer to silence. If 'entire_buffer' is
 	// false, just clears out any samples waiting rather than the entire buffer.
 	void clear( int entire_buffer = 1 );
@@ -54,15 +54,6 @@ class Blip_Buffer
 	// Sets frequency high-pass filter frequency, where higher values reduce bass more
 	void bass_freq( int frequency );
 
-	// Current output sample rate
-	long sample_rate() const;
-
-	// Length of buffer in milliseconds
-	int length() const;
-
-	// Number of source time units per second
-	long clock_rate() const;
-
 	// Experimental features
 
 	// Saves state, including high-pass filter and tails of last deltas.
@@ -73,16 +64,6 @@ class Blip_Buffer
 	// settings during same run of program. States can NOT be stored on disk.
 	// Clears buffer before loading state.
 	void load_state( blip_buffer_state_t const& in );
-
-	// Number of samples delay from synthesis to samples read out
-	//int output_latency() const;
-
-	// Number of raw samples that can be mixed within frame of specified duration.
-	//long count_samples( int32_t duration ) const;
-
-	// Mixes in 'count' samples from 'buf_in'
-	//void mix_samples( int16_t const* buf_in, long count );
-
 
 	// Signals that sound has been added to buffer. Could be done automatically in
 	// Blip_Synth, but that would affect performance more, as you can arrange that
@@ -95,32 +76,25 @@ class Blip_Buffer
 	void remove_silence( long count );
 	uint32_t resampled_time( int32_t t ) const { return t * factor_ + offset_; }
 	uint32_t clock_rate_factor( long clock_rate ) const;
-	public:
-	Blip_Buffer();
-	~Blip_Buffer();
-
-	// Deprecated
-	const char * sample_rate( long r ) { return set_sample_rate( r ); }
-	const char * sample_rate( long r, int msec ) { return set_sample_rate( r, msec ); }
-	private:
-	// noncopyable
-	Blip_Buffer( const Blip_Buffer& );
-	Blip_Buffer& operator = ( const Blip_Buffer& );
-	public:
-	typedef int32_t buf_t_;
 	uint32_t factor_;
 	uint32_t offset_;
-	buf_t_* buffer_;
+	int32_t * buffer_;
 	int32_t buffer_size_;
 	int32_t reader_accum_;
 	int bass_shift_;
 	Blip_Buffer* modified_; // non-zero = true (more optimal than using bool, heh)
 	int32_t last_non_silence;
-	private:
+	// Current output sample rate
 	long sample_rate_;
+	// Number of source time units per second
 	long clock_rate_;
-	int bass_freq_;
+	// Length of buffer in milliseconds
 	int length_;
+	private:
+	// noncopyable
+	Blip_Buffer( const Blip_Buffer& );
+	Blip_Buffer& operator = ( const Blip_Buffer& );
+	int bass_freq_;
 };
 
 #ifdef HAVE_CONFIG_H
@@ -139,7 +113,6 @@ class Blip_Buffer
 #endif
 
 // Internal
-typedef uint32_t uint32_t;
 int const blip_widest_impulse_ = 16;
 int const blip_buffer_extra_ = blip_widest_impulse_ + 2;
 int const blip_res = 1 << BLIP_PHASE_BITS;
@@ -225,17 +198,13 @@ class blip_eq_t {
 		// Logarithmic rolloff to treble dB at half sampling rate. Negative values reduce
 		// treble, small positive values (0 to 5.0) increase treble.
 		blip_eq_t( double treble_db = 0 );
-
-		// See blip_buffer.txt
 		blip_eq_t( double treble, long rolloff_freq, long sample_rate, long cutoff_freq = 0 );
-
 	private:
 		double treble;
 		long rolloff_freq;
 		long sample_rate;
 		long cutoff_freq;
 		void generate( float* out, int count ) const;
-		friend class Blip_Synth_;
 };
 
 int const blip_sample_bits = 30;
@@ -250,7 +219,7 @@ int const blip_sample_bits = 30;
 
 // Begins reading from buffer. Name should be unique to the current block.
 #define BLIP_READER_BEGIN( name, blip_buffer ) \
-        const Blip_Buffer::buf_t_* BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
+        const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
 // Gets value to pass to BLIP_READER_NEXT()
@@ -278,7 +247,7 @@ int const blip_reader_default_bass = 9;
 // experimental
 #define BLIP_READER_ADJ_( name, offset ) (name##_reader_buf += offset)
 
-int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
+int32_t const blip_reader_idx_factor = sizeof (int32_t);
 
 #define BLIP_READER_NEXT_IDX_( name, bass, idx ) {\
         name##_reader_accum -= name##_reader_accum >> (bass);\
@@ -288,7 +257,7 @@ int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
 #define BLIP_READER_NEXT_RAW_IDX_( name, bass, idx ) {\
         name##_reader_accum -= name##_reader_accum >> (bass);\
         name##_reader_accum +=\
-                        *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx));\
+                        *(int32_t const*) ((char const*) name##_reader_buf + (idx));\
 }
 
 const int blip_low_quality  = blip_med_quality;
@@ -360,10 +329,7 @@ inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
 inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
 inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
 
-inline int  Blip_Buffer::length() const         { return length_; }
 inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
-inline long Blip_Buffer::sample_rate() const    { return sample_rate_; }
-inline long Blip_Buffer::clock_rate() const     { return clock_rate_; }
 inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
 int const blip_max_length = 0;
@@ -421,6 +387,13 @@ class Stereo_Buffer {
 		int const* channel_types_;
 };
 
+typedef struct pan_vol_t
+{
+	float vol; // 0.0 = silent, 0.5 = half volume, 1.0 = normal
+	float pan; // -1.0 = left, 0.0 = center, +1.0 = right
+};
+
+typedef blargg_long fixed_t;
 
 // See Simple_Effects_Buffer (below) for a simpler interface
 
@@ -430,12 +403,6 @@ class Effects_Buffer {
 		// approach if there are too few), and maximum echo delay can be reduced
 		Effects_Buffer( int max_bufs = 32, long echo_size = 24 * 1024L );
 		virtual ~Effects_Buffer();
-
-		struct pan_vol_t
-		{
-			float vol; // 0.0 = silent, 0.5 = half volume, 1.0 = normal
-			float pan; // -1.0 = left, 0.0 = center, +1.0 = right
-		};
 
 		// Global configuration
 		struct config_t
@@ -453,8 +420,10 @@ class Effects_Buffer {
 
 		// Per-channel configuration. Two or more channels with matching parameters are
 		// optimized to internally use the same buffer.
-		struct chan_config_t : pan_vol_t
+		struct chan_config_t
 		{
+			float vol; // 0.0 = silent, 0.5 = half volume, 1.0 = normal
+			float pan; // -1.0 = left, 0.0 = center, +1.0 = right
 			bool surround;  // if true, negates left volume to put sound in back
 			bool echo;      // false = channel doesn't have any echo
 		};
@@ -477,7 +446,6 @@ class Effects_Buffer {
 		long read_samples( int16_t*, long );
 		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
 		enum { stereo = 2 };
-		typedef blargg_long fixed_t;
 		void mixer_read_pairs( int16_t* out, int count );
 		bool immediate_removal_;
 		long sample_rate_;
@@ -504,13 +472,13 @@ class Effects_Buffer {
 
 		struct buf_t : Blip_Buffer
 		{
-		fixed_t vol [stereo];
-		bool echo;
+			fixed_t vol [stereo];
+			bool echo;
 
-		void* operator new ( size_t, void* p ) { return p; }
-		void operator delete ( void* ) { }
+			void* operator new ( size_t, void* p ) { return p; }
+			void operator delete ( void* ) { }
 
-		~buf_t() { }
+			~buf_t() { }
 		};
 		buf_t* bufs_buffer;
 		int bufs_size;
