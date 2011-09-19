@@ -176,7 +176,6 @@ void Blip_Synth_Fast_::volume_unit( double new_unit )
 
 long Blip_Buffer::read_samples( int16_t * out, long count)
 {
-	int const bass = BLIP_READER_BASS( *this );
 	BLIP_READER_BEGIN( reader, *this );
 	BLIP_READER_ADJ_( reader, count );
 	int16_t * BLIP_RESTRICT out_tmp = out + count;
@@ -185,7 +184,7 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	do
 	{
 		int32_t s = BLIP_READER_READ( reader );
-		BLIP_READER_NEXT_IDX_( reader, bass, offset );
+		BLIP_READER_NEXT_IDX_( reader, blip_reader_default_bass, offset );
 		BLIP_CLAMP( s, s );
 		out_tmp [offset] = (int16_t) s;
 	}
@@ -344,7 +343,6 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			--buf;
 			--outtemp;
 
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 			BLIP_READER_BEGIN( side,   **buf );
 			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
@@ -356,8 +354,8 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			{
 				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
 				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_READER_NEXT_IDX_( side,   blip_reader_default_bass, offset );
+				BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
@@ -370,7 +368,6 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			--buf;
 			--outtemp;
 
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 			BLIP_READER_BEGIN( side,   **buf );
 			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
@@ -382,8 +379,8 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			{
 				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
 				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_READER_NEXT_IDX_( side,   blip_reader_default_bass, offset );
+				BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
@@ -399,7 +396,6 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 	}
 	else
 	{
-		int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
@@ -409,7 +405,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		do
 		{
 			blargg_long s = BLIP_READER_READ( center );
-			BLIP_READER_NEXT_IDX_( center, bass, offset );
+			BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 			BLIP_CLAMP( s, s );
 
 			outtemp [offset] [0] = (int16_t) s;
@@ -439,7 +435,6 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			--buf;
 			--outtemp;
 
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 			BLIP_READER_BEGIN( side,   **buf );
 			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
@@ -451,8 +446,8 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			{
 				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
 				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_READER_NEXT_IDX_( side,   blip_reader_default_bass, offset );
+				BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
@@ -465,7 +460,6 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			--buf;
 			--outtemp;
 
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 			BLIP_READER_BEGIN( side,   **buf );
 			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
@@ -477,8 +471,8 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			{
 				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
 				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_READER_NEXT_IDX_( side,   blip_reader_default_bass, offset );
+				BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
@@ -494,7 +488,6 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	}
 	else
 	{
-		int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
@@ -504,7 +497,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		do
 		{
 			blargg_long s = BLIP_READER_READ( center );
-			BLIP_READER_NEXT_IDX_( center, bass, offset );
+			BLIP_READER_NEXT_IDX_( center, blip_reader_default_bass, offset );
 			BLIP_CLAMP( s, s );
 
 			outtemp [offset] [0] = (int16_t) s;
@@ -823,7 +816,7 @@ void Effects_Buffer::apply_config()
                         else
                         {
                                 // TODO: this is a mess, needs refinement
-                                dprintf( "Effects_Buffer ran out of buffers; using closest match\n" );
+                                //Effects_Buffer ran out of buffers; using closest match
                                 b = 0;
                                 fixed_t best_dist = TO_FIXED( 8 );
                                 for ( int h = buf_count; --h >= 0; )
@@ -1016,7 +1009,6 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
             #endif
                                 {
                                         stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
-                                        int const bass = BLIP_READER_BASS( *buf );
                                         BLIP_READER_BEGIN( in, *buf );
                                         BLIP_READER_ADJ_( in, mixer_samples_read );
                                         fixed_t const vol_0 = buf->vol [0];
@@ -1036,7 +1028,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                                 do
                                                 {
                                                         fixed_t s = BLIP_READER_READ( in );
-                                                        BLIP_READER_NEXT_IDX_( in, bass, offset );
+                                                        BLIP_READER_NEXT_IDX_( in, blip_reader_default_bass, offset );
 
                                                         out [offset] [0] += s * vol_0;
                                                         out [offset] [1] += s * vol_1;

@@ -227,7 +227,7 @@ int const blip_sample_bits = 30;
 
 // Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
 // code at the cost of having no bass control
-int const blip_reader_default_bass = 9;
+#define blip_reader_default_bass 9
 
 // Current sample
 #define BLIP_READER_READ( name )        (name##_reader_accum >> (blip_sample_bits - 16))
@@ -256,8 +256,7 @@ int32_t const blip_reader_idx_factor = sizeof (int32_t);
 
 #define BLIP_READER_NEXT_RAW_IDX_( name, bass, idx ) {\
         name##_reader_accum -= name##_reader_accum >> (bass);\
-        name##_reader_accum +=\
-                        *(int32_t const*) ((char const*) name##_reader_buf + (idx));\
+        name##_reader_accum += *(int32_t const*) ((char const*) name##_reader_buf + (idx));\
 }
 
 const int blip_low_quality  = blip_med_quality;
@@ -282,16 +281,9 @@ struct blip_buffer_state_t
         int32_t buf [blip_buffer_extra_];
 };
 
-// End of public interface
-
-
 template<int quality,int range>
 inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
-	// If this assertion fails, it means that an attempt was made to add a delta
-	// at a negative time or past the end of the buffer.
-	//assert( (int32_t) (time >> BLIP_BUFFER_ACCURACY) < blip_buf->buffer_size_ );
-
 	delta *= impl.delta_factor;
 	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
 	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (blip_res - 1));
