@@ -477,12 +477,12 @@ static void remake_stereo_buffer()
 	init_gba_pcm(&pcm[1].pcm_s);
 
 	// Stereo_Buffer
-	delete stereo_buffer;
-	stereo_buffer = 0;
-
-	stereo_buffer = new Stereo_Buffer; // TODO: handle out of memory
-	stereo_buffer->set_sample_rate( soundSampleRate ); // TODO: handle out of memory
-	stereo_buffer->clock_rate( gb_apu->clock_rate );
+	if ( !stereo_buffer)
+	{
+		stereo_buffer = new Stereo_Buffer; // TODO: handle out of memory
+		stereo_buffer->set_sample_rate( soundSampleRate ); // TODO: handle out of memory
+		stereo_buffer->clock_rate( gb_apu->clock_rate );
+	}
 
 	// PCM
 	pcm[0].which = 0;
