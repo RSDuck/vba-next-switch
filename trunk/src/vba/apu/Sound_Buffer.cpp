@@ -631,7 +631,7 @@ int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 
         for ( int i = bufs_size; --i >= 0; )
 	{
-        	int32_t retval = bufs_buffer[i].set_sample_rate(sample_rate_, length_);
+        	retval = bufs_buffer[i].set_sample_rate(sample_rate_, length_);
 		if (retval != 0)
 			return retval;
 	}
@@ -787,7 +787,7 @@ void Effects_Buffer::apply_config()
 	//Begin of assign buffers
 	// assign channels to buffers
 	int buf_count = 0;
-	for ( int i = 0; i < (int) chans.size_; i++ )
+	for ( i = 0; i < (int) chans.size_; i++ )
 	{
 		// put second two side channels at end to give priority to main channels
 		// in case closest matching is necessary

@@ -113,7 +113,7 @@ static Gba_Pcm_Fifo     pcm[2];
 static Gb_Apu*          gb_apu;
 static Stereo_Buffer*   stereo_buffer;
 
-static Blip_Synth<blip_med_quality,1> pcm_synth; // 32 kHz, 16 kHz, 8 kHz
+static Blip_Synth<blip_med_quality> pcm_synth; // 32 kHz, 16 kHz, 8 kHz
 
 void Gba_Pcm::init()
 {

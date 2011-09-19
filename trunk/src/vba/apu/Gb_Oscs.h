@@ -27,8 +27,8 @@ class Gb_Osc
 	int mode;			// mode_dmg, mode_cgb, mode_agb
 	int dac_off_amp;		// amplitude when DAC is off
 	int last_amp;			// current amplitude in Blip_Buffer
-	typedef Blip_Synth<blip_good_quality,1> Good_Synth;
-	typedef Blip_Synth<blip_med_quality ,1> Med_Synth;
+	typedef Blip_Synth<blip_good_quality> Good_Synth;
+	typedef Blip_Synth<blip_med_quality> Med_Synth;
 	Good_Synth const* good_synth;
 	Med_Synth  const* med_synth;
 

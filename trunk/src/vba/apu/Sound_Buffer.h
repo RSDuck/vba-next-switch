@@ -128,7 +128,7 @@ int const blip_sample_bits = 30;
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
 // amplitudes (max - min).
-template<int quality,int range>
+template<int quality>
 class Blip_Synth {
 	public:
 		Blip_Synth() { impl_buf = 0; last_amp = 0; delta_factor = 0; }
@@ -136,7 +136,7 @@ class Blip_Synth {
 		int last_amp;
 		int delta_factor;
 		// Sets overall volume of waveform
-		void volume(double v) { volume_unit( v * (1.0 / (range < 0 ? -range : range))); }
+		void volume(double v) { volume_unit( v * 1.0); }
 		void volume_unit(double new_unit) { delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5); };
 
 		// Configures low-pass filter (see blip_buffer.txt)
@@ -246,8 +246,8 @@ struct blip_buffer_state_t
         int32_t buf [blip_buffer_extra_];
 };
 
-template<int quality,int range>
-inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
+template<int quality>
+inline void Blip_Synth<quality>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
 	delta *= delta_factor;
 	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
@@ -268,14 +268,6 @@ inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delt
 
 #undef BLIP_FWD
 #undef BLIP_REV
-
-template<int quality,int range>
-inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
-{
-	int delta = amp - last_amp;
-	last_amp = amp;
-	offset_resampled( t * impl_buf->factor_ + impl_buf->offset_, delta, impl_buf );
-}
 
 inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
 inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
