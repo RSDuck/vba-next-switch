@@ -3,30 +3,8 @@
 
 #include "Types.h"
 
-// swaps a 16-bit value
-#if 0
-static inline u16 swap16(u16 v)
-{
-  return (v<<8)|(v>>8);
-}
-#endif
-
-// swaps a 32-bit value
-#if 0
-static inline u32 swap32(u32 v)
-{
-  return (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
-}
-#endif
-
-// if a >= 0 return x else y
-static __inline int isel( int a, int x, int y )
-{
-	int mask = (a >> 31); // arithmetic shift right, splat out the sign bit
-	// mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.
-	return (x & (~mask)) + (y & mask);
-}
-
+#define isel(a, x, y) \
+	(x & (~(a >> 31))) + (y & (a >> 31));
 
 #ifdef WORDS_BIGENDIAN
 #if defined(__GNUC__) && defined(__ppc__)

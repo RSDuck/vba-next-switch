@@ -1,8 +1,8 @@
 #ifndef RTC_H
 #define RTC_H
 
-u16 rtcRead(u32 address);
-bool rtcWrite(u32 address, u16 value);
+uint16_t rtcRead(uint32_t address);
+bool rtcWrite(uint32_t address, uint16_t value);
 void rtcEnable(bool);
 bool rtcIsEnabled();
 void rtcReset();

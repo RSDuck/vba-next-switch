@@ -123,9 +123,9 @@ class blip_eq_t;
 #endif
 
 // Quality level, better = slower. In general, use blip_good_quality.
-const int blip_med_quality  = 8;
-const int blip_good_quality = 12;
-const int blip_high_quality = 16;
+#define blip_med_quality	8
+#define blip_good_quality	12
+#define blip_high_quality	16
 
 #define blip_sample_bits 30
 
@@ -277,7 +277,7 @@ inline void Blip_Synth<quality>::offset_resampled( uint32_t time, int delta, Bli
 inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
 inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
-int const blip_max_length = 0;
+#define blip_max_length	0
 
 // 1/4th of a second
 #define blip_default_length 250
