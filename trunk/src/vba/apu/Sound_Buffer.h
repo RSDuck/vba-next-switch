@@ -20,7 +20,9 @@ class Blip_Buffer
 	public:
 	Blip_Buffer();
 	~Blip_Buffer();
+	#ifndef FASTER_SOUND_HACK_NON_SILENCE
 	uint32_t non_silent() const;
+	#endif
 
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
 	// to 1/4 second) and clears buffer. If there isn't enough memory, leaves buffer
@@ -71,7 +73,6 @@ class Blip_Buffer
 	void set_modified() { modified_ = this; }
 
 	// not documented yet
-	uint32_t unsettled() const;
 	Blip_Buffer* clear_modified() { Blip_Buffer* b = modified_; modified_ = 0; return b; }
 	void remove_silence( long count );
 	uint32_t resampled_time( int32_t t ) const { return t * factor_ + offset_; }
@@ -113,17 +114,20 @@ class Blip_Buffer
 #endif
 
 // Internal
-int const blip_widest_impulse_ = 16;
+#define blip_widest_impulse_ 16
 int const blip_buffer_extra_ = blip_widest_impulse_ + 2;
 int const blip_res = 1 << BLIP_PHASE_BITS;
+
+#ifdef USE_SOUND_FILTERING
 class blip_eq_t;
+#endif
 
 // Quality level, better = slower. In general, use blip_good_quality.
 const int blip_med_quality  = 8;
 const int blip_good_quality = 12;
 const int blip_high_quality = 16;
 
-int const blip_sample_bits = 30;
+#define blip_sample_bits 30
 
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
@@ -135,13 +139,9 @@ class Blip_Synth {
 		Blip_Buffer* impl_buf;
 		int last_amp;
 		int delta_factor;
+
 		// Sets overall volume of waveform
-		void volume(double v) { volume_unit( v * 1.0); }
 		void volume_unit(double new_unit) { delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5); };
-
-		// Configures low-pass filter (see blip_buffer.txt)
-		//void treble_eq( blip_eq_t const& eq )       { }
-
 		void output( Blip_Buffer* b )               { impl_buf = b; last_amp = 0; }
 
 		// Updates amplitude of waveform at given time. Using this requires a separate
@@ -158,6 +158,7 @@ class Blip_Synth {
 		void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
 };
 
+#ifdef USE_SOUND_FILTERING
 // Low-pass equalization parameters
 class blip_eq_t {
 	public:
@@ -173,6 +174,9 @@ class blip_eq_t {
 		void generate( float* out, int count ) const;
 };
 
+inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
+inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
+#endif
 
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
 #define BLIP_RESTRICT __restrict
@@ -269,14 +273,14 @@ inline void Blip_Synth<quality>::offset_resampled( uint32_t time, int delta, Bli
 #undef BLIP_FWD
 #undef BLIP_REV
 
-inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
-inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
 
 inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
 inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
 int const blip_max_length = 0;
-int const blip_default_length = 250; // 1/4 second
+
+// 1/4th of a second
+#define blip_default_length 250
 
 #define	wave_type	0x100
 #define noise_type	0x200
@@ -296,7 +300,6 @@ class Stereo_Buffer {
 		~Stereo_Buffer();
 		int32_t set_sample_rate( long, int msec = blip_default_length );
 		void clock_rate( long );
-		void bass_freq( int );
 		void clear();
 
 		// Gets indexed channel, from 0 to channel count - 1
@@ -307,8 +310,7 @@ class Stereo_Buffer {
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
 		enum { bufs_size = 3 };
-		typedef Blip_Buffer buf_t;
-		buf_t bufs_buffer [bufs_size];
+		Blip_Buffer bufs_buffer [bufs_size];
 		bool immediate_removal_;
 		long sample_rate_;
 	private:
@@ -335,8 +337,6 @@ typedef struct pan_vol_t
 	float vol; // 0.0 = silent, 0.5 = half volume, 1.0 = normal
 	float pan; // -1.0 = left, 0.0 = center, +1.0 = right
 };
-
-typedef blargg_long fixed_t;
 
 // See Simple_Effects_Buffer (below) for a simpler interface
 
@@ -407,7 +407,7 @@ class Effects_Buffer {
 
 		struct chan_t
 		{
-			fixed_t vol [stereo];
+			blargg_long vol [stereo];
 			chan_config_t cfg;
 			channel_t channel;
 		};
@@ -415,7 +415,7 @@ class Effects_Buffer {
 
 		struct buf_t : Blip_Buffer
 		{
-			fixed_t vol [stereo];
+			blargg_long vol [stereo];
 			bool echo;
 
 			void* operator new ( size_t, void* p ) { return p; }
@@ -431,12 +431,12 @@ class Effects_Buffer {
 
 		struct {
 			long delay [stereo];
-			fixed_t treble;
-			fixed_t feedback;
-			fixed_t low_pass [stereo];
+			blargg_long treble;
+			blargg_long feedback;
+			blargg_long low_pass [stereo];
 		} s_struct;
 
-		blargg_vector<fixed_t> echo;
+		blargg_vector<blargg_long> echo;
 		blargg_long echo_pos;
 
 		bool no_effects;

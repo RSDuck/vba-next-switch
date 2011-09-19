@@ -26,14 +26,6 @@ int const power_mask = 0x80;
 
 #define osc_count 4
 
-#if 0
-void Gb_Apu::treble_eq( blip_eq_t const& eq )
-{
-	//good_synth.treble_eq( eq );
-	//med_synth .treble_eq( eq );
-}
-#endif
-
 inline int Gb_Apu::calc_output( int osc ) const
 {
 	int bits = regs [stereo_reg - start_addr] >> osc;
@@ -58,8 +50,8 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 void Gb_Apu::synth_volume( int iv )
 {
 	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv;
-	good_synth.volume( v );
-	med_synth .volume( v );
+	good_synth.volume_unit( v * 1.0 );
+	med_synth .volume_unit( v * 1.0 );
 }
 
 void Gb_Apu::apply_volume()

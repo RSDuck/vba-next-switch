@@ -521,7 +521,7 @@ static void remake_stereo_buffer()
 
 	gb_apu->volume(soundVolume_ * apu_vols [ioMem [SGCNT0_H] & 3] );
 
-	pcm_synth.volume( 0.66 / 256 * soundVolume_);
+	pcm_synth.volume_unit( (0.66 / 256 * soundVolume_) * 1.0);
 	//End of Apply Volume - False
 }
 
