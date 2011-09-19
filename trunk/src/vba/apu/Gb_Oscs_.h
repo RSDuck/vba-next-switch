@@ -37,7 +37,7 @@ inline void Gb_Osc::update_amp( int32_t time, int new_amp )
         if ( delta )
         {
                 last_amp = new_amp;
-                med_synth->offset( time, delta, output );
+                med_synth->offset_resampled( time * output->factor_ + output->offset_, delta, output );
         }
 }
 
@@ -291,8 +291,7 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if ( !dac_enabled() )
 					enabled = false;
-				else if ( mode == mode_dmg && was_enabled &&
-						(unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
+				else if ( mode == mode_dmg && was_enabled && (unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
 					corrupt_wave();
 
 				phase = 0;
@@ -391,7 +390,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 ph = (ph + 1) & 7;
                                 if ( ph == 0 || ph == duty )
                                 {
-                                        good_synth->offset_inline( time, delta, out );
+                                        good_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
                                         delta = -delta;
                                 }
                                 time += per;
@@ -561,7 +560,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                                 {
                                         bits |= ~mask;
                                         delta = -delta;
-                                        med_synth->offset_inline( time, delta, out );
+                                        med_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
                                 }
                                 time += per;
                         }
@@ -654,7 +653,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 if ( delta )
                                 {
                                         lamp = amp;
-                                        med_synth->offset_inline( time, delta, out );
+                                        med_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
                                 }
                                 time += per;
                         }

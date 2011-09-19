@@ -141,7 +141,7 @@ void Gba_Pcm::apply_control(int idx)
 		if ( output )
 		{
 			output->set_modified();
-			pcm_synth.offset( SOUND_CLOCK_TICKS - soundTicks, -last_amp, output );
+			pcm_synth.offset_resampled((SOUND_CLOCK_TICKS - soundTicks) * output->factor_ + output->offset_, -last_amp, output );
 		}
 		last_amp = 0;
 		output = out;
@@ -181,7 +181,7 @@ void Gba_Pcm::update(int dac)
 		filter = filters [idx];
 #endif
 
-		pcm_synth.offset( time, delta, output );
+		pcm_synth.offset_resampled( time * output->factor_ + output->offset_, delta, output );
 	}
 	last_time = time;
 }

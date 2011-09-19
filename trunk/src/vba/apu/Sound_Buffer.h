@@ -118,22 +118,12 @@ int const blip_buffer_extra_ = blip_widest_impulse_ + 2;
 int const blip_res = 1 << BLIP_PHASE_BITS;
 class blip_eq_t;
 
-class Blip_Synth_Fast_
-{
-	public:
-	Blip_Buffer* buf;
-	int last_amp;
-	int delta_factor;
-
-	void volume_unit( double );
-	Blip_Synth_Fast_();
-	void treble_eq( blip_eq_t const& ) { }
-};
-
 // Quality level, better = slower. In general, use blip_good_quality.
 const int blip_med_quality  = 8;
 const int blip_good_quality = 12;
 const int blip_high_quality = 16;
+
+int const blip_sample_bits = 30;
 
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
@@ -141,13 +131,18 @@ const int blip_high_quality = 16;
 template<int quality,int range>
 class Blip_Synth {
 	public:
+		Blip_Synth() { impl_buf = 0; last_amp = 0; delta_factor = 0; }
+		Blip_Buffer* impl_buf;
+		int last_amp;
+		int delta_factor;
 		// Sets overall volume of waveform
-		void volume( double v ) { impl.volume_unit( v * (1.0 / (range < 0 ? -range : range)) ); }
+		void volume(double v) { volume_unit( v * (1.0 / (range < 0 ? -range : range))); }
+		void volume_unit(double new_unit) { delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5); };
 
 		// Configures low-pass filter (see blip_buffer.txt)
-		void treble_eq( blip_eq_t const& eq )       { impl.treble_eq( eq ); }
+		//void treble_eq( blip_eq_t const& eq )       { }
 
-		void output( Blip_Buffer* b )               { impl.buf = b; impl.last_amp = 0; }
+		void output( Blip_Buffer* b )               { impl_buf = b; last_amp = 0; }
 
 		// Updates amplitude of waveform at given time. Using this requires a separate
 		// Blip_Synth for each waveform.
@@ -158,21 +153,9 @@ class Blip_Synth {
 		// Adds an amplitude transition of specified delta, optionally into specified buffer
 		// rather than the one set with output(). Delta can be positive or negative.
 		// The actual change in amplitude is delta * (volume / range)
-		void offset( int32_t, int delta, Blip_Buffer* ) const;
-		void offset( int32_t t, int delta ) const { offset( t, delta, impl.buf ); }
 
 		// Works directly in terms of fractional output samples. Contact author for more info.
 		void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
-
-		// Same as offset(), except code is inlined for higher performance
-		void offset_inline( int32_t t, int delta, Blip_Buffer* buf ) const {
-			offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
-		}
-		void offset_inline( int32_t t, int delta ) const {
-			offset_resampled( t * impl.buf->factor_ + impl.buf->offset_, delta, impl.buf );
-		}
-	private:
-		Blip_Synth_Fast_ impl;
 };
 
 // Low-pass equalization parameters
@@ -190,7 +173,6 @@ class blip_eq_t {
 		void generate( float* out, int count ) const;
 };
 
-int const blip_sample_bits = 30;
 
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
 #define BLIP_RESTRICT __restrict
@@ -267,7 +249,7 @@ struct blip_buffer_state_t
 template<int quality,int range>
 inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
-	delta *= impl.delta_factor;
+	delta *= delta_factor;
 	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
 	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (blip_res - 1));
 
@@ -288,17 +270,11 @@ inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delt
 #undef BLIP_REV
 
 template<int quality,int range>
-inline void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer* buf ) const
-{
-        offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
-}
-
-template<int quality,int range>
 inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
 {
-	int delta = amp - impl.last_amp;
-	impl.last_amp = amp;
-	offset_resampled( t * impl.buf->factor_ + impl.buf->offset_, delta, impl.buf );
+	int delta = amp - last_amp;
+	last_amp = amp;
+	offset_resampled( t * impl_buf->factor_ + impl_buf->offset_, delta, impl_buf );
 }
 
 inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }

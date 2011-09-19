@@ -65,7 +65,7 @@ class Gb_Apu
 	void reduce_clicks( bool reduce = true );
 
 	// Sets treble equalization.
-	void treble_eq( blip_eq_t const& );
+	//void treble_eq( blip_eq_t const& );
 
 	// Treble and bass values for various hardware.
 	enum {

@@ -26,11 +26,13 @@ int const power_mask = 0x80;
 
 #define osc_count 4
 
+#if 0
 void Gb_Apu::treble_eq( blip_eq_t const& eq )
 {
-	good_synth.treble_eq( eq );
-	med_synth .treble_eq( eq );
+	//good_synth.treble_eq( eq );
+	//med_synth .treble_eq( eq );
 }
+#endif
 
 inline int Gb_Apu::calc_output( int osc ) const
 {
@@ -246,7 +248,7 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 		if ( o.output )
 		{
 			o.output->set_modified();
-			med_synth.offset( last_time, delta, o.output );
+			med_synth.offset_resampled( last_time * o.output->factor_ + o.output->offset_, delta, o.output );
 		}
 	}
 }
