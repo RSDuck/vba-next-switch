@@ -78,10 +78,11 @@ void Blip_Buffer::clear( int entire_buffer )
         }
 }
 
-const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
+int32_t Blip_Buffer::set_sample_rate(long new_rate, int msec)
 {
+	// Internal (tried to resize Silent_Blip_Buffer)
         if ( buffer_size_ == silent_buf_size )
-                return "Internal (tried to resize Silent_Blip_Buffer)";
+                return -1;
 
         // start with maximum length that resampled time can represent
         long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - blip_buffer_extra_ - 64;
@@ -94,9 +95,9 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 
         if ( buffer_size_ != new_size )
         {
-                void* p = realloc( buffer_, (new_size + blip_buffer_extra_) * sizeof *buffer_ );
+                void* p = realloc( buffer_, (new_size + blip_buffer_extra_) * sizeof(*buffer_));
                 if ( !p )
-                        return "Out of memory";
+                        return -1;	// Out of memory
                 buffer_ = (int32_t *) p;
         }
 
@@ -156,8 +157,8 @@ void Blip_Buffer::remove_samples( long count )
 
 	// copy remaining samples to beginning and clear old samples
 	long remain = samples_avail() + blip_buffer_extra_;
-	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
-	__builtin_memset( buffer_ + remain, 0, count * sizeof *buffer_ );
+	memmove( buffer_, buffer_ + count, remain * sizeof(*buffer_));
+	__builtin_memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
 
 // Blip_Synth_
@@ -208,7 +209,7 @@ void Blip_Buffer::save_state( blip_buffer_state_t* out )
 {
         out->offset_       = offset_;
         out->reader_accum_ = reader_accum_;
-        __builtin_memcpy( out->buf, &buffer_ [offset_ >> BLIP_BUFFER_ACCURACY], sizeof out->buf );
+        __builtin_memcpy( out->buf, &buffer_ [offset_ >> BLIP_BUFFER_ACCURACY], sizeof(out->buf));
 }
 
 void Blip_Buffer::load_state( blip_buffer_state_t const& in )
@@ -217,7 +218,7 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
         offset_       = in.offset_;
         reader_accum_ = in.reader_accum_;
-        __builtin_memcpy( buffer_, in.buf, sizeof in.buf );
+        __builtin_memcpy( buffer_, in.buf, sizeof(in.buf));
 }
 
 
@@ -250,14 +251,18 @@ Stereo_Buffer::Stereo_Buffer()
 
 Stereo_Buffer::~Stereo_Buffer() { }
 
-const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
+int32_t Stereo_Buffer::set_sample_rate( long rate, int msec )
 {
         mixer_samples_read = 0;
         for ( int i = bufs_size; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
+	{
+		int32_t retval = bufs_buffer [i].set_sample_rate(rate, msec);
+		if(retval != 0)
+			return retval;
+	}
 	sample_rate_ = bufs_buffer[0].sample_rate_;
 	length_ = bufs_buffer[0].length_;
-        return 0; 
+        return 0; 	// success
 }
 
 void Stereo_Buffer::clock_rate( long rate )
@@ -548,17 +553,17 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
         config_.side_chans [0].vol = 1.0f;
         config_.side_chans [1].vol = 1.0f;
 
-        __builtin_memset( &s, 0, sizeof s );
+        __builtin_memset( &s_struct, 0, sizeof(s_struct));
         echo_pos       = 0;
-        s.low_pass [0] = 0;
-        s.low_pass [1] = 0;
+        s_struct.low_pass [0] = 0;
+        s_struct.low_pass [1] = 0;
         mixer_samples_read = 0;
 
         for ( int i = bufs_size; --i >= 0; )
                 bufs_buffer [i].clear();
 
-        if ( echo.size() )
-                __builtin_memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
+        if ( echo.size_ )
+                __builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 }
 
 Effects_Buffer::~Effects_Buffer()
@@ -575,24 +580,28 @@ Effects_Buffer::~Effects_Buffer()
 }
 
 // avoid using new []
-const char * Effects_Buffer::new_bufs( int size )
+int32_t Effects_Buffer::new_bufs( int size )
 {
-        bufs_buffer = (buf_t*) __builtin_malloc( size * sizeof *bufs_buffer );
+        bufs_buffer = (buf_t*) __builtin_malloc( size * sizeof(*bufs_buffer));
         CHECK_ALLOC( bufs_buffer );
         for ( int i = 0; i < size; i++ )
                 new (bufs_buffer + i) buf_t;
         bufs_size = size;
-        return 0;
+        return 0;	// success
 }
 
-const char * Effects_Buffer::set_sample_rate( long rate, int msec )
+int32_t Effects_Buffer::set_sample_rate( long rate, int msec )
 {
         // extra to allow farther past-the-end pointers
         mixer_samples_read = 0;
-        RETURN_ERR( echo.resize( echo_size + stereo ) );
+
+        int32_t retval = echo.resize(echo_size + stereo);
+	if(retval != 0)
+		return retval;
+
 	sample_rate_ = rate;
 	length_ = msec;
-	return 0;
+	return 0;	// success
 }
 
 void Effects_Buffer::clock_rate( long rate )
@@ -609,7 +618,7 @@ void Effects_Buffer::bass_freq( int freq )
                 bufs_buffer [i].bass_freq( bass_freq_ );
 }
 
-const char * Effects_Buffer::set_channel_count( int count, int const* types )
+int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 {
 	channel_count_ = count;
 	channel_types_ = types;
@@ -626,14 +635,22 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
 
         mixer_samples_read = 0;
 
-        RETURN_ERR( chans.resize( count + extra_chans ) );
+        int32_t retval = chans.resize(count + extra_chans);
+	if (retval != 0)
+		return retval;
 
-        RETURN_ERR( new_bufs( min( bufs_max, count + extra_chans ) ) );
+        retval = new_bufs(min(bufs_max, count + extra_chans));
+	if (retval != 0)
+		return retval;
 
         for ( int i = bufs_size; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( sample_rate_, length_ ));
+	{
+        	int32_t retval = bufs_buffer[i].set_sample_rate(sample_rate_, length_);
+		if (retval != 0)
+			return retval;
+	}
 
-        for ( int i = chans.size(); --i >= 0; )
+        for ( int i = chans.size_; --i >= 0; )
         {
                 chan_t& ch = chans [i];
                 ch.cfg.vol      = 1.0f;
@@ -649,14 +666,14 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
         bass_freq( bass_freq_ );
         apply_config();
         echo_pos       = 0;
-        s.low_pass [0] = 0;
-        s.low_pass [1] = 0;
+        s_struct.low_pass [0] = 0;
+        s_struct.low_pass [1] = 0;
         mixer_samples_read = 0;
 
         for ( int i = bufs_size; --i >= 0; )
                 bufs_buffer [i].clear();
-        if ( echo.size() )
-                __builtin_memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
+        if ( echo.size_ )
+                __builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 
         return 0;
 }
@@ -737,182 +754,179 @@ void Simple_Effects_Buffer::apply_config()
 
 void Effects_Buffer::apply_config()
 {
-        int i;
+	int i;
 
-        if ( !bufs_size )
-                return;
+	if ( !bufs_size )
+		return;
 
-        s.treble = TO_FIXED( config_.treble );
+	s_struct.treble = TO_FIXED( config_.treble );
 
-        bool echo_dirty = false;
+	bool echo_dirty = false;
 
-        fixed_t old_feedback = s.feedback;
-        s.feedback = TO_FIXED( config_.feedback );
-        if ( !old_feedback && s.feedback )
-                echo_dirty = true;
+	fixed_t old_feedback = s_struct.feedback;
+	s_struct.feedback = TO_FIXED( config_.feedback );
+	if ( !old_feedback && s_struct.feedback )
+		echo_dirty = true;
 
-        // delays
-        for ( i = stereo; --i >= 0; )
-        {
-                long delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
-                delay = max( delay, long (max_read * stereo) );
-                delay = min( delay, long (echo_size - max_read * stereo) );
-                if ( s.delay [i] != delay )
-                {
-                        s.delay [i] = delay;
-                        echo_dirty = true;
-                }
-        }
+	// delays
+	for ( i = stereo; --i >= 0; )
+	{
+		long delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
+		delay = max( delay, long (max_read * stereo) );
+		delay = min( delay, long (echo_size - max_read * stereo) );
+		if ( s_struct.delay [i] != delay )
+		{
+			s_struct.delay [i] = delay;
+			echo_dirty = true;
+		}
+	}
 
-        // side channels
-        for ( i = 2; --i >= 0; )
-        {
-                chans [i+2].cfg.vol = chans [i].cfg.vol = config_.side_chans [i].vol * 0.5f;
-                chans [i+2].cfg.pan = chans [i].cfg.pan = config_.side_chans [i].pan;
-        }
+	// side channels
+	for ( i = 2; --i >= 0; )
+	{
+		chans [i+2].cfg.vol = chans [i].cfg.vol = config_.side_chans [i].vol * 0.5f;
+		chans [i+2].cfg.pan = chans [i].cfg.pan = config_.side_chans [i].pan;
+	}
 
-        // convert volumes
-        for ( i = chans.size(); --i >= 0; )
-        {
-                chan_t& ch = chans [i];
-                ch.vol [0] = TO_FIXED( ch.cfg.vol - ch.cfg.vol * ch.cfg.pan );
-                ch.vol [1] = TO_FIXED( ch.cfg.vol + ch.cfg.vol * ch.cfg.pan );
-                if ( ch.cfg.surround )
-                        ch.vol [0] = -ch.vol [0];
-        }
+	// convert volumes
+	for ( i = chans.size_; --i >= 0; )
+	{
+		chan_t& ch = chans [i];
+		ch.vol [0] = TO_FIXED( ch.cfg.vol - ch.cfg.vol * ch.cfg.pan );
+		ch.vol [1] = TO_FIXED( ch.cfg.vol + ch.cfg.vol * ch.cfg.pan );
+		if ( ch.cfg.surround )
+			ch.vol [0] = -ch.vol [0];
+	}
 
-   	//Begin of assign buffers
-        // assign channels to buffers
-        int buf_count = 0;
-        for ( int i = 0; i < (int) chans.size(); i++ )
-        {
-                // put second two side channels at end to give priority to main channels
-                // in case closest matching is necessary
-                int x = i;
-                if ( i > 1 )
-                        x += 2;
-                if ( x >= (int) chans.size() )
-                        x -= (chans.size() - 2);
-                chan_t& ch = chans [x];
+	//Begin of assign buffers
+	// assign channels to buffers
+	int buf_count = 0;
+	for ( int i = 0; i < (int) chans.size_; i++ )
+	{
+		// put second two side channels at end to give priority to main channels
+		// in case closest matching is necessary
+		int x = i;
+		if ( i > 1 )
+			x += 2;
+		if ( x >= (int) chans.size_)
+			x -= (chans.size_ - 2);
+		chan_t& ch = chans [x];
 
-                int b = 0;
-                for ( ; b < buf_count; b++ )
-                {
-                        if (    ch.vol [0] == bufs_buffer [b].vol [0] &&
-                                        ch.vol [1] == bufs_buffer [b].vol [1] &&
-                                        (ch.cfg.echo == bufs_buffer [b].echo || !s.feedback) )
-                                break;
-                }
+		int b = 0;
+		for ( ; b < buf_count; b++ )
+		{
+			if (    ch.vol [0] == bufs_buffer [b].vol [0] &&
+					ch.vol [1] == bufs_buffer [b].vol [1] &&
+					(ch.cfg.echo == bufs_buffer [b].echo || !s_struct.feedback) )
+				break;
+		}
 
-                if ( b >= buf_count )
-                {
-                        if ( buf_count < bufs_max )
-                        {
-                                bufs_buffer [b].vol [0] = ch.vol [0];
-                                bufs_buffer [b].vol [1] = ch.vol [1];
-                                bufs_buffer [b].echo    = ch.cfg.echo;
-                                buf_count++;
-                        }
-                        else
-                        {
-                                // TODO: this is a mess, needs refinement
-                                //Effects_Buffer ran out of buffers; using closest match
-                                b = 0;
-                                fixed_t best_dist = TO_FIXED( 8 );
-                                for ( int h = buf_count; --h >= 0; )
-                                {
-                                        #define CALC_LEVELS( vols, sum, diff, surround ) \
-                                        fixed_t sum, diff;\
-                                        bool surround = false;\
-                                        {\
-                                                fixed_t vol_0 = vols [0];\
-                                                if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
-                                                fixed_t vol_1 = vols [1];\
-                                                if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
-                                                sum  = vol_0 + vol_1;\
-                                                diff = vol_0 - vol_1;\
-                                        }
-                                        CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
-                                        CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
+		if ( b >= buf_count )
+		{
+			if ( buf_count < bufs_max )
+			{
+				bufs_buffer [b].vol [0] = ch.vol [0];
+				bufs_buffer [b].vol [1] = ch.vol [1];
+				bufs_buffer [b].echo    = ch.cfg.echo;
+				buf_count++;
+			}
+			else
+			{
+				// TODO: this is a mess, needs refinement
+				//Effects_Buffer ran out of buffers; using closest match
+				b = 0;
+				fixed_t best_dist = TO_FIXED( 8 );
+				for ( int h = buf_count; --h >= 0; )
+				{
+#define CALC_LEVELS( vols, sum, diff, surround ) \
+					fixed_t sum, diff;\
+					bool surround = false;\
+					{\
+						fixed_t vol_0 = vols [0];\
+						if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
+						fixed_t vol_1 = vols [1];\
+						if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
+						sum  = vol_0 + vol_1;\
+						diff = vol_0 - vol_1;\
+					}
+					CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
+					CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
 
-                                        fixed_t dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
+					fixed_t dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
 
-                                        if ( ch_surround != buf_surround )
-                                                dist += TO_FIXED( 1 ) / 2;
+					if ( ch_surround != buf_surround )
+						dist += TO_FIXED( 1 ) / 2;
 
-                                        if ( s.feedback && ch.cfg.echo != bufs_buffer [h].echo )
-                                                dist += TO_FIXED( 1 ) / 2;
+					if ( s_struct.feedback && ch.cfg.echo != bufs_buffer [h].echo )
+						dist += TO_FIXED( 1 ) / 2;
 
-                                        if ( best_dist > dist )
-                                        {
-                                                best_dist = dist;
-                                                b = h;
-                                        }
-                                }
-                        }
-                }
+					if ( best_dist > dist )
+					{
+						best_dist = dist;
+						b = h;
+					}
+				}
+			}
+		}
 
-                //dprintf( "ch %d->buf %d\n", x, b );
-                ch.channel.center = &bufs_buffer [b];
-        }
-   	//End of assign buffers
+		//dprintf( "ch %d->buf %d\n", x, b );
+		ch.channel.center = &bufs_buffer [b];
+	}
+	//End of assign buffers
 
-        // set side channels
-        for ( i = chans.size(); --i >= 0; )
-        {
-                chan_t& ch = chans [i];
-                ch.channel.left  = chans [ch.cfg.echo*2  ].channel.center;
-                ch.channel.right = chans [ch.cfg.echo*2+1].channel.center;
-        }
+	// set side channels
+	for ( i = chans.size_; --i >= 0; )
+	{
+		chan_t& ch = chans [i];
+		ch.channel.left  = chans [ch.cfg.echo*2  ].channel.center;
+		ch.channel.right = chans [ch.cfg.echo*2+1].channel.center;
+	}
 
-        bool old_echo = !no_echo && !no_effects;
+	bool old_echo = !no_echo && !no_effects;
 
-        // determine whether effects and echo are needed at all
-        no_effects = true;
-        no_echo    = true;
-        for ( i = chans.size(); --i >= extra_chans; )
-        {
-                chan_t& ch = chans [i];
-                if ( ch.cfg.echo && s.feedback )
-                        no_echo = false;
+	// determine whether effects and echo are needed at all
+	no_effects = true;
+	no_echo    = true;
+	for ( i = chans.size_; --i >= extra_chans; )
+	{
+		chan_t& ch = chans [i];
+		if ( ch.cfg.echo && s_struct.feedback )
+			no_echo = false;
 
-                if ( ch.vol [0] != TO_FIXED( 1 ) || ch.vol [1] != TO_FIXED( 1 ) )
-                        no_effects = false;
-        }
-        if ( !no_echo )
-                no_effects = false;
+		if ( ch.vol [0] != TO_FIXED( 1 ) || ch.vol [1] != TO_FIXED( 1 ) )
+			no_effects = false;
+	}
+	if (!no_echo)
+		no_effects = false;
 
-        if (    chans [0].vol [0] != TO_FIXED( 1 ) ||
-                        chans [0].vol [1] != TO_FIXED( 0 ) ||
-                        chans [1].vol [0] != TO_FIXED( 0 ) ||
-                        chans [1].vol [1] != TO_FIXED( 1 ) )
-                no_effects = false;
+	if (chans [0].vol [0] != TO_FIXED( 1 ) || chans [0].vol [1] != TO_FIXED( 0 ) || chans [1].vol [0] != TO_FIXED( 0 ) || chans [1].vol [1] != TO_FIXED( 1 ) )
+		no_effects = false;
 
-        if ( !config_.enabled )
-                no_effects = true;
+	if (!config_.enabled)
+		no_effects = true;
 
-        if ( no_effects )
-        {
-                for ( i = chans.size(); --i >= 0; )
-                {
-                        chan_t& ch = chans [i];
-                        ch.channel.center = &bufs_buffer [2];
-                        ch.channel.left   = &bufs_buffer [0];
-                        ch.channel.right  = &bufs_buffer [1];
-                }
-        }
+	if (no_effects)
+	{
+		for ( i = chans.size_; --i >= 0; )
+		{
+			chan_t& ch = chans [i];
+			ch.channel.center = &bufs_buffer [2];
+			ch.channel.left   = &bufs_buffer [0];
+			ch.channel.right  = &bufs_buffer [1];
+		}
+	}
 
-        mixer_bufs [0] = &bufs_buffer [0];
-        mixer_bufs [1] = &bufs_buffer [1];
-        mixer_bufs [2] = &bufs_buffer [2];
+	mixer_bufs [0] = &bufs_buffer [0];
+	mixer_bufs [1] = &bufs_buffer [1];
+	mixer_bufs [2] = &bufs_buffer [2];
 
-        if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
-   {
-      if ( echo.size() )
-         __builtin_memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
-   }
+	if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
+	{
+		if (echo.size_)
+			__builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
+	}
 
-        channels_changed();
+	channels_changed();
 }
 
 // Mixing
@@ -948,7 +962,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
                                 {
                                         // optimization: clear echo here to keep mix_effects() a leaf function
                                         echo_pos = 0;
-                                        __builtin_memset( echo.begin(), 0, count * stereo * sizeof echo [0] );
+                                        __builtin_memset( echo.begin_, 0, count * stereo * sizeof(echo [0]));
                                 }
 
                                 mix_effects( out, count );
@@ -1035,7 +1049,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                                 }
                                                 while ( ++offset );
 
-                                                out = (stereo_fixed_t*) echo.begin();
+                                                out = (stereo_fixed_t*) echo.begin_;
                                                 count = remain;
                                         }
                                         while ( remain );
@@ -1050,17 +1064,17 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                 // add echo
                 if ( echo_phase && !no_echo )
                 {
-                        fixed_t const feedback = s.feedback;
-                        fixed_t const treble   = s.treble;
+                        fixed_t const feedback = s_struct.feedback;
+                        fixed_t const treble   = s_struct.treble;
 
                         int i = 1;
                         do
                         {
-                                fixed_t low_pass = s.low_pass [i];
+                                fixed_t low_pass = s_struct.low_pass [i];
 
                                 fixed_t* echo_end = &echo [echo_size + i];
                                 fixed_t const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
-                                blargg_long out_offset = echo_pos + i + s.delay [i];
+                                blargg_long out_offset = echo_pos + i + s_struct.delay [i];
                                 if ( out_offset >= echo_size )
                                         out_offset -= echo_size;
                                 fixed_t* BLIP_RESTRICT out_pos = &echo [out_offset];
@@ -1074,7 +1088,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                         if ( pos < out_pos )
                                                 pos = out_pos;
                                         int count = blargg_ulong ((char*) echo_end - (char const*) pos) /
-                                                        unsigned (stereo * sizeof (fixed_t));
+                                                        unsigned (stereo * sizeof(fixed_t));
                                         if ( count > remain )
                                                 count = remain;
                                         remain -= count;
@@ -1094,7 +1108,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                 }
                                 while ( remain );
 
-                                s.low_pass [i] = low_pass;
+                                s_struct.low_pass [i] = low_pass;
                         }
                         while ( --i >= 0 );
                 }
@@ -1129,7 +1143,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                         }
                         while ( ++offset );
 
-                        in = (stereo_fixed_t*) echo.begin();
+                        in = (stereo_fixed_t*) echo.begin_;
                         count = remain;
                 }
                 while ( remain );

@@ -24,8 +24,8 @@ class Blip_Buffer
 
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
 	// to 1/4 second) and clears buffer. If there isn't enough memory, leaves buffer
-	// untouched and returns "Out of memory", otherwise returns NULL.
-	const char * set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
+	// untouched and returns -1, otherwise returns 0.
+	int32_t set_sample_rate(long samples_per_sec, int msec_length = 1000 / 4);
 
 	// Sets number of source time units per second
 	void clock_rate( long clocks_per_sec );
@@ -128,23 +128,6 @@ class Blip_Synth_Fast_
 	void volume_unit( double );
 	Blip_Synth_Fast_();
 	void treble_eq( blip_eq_t const& ) { }
-};
-
-class Blip_Synth_ {
-	public:
-		Blip_Buffer* buf;
-		int last_amp;
-		int delta_factor;
-
-		void volume_unit( double );
-		Blip_Synth_( short* impulses, int width );
-		void treble_eq( blip_eq_t const& );
-	private:
-		double volume_unit_;
-		short* const impulses;
-		int const width;
-		int32_t kernel_unit;
-		int impulses_size() const { return blip_res / 2 * width + 1; }
 };
 
 // Quality level, better = slower. In general, use blip_good_quality.
@@ -343,7 +326,7 @@ class Stereo_Buffer {
 	public:
 		Stereo_Buffer();
 		~Stereo_Buffer();
-		const char * set_sample_rate( long, int msec = blip_default_length );
+		int32_t set_sample_rate( long, int msec = blip_default_length );
 		void clock_rate( long );
 		void bass_freq( int );
 		void clear();
@@ -359,6 +342,7 @@ class Stereo_Buffer {
 		typedef Blip_Buffer buf_t;
 		buf_t bufs_buffer [bufs_size];
 		bool immediate_removal_;
+		long sample_rate_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
 		blargg_long mixer_samples_read;
@@ -370,7 +354,6 @@ class Stereo_Buffer {
 		// Count of changes to channel configuration. Incremented whenever
 		// a change is made to any of the Blip_Buffers for any channel.
 		unsigned channels_changed_count_;
-		long sample_rate_;
 		// Length of buffer, in milliseconds
 		int length_;
 		int channel_count_;
@@ -424,11 +407,11 @@ class Effects_Buffer {
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
 		void clear();
-		const char * set_sample_rate( long samples_per_sec, int msec = blip_default_length );
+		int32_t set_sample_rate(long samples_per_sec, int msec = blip_default_length);
 
 		// Sets the number of channels available and optionally their types
 		// (type information used by Effects_Buffer)
-		const char * set_channel_count( int, int const* = 0 );
+		int32_t set_channel_count( int, int const* = 0 );
 		void clock_rate( long );
 		void bass_freq( int );
 
@@ -483,7 +466,7 @@ class Effects_Buffer {
 			fixed_t treble;
 			fixed_t feedback;
 			fixed_t low_pass [stereo];
-		} s;
+		} s_struct;
 
 		blargg_vector<fixed_t> echo;
 		blargg_long echo_pos;
@@ -492,7 +475,7 @@ class Effects_Buffer {
 		bool no_echo;
 
 		void mix_effects( int16_t* out, int pair_count );
-		const char * new_bufs( int size );
+		int32_t new_bufs( int size );
 		//from Multi_Buffer
 		unsigned channels_changed_count_;
 		int samples_per_frame_;

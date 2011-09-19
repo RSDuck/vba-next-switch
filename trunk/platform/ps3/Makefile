@@ -292,6 +292,7 @@ clean_vba:
 	@rm $(VBA_COBJS:%.o=$(BUILD_DIR)/%.d) -f
 	
 clean: clean_vba
+	@rm -rf objs common ../src
 	@rm $(PPU_TARGET) $(PPU_TARGET:%.elf=%.self) -f
 
 #massively reduced filesize using MKSELF_GEOHOT - use this for normal jailbreak builds

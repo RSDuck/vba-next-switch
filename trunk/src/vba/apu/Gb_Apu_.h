@@ -396,12 +396,15 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 
 #define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
 
-inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
+inline int32_t Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
 	int format = format0;
 	REFLECT( format, format );
 	if (format != format0)
-		return "Unsupported sound save state format";
+	{
+		// Unsupported sound save state format
+		return -1;
+	}
 
 	int version = 0;
 	REFLECT( version, version );
@@ -455,9 +458,12 @@ void Gb_Apu::save_state( gb_apu_state_t* out )
 	save_load2( out, true );
 }
 
-const char * Gb_Apu::load_state( gb_apu_state_t const& in )
+int32_t Gb_Apu::load_state( gb_apu_state_t const& in )
 {
-	RETURN_ERR( save_load( CONST_CAST(gb_apu_state_t*,&in), false ) );
+	int32_t retval = save_load(CONST_CAST(gb_apu_state_t*,&in), false);
+	if(retval != 0)
+		return retval;
+	
 	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );
 
 	apply_stereo();

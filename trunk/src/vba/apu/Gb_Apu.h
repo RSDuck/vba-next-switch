@@ -87,26 +87,26 @@ class Gb_Apu
 	void save_state( gb_apu_state_t* state_out );
 
 	// Loads state. You should call reset() BEFORE this.
-	const char * load_state( gb_apu_state_t const& in );
+	int32_t load_state( gb_apu_state_t const& in );
 	private:
 	// noncopyable
 	Gb_Apu( const Gb_Apu& );
 	Gb_Apu& operator = ( const Gb_Apu& );
 
-	Gb_Osc*     oscs [osc_count];
-	int32_t last_time;          // time sound emulator has been run to
-	int32_t frame_period;       // clocks between each frame sequencer step
-	double      volume_;
-	bool        reduce_clicks_;
+	Gb_Osc*		oscs [osc_count];
+	int32_t		last_time;          // time sound emulator has been run to
+	int32_t		frame_period;       // clocks between each frame sequencer step
+	double		volume_;
+	bool		reduce_clicks_;
 
 	Gb_Sweep_Square square1;
 	Gb_Square       square2;
 	Gb_Wave         wave;
 	Gb_Noise        noise;
-	int32_t     frame_time;     // time of next frame sequencer action
+	int32_t		frame_time;     // time of next frame sequencer action
 	int             frame_phase;    // phase of next frame sequencer step
 	enum { regs_size = register_count + 0x10 };
-	uint8_t  regs [regs_size];// last values written to registers
+	uint8_t		regs[regs_size];// last values written to registers
 
 	// large objects after everything else
 	Gb_Osc::Good_Synth  good_synth;
@@ -120,7 +120,7 @@ class Gb_Apu
 	void run_until( int32_t );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
-	const char* save_load( gb_apu_state_t*, bool save );
+	int32_t save_load( gb_apu_state_t*, bool save );
 	void save_load2( gb_apu_state_t*, bool save );
 };
 
