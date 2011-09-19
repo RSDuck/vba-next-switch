@@ -15,6 +15,10 @@
 extern void log(const char *,...);
 
 #ifdef __CELLOS_LV2__
+#include "../../platform/ps3/src/ps3video.hpp"
+
+extern PS3Graphics* Graphics;
+
 extern uint32_t special_action_msg_expired;
 extern char special_action_msg[256];
 #endif
