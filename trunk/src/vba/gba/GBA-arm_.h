@@ -1,20 +1,3 @@
-#include <stdarg.h>
-#include <string.h>
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-#include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sound.h"
-#include "Sram.h"
-#include "bios.h"
-#include "../NLS.h"
-
-#ifdef ELF
-#include "elf.h"
-#endif
-
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
 #endif
@@ -2354,11 +2337,6 @@ int armExecute()
 
 
 		int oldArmNextPC = armNextPC;
-
-#ifndef FINAL_VERSION
-		if (armNextPC == stop)
-			armNextPC++;
-#endif
 
 		armNextPC = reg[15].I;
 		reg[15].I += 4;

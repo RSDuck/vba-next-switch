@@ -1,24 +1,5 @@
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-#include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sound.h"
-#include "Sram.h"
-#include "bios.h"
-#include "../NLS.h"
-
-#ifdef ELF
-#include "elf.h"
-#endif
-
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
-#endif
-
-#ifdef _MSC_VER
-#define snprintf _snprintf
 #endif
 
 static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
@@ -38,9 +19,6 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
 }
 
 // Common macros //////////////////////////////////////////////////////////
-
-# define THUMB_CONSOLE_OUTPUT(a,b)
-# define UPDATE_OLDREG
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -492,7 +470,6 @@ static INSN_REGPARM void thumb40_0(uint32_t opcode)
 
   reg[dest].I = val;
 
-  THUMB_CONSOLE_OUTPUT(NULL, reg[2].I);
 }
 
 // EOR Rd, Rs
@@ -795,7 +772,6 @@ static INSN_REGPARM void thumb46_2(uint32_t opcode)
 	reg[(opcode&7)+8].I = reg[(opcode>>3)&7].I;
 	if((opcode&7) == 7)
 	{
-		UPDATE_OLDREG;
 		reg[15].I &= 0xFFFFFFFE;
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
@@ -812,7 +788,6 @@ static INSN_REGPARM void thumb46_3(uint32_t opcode)
 
 	if((opcode&7) == 7)
 	{
-		UPDATE_OLDREG;
 		reg[15].I &= 0xFFFFFFFE;
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
@@ -828,7 +803,6 @@ static INSN_REGPARM void thumb47(uint32_t opcode)
 {
 	int base = (opcode >> 3) & 15;
 	busPrefetchCount=0;
-	UPDATE_OLDREG;
 	reg[15].I = reg[base].I;
 
 	if(reg[base].I & 1)
@@ -1280,7 +1254,6 @@ static INSN_REGPARM void thumbC8(uint32_t opcode)
 static INSN_REGPARM void thumbD0(uint32_t opcode)
 {
 	int val;
-	UPDATE_OLDREG;
 	if(Z_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1300,7 +1273,6 @@ static INSN_REGPARM void thumbD0(uint32_t opcode)
 // BNE offset
 static INSN_REGPARM void thumbD1(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!Z_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1316,7 +1288,6 @@ static INSN_REGPARM void thumbD1(uint32_t opcode)
 // BCS offset
 static INSN_REGPARM void thumbD2(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(C_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1332,7 +1303,6 @@ static INSN_REGPARM void thumbD2(uint32_t opcode)
 // BCC offset
 static INSN_REGPARM void thumbD3(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!C_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1348,7 +1318,6 @@ static INSN_REGPARM void thumbD3(uint32_t opcode)
 // BMI offset
 static INSN_REGPARM void thumbD4(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(N_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1364,7 +1333,6 @@ static INSN_REGPARM void thumbD4(uint32_t opcode)
 // BPL offset
 static INSN_REGPARM void thumbD5(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!N_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1380,7 +1348,6 @@ static INSN_REGPARM void thumbD5(uint32_t opcode)
 // BVS offset
 static INSN_REGPARM void thumbD6(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(V_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1396,7 +1363,6 @@ static INSN_REGPARM void thumbD6(uint32_t opcode)
 // BVC offset
 static INSN_REGPARM void thumbD7(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!V_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1412,7 +1378,6 @@ static INSN_REGPARM void thumbD7(uint32_t opcode)
 // BHI offset
 static INSN_REGPARM void thumbD8(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(C_FLAG && !Z_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1428,7 +1393,6 @@ static INSN_REGPARM void thumbD8(uint32_t opcode)
 // BLS offset
 static INSN_REGPARM void thumbD9(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!C_FLAG || Z_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1444,7 +1408,6 @@ static INSN_REGPARM void thumbD9(uint32_t opcode)
 // BGE offset
 static INSN_REGPARM void thumbDA(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(N_FLAG == V_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1460,7 +1423,6 @@ static INSN_REGPARM void thumbDA(uint32_t opcode)
 // BLT offset
 static INSN_REGPARM void thumbDB(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(N_FLAG != V_FLAG)
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1476,7 +1438,6 @@ static INSN_REGPARM void thumbDB(uint32_t opcode)
 // BGT offset
 static INSN_REGPARM void thumbDC(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(!Z_FLAG && (N_FLAG == V_FLAG))
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1492,7 +1453,6 @@ static INSN_REGPARM void thumbDC(uint32_t opcode)
 // BLE offset
 static INSN_REGPARM void thumbDD(uint32_t opcode)
 {
-	UPDATE_OLDREG;
 	if(Z_FLAG || (N_FLAG != V_FLAG))
 	{
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
@@ -1730,10 +1690,6 @@ int thumbExecute()
 			busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
 
 		uint32_t oldArmNextPC = armNextPC;
-#ifndef FINAL_VERSION
-		if(armNextPC == stop)
-			armNextPC++;
-#endif
 
 		armNextPC = reg[15].I;
 		reg[15].I += 2;

@@ -634,17 +634,6 @@ void systemGbBorderOn()
 {
 }
 
-void DbgMsg(const char *msg, ...)
-{
-
-}
-
-
-void winlog(const char *,...)
-{
-
-}
-
 float Emulator_GetFontSize()
 {
 	return Settings.PS3FontSize/100.0;

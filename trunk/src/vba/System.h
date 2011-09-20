@@ -12,8 +12,6 @@
 #define USE_FRAMESKIP
 #endif
 
-extern void log(const char *,...);
-
 #ifdef __CELLOS_LV2__
 #include "../../platform/ps3/src/ps3video.hpp"
 
@@ -38,7 +36,6 @@ extern void systemReadJoypad(int);
 
 extern uint32_t systemGetClock();
 extern void systemMessage(int, const char *, ...);
-extern void systemSetTitle(const char *);
 extern void systemScreenMessage(const char *);
 #ifdef USE_MOTION_SENSOR
 extern void systemUpdateMotionSensor();
@@ -55,12 +52,6 @@ extern void Sm60FPS_Sleep();
 #endif
 extern void systemFrame();
 extern void systemGbBorderOn();
-
-extern void DbgMsg(const char *msg, ...);
-extern void winlog(const char *,...);
-
-extern void (*dbgOutput)(const char *s, uint32_t addr);
-extern void (*dbgSignal)(int sig,int number);
 
 // sound functions
 extern bool systemSoundInit();
