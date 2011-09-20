@@ -67,7 +67,6 @@ VBA_CPPSRCS		+= $(SRC_DIR)/ps3video.cpp \
 		$(VBA_API_DIR)/gba/EEprom.cpp \
 		$(VBA_API_DIR)/gba/Flash.cpp \
 		$(VBA_API_DIR)/gba/RTC.cpp \
-		$(VBA_API_DIR)/gba/bios.cpp \
 		$(CELL_FRAMEWORK_DIR)/fileio/FileBrowser.cpp \
 		$(SRC_DIR)/menu.cpp
 

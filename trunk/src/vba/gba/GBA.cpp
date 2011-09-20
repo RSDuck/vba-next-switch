@@ -3,6 +3,7 @@
 #include "GBAinline.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 #ifdef __LIBGBA__
 #include <stddef.h>
@@ -22,7 +23,6 @@ uint64_t joy = 0;
 #include "Flash.h"
 #include "Sound.h"
 #include "Sram.h"
-#include "bios.h"
 #include "../NLS.h"
 
 #ifdef ELF
@@ -274,12 +274,12 @@ bool windowOn = false;
 #ifdef USE_FRAMESKIP
 int frameCount = 0;
 uint32_t lastTime = 0;
+int count = 0;
 #endif
 
 char buffer[1024];
 FILE *out = NULL;
 
-int count = 0;
 
 const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
@@ -622,6 +622,8 @@ void cpuEnableProfiling(int hz)
 	profSetHertz(hz);
 }
 #endif
+
+#include "bios_.h"
 
 static void BIOS_RegisterRamReset(uint32_t flags)
 {
