@@ -201,7 +201,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 			break;
 
 		case 2:
-			if ( !dac_enabled() )
+			if ( !(gb_env_dac_enabled()) )
 				enabled = false;
 
 			zombie_volume( old, data );
@@ -221,7 +221,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 				env_enabled = true;
 				if ( frame_phase == 7 )
 					env_delay++;
-				if ( !dac_enabled() )
+				if ( !(gb_env_dac_enabled()) )
 					enabled = false;
 				return true;
 			}
@@ -344,7 +344,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if ( gb_env_dac_enabled() )
                 {
                         if ( enabled )
                                 vol = volume;
@@ -491,7 +491,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if ( gb_env_dac_enabled() )
                 {
                         if ( enabled )
                                 vol = volume;

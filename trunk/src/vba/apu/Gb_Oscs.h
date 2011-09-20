@@ -48,6 +48,9 @@ class Gb_Osc
 	int write_trig( int frame_phase, int max_len, int old_data );
 };
 
+// Non-zero if DAC is enabled
+#define gb_env_dac_enabled() regs[2] & 0xF8
+
 class Gb_Env : public Gb_Osc
 {
 	public:
@@ -64,9 +67,6 @@ class Gb_Env : public Gb_Osc
 		volume    = 0;
 		Gb_Osc::reset();
 	}
-	protected:
-	// Non-zero if DAC is enabled
-	int dac_enabled() const { return regs [2] & 0xF8; }
 	private:
 	void zombie_volume( int old, int data );
 	int reload_env_timer();

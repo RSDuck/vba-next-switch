@@ -26,11 +26,9 @@ int const power_mask = 0x80;
 
 #define osc_count 4
 
-inline int Gb_Apu::calc_output( int osc ) const
-{
-	int bits = regs [stereo_reg - start_addr] >> osc;
-	return (bits >> 3 & 2) | (bits & 1);
-}
+#define calc_output(osc) \
+	int bits = regs [stereo_reg - start_addr] >> osc; \
+	bits = (bits >> 3 & 2) | (bits & 1);
 
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
@@ -42,7 +40,8 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 		o.outputs [1] = right;
 		o.outputs [2] = left;
 		o.outputs [3] = center;
-		o.output = o.outputs [calc_output( i )];
+		calc_output(i);
+		o.output = o.outputs [bits];
 		++i;
 	}while ( i < osc );
 }
@@ -293,7 +292,8 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			for ( int i = osc_count; --i >= 0; )
 			{
 				Gb_Osc& o = *oscs [i];
-				Blip_Buffer* out = o.outputs [calc_output( i )];
+				calc_output(i);
+				Blip_Buffer* out = o.outputs [bits];
 				if ( o.output != out )
 				{
 					silence_osc( o );
@@ -336,7 +336,8 @@ void Gb_Apu::apply_stereo()
 	for ( int i = osc_count; --i >= 0; )
 	{
 		Gb_Osc& o = *oscs [i];
-		Blip_Buffer* out = o.outputs [calc_output( i )];
+		calc_output(i);
+		Blip_Buffer* out = o.outputs [bits];
 		if ( o.output != out )
 		{
 			silence_osc( o );

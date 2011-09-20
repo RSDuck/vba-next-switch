@@ -112,7 +112,6 @@ class Gb_Apu
 	Gb_Osc::Good_Synth  good_synth;
 	Gb_Osc::Med_Synth   med_synth;
 
-	int calc_output( int osc ) const;
 	void apply_stereo();
 	void apply_volume();
 	void synth_volume( int );
@@ -131,41 +130,30 @@ class Gb_Apu
 // room for expansion so the state size shouldn't increase.
 struct gb_apu_state_t
 {
-#if GB_APU_CUSTOM_STATE
-	// Values stored as plain int so your code can read/write them easily.
-	// Structure can NOT be written to disk, since format is not portable.
-	typedef int val_t;
-#else
-	// Values written in portable little-endian format, allowing structure
-	// to be written directly to disk.
-	typedef unsigned char val_t [4];
-#endif
-
-
-	val_t format;   // format of all following data
-	val_t version;  // later versions just add fields to end
+	int format;   // format of all following data
+	int version;  // later versions just add fields to end
 
 	unsigned char regs [0x40];
-	val_t frame_time;
-	val_t frame_phase;
+	int frame_time;
+	int frame_phase;
 
-	val_t sweep_freq;
-	val_t sweep_delay;
-	val_t sweep_enabled;
-	val_t sweep_neg;
-	val_t noise_divider;
-	val_t wave_buf;
+	int sweep_freq;
+	int sweep_delay;
+	int sweep_enabled;
+	int sweep_neg;
+	int noise_divider;
+	int wave_buf;
 
-	val_t delay      [4];
-	val_t length_ctr [4];
-	val_t phase      [4];
-	val_t enabled    [4];
+	int delay      [4];
+	int length_ctr [4];
+	int phase      [4];
+	int enabled    [4];
 
-	val_t env_delay   [3];
-	val_t env_volume  [3];
-	val_t env_enabled [3];
+	int env_delay   [3];
+	int env_volume  [3];
+	int env_enabled [3];
 
-	val_t unused  [13]; // for future expansion
+	int unused  [13]; // for future expansion
 };
 
 #endif

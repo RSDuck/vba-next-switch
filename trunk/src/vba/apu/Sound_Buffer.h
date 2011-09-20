@@ -293,6 +293,8 @@ typedef struct channel_t {
 	Blip_Buffer* right;
 };
 
+#define buffers_size 3
+
 // Uses three buffers (one for center) and outputs stereo sample pairs.
 class Stereo_Buffer {
 	public:
@@ -302,15 +304,12 @@ class Stereo_Buffer {
 		void clock_rate( long );
 		void clear();
 
-		// Gets indexed channel, from 0 to channel count - 1
-		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );
 
 		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
-		enum { bufs_size = 3 };
-		Blip_Buffer bufs_buffer [bufs_size];
+		Blip_Buffer bufs_buffer[buffers_size];
 		bool immediate_removal_;
 		long sample_rate_;
 	private:

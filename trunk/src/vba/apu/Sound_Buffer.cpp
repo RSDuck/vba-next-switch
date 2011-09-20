@@ -240,7 +240,7 @@ Stereo_Buffer::~Stereo_Buffer() { }
 int32_t Stereo_Buffer::set_sample_rate( long rate, int msec )
 {
         mixer_samples_read = 0;
-        for ( int i = bufs_size; --i >= 0; )
+        for ( int i = buffers_size; --i >= 0; )
 	{
 		int32_t retval = bufs_buffer [i].set_sample_rate(rate, msec);
 		if(retval != 0)
@@ -253,7 +253,7 @@ int32_t Stereo_Buffer::set_sample_rate( long rate, int msec )
 
 void Stereo_Buffer::clock_rate( long rate )
 {
-        for ( int i = bufs_size; --i >= 0; )
+        for ( int i = buffers_size; --i >= 0; )
                 bufs_buffer [i].clock_rate( rate );
 }
 
@@ -264,13 +264,13 @@ void Effects_Buffer::clear()
 void Stereo_Buffer::clear()
 {
         mixer_samples_read = 0;
-        for ( int i = bufs_size; --i >= 0; )
+        for ( int i = buffers_size; --i >= 0; )
                 bufs_buffer [i].clear();
 }
 
 void Stereo_Buffer::end_frame( int32_t time )
 {
-        for ( int i = bufs_size; --i >= 0; )
+        for ( int i = buffers_size; --i >= 0; )
                 bufs_buffer [i].end_frame( time );
 }
 
@@ -285,7 +285,7 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 
                 if ( samples_avail() <= 0 || immediate_removal_ )
                 {
-                        for ( int i = bufs_size; --i >= 0; )
+                        for ( int i = buffers_size; --i >= 0; )
                         {
                                 Blip_Buffer & b = bufs_buffer [i];
             #ifndef FASTER_SOUND_HACK_NON_SILENCE
