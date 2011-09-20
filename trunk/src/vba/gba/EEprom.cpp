@@ -25,12 +25,12 @@ variable_desc eepromSaveData[] = {
 	{ NULL, 0 }
 };
 
-void eepromInit()
+void eepromInit(void)
 {
 	__builtin_memset(eepromData, 255, sizeof(eepromData));
 }
 
-void eepromReset()
+void eepromReset(void)
 {
 	eepromMode = EEPROM_IDLE;
 	eepromByte = 0;
@@ -56,17 +56,15 @@ void eepromReadGame(gzFile gzFile, int version)
 		utilGzRead(gzFile, eepromData, 0x2000);
 	}
 	else
-	{
-		// prior to 0.7.1, only 4K EEPROM was supported
-		eepromSize = 512;
-	}
+		eepromSize = 512;	// prior to 0.7.1, only 4K EEPROM was supported
 }
 
 void eepromReadGameSkip(gzFile gzFile, int version)
 {
 	// skip the eeprom data in a save game
 	utilReadDataSkip(gzFile, eepromSaveData);
-	if(version >= SAVE_GAME_VERSION_3) {
+	if(version >= SAVE_GAME_VERSION_3)
+	{
 		utilGzSeek(gzFile, sizeof(int), SEEK_CUR);
 		utilGzSeek(gzFile, 0x2000, SEEK_CUR);
 	}
@@ -83,7 +81,8 @@ int eepromRead(uint32_t /* address */)
 		case EEPROM_READDATA:
 			{
 				eepromBits++;
-				if(eepromBits == 4) {
+				if(eepromBits == 4)
+				{
 					eepromMode = EEPROM_READDATA2;
 					eepromBits = 0;
 					eepromByte = 0;
@@ -113,7 +112,9 @@ void eepromWrite(uint32_t /* address */, uint8_t value)
 {
 	if(cpuDmaCount == 0)
 		return;
+
 	int bit = value & 1;
+
 	switch(eepromMode)
 	{
 		case EEPROM_IDLE:
@@ -128,33 +129,43 @@ void eepromWrite(uint32_t /* address */, uint8_t value)
 			eepromBits++;
 			if((eepromBits & 7) == 0)
 				eepromByte++;
-			if(cpuDmaCount == 0x11 || cpuDmaCount == 0x51) {
-				if(eepromBits == 0x11) {
+			if(cpuDmaCount == 0x11 || cpuDmaCount == 0x51)
+			{
+				if(eepromBits == 0x11)
+				{
 					eepromInUse = true;
 					eepromSize = 0x2000;
-					eepromAddress = ((eepromBuffer[0] & 0x3F) << 8) |
-						((eepromBuffer[1] & 0xFF));
-					if(!(eepromBuffer[0] & 0x40)) {
+					eepromAddress = ((eepromBuffer[0] & 0x3F) << 8) | ((eepromBuffer[1] & 0xFF));
+					if(!(eepromBuffer[0] & 0x40))
+					{
 						eepromBuffer[0] = bit;
 						eepromBits = 1;
 						eepromByte = 0;
 						eepromMode = EEPROM_WRITEDATA;
-					} else {
+					}
+					else
+					{
 						eepromMode = EEPROM_READDATA;
 						eepromByte = 0;
 						eepromBits = 0;
 					}
 				}
-			} else {
-				if(eepromBits == 9) {
+			}
+			else
+			{
+				if(eepromBits == 9)
+				{
 					eepromInUse = true;
 					eepromAddress = (eepromBuffer[0] & 0x3F);
-					if(!(eepromBuffer[0] & 0x40)) {
+					if(!(eepromBuffer[0] & 0x40))
+					{
 						eepromBuffer[0] = bit;
 						eepromBits = 1;
 						eepromByte = 0;
 						eepromMode = EEPROM_WRITEDATA;
-					} else {
+					}
+					else
+					{
 						eepromMode = EEPROM_READDATA;
 						eepromByte = 0;
 						eepromBits = 0;
@@ -173,14 +184,18 @@ void eepromWrite(uint32_t /* address */, uint8_t value)
 			eepromBits++;
 			if((eepromBits & 7) == 0)
 				eepromByte++;
-			if(eepromBits == 0x40) {
+
+			if(eepromBits == 0x40)
+			{
 				eepromInUse = true;
 				// write data;
 				for(int i = 0; i < 8; i++)
 					eepromData[(eepromAddress << 3) + i] = eepromBuffer[i];
 
 				systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
-			} else if(eepromBits == 0x41) {
+			}
+			else if(eepromBits == 0x41)
+			{
 				eepromMode = EEPROM_IDLE;
 				eepromByte = 0;
 				eepromBits = 0;

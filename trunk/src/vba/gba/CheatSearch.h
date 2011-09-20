@@ -5,31 +5,31 @@
 #include "../System.h"
 
 struct CheatSearchBlock {
-  int size;
-  u32 offset;
-  u8 *bits;
-  u8 *data;
-  u8 *saved;
+	int size;
+	u32 offset;
+	u8 *bits;
+	u8 *data;
+	u8 *saved;
 };
 
 struct CheatSearchData {
-  int count;
-  CheatSearchBlock *blocks;
+	int count;
+	CheatSearchBlock *blocks;
 };
 
 enum {
-  SEARCH_EQ,
-  SEARCH_NE,
-  SEARCH_LT,
-  SEARCH_LE,
-  SEARCH_GT,
-  SEARCH_GE
+	SEARCH_EQ,
+	SEARCH_NE,
+	SEARCH_LT,
+	SEARCH_LE,
+	SEARCH_GT,
+	SEARCH_GE
 };
 
 enum {
-  BITS_8,
-  BITS_16,
-  BITS_32
+	BITS_8,
+	BITS_16,
+	BITS_32
 };
 
 #define SET_BIT(bits,off) \

@@ -1,29 +1,29 @@
 #ifndef BIOS_H
 #define BIOS_H
 
-extern void BIOS_ArcTan();
-extern void BIOS_ArcTan2();
-extern void BIOS_BitUnPack();
-extern void BIOS_GetBiosChecksum();
-extern void BIOS_BgAffineSet();
-extern void BIOS_CpuSet();
-extern void BIOS_CpuFastSet();
-extern void BIOS_Diff8bitUnFilterWram();
-extern void BIOS_Diff8bitUnFilterVram();
-extern void BIOS_Diff16bitUnFilter();
-extern void BIOS_Div();
-extern void BIOS_DivARM();
-extern void BIOS_HuffUnComp();
-extern void BIOS_LZ77UnCompVram();
-extern void BIOS_LZ77UnCompWram();
-extern void BIOS_ObjAffineSet();
-extern void BIOS_RegisterRamReset();
-extern void BIOS_RegisterRamReset(u32);
-extern void BIOS_RLUnCompVram();
-extern void BIOS_RLUnCompWram();
-extern void BIOS_SoftReset();
-extern void BIOS_Sqrt();
-extern void BIOS_MidiKey2Freq();
-extern void BIOS_SndDriverJmpTableCopy();
+extern void BIOS_ArcTan(void);
+extern void BIOS_ArcTan2(void);
+extern void BIOS_BitUnPack(void);
+extern void BIOS_GetBiosChecksum(void);
+extern void BIOS_BgAffineSet(void);
+extern void BIOS_CpuSet(void);
+extern void BIOS_CpuFastSet(void);
+extern void BIOS_Diff8bitUnFilterWram(void);
+extern void BIOS_Diff8bitUnFilterVram(void);
+extern void BIOS_Diff16bitUnFilter(void);
+extern void BIOS_Div(void);
+extern void BIOS_DivARM(void);
+extern void BIOS_HuffUnComp(void);
+extern void BIOS_LZ77UnCompVram(void);
+extern void BIOS_LZ77UnCompWram(void);
+extern void BIOS_ObjAffineSet(void);
+extern void BIOS_RegisterRamReset(void);
+extern void BIOS_RegisterRamReset(uint32_t);
+extern void BIOS_RLUnCompVram(void);
+extern void BIOS_RLUnCompWram(void);
+extern void BIOS_SoftReset(void);
+extern void BIOS_Sqrt(void);
+extern void BIOS_MidiKey2Freq(void);
+extern void BIOS_SndDriverJmpTableCopy(void);
 
 #endif // BIOS_H

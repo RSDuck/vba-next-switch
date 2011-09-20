@@ -29,10 +29,13 @@ extern void systemScreenCapture(int);
 #ifndef __CELLOS_LV2__
 extern void systemDrawScreen();
 #endif
+
 // updates the joystick data
 extern bool systemReadJoypads();
+
 // return information about the given joystick, -1 for default joystick
 extern void systemReadJoypad(int);
+
 extern uint32_t systemGetClock();
 extern void systemMessage(int, const char *, ...);
 extern void systemSetTitle(const char *);
@@ -46,15 +49,12 @@ extern bool systemCanChangeSoundQuality();
 extern void systemShowSpeed(int);
 #ifdef USE_FRAMESKIP
 extern void system10Frames(int);
-#endif
-extern void systemFrame();
-extern void systemGbBorderOn();
-
-#ifdef USE_FRAMESKIP
 extern void Sm60FPS_Init();
 extern bool Sm60FPS_CanSkipFrame();
 extern void Sm60FPS_Sleep();
 #endif
+extern void systemFrame();
+extern void systemGbBorderOn();
 
 extern void DbgMsg(const char *msg, ...);
 extern void winlog(const char *,...);
@@ -84,12 +84,11 @@ extern int systemBlueShift;
 #if defined(USE_GBA_FILTERS)
 extern int systemColorDepth;
 #endif
-#if 0
-extern int systemDebug;
-#endif
+
 #ifdef USE_AGBPRINT
 extern int systemVerbose;
 #endif
+
 extern int systemFrameSkip;
 extern int systemSaveUpdateCounter;
 extern int systemSpeed;

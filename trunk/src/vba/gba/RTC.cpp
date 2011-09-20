@@ -35,7 +35,7 @@ void rtcEnable(bool e)
 	rtcEnabled = e;
 }
 
-bool rtcIsEnabled()
+bool rtcIsEnabled(void)
 {
 	return rtcEnabled;
 }
@@ -154,20 +154,24 @@ bool rtcWrite(uint32_t address, uint16_t value)
 									}
 									break;
 								default:
+#ifdef VBA_DEBUG
 									systemMessage(0, N_("Unknown RTC command %02x"), rtcClockData.command);
+#endif
 									rtcClockData.state = IDLE;
 									break;
 							}
 						}
 						break;
 					case DATA:
-						if(rtcClockData.byte1 & 2) {
-						} else {
-							rtcClockData.byte0 = (rtcClockData.byte0 & ~2) |
-								((rtcClockData.data[rtcClockData.bits >> 3] >>
-								  (rtcClockData.bits & 7)) & 1)*2;
+						if(rtcClockData.byte1 & 2)
+						{
+						}
+						else
+						{
+							rtcClockData.byte0 = (rtcClockData.byte0 & ~2) | ((rtcClockData.data[rtcClockData.bits >> 3] >> (rtcClockData.bits & 7)) & 1)*2;
 							rtcClockData.bits++;
-							if(rtcClockData.bits == 8*rtcClockData.dataLen) {
+							if(rtcClockData.bits == 8*rtcClockData.dataLen)
+							{
 								rtcClockData.bits = 0;
 								rtcClockData.state = IDLE;
 							}
@@ -199,7 +203,7 @@ bool rtcWrite(uint32_t address, uint16_t value)
 	return true;
 }
 
-void rtcReset()
+void rtcReset(void)
 {
 	__builtin_memset(&rtcClockData, 0, sizeof(rtcClockData));
 

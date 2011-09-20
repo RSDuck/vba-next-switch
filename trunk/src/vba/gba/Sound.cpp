@@ -10,6 +10,7 @@
 
 #include "../apu/Gb_Apu.h"
 #include "../apu/Sound_Buffer.h"
+
 #ifdef __CELLOS_LV2__
 #include "../../../platform/ps3/src/emu-ps3.hpp"
 #endif
@@ -124,9 +125,7 @@ static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 	pcm_s->shift = ~ioMem [SGCNT0_H] >> (2 + idx) & 1;
 
 	if ( (ioMem [NR52] & 0x80) )
-	{
 		ch = ioMem [SGCNT0_H+1] >> (idx << 2) & 3;
-	}
 
 	Blip_Buffer* out = &stereo_buffer->bufs_buffer[arrayval[ch]];
 
@@ -280,14 +279,14 @@ void Gba_Pcm_Fifo::write_fifo( int data )
 	writeIndex = (writeIndex + 2) & 31;
 }
 
-int gba_to_gb_sound( int addr )
+int gba_to_gb_sound(int addr)
 {
 	if ( addr >= 0x60 && addr < 0xA0 )
 		return table [addr - 0x60];
 	return 0;
 }
 
-void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
+void gba_to_gb_sound_parallel(int * __restrict addr, int * __restrict addr2)
 {
 	uint32_t addr1_table = *addr - 0x60;
 	uint32_t addr2_table = *addr2 - 0x60;
@@ -399,7 +398,7 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 }
 
 #ifdef USE_SOUND_FILTERING
-static void apply_filtering()
+static void apply_filtering(void)
 {
 	soundFiltering_ = soundFiltering;
 
@@ -416,7 +415,7 @@ static void apply_filtering()
 }
 #endif
 
-void psoundTickfn()
+void psoundTickfn(void)
 {
 	// Run sound hardware to present
 	end_frame_gba_pcm(&pcm[0].pcm_s, SOUND_CLOCK_TICKS);
@@ -427,7 +426,7 @@ void psoundTickfn()
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail() );
+	int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 
 #ifdef USE_SOUND_FILTERING
@@ -447,7 +446,7 @@ void psoundTickfn()
 #endif
 }
 
-static void apply_muting()
+static void apply_muting(void)
 {
 	// PCM
 	apply_control_gba_pcm(&pcm[0].pcm_s, 0);
@@ -467,7 +466,7 @@ static void apply_muting()
 	&stereo_buffer->bufs_buffer[0], &stereo_buffer->bufs_buffer[1], 3 );
 }
 
-static void remake_stereo_buffer()
+static void remake_stereo_buffer(void)
 {
 	if ( !ioMem )
 		return;
@@ -519,18 +518,18 @@ static void remake_stereo_buffer()
 	//End of Apply Volume - False
 }
 
-void soundShutdown()
+void soundShutdown(void)
 {
 	systemOnSoundShutdown();
 }
 
-void soundPause()
+void soundPause(void)
 {
 	soundPaused = true;
 	systemSoundPause();
 }
 
-void soundResume()
+void soundResume(void)
 {
 	soundPaused = false;
 	systemSoundResume();
@@ -543,7 +542,7 @@ void soundSetVolume( float volume )
 }
 #endif
 
-float soundGetVolume()
+float soundGetVolume(void)
 {
 	return soundVolume;
 }
@@ -556,12 +555,12 @@ void soundSetEnable(int channels)
 }
 #endif
 
-int soundGetEnable()
+int soundGetEnable(void)
 {
 	return (soundEnableFlag & 0x30f);
 }
 
-void soundReset()
+void soundReset(void)
 {
 	systemSoundReset();
 
@@ -594,7 +593,7 @@ void soundReset()
 	// End of Sound Event (NR52)
 }
 
-bool soundInit()
+bool soundInit(void)
 {
 	bool sound_driver_ok = systemSoundInit();
 	if ( !sound_driver_ok )
@@ -630,9 +629,7 @@ void soundSetSampleRate(long sampleRate)
 			soundInit();
 		}
 		else
-		{
 			soundSampleRate      = sampleRate;
-		}
 
 		remake_stereo_buffer();
 	}

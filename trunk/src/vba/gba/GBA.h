@@ -16,35 +16,35 @@
 #define SAVE_GAME_VERSION  SAVE_GAME_VERSION_10
 
 typedef struct {
-  uint8_t *address;
-  uint32_t mask;
+	uint8_t *address;
+	uint32_t mask;
 } memoryMap;
 
 typedef union {
-  struct {
+	struct {
 #ifdef WORDS_BIGENDIAN
-    uint8_t B3;
-    uint8_t B2;
-    uint8_t B1;
-    uint8_t B0;
+		uint8_t B3;
+		uint8_t B2;
+		uint8_t B1;
+		uint8_t B0;
 #else
-    uint8_t B0;
-    uint8_t B1;
-    uint8_t B2;
-    uint8_t B3;
+		uint8_t B0;
+		uint8_t B1;
+		uint8_t B2;
+		uint8_t B3;
 #endif
-  } B;
-  struct {
+	} B;
+	struct {
 #ifdef WORDS_BIGENDIAN
-    uint16_t W1;
-    uint16_t W0;
+		uint16_t W1;
+		uint16_t W0;
 #else
-    uint16_t W0;
-    uint16_t W1;
+		uint16_t W0;
+		uint16_t W1;
 #endif
-  } W;
+	} W;
 #ifdef WORDS_BIGENDIAN
-  volatile uint32_t I;
+	volatile uint32_t I;
 #else
 	uint32_t I;
 #endif
@@ -74,24 +74,12 @@ extern bool CPUWriteBatteryFile(const char *);
 extern bool CPUReadBatteryFile(const char *);
 extern bool CPUExportEepromFile(const char *);
 extern bool CPUImportEepromFile(const char *);
-#ifdef USE_PNG
-extern bool CPUWritePNGFile(const char *);
-#endif
-#ifdef USE_BMP
-extern bool CPUWriteBMPFile(const char *);
-#endif
 extern void CPUCleanUp();
 extern void CPUUpdateRender();
-//extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
-#ifdef __LIBGBA__
-extern bool CPUReadState_libgba(const uint8_t*, unsigned);
-#endif
 extern bool CPUWriteMemState(char *, int);
-#ifdef __LIBGBA__
-extern unsigned CPUWriteState_libgba(uint8_t*, unsigned);
-#endif
+
 extern bool CPUWriteState(const char *);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
@@ -99,12 +87,27 @@ extern void CPUUpdateRegister(uint32_t, uint16_t);
 extern void applyTimer ();
 extern void CPUInit(const char *,bool);
 extern void CPUReset();
+
+extern void CPUCheckDMA(int,int);
+
+#ifdef USE_PNG
+extern bool CPUWritePNGFile(const char *);
+#endif
+#ifdef USE_BMP
+extern bool CPUWriteBMPFile(const char *);
+#endif
+
 #ifdef USE_FRAMESKIP
 extern void CPULoop(int ticks);
 #else
 extern void CPULoop();
 #endif
-extern void CPUCheckDMA(int,int);
+
+#ifdef __LIBGBA__
+extern unsigned CPUWriteState_libgba(uint8_t*, unsigned);
+extern bool CPUReadState_libgba(const uint8_t*, unsigned);
+#endif
+
 #ifdef PROFILING
 #include "prof/prof.h"
 extern void cpuProfil(profile_segment *seg);
