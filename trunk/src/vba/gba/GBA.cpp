@@ -1,7 +1,4 @@
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-
+#include <zlib.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -17,13 +14,12 @@ static uint32_t line[7][240];
 static bool gfxInWin[2][240];
 static int lineOBJpixleft[128];
 uint64_t joy = 0;
+static uint32_t clockTicks;
 
-#include "GBAGfx.h"
 #include "EEprom.h"
 #include "Flash.h"
 #include "Sound.h"
 #include "Sram.h"
-#include "../NLS.h"
 
 #ifdef ELF
 #include "elf.h"
@@ -32,6 +28,7 @@ uint64_t joy = 0;
 #include "../Util.h"
 #include "../common/Port.h"
 #include "../System.h"
+#include "../NLS.h"
 
 #ifdef USE_AGBPRINT
 #include "agbprint.h"
@@ -42,6 +39,8 @@ uint64_t joy = 0;
 #endif
 
 #ifdef __CELLOS_LV2__
+#include <ppu_intrinsics.h>
+
 uint32_t special_action_msg_expired;	// time at which the message no longer needs to be overlaid onscreen
 char special_action_msg[256];
 #endif
@@ -51,7 +50,6 @@ char special_action_msg[256];
 #endif
 
 #ifdef __GNUC__
-#define _stricmp strcasecmp
 #include <string.h>
 #include <stdio.h>
 #endif
@@ -68,6 +66,8 @@ int gfxBG3Y = 0;
 //int gfxLastVCOUNT = 0;
 
 // GLOBALS.CPP 
+
+#include "GBA.h"
 
 reg_pair reg[45];
 memoryMap map[256];
@@ -278,8 +278,6 @@ int count = 0;
 #endif
 
 char buffer[1024];
-FILE *out = NULL;
-
 
 const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
@@ -608,6 +606,11 @@ static int romSize = 0x2000000;
 uint8_t cpuBitsSet[256];
 uint8_t cpuLowestBitSet[256];
 
+#include "GBAGfx.h"
+#include "GBAcpu.h"
+#include "RTC.h"
+#include "GBAinline.h"
+
 #ifdef PROFILING
 void cpuProfil(profile_segment *seg)
 {
@@ -798,7 +801,6 @@ inline int CPUUpdateTicks()
   ARM_PREFETCH; \
   reg[15].I += 4; \
 }
-
 
 static bool CPUWriteState(gzFile gzFile)
 {
@@ -1191,9 +1193,8 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 	fwrite(temp, 1, totalSize, file); // write save + header
 	uint32_t crc = 0;
 
-	for(int i = 0; i < totalSize; i++) {
+	for(int i = 0; i < totalSize; i++)
 		crc += ((uint32_t)temp[i] << (crc % 0x18));
-	}
 
 	utilPutDword(buffer, crc);
 	fwrite(buffer, 1, 4, file); // CRC?
@@ -1321,15 +1322,15 @@ bool CPUIsGBABios(const char * file)
 
 		if(p != NULL)
 		{
-			if(_stricmp(p, ".gba") == 0)
+			if(strcasecmp(p, ".gba") == 0)
 				return true;
-			if(_stricmp(p, ".agb") == 0)
+			if(strcasecmp(p, ".agb") == 0)
 				return true;
-			if(_stricmp(p, ".bin") == 0)
+			if(strcasecmp(p, ".bin") == 0)
 				return true;
-			if(_stricmp(p, ".bios") == 0)
+			if(strcasecmp(p, ".bios") == 0)
 				return true;
-			if(_stricmp(p, ".rom") == 0)
+			if(strcasecmp(p, ".rom") == 0)
 				return true;
 		}
 	}
@@ -1348,7 +1349,7 @@ bool CPUIsELF(const char *file)
 
 		if(p != NULL)
 		{
-			if(_stricmp(p, ".elf") == 0)
+			if(strcasecmp(p, ".elf") == 0)
 				return true;
 		}
 	}
@@ -6193,10 +6194,18 @@ void CPUInterrupt()
 	biosProtected[3] = 0xe5;
 }
 
+// GBA-ARM
+
+#include "GBA-arm_.h"
+
+// GBA-Thumb
+
+#include "GBA-thumb_.h"
+
 #ifdef USE_FRAMESKIP
 void CPULoop(int ticks)
 #else
-void CPULoop()
+void CPULoop(void)
 #endif
 {
 	// emuCount
@@ -6205,7 +6214,6 @@ void CPULoop()
 #else
 	int ticks = 250000;
 #endif
-	int clockTicks;
 	int timerOverflow = 0;
 	// variable used by the CPU core
 	cpuTotalTicks = 0;
@@ -6832,10 +6840,3 @@ updateLoop:
 
 #include "Sram_.h"
 
-// GBA-ARM
-
-#include "GBA-arm_.h"
-
-// GBA-Thumb
-
-#include "GBA-thumb_.h"

@@ -1,7 +1,3 @@
-#ifdef __CELLOS_LV2__
-#include <ppu_intrinsics.h>
-#endif
-
 static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
 {
 	// CPU Undefined Exception - ghetto inline
@@ -1662,7 +1658,7 @@ static insnfunc_t thumbInsnTable[1024] = {
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
 
-int thumbExecute()
+static int thumbExecute()
 {
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, it's used during operations and generates LHS without it
@@ -1712,7 +1708,7 @@ int thumbExecute()
 #ifdef USE_SWITICKS
 	}while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 #else
-	}while((cpuTotalTicks < cpuNextEvent) & ~armState & ~holdState);
+}while((cpuTotalTicks < cpuNextEvent) & ~armState & ~holdState);
 #endif
 	return 1;
 }

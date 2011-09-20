@@ -1,9 +1,6 @@
 #ifndef GBACPU_H
 #define GBACPU_H
 
-extern int armExecute();
-extern int thumbExecute();
-
 #if defined (_M_IX86) || defined (_M_IA64) || defined (__i486__) \
 || defined (__x86_64__) || defined (__ia64__) || defined (__i386__)
 # define INSN_REGPARM __attribute__((regparm(1)))
@@ -43,31 +40,6 @@ extern int thumbExecute();
 #define THUMB_PREFETCH_NEXT\
   cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
  
-#ifdef USE_SWITICKS
-extern int SWITicks;
-#endif
-extern u32 mastercode;
-extern bool busPrefetch;
-extern bool busPrefetchEnable;
-extern u32 busPrefetchCount;
-extern int cpuNextEvent;
-extern bool holdState;
-extern u32 cpuPrefetch[2];
-extern int cpuTotalTicks;
-extern u8 memoryWait[16];
-extern u8 memoryWait32[16];
-extern u8 memoryWaitSeq[16];
-extern u8 memoryWaitSeq32[16];
-extern u8 cpuBitsSet[256];
-extern u8 cpuLowestBitSet[256];
-extern void CPUSwitchMode(int mode, bool saveState, bool breakLoop);
-extern void CPUSwitchMode(int mode, bool saveState);
-extern void CPUUpdateCPSR();
-extern void CPUUpdateFlags(bool breakLoop);
-extern void CPUUpdateFlags();
-extern void CPUSoftwareInterrupt();
-extern void CPUSoftwareInterrupt(int comment);
-
 // Waitstates when accessing data
 static inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
 {

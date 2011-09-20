@@ -1,13 +1,6 @@
 #ifndef GFX_H
 #define GFX_H
 
-#include "GBA.h"
-#include "Globals.h"
-
-#include "../common/Port.h"
-
-#include "string.h"
-
 #define CLEAR_ARRAY(a) \
 {\
 	uint32_t *array = (a);\

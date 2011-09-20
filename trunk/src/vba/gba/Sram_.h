@@ -3,10 +3,12 @@
 #include "Flash.h"
 #include "Sram.h"
 
+#if 0
 uint8_t sramRead(uint32_t address)
 {
 	return flashSaveMemory[address & 0xFFFF];
 }
+#endif
 
 void sramDelayedWrite(uint32_t address, uint8_t byte)
 {

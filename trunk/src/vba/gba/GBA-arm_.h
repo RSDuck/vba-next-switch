@@ -1,7 +1,3 @@
-#ifdef __CELLOS_LV2__
-#include <ppu_intrinsics.h>
-#endif
-
 #ifdef _MSC_VER
  // Disable "empty statement" warnings
  #pragma warning(disable: 4390)
@@ -9,10 +5,6 @@
  // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.
  #define offset offset_
 #endif
-
-///////////////////////////////////////////////////////////////////////////
-
-static int clockTicks;
 
 static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 {
@@ -30,53 +22,8 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 	// CPU Undefined Exception - end of ghetto inline
 }
 
-// Subroutine to count instructions (for debugging/optimizing)
-//#define INSN_COUNTER  // comment out if you don't want it
-#ifdef INSN_COUNTER
-static void count(uint32_t opcode, int cond_res)
-{
-	static int insncount = 0;    // number of insns seen
-	static int executed = 0;     // number of insns executed
-	static int mergewith[4096];  // map instructions to routines
-	static int count[4096];      // count of each 12-bit code
-	int index = ((opcode>>16)&0xFF0) | ((opcode>>4)&0x0F);
-	static FILE *outfile = NULL;
-
-	if (!insncount)
-	{
-		for (int i = 0; i < 4096; i++)
-		{
-			for (int j = 0; j < i; j++)
-			{
-				if (armInsnTable[i] == armInsnTable[j])
-					break;
-			}
-			mergewith[i] = j;
-		}
-		outfile = fopen("VBA-armcount.txt", "w");
-	}
-	if (cond_res)
-	{
-		count[mergewith[index]]++;
-		executed++;
-	}
-	insncount++;
-	if (outfile && insncount%1000000 == 0)
-	{
-		fprintf(outfile, "Total instructions: %d\n", insncount);
-		fprintf(outfile, "Instructions executed: %d\n", executed);
-		for (int i = 0; i < 4096; i++)
-		{
-			if (count[i])
-				fprintf(outfile, "arm%03X: %d\n", i, count[i]);
-		}
-	}
-}
-#endif
 
 // Common macros //////////////////////////////////////////////////////////
-
-#define CONSOLE_OUTPUT(a,b)  /* nothing */
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -2295,7 +2242,7 @@ static insnfunc_t armInsnTable[4096] = {
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
-int armExecute()
+static int armExecute()
 {
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, its used during operations and generates LHS without it
@@ -2408,9 +2355,6 @@ int armExecute()
 
 			(*armInsnTable[(cond1| cond2)])(opcode);
 		}
-#ifdef INSN_COUNTER
-		count(opcode, cond_res);
-#endif		
 		ct = clockTicks;
 
 		if (ct < 0)
