@@ -749,20 +749,20 @@ inline int CPUUpdateTicks()
 
 #define CPUUpdateWindow0() \
 { \
-  int x00_window0 = WIN0H>>8; \
-  int x01_window0 = WIN0H & 255; \
-  int x00_lte_x01 = x00_window0 <= x01_window0; \
-  for(int i = 0; i < 240; i++) \
-      gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
+	int x00_window0 = WIN0H>>8; \
+	int x01_window0 = WIN0H & 255; \
+	int x00_lte_x01 = x00_window0 <= x01_window0; \
+	for(int i = 0; i < 240; i++) \
+		gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
 }
 
 #define CPUUpdateWindow1() \
 { \
-  int x00_window1 = WIN1H>>8; \
-  int x01_window1 = WIN1H & 255; \
-  int x00_lte_x01 = x00_window1 <= x01_window1; \
-  for(int i = 0; i < 240; i++) \
-   gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
+	int x00_window1 = WIN1H>>8; \
+	int x01_window1 = WIN1H & 255; \
+	int x00_lte_x01 = x00_window1 <= x01_window1; \
+	for(int i = 0; i < 240; i++) \
+	gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
 }
 
 #define CPUCompareVCOUNT() \
@@ -4213,7 +4213,6 @@ static bool CPUReadState(gzFile gzFile)
 		timer1Ticks = ((0x10000 - TM1D) << timer1ClockReload) - timer1Ticks;
 		timer2Ticks = ((0x10000 - TM2D) << timer2ClockReload) - timer2Ticks;
 		timer3Ticks = ((0x10000 - TM3D) << timer3ClockReload) - timer3Ticks;
-		//interp_rate();
 	}
 
 	// set pointers!
@@ -4299,70 +4298,61 @@ bool CPUReadMemState(char *memory, int available)
 	return res;
 }
 
-void CPUUpdateCPSR()
-{
-	uint32_t CPSR = reg[16].I & 0x40;
-
-	if(N_FLAG)
-		CPSR |= 0x80000000;
-
-	if(Z_FLAG)
-		CPSR |= 0x40000000;
-
-	if(C_FLAG)
-		CPSR |= 0x20000000;
-
-	if(V_FLAG)
-		CPSR |= 0x10000000;
-
-	if(!armState)
-		CPSR |= 0x00000020;
-
-	if(!armIrqEnable)
-		CPSR |= 0x80;
-
-	CPSR |= (armMode & 0x1F);
-	reg[16].I = CPSR;
+#define CPUUpdateCPSR() \
+{ \
+	uint32_t CPSR = reg[16].I & 0x40; \
+	\
+	if(N_FLAG) \
+		CPSR |= 0x80000000; \
+	\
+	if(Z_FLAG) \
+		CPSR |= 0x40000000; \
+	\
+	if(C_FLAG) \
+		CPSR |= 0x20000000; \
+	\
+	if(V_FLAG) \
+		CPSR |= 0x10000000; \
+	\
+	if(!armState) \
+		CPSR |= 0x00000020; \
+	\
+	if(!armIrqEnable) \
+		CPSR |= 0x80; \
+	\
+	CPSR |= (armMode & 0x1F); \
+	reg[16].I = CPSR; \
 }
 
-void CPUUpdateFlags(bool breakLoop)
-{
-	uint32_t CPSR = reg[16].I;
+#define CPUUpdateFlags_common() \
+{ \
+	uint32_t CPSR = reg[16].I; \
+	N_FLAG = (CPSR & 0x80000000) ? true: false; \
+	Z_FLAG = (CPSR & 0x40000000) ? true: false; \
+	C_FLAG = (CPSR & 0x20000000) ? true: false; \
+	V_FLAG = (CPSR & 0x10000000) ? true: false; \
+	armState = (CPSR & 0x20) ? false : true; \
+	armIrqEnable = (CPSR & 0x80) ? false : true; \
+}
 
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
-
-	if(breakLoop)
-	{
-		if (armIrqEnable && (IF & IE) && (IME & 1))
-			cpuNextEvent = cpuTotalTicks;
+#define CPUUpdateFlags_breakloop(breakLoop) \
+	CPUUpdateFlags_common(); \
+	if(breakLoop) \
+	{ \
+		if (armIrqEnable && (IF & IE) && (IME & 1)) \
+			cpuNextEvent = cpuTotalTicks; \
 	}
-}
 
-void CPUUpdateFlags()
-{
-	uint32_t CPSR = reg[16].I;
-
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
-
-	if (armIrqEnable && (IF & IE) && (IME & 1))
+#define CPUUpdateFlags() \
+	CPUUpdateFlags_common(); \
+	if (armIrqEnable && (IF & IE) && (IME & 1)) \
 		cpuNextEvent = cpuTotalTicks;
-}
 
 #define CPUSwap(a, b) \
 { \
-volatile uint32_t c = *b; \
-*b = *a; \
-*a = c; \
+	volatile uint32_t c = *b; \
+	*b = *a; \
+	*a = c; \
 }
 
 
@@ -4480,7 +4470,7 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 			break;
 	}
 	armMode = mode;
-	CPUUpdateFlags(breakLoop);
+	CPUUpdateFlags_breakloop(breakLoop);
 	CPUUpdateCPSR();
 }
 
@@ -4883,11 +4873,11 @@ void CPUCheckDMA(int reason, int dmamask)
 				cpuNextEvent = cpuTotalTicks;
 			}
 
-			if(((DM0CNT_H >> 5) & 3) == 3) {
+			if(((DM0CNT_H >> 5) & 3) == 3)
 				dma0Dest = DM0DAD_L | (DM0DAD_H << 16);
-			}
 
-			if(!(DM0CNT_H & 0x0200) || (reason == 0)) {
+			if(!(DM0CNT_H & 0x0200) || (reason == 0))
+			{
 				DM0CNT_H &= 0x7FFF;
 				UPDATE_REG(0xBA, DM0CNT_H);
 			}
@@ -4957,9 +4947,7 @@ void CPUCheckDMA(int reason, int dmamask)
 			}
 
 			if(((DM1CNT_H >> 5) & 3) == 3)
-			{
 				dma1Dest = DM1DAD_L | (DM1DAD_H << 16);
-			}
 
 			if(!(DM1CNT_H & 0x0200) || (reason == 0))
 			{
@@ -5032,9 +5020,7 @@ void CPUCheckDMA(int reason, int dmamask)
 			}
 
 			if(((DM2CNT_H >> 5) & 3) == 3)
-			{
 				dma2Dest = DM2DAD_L | (DM2DAD_H << 16);
-			}
 
 			if(!(DM2CNT_H & 0x0200) || (reason == 0))
 			{
@@ -5468,7 +5454,8 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				DM2CNT_H = value;
 				UPDATE_REG(0xD2, DM2CNT_H);
 
-				if(start && (value & 0x8000)) {
+				if(start && (value & 0x8000))
+				{
 					dma2Source = DM2SAD_L | (DM2SAD_H << 16);
 					dma2Dest = DM2DAD_L | (DM2DAD_H << 16);
 
@@ -5515,7 +5502,6 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0x100:
 			timer0Reload = value;
-			//interp_rate();
 			break;
 		case 0x102:
 			timer0Value = value;
@@ -5524,7 +5510,6 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0x104:
 			timer1Reload = value;
-			//interp_rate();
 			break;
 		case 0x106:
 			timer1Value = value;
