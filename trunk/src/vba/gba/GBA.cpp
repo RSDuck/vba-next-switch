@@ -623,6 +623,80 @@ void cpuEnableProfiling(int hz)
 }
 #endif
 
+static void BIOS_RegisterRamReset(uint32_t flags)
+{
+	// no need to trace here. this is only called directly from GBA.cpp
+	// to emulate bios initialization
+
+	CPUUpdateRegister(0x0, 0x80);
+
+	if(flags)
+	{
+		if(flags & 0x01)
+			__builtin_memset(workRAM, 0, 0x40000);	// clear work RAM
+		if(flags & 0x02)
+			__builtin_memset(internalRAM, 0, 0x7e00); // don't clear 0x7e00-0x7fff	// clear internal RAM
+
+		if(flags & 0x04)
+			__builtin_memset(paletteRAM, 0, 0x400);	// clear palette RAM
+
+		if(flags & 0x08)
+			__builtin_memset(vram, 0, 0x18000);	// clear VRAM
+
+		if(flags & 0x10)
+			__builtin_memset(oam, 0, 0x400);	// clean OAM
+
+		if(flags & 0x80)
+		{
+			int i;
+			for(i = 0; i < 0x10; i++)
+				CPUUpdateRegister(0x200+i*2, 0);
+
+			for(i = 0; i < 0xF; i++)
+				CPUUpdateRegister(0x4+i*2, 0);
+
+			for(i = 0; i < 0x20; i++)
+				CPUUpdateRegister(0x20+i*2, 0);
+
+			for(i = 0; i < 0x18; i++)
+				CPUUpdateRegister(0xb0+i*2, 0);
+
+			CPUUpdateRegister(0x130, 0);
+			CPUUpdateRegister(0x20, 0x100);
+			CPUUpdateRegister(0x30, 0x100);
+			CPUUpdateRegister(0x26, 0x100);
+			CPUUpdateRegister(0x36, 0x100);
+		}
+
+		if(flags & 0x20)
+		{
+			int i;
+			for(i = 0; i < 8; i++)
+				CPUUpdateRegister(0x110+i*2, 0);
+
+			CPUUpdateRegister(0x134, 0x8000);
+
+			for(i = 0; i < 7; i++)
+				CPUUpdateRegister(0x140+i*2, 0);
+		}
+
+		if(flags & 0x40)
+		{
+			int i;
+			CPUWriteByte(0x4000084, 0);
+			CPUWriteByte(0x4000084, 0x80);
+			CPUWriteMemory(0x4000080, 0x880e0000);
+			CPUUpdateRegister(0x88, CPUReadHalfWord(0x4000088)&0x3ff);
+			CPUWriteByte(0x4000070, 0x70);
+			for(i = 0; i < 8; i++)
+				CPUUpdateRegister(0x90+i*2, 0);
+			CPUWriteByte(0x4000070, 0);
+			for(i = 0; i < 8; i++)
+				CPUUpdateRegister(0x90+i*2, 0);
+			CPUWriteByte(0x4000084, 0);
+		}
+	}
+}
 
 inline int CPUUpdateTicks()
 {
@@ -4460,7 +4534,7 @@ void CPUSoftwareInterrupt(int comment)
 			ARM_PREFETCH;
 			break;
 		case 0x01:
-			BIOS_RegisterRamReset();
+			BIOS_RegisterRamReset(reg[0].I);
 			break;
 		case 0x02:
 			holdState = true;
