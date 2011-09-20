@@ -6154,29 +6154,29 @@ void CPUReset()
 	}
 }
 
-void CPUInterrupt()
-{
-	uint32_t PC = reg[15].I;
-	bool savedState = armState;
-	CPUSwitchMode(0x12, true, false);
-	reg[14].I = PC;
-
-	if(!savedState)
-		reg[14].I += 2;
-
-	reg[15].I = 0x18;
-	armState = true;
-	armIrqEnable = false;
-
-	armNextPC = reg[15].I;
-	reg[15].I += 4;
-	ARM_PREFETCH;
-
-	//  if(!holdState)
-	biosProtected[0] = 0x02;
-	biosProtected[1] = 0xc0;
-	biosProtected[2] = 0x5e;
-	biosProtected[3] = 0xe5;
+#define CPUInterrupt() \
+{ \
+	uint32_t PC = reg[15].I; \
+	bool savedState = armState; \
+	CPUSwitchMode(0x12, true, false); \
+	reg[14].I = PC; \
+	\
+	if(!savedState) \
+		reg[14].I += 2; \
+	\
+	reg[15].I = 0x18; \
+	armState = true; \
+	armIrqEnable = false; \
+	\
+	armNextPC = reg[15].I; \
+	reg[15].I += 4; \
+	ARM_PREFETCH; \
+	\
+	/*  if(!holdState) */ \
+	biosProtected[0] = 0x02; \
+	biosProtected[1] = 0xc0; \
+	biosProtected[2] = 0x5e; \
+	biosProtected[3] = 0xe5; \
 }
 
 // GBA-ARM

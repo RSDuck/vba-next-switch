@@ -1,6 +1,4 @@
-#include <math.h>
-
-s16 sineTable[256] = {
+static s16 sineTable[256] = {
   (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
   (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
   (s16)0x187D, (s16)0x19EF, (s16)0x1B5D, (s16)0x1CC6, (s16)0x1E2B, (s16)0x1F8B, (s16)0x20E7, (s16)0x223D,
@@ -35,18 +33,18 @@ s16 sineTable[256] = {
   (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
 };
 
-static void BIOS_ArcTan(void)
-{
-	s32 a =  -(((s32)(reg[0].I*reg[0].I)) >> 14);
-	s32 b = ((0xA9 * a) >> 14) + 0x390;
-	b = ((b * a) >> 14) + 0x91C;
-	b = ((b * a) >> 14) + 0xFB6;
-	b = ((b * a) >> 14) + 0x16AA;
-	b = ((b * a) >> 14) + 0x2081;
-	b = ((b * a) >> 14) + 0x3651;
-	b = ((b * a) >> 14) + 0xA2F9;
-	a = ((s32)reg[0].I * b) >> 16;
-	reg[0].I = a;
+#define BIOS_ArcTan() \
+{ \
+	s32 a =  -(((s32)(reg[0].I*reg[0].I)) >> 14); \
+	s32 b = ((0xA9 * a) >> 14) + 0x390; \
+	b = ((b * a) >> 14) + 0x91C; \
+	b = ((b * a) >> 14) + 0xFB6; \
+	b = ((b * a) >> 14) + 0x16AA; \
+	b = ((b * a) >> 14) + 0x2081; \
+	b = ((b * a) >> 14) + 0x3651; \
+	b = ((b * a) >> 14) + 0xA2F9; \
+	a = ((s32)reg[0].I * b) >> 16; \
+	reg[0].I = a; \
 }
 
 static void BIOS_Div(void)
@@ -150,10 +148,7 @@ static void BIOS_BitUnPack(void)
 	}while(1);
 }
 
-static void BIOS_GetBiosChecksum(void)
-{
-	reg[0].I=0xBAAE187F;
-}
+#define BIOS_GetBiosChecksum() reg[0].I=0xBAAE187F;
 
 static void BIOS_BgAffineSet(void)
 {
@@ -210,8 +205,7 @@ static void BIOS_CpuSet(void)
 	u32 dest = reg[1].I;
 	u32 cnt = reg[2].I;
 
-	if(((source & 0xe000000) == 0) ||
-			((source + (((cnt << 11)>>9) & 0x1fffff)) & 0xe000000) == 0)
+	if(((source & 0xe000000) == 0) || ((source + (((cnt << 11)>>9) & 0x1fffff)) & 0xe000000) == 0)
 		return;
 
 	int count = cnt & 0x1FFFFF;
@@ -665,8 +659,7 @@ static void BIOS_LZ77UnCompWram(void)
 	u32 header = CPUReadMemory(source);
 	source += 4;
 
-	if(((source & 0xe000000) == 0) ||
-			((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0)
+	if(((source & 0xe000000) == 0) || ((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0)
 		return;
 
 	int len = header >> 8;
@@ -904,11 +897,9 @@ static void BIOS_SoftReset(void)
 	reg[0].I = (int)((double)freq / tmp); \
 }
 
-static void BIOS_SndDriverJmpTableCopy(void)
-{
-	for(int i = 0; i < 0x24; i++)
-	{
-		CPUWriteMemory(reg[0].I, 0x9c);
-		reg[0].I += 4;
+#define BIOS_SndDriverJmpTableCopy() \
+	for(int i = 0; i < 0x24; i++) \
+	{ \
+		CPUWriteMemory(reg[0].I, 0x9c); \
+		reg[0].I += 4; \
 	}
-}
