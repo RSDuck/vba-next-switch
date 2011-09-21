@@ -150,40 +150,11 @@ class blip_eq_t;
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
 // amplitudes (max - min).
-class Blip_Synth
+typedef struct Blip_Synth
 {
-	public:
-	Blip_Synth() { impl_buf = 0; last_amp = 0; delta_factor = 0; }
-	Blip_Buffer* impl_buf;
 	int last_amp;
 	int delta_factor;
-
-	// Adds an amplitude transition of specified delta, optionally into specified buffer
-	// rather than the one set with output(). Delta can be positive or negative.
-	// The actual change in amplitude is delta * (volume / range)
-
-	// Works directly in terms of fractional output samples. Contact author for more info.
-	void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
 };
-
-inline void Blip_Synth::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
-{
-	delta *= delta_factor;
-	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
-	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (BLIP_RES - 1));
-
-	int32_t left = buf [0] + delta;
-
-	// Kind of crappy, but doing shift after multiply results in overflow.
-	// Alternate way of delaying multiply by delta_factor results in worse
-	// sub-sample resolution.
-	int32_t right = (delta >> BLIP_PHASE_BITS) * phase;
-	left  -= right;
-	right += buf[1];
-
-	buf[0] = left;
-	buf[1] = right;
-}
 
 #ifdef USE_SOUND_FILTERING
 // Low-pass equalization parameters
@@ -481,3 +452,5 @@ class Simple_Effects_Buffer : public Effects_Buffer
 };
 
 #endif
+
+void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );

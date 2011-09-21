@@ -26,7 +26,7 @@ bool const cgb_05 = false; // enables CGB-05 zombie behavior
         if ( delta ) \
         { \
                 last_amp = new_amp; \
-                med_synth->offset_resampled( time * output->factor_ + output->offset_, delta, output ); \
+                offset_resampled(med_synth->delta_factor, time * output->factor_ + output->offset_, delta, output ); \
         }
 
 // Units
@@ -369,7 +369,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 ph = (ph + 1) & 7;
                                 if ( ph == 0 || ph == duty )
                                 {
-                                        good_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
+                                        offset_resampled(good_synth->delta_factor, time * out->factor_ + out->offset_, delta, out );
                                         delta = -delta;
                                 }
                                 time += per;
@@ -540,7 +540,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                                 {
                                         bits |= ~mask;
                                         delta = -delta;
-                                        med_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
+                                        offset_resampled(med_synth->delta_factor, time * out->factor_ + out->offset_, delta, out );
                                 }
                                 time += per;
                         }
@@ -633,7 +633,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 if ( delta )
                                 {
                                         lamp = amp;
-                                        med_synth->offset_resampled( time * out->factor_ + out->offset_, delta, out );
+                                        offset_resampled(med_synth->delta_factor, time * out->factor_ + out->offset_, delta, out );
                                 }
                                 time += per;
                         }

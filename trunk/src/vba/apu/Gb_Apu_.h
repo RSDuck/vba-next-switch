@@ -232,7 +232,7 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 		if ( o.output )
 		{
 			o.output->set_modified();
-			med_synth.offset_resampled( last_time * o.output->factor_ + o.output->offset_, delta, o.output );
+			offset_resampled(med_synth.delta_factor, last_time * o.output->factor_ + o.output->offset_, delta, o.output );
 		}
 	}
 }

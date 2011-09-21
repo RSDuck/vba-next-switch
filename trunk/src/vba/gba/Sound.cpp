@@ -38,6 +38,7 @@
 #define NR52 0x84
 
 extern bool stopState;      // TODO: silence sound when true
+extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
 
 // 1 / 100th of a second
 #define SOUND_CLOCK_TICKS_ 167772
@@ -108,7 +109,7 @@ static Gba_Pcm_Fifo     pcm[2];
 static Gb_Apu*          gb_apu;
 static Stereo_Buffer*   stereo_buffer;
 
-static Blip_Synth pcm_synth;
+static struct Blip_Synth pcm_synth;
 
 static void init_gba_pcm(gba_pcm_struct * pcm_s)
 {
@@ -134,7 +135,7 @@ static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 		if ( pcm_s->output )
 		{
 			pcm_s->output->set_modified();
-			pcm_synth.offset_resampled((SOUND_CLOCK_TICKS - soundTicks) * pcm_s->output->factor_ + pcm_s->output->offset_, -pcm_s->last_amp, pcm_s->output );
+			offset_resampled(pcm_synth.delta_factor, (SOUND_CLOCK_TICKS - soundTicks) * pcm_s->output->factor_ + pcm_s->output->offset_, -pcm_s->last_amp, pcm_s->output );
 		}
 		pcm_s->last_amp = 0;
 		pcm_s->output = out;
@@ -174,7 +175,7 @@ static void update_gba_pcm(gba_pcm_struct * pcm_s, int dac)
 		filter = filters [idx];
 #endif
 
-		pcm_synth.offset_resampled( time * pcm_s->output->factor_ + pcm_s->output->offset_, delta, pcm_s->output );
+		offset_resampled(pcm_synth.delta_factor, time * pcm_s->output->factor_ + pcm_s->output->offset_, delta, pcm_s->output );
 	}
 	pcm_s->last_time = time;
 }

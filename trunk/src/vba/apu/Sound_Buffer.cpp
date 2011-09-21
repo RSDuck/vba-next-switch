@@ -1,9 +1,10 @@
+#include "Sound_Buffer.h"
+
 #include "Gb_Apu_.h"
 
 #include "Gb_Oscs_.h"
 // Blip_Buffer 0.4.1. http://www.slack.net/~ant/
 
-#include "Sound_Buffer.h"
 #include "../System.h"
 #include <string.h>
 #include <stdlib.h>
@@ -1142,4 +1143,28 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                 }
                 while ( remain );
         }
+}
+
+// Adds an amplitude transition of specified delta, optionally into specified buffer
+// rather than the one set with output(). Delta can be positive or negative.
+// The actual change in amplitude is delta * (volume / range)
+
+// Works directly in terms of fractional output samples. Contact author for more info.
+void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf )
+{
+	delta *= delta_factor;
+	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
+	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (BLIP_RES - 1));
+
+	int32_t left = buf[0] + delta;
+
+	// Kind of crappy, but doing shift after multiply results in overflow.
+	// Alternate way of delaying multiply by delta_factor results in worse
+	// sub-sample resolution.
+	int32_t right = (delta >> BLIP_PHASE_BITS) * phase;
+	left  -= right;
+	right += buf[1];
+
+	buf[0] = left;
+	buf[1] = right;
 }
