@@ -72,13 +72,13 @@ void Gb_Env::clock_envelope()
 }
 
 #define reload_sweep_timer() \
-        sweep_delay = (regs [0] & period_mask) >> 4; \
+        sweep_delay = (regs [0] & PERIOD_MASK) >> 4; \
         if ( !sweep_delay ) \
                 sweep_delay = 8;
 
 void Gb_Sweep_Square::calc_sweep( bool update )
 {
-        int const shift = regs [0] & shift_mask;
+        int const shift = regs [0] & SHIFT_MASK;
         int const delta = sweep_freq >> shift;
         sweep_neg = (regs [0] & 0x08) != 0;
         int const freq = sweep_freq + (sweep_neg ? -delta : delta);
@@ -101,7 +101,7 @@ void Gb_Sweep_Square::clock_sweep()
         if ( --sweep_delay <= 0 )
         {
                 reload_sweep_timer();
-                if ( sweep_enabled && (regs [0] & period_mask) )
+                if ( sweep_enabled && (regs [0] & PERIOD_MASK) )
                 {
                         calc_sweep( true  );
                         calc_sweep( false );
@@ -113,11 +113,11 @@ int Gb_Wave::access( unsigned addr ) const
 {
         if ( enabled )
         {
-                addr = phase & (bank_size - 1);
-                if ( mode == mode_dmg )
+                addr = phase & (BANK_SIZE - 1);
+                if (mode == MODE_DMG)
                 {
                         addr++;
-                        if ( delay > clk_mul )
+                        if (delay > CLK_MUL)
                                 return -1; // can only access within narrow time window while playing
                 }
                 addr >>= 1;
@@ -157,7 +157,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 inline void Gb_Env::zombie_volume( int old, int data )
 {
         int v = volume;
-        if ( mode == mode_agb || cgb_05 )
+        if ( mode == MODE_AGB || cgb_05 )
         {
                 // CGB-05 behavior, very close to AGB behavior as well
                 if ( (old ^ data) & 8 )
@@ -233,7 +233,7 @@ bool Gb_Square::write_register( int frame_phase, int reg, int old_data, int data
 {
         bool result = Gb_Env::write_register( frame_phase, reg, old_data, data );
         if ( result )
-                delay = (delay & (4 * clk_mul - 1)) + period();
+                delay = (delay & (4 * CLK_MUL - 1)) + period();
         return result;
 }
 
@@ -242,7 +242,7 @@ inline void Gb_Noise::write_register( int frame_phase, int reg, int old_data, in
         if ( Gb_Env::write_register( frame_phase, reg, old_data, data ) )
         {
                 phase = 0x7FFF;
-                delay += 8 * clk_mul;
+                delay += 8 * CLK_MUL;
         }
 }
 
@@ -256,15 +256,15 @@ inline void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_d
                 sweep_freq = frequency();
                 sweep_neg = false;
                 reload_sweep_timer();
-                sweep_enabled = (regs [0] & (period_mask | shift_mask)) != 0;
-                if ( regs [0] & shift_mask )
+                sweep_enabled = (regs [0] & (PERIOD_MASK | SHIFT_MASK)) != 0;
+                if ( regs [0] & SHIFT_MASK)
                         calc_sweep( false );
         }
 }
 
 void Gb_Wave::corrupt_wave()
 {
-        int pos = ((phase + 1) & (bank_size - 1)) >> 1;
+        int pos = ((phase + 1) & (BANK_SIZE - 1)) >> 1;
         if ( pos < 4 )
                 m_wave_ram[0] = m_wave_ram[pos];
         else
@@ -291,11 +291,11 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if ( !dac_enabled() )
 					enabled = false;
-				else if ( mode == mode_dmg && was_enabled && (unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
+				else if ( mode == MODE_DMG && was_enabled && (unsigned) (delay - 2 * CLK_MUL) < 2 * CLK_MUL)
 					corrupt_wave();
 
 				phase = 0;
-				delay    = period() + 6 * clk_mul;
+				delay    = period() + 6 * CLK_MUL;
 			}
 	}
 }
@@ -330,7 +330,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         int const duty_code = regs [1] >> 6;
         int32_t duty_offset = duty_offsets [duty_code];
         int32_t duty = duties [duty_code];
-        if ( mode == mode_agb )
+        if (mode == MODE_AGB)
         {
                 // AGB uses inverted duty
                 duty_offset -= duty;
@@ -349,12 +349,12 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                         if ( enabled )
                                 vol = volume;
 
-                        amp = -dac_bias;
-                        if ( mode == mode_agb )
+                        amp = -DAC_BIAS;
+                        if (mode == MODE_AGB)
                                 amp = -(vol >> 1);
 
                         // Play inaudible frequencies as constant amplitude
-                        if ( frequency() >= 0x7FA && delay < 32 * clk_mul )
+                        if ( frequency() >= 0x7FA && delay < 32 * CLK_MUL)
                         {
                                 amp += (vol * duty) >> 3;
                                 vol = 0;
@@ -496,8 +496,8 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         if ( enabled )
                                 vol = volume;
 
-                        amp = -dac_bias;
-                        if ( mode == mode_agb )
+                        amp = -DAC_BIAS;
+                        if (mode == MODE_AGB)
                                 amp = -(vol >> 1);
 
                         if ( !(phase & 1) )
@@ -508,7 +508,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
 
                 // AGB negates final output
-                if ( mode == mode_agb )
+                if (mode == MODE_AGB)
                 {
                         vol = -vol;
                         amp    = -amp;
@@ -519,14 +519,14 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
 
         // Run timer and calculate time of next LFSR clock
         static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
-        int const period1 = period1s [regs [3] & 7] * clk_mul;
+        int const period1 = period1s [regs [3] & 7] * CLK_MUL;
         {
                 int extra = (end_time - time) - delay;
                 int const per2 = period2();
                 time += delay + ((divider ^ (per2 >> 1)) & (per2 - 1)) * period1;
 
                 int count = (extra < 0 ? 0 : (extra + period1 - 1) / period1);
-                divider = (divider - count) & period2_mask;
+                divider = (divider - count) & PERIOD2_MASK;
                 delay = count * period1 - extra;
         }
 
@@ -596,7 +596,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                         amp = 8 << 4; // really depends on average of all samples in wave
 
                         // if delay is larger, constant amplitude won't start yet
-                        if ( frequency() <= 0x7FB || delay > 15 * clk_mul )
+                        if ( frequency() <= 0x7FB || delay > 15 * CLK_MUL)
                         {
                                 if ( volume_mul )
                                         playing = (int) enabled;
@@ -604,7 +604,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 amp = (sample_buf << (phase << 2 & 4) & 0xF0) * playing;
                         }
 
-                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - dac_bias;
+                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - DAC_BIAS;
                 }
                 update_amp( time, amp );
         }
@@ -619,10 +619,10 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 int const flags = regs [0] & agb_mask;
                 int const wave_mask = (flags & size20_mask) | 0x1F;
                 int swap_banks = 0;
-                if ( flags & bank40_mask )
+                if (flags & BANK40_MASK)
                 {
                         swap_banks = flags & size20_mask;
-                        wave += bank_size/2 - (swap_banks >> 1);
+                        wave += BANK_SIZE/2 - (swap_banks >> 1);
                 }
 
                 int ph = phase ^ swap_banks;
@@ -639,7 +639,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 else
                 {
                         // Output amplitude transitions
-                        int lamp = last_amp + dac_bias;
+                        int lamp = last_amp + DAC_BIAS;
                         do
                         {
                                 // Extract nybble
@@ -658,7 +658,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 time += per;
                         }
                         while ( time < end_time );
-                        last_amp = lamp - dac_bias;
+                        last_amp = lamp - DAC_BIAS;
                 }
                 ph = (ph - 1) & wave_mask; // undo pre-advance and mask position
 

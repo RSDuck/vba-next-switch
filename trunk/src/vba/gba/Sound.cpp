@@ -108,7 +108,7 @@ static Gba_Pcm_Fifo     pcm[2];
 static Gb_Apu*          gb_apu;
 static Stereo_Buffer*   stereo_buffer;
 
-static Blip_Synth<blip_med_quality> pcm_synth; // 32 kHz, 16 kHz, 8 kHz
+static Blip_Synth pcm_synth;
 
 static void init_gba_pcm(gba_pcm_struct * pcm_s)
 {
@@ -495,7 +495,7 @@ static void remake_stereo_buffer(void)
 	{
 		gb_apu = new Gb_Apu; // TODO: handle out of memory
 		//Begin of Reset APU
-		gb_apu->reset( mode_agb, true );
+		gb_apu->reset(MODE_AGB, true );
 
 		if ( stereo_buffer )
 			stereo_buffer->clear();
@@ -567,7 +567,7 @@ void soundReset(void)
 
 	remake_stereo_buffer();
 	//Begin of Reset APU
-	gb_apu->reset( mode_agb, true );
+	gb_apu->reset(MODE_AGB, true);
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();
@@ -877,7 +877,7 @@ void soundReadGame( gzFile in, int version )
 	// Prepare APU and default state
 
 	//Begin of Reset APU
-	gb_apu->reset( mode_agb, true );
+	gb_apu->reset(MODE_AGB, true);
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();
@@ -959,7 +959,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	// Prepare APU and default state
 
 	//Begin of Reset APU
-	gb_apu->reset( mode_agb, true );
+	gb_apu->reset(MODE_AGB, true);
 
 	if ( stereo_buffer )
 		stereo_buffer->clear();

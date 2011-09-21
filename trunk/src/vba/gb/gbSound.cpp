@@ -106,11 +106,11 @@ void gbSoundTick()
 
 static void reset_apu()
 {
-	uint32_t mode = mode_dmg;
+	uint32_t mode = MODE_DMG;
 	if ( gbHardware & 2 )
-		mode = mode_cgb;
+		mode = MODE_CGB;
 	if ( gbHardware & 8 || declicking )
-		mode = mode_agb;
+		mode = MODE_AGB;
 	gb_apu->reset( mode );
 	gb_apu->reduce_clicks( declicking );
 
@@ -127,15 +127,21 @@ static void remake_stereo_buffer()
 	stereo_buffer = 0;
 
 	stereo_buffer = new Simple_Effects_Buffer; // TODO: handle out of memory
-	if ( stereo_buffer->set_sample_rate( soundSampleRate ) ) { } // TODO: handle out of memory
+	if(stereo_buffer->set_sample_rate( soundSampleRate))
+	{
+		// TODO: handle out of memory
+	} 
 	stereo_buffer->clock_rate( gb_apu->clock_rate );
 
 	// APU
 	static int const chan_types [chan_count] = {
-		wave_type+1, wave_type+2,
-		wave_type+3, mixed_type+1
+		WAVE_TYPE+1, WAVE_TYPE+2,
+		WAVE_TYPE+3, MIXED_TYPE+1
 	};
-	if ( stereo_buffer->set_channel_count( chan_count, chan_types ) ) { } // TODO: handle errors
+	if(stereo_buffer->set_channel_count( chan_count, chan_types))
+	{
+		//TODO: handle errors
+	}
 
 	if ( !gb_apu )
 	{

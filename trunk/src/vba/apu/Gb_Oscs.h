@@ -15,8 +15,8 @@
         #error "GB_APU_OVERCLOCK must be a power of 2"
 #endif
 
-#define	clk_mul	GB_APU_OVERCLOCK
-#define dac_bias 7
+#define	CLK_MUL	GB_APU_OVERCLOCK
+#define DAC_BIAS 7
 
 class Gb_Osc
 {
@@ -27,10 +27,8 @@ class Gb_Osc
 	int mode;			// mode_dmg, mode_cgb, mode_agb
 	int dac_off_amp;		// amplitude when DAC is off
 	int last_amp;			// current amplitude in Blip_Buffer
-	typedef Blip_Synth<blip_good_quality> Good_Synth;
-	typedef Blip_Synth<blip_med_quality> Med_Synth;
-	Good_Synth const* good_synth;
-	Med_Synth  const* med_synth;
+	Blip_Synth const* good_synth;
+	Blip_Synth const* med_synth;
 
 	int delay;			// clocks until frequency timer expires
 	int length_ctr;			// length counter
@@ -85,11 +83,11 @@ class Gb_Square : public Gb_Env
 	}
 	private:
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (4 * clk_mul); }
+	int period() const { return (2048 - frequency()) * (4 * CLK_MUL); }
 };
 
-#define	period_mask 0x70
-#define shift_mask  0x07
+#define	PERIOD_MASK 0x70
+#define SHIFT_MASK  0x07
 
 class Gb_Sweep_Square : public Gb_Square
 {
@@ -115,7 +113,7 @@ class Gb_Sweep_Square : public Gb_Square
 	void reload_sweep_timer();
 };
 
-#define	period2_mask 0x1FFFF
+#define	PERIOD2_MASK 0x1FFFF
 
 class Gb_Noise : public Gb_Env
 {
@@ -129,7 +127,7 @@ class Gb_Noise : public Gb_Env
 	{
 		divider = 0;
 		Gb_Env::reset();
-		delay = 4 * clk_mul; // TODO: remove?
+		delay = 4 * CLK_MUL; // TODO: remove?
 	}
 	private:
 	int period2_index() const { return regs [3] >> 4; }
@@ -137,8 +135,8 @@ class Gb_Noise : public Gb_Env
 	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
 };
 
-#define bank40_mask	0x40
-#define bank_size	32
+#define BANK40_MASK	0x40
+#define BANK_SIZE	32
 
 class Gb_Wave : public Gb_Osc
 {
@@ -162,14 +160,14 @@ class Gb_Wave : public Gb_Osc
 
 	private:
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (2 * clk_mul); }
+	int period() const { return (2048 - frequency()) * (2 * CLK_MUL); }
 
 	// Non-zero if DAC is enabled
 	int dac_enabled() const { return regs [0] & 0x80; }
 
 	void corrupt_wave();
 
-	uint8_t* wave_bank() const { return &m_wave_ram[(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
+	uint8_t* wave_bank() const { return &m_wave_ram[(~regs [0] & BANK40_MASK) >> 2 & agb_mask]; }
 
 	// Wave index that would be accessed, or -1 if no access would occur
 	int access( unsigned addr ) const;
