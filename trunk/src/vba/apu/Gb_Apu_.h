@@ -214,16 +214,9 @@ void Gb_Apu::run_until_( int32_t end_time )
 	}while(1);
 }
 
-inline void Gb_Apu::run_until( int32_t time )
-{
-	if ( time > last_time )
-		run_until_( time );
-}
-
 void Gb_Apu::end_frame( int32_t end_time )
 {
-	if ( end_time > last_time )
-		run_until( end_time );
+	run_until(end_time);
 
 	frame_time -= end_time;
 
@@ -262,7 +255,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			data &= 0x3F; // clear square duty
 	}
 
-	run_until( time );
+	run_until(time);
 
 	if ( addr >= WAVE_RAM )
 	{
@@ -349,7 +342,7 @@ void Gb_Apu::apply_stereo()
 
 int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
-	run_until( time );
+	run_until(time);
 
 	int reg = addr - START_ADDR;
 	if ( (unsigned) reg >= REGISTER_COUNT)

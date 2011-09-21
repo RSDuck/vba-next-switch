@@ -51,6 +51,12 @@ struct gb_apu_state_t;
 #define agb_treble	0
 #define agb_bass	30
 
+#define run_until(time) \
+	if (time > last_time) \
+	{ \
+		run_until_(time); \
+	}
+
 class Gb_Apu
 {
 	public:
@@ -120,7 +126,6 @@ class Gb_Apu
 
 	void apply_stereo();
 	void run_until_( int32_t );
-	void run_until( int32_t );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
 	int32_t save_load( gb_apu_state_t*, bool save );
