@@ -24,7 +24,7 @@ class Gb_Osc
 	Blip_Buffer* outputs [4];	// NULL, right, left, center
 	Blip_Buffer* output;		// where to output sound
 	uint8_t * regs;			// osc's 5 registers
-	int mode;			// mode_dmg, mode_cgb, mode_agb
+	int mode;			// MODE_DMG, MODE_CGB, MODE_AGB
 	int dac_off_amp;		// amplitude when DAC is off
 	int last_amp;			// current amplitude in Blip_Buffer
 	Blip_Synth const* good_synth;
@@ -36,13 +36,9 @@ class Gb_Osc
 	bool enabled;			// internal enabled flag
 
 	void clock_length();
-	void reset();
 	protected:
-
 	// 11-bit frequency in NRx3 and NRx4
 	int frequency() const { return (regs [4] & 7) * 0x100 + regs [3]; }
-
-	void update_amp( int32_t, int new_amp );
 	int write_trig( int frame_phase, int max_len, int old_data );
 };
 
@@ -63,7 +59,11 @@ class Gb_Env : public Gb_Osc
 	{
 		env_delay = 0;
 		volume    = 0;
-		Gb_Osc::reset();
+		output   = 0;
+		last_amp = 0;
+		delay    = 0;
+		phase    = 0;
+		enabled  = false;
 	}
 	private:
 	void zombie_volume( int old, int data );
@@ -78,7 +78,13 @@ class Gb_Square : public Gb_Env
 
 	void reset()
 	{
-		Gb_Env::reset();
+		env_delay = 0;
+		volume    = 0;
+		output   = 0;
+		last_amp = 0;
+		delay    = 0;
+		phase    = 0;
+		enabled  = false;
 		delay = 0x40000000; // TODO: something less hacky (never clocked until first trigger)
 	}
 	private:
@@ -106,7 +112,14 @@ class Gb_Sweep_Square : public Gb_Square
 		sweep_delay   = 0;
 		sweep_enabled = false;
 		sweep_neg     = false;
-		Gb_Square::reset();
+		env_delay = 0;
+		volume    = 0;
+		output   = 0;
+		last_amp = 0;
+		delay    = 0;
+		phase    = 0;
+		enabled  = false;
+		delay = 0x40000000; // TODO: something less hacky (never clocked until first trigger)
 	}
 	private:
 	void calc_sweep( bool update );
@@ -126,7 +139,13 @@ class Gb_Noise : public Gb_Env
 	void reset()
 	{
 		divider = 0;
-		Gb_Env::reset();
+		env_delay = 0;
+		volume    = 0;
+		output   = 0;
+		last_amp = 0;
+		delay    = 0;
+		phase    = 0;
+		enabled  = false;
 		delay = 4 * CLK_MUL; // TODO: remove?
 	}
 	private:
@@ -155,7 +174,11 @@ class Gb_Wave : public Gb_Osc
 	void reset()
 	{
 		sample_buf = 0;
-		Gb_Osc::reset();
+		output   = 0;
+		last_amp = 0;
+		delay    = 0;
+		phase    = 0;
+		enabled  = false;
 	}
 
 	private:

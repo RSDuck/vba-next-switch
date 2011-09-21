@@ -21,25 +21,14 @@ bool const cgb_05 = false; // enables CGB-05 zombie behavior
 #define trigger_mask 0x80
 #define length_enabled 0x40
 
-void Gb_Osc::reset()
-{
-        output   = 0;
-        last_amp = 0;
-        delay    = 0;
-        phase    = 0;
-        enabled  = false;
-}
-
-inline void Gb_Osc::update_amp( int32_t time, int new_amp )
-{
-        output->set_modified();
-        int delta = new_amp - last_amp;
-        if ( delta )
-        {
-                last_amp = new_amp;
-                med_synth->offset_resampled( time * output->factor_ + output->offset_, delta, output );
+#define GB_OSC_UPDATE_AMP(time, new_amp) \
+        output->set_modified(); \
+        int delta = new_amp - last_amp; \
+        if ( delta ) \
+        { \
+                last_amp = new_amp; \
+                med_synth->offset_resampled( time * output->factor_ + output->offset_, delta, output ); \
         }
-}
 
 // Units
 
@@ -366,7 +355,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 vol = -vol;
                         }
                 }
-                update_amp( time, amp );
+                GB_OSC_UPDATE_AMP( time, amp );
         }
 
         // Generate wave
@@ -514,7 +503,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         amp    = -amp;
                 }
 
-                update_amp( time, amp );
+                GB_OSC_UPDATE_AMP( time, amp );
         }
 
         // Run timer and calculate time of next LFSR clock
@@ -606,7 +595,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
 
                         amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - DAC_BIAS;
                 }
-                update_amp( time, amp );
+                GB_OSC_UPDATE_AMP( time, amp );
         }
 
         // Generate wave
