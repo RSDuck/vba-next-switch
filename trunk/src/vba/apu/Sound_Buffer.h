@@ -9,17 +9,37 @@
 
 #include "blargg_common.h"
 
+#ifdef HAVE_CONFIG_H
+        #include "config.h"
+#endif
+
 /* BLIP BUFFER */
+
+// Number of bits in resample ratio fraction. Higher values give a more accurate ratio
+// but reduce maximum buffer size.
+#define BLIP_BUFFER_ACCURACY 16
 
 // Output samples are 16-bit signed, with a range of -32768 to 32767
 #define BLIP_SAMPLE_MAX 32767
 #define STEREO 2
 
-struct blip_buffer_state_t;
+// Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in
+// noticeable broadband noise when synthesizing high frequency square waves.
+// Affects size of Blip_Synth objects since they store the waveform directly.
+#define BLIP_PHASE_BITS 8
+
+//blip_res = 1 << BLIP_PHASE_BITS
+#define BLIP_RES 256
 
 #ifdef FASTER_SOUND_HACK_NON_SILENCE
 #define blip_buffer_end_frame(blip, t) blip.offset_ += t * blip.factor_
 #endif
+
+// Number of samples available for reading with read_samples()
+#define blip_buffer_samples_avail() (offset_ >> BLIP_BUFFER_ACCURACY)
+#define blip_buffer_samples_avail_inst(blip) (blip.offset_ >> BLIP_BUFFER_ACCURACY)
+
+struct blip_buffer_state_t;
 
 class Blip_Buffer
 {
@@ -57,8 +77,6 @@ class Blip_Buffer
 	// Clear out any samples waiting rather than entire buffer
 	void clear_false(void);
 
-	// Number of samples available for reading with read_samples()
-	long samples_avail() const;
 
 	// Removes 'count' samples from those waiting to be read
 	void remove_samples( long count );
@@ -105,25 +123,11 @@ class Blip_Buffer
 	int bass_freq_;
 };
 
-#ifdef HAVE_CONFIG_H
-        #include "config.h"
-#endif
 
-// Number of bits in resample ratio fraction. Higher values give a more accurate ratio
-// but reduce maximum buffer size.
-#define BLIP_BUFFER_ACCURACY 16
 
-// Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in
-// noticeable broadband noise when synthesizing high frequency square waves.
-// Affects size of Blip_Synth objects since they store the waveform directly.
-#define BLIP_PHASE_BITS 8
-
-//blip_res = 1 << BLIP_PHASE_BITS
-#define BLIP_RES 256
 
 // Internal
 #define blip_widest_impulse_ 16
-//blip_buffer_extra = blip_widest_impulse_ + 2
 #define blip_buffer_extra_ 18
 
 #ifdef USE_SOUND_FILTERING
@@ -267,7 +271,6 @@ struct blip_buffer_state_t
 #undef BLIP_FWD
 #undef BLIP_REV
 
-inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
 
 inline void Blip_Buffer::clock_rate( long cps )
 {
@@ -314,7 +317,7 @@ class Stereo_Buffer {
 		void end_frame( int32_t );
 		#endif
 
-		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
+		long samples_avail() { return (blip_buffer_samples_avail_inst(bufs_buffer [0]) - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer[BUFFERS_SIZE];
@@ -394,7 +397,7 @@ class Effects_Buffer {
 		channel_t channel( int i);
 		void end_frame( int32_t );
 		long read_samples( int16_t*, long );
-		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
+		long samples_avail() const { return (blip_buffer_samples_avail_inst(bufs_buffer [0]) - mixer_samples_read) * 2; }
 		enum { stereo = 2 };
 		void mixer_read_pairs( int16_t* out, int count );
 		bool immediate_removal_;

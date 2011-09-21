@@ -84,7 +84,7 @@ void Blip_Buffer::clear_false(void)
 	modified_     = 0;
 	if ( buffer_ )
 	{
-		long count = samples_avail();
+		long count = blip_buffer_samples_avail();
 		__builtin_memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof(int32_t) );
 	}
 }
@@ -150,7 +150,7 @@ void Blip_Buffer::end_frame( int32_t t )
 {
         offset_ += t * factor_;
         if ( clear_modified() )
-                last_non_silence = samples_avail() + blip_buffer_extra_;
+                last_non_silence = blip_buffer_samples_avail() + blip_buffer_extra_;
 }
 #endif
 
@@ -164,7 +164,7 @@ void Blip_Buffer::remove_samples( long count )
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
 	// copy remaining samples to beginning and clear old samples
-	long remain = samples_avail() + blip_buffer_extra_;
+	long remain = blip_buffer_samples_avail() + blip_buffer_extra_;
 	memmove( buffer_, buffer_ + count, remain * sizeof(*buffer_));
 	__builtin_memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
