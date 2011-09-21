@@ -7,7 +7,6 @@
 #include "../System.h"
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
 
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -129,13 +128,6 @@ int32_t Blip_Buffer::set_sample_rate(long new_rate, int msec)
         return 0; // success
 }
 
-uint32_t Blip_Buffer::clock_rate_factor( long rate ) const
-{
-        double ratio = (double) sample_rate_ / rate;
-        int32_t factor = (int32_t) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5 );
-        return (uint32_t) factor;
-}
-
 void Blip_Buffer::bass_freq( int freq )
 {
         bass_freq_ = freq;
@@ -205,8 +197,6 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 		return count;
 }
 
-uint32_t const subsample_mask = (1L << BLIP_BUFFER_ACCURACY) - 1;
-
 void Blip_Buffer::save_state( blip_buffer_state_t* out )
 {
         out->offset_       = offset_;
@@ -232,8 +222,6 @@ uint32_t Blip_Buffer::non_silent() const
 #endif
 
 // Stereo_Buffer
-
-int const stereo = 2;
 
 Stereo_Buffer::Stereo_Buffer()
 {
@@ -434,7 +422,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
 	{
 #endif
-		int16_t* BLIP_RESTRICT outtemp = out + count * stereo;
+		int16_t* BLIP_RESTRICT outtemp = out + count * STEREO;
 
 		// do left + center and right + center separately to reduce register load
 		Blip_Buffer* const* buf = &mixer_bufs [2];
@@ -458,7 +446,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
@@ -483,7 +471,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );

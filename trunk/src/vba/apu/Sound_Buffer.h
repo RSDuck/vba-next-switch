@@ -4,6 +4,7 @@
 #ifndef MULTI_BUFFER_H
 #define MULTI_BUFFER_H
 
+#include <math.h>
 #include "../System.h"
 
 #include "blargg_common.h"
@@ -12,6 +13,7 @@
 
 // Output samples are 16-bit signed, with a range of -32768 to 32767
 #define BLIP_SAMPLE_MAX 32767
+#define STEREO 2
 
 struct blip_buffer_state_t;
 
@@ -82,8 +84,6 @@ class Blip_Buffer
 
 	// not documented yet
 	Blip_Buffer* clear_modified() { Blip_Buffer* b = modified_; modified_ = 0; return b; }
-	void remove_silence( long count );
-	uint32_t clock_rate_factor( long clock_rate ) const;
 	uint32_t factor_;
 	uint32_t offset_;
 	int32_t * buffer_;
@@ -268,7 +268,14 @@ struct blip_buffer_state_t
 #undef BLIP_REV
 
 inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
-inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
+
+inline void Blip_Buffer::clock_rate( long cps )
+{
+	clock_rate_ = cps;
+	double ratio = (double) sample_rate_ / clock_rate_;
+	int32_t factor = (int32_t) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5);
+	factor_ = (uint32_t)factor;
+}
 
 #define BLIP_MAX_LENGTH	0
 
