@@ -15,6 +15,10 @@
 
 struct blip_buffer_state_t;
 
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
+#define blip_buffer_end_frame(blip, t) blip.offset_ += t * blip.factor_
+#endif
+
 class Blip_Buffer
 {
 	public:
@@ -32,10 +36,12 @@ class Blip_Buffer
 	// Sets number of source time units per second
 	void clock_rate( long clocks_per_sec );
 
+	#ifndef FASTER_SOUND_HACK_NON_SILENCE
 	// Ends current time frame of specified duration and makes its samples available
 	// (along with any still-unread samples) for reading with read_samples(). Begins
 	// a new time frame at the end of the current frame.
 	void end_frame( int32_t time );
+	#endif
 
 	// Reads at most 'max_samples' out of buffer into 'dest', removing them from
 	// the buffer. Returns number of samples actually read and removed. If stereo is
@@ -75,7 +81,6 @@ class Blip_Buffer
 	// not documented yet
 	Blip_Buffer* clear_modified() { Blip_Buffer* b = modified_; modified_ = 0; return b; }
 	void remove_silence( long count );
-	uint32_t resampled_time( int32_t t ) const { return t * factor_ + offset_; }
 	uint32_t clock_rate_factor( long clock_rate ) const;
 	uint32_t factor_;
 	uint32_t offset_;
@@ -295,6 +300,12 @@ typedef struct channel_t {
 
 #define buffers_size 3
 
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
+#define stereo_buffer_end_frame(stereo_buf, time) \
+        for ( int i = buffers_size; --i >= 0; ) \
+		blip_buffer_end_frame(stereo_buf->bufs_buffer[i], time);
+#endif
+
 // Uses three buffers (one for center) and outputs stereo sample pairs.
 class Stereo_Buffer {
 	public:
@@ -304,7 +315,9 @@ class Stereo_Buffer {
 		void clock_rate( long );
 		void clear();
 
+	#ifndef FASTER_SOUND_HACK_NON_SILENCE
 		void end_frame( int32_t );
+		#endif
 
 		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );

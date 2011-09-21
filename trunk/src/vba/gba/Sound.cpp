@@ -422,7 +422,7 @@ void psoundTickfn(void)
 	end_frame_gba_pcm(&pcm[1].pcm_s, SOUND_CLOCK_TICKS);
 
 	gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
-	stereo_buffer->end_frame( SOUND_CLOCK_TICKS );
+	stereo_buffer_end_frame(stereo_buffer, SOUND_CLOCK_TICKS);
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples

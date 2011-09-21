@@ -137,14 +137,18 @@ void Blip_Buffer::bass_freq( int freq )
         bass_shift_ = shift;
 }
 
+// Ends current time frame of specified duration and makes its samples available
+// (along with any still-unread samples) for reading with read_samples(). Begins
+// a new time frame at the end of the current frame.
+
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
 void Blip_Buffer::end_frame( int32_t t )
 {
         offset_ += t * factor_;
-#ifndef FASTER_SOUND_HACK_NON_SILENCE
         if ( clear_modified() )
                 last_non_silence = samples_avail() + blip_buffer_extra_;
-#endif
 }
+#endif
 
 void Blip_Buffer::remove_samples( long count )
 {
@@ -268,11 +272,17 @@ void Stereo_Buffer::clear()
                 bufs_buffer [i].clear();
 }
 
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
 void Stereo_Buffer::end_frame( int32_t time )
 {
         for ( int i = buffers_size; --i >= 0; )
+	#ifdef FASTER_SOUND_HACK_NON_SILENCE
+		blip_buffer_end_frame(bufs_buffer[i], time);
+	#else
                 bufs_buffer [i].end_frame( time );
+	#endif
 }
+#endif
 
 long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 {
@@ -913,8 +923,12 @@ void Effects_Buffer::apply_config()
 
 void Effects_Buffer::end_frame( int32_t time )
 {
-        for ( int i = bufs_size; --i >= 0; )
-                bufs_buffer [i].end_frame( time );
+	for ( int i = bufs_size; --i >= 0; )
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
+		blip_buffer_end_frame(bufs_buffer[i], time);
+#else
+		bufs_buffer [i].end_frame( time );
+#endif
 }
 
 long Effects_Buffer::read_samples( int16_t * out, long out_size )
