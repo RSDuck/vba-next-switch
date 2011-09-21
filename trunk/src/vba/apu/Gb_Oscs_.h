@@ -19,7 +19,6 @@ bool const cgb_02 = false; // enables bug in early CGB units that causes problem
 bool const cgb_05 = false; // enables CGB-05 zombie behavior
 
 #define trigger_mask 0x80
-#define length_enabled 0x40
 
 #define GB_OSC_UPDATE_AMP(time, new_amp) \
         output->set_modified(); \
@@ -31,15 +30,6 @@ bool const cgb_05 = false; // enables CGB-05 zombie behavior
         }
 
 // Units
-
-void Gb_Osc::clock_length()
-{
-        if ( (regs [4] & length_enabled) && length_ctr )
-        {
-                if ( --length_ctr <= 0 )
-                        enabled = false;
-        }
-}
 
 inline int Gb_Env::reload_env_timer()
 {
@@ -120,9 +110,9 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 {
         int data = regs [4];
 
-        if ( (frame_phase & 1) && !(old_data & length_enabled) && length_ctr )
+        if ( (frame_phase & 1) && !(old_data & LENGTH_ENABLED) && length_ctr )
         {
-                if ( (data & length_enabled) || cgb_02 )
+                if ( (data & LENGTH_ENABLED) || cgb_02 )
                         length_ctr--;
         }
 
@@ -132,7 +122,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
                 if ( !length_ctr )
                 {
                         length_ctr = max_len;
-                        if ( (frame_phase & 1) && (data & length_enabled) )
+                        if ( (frame_phase & 1) && (data & LENGTH_ENABLED) )
                                 length_ctr--;
                 }
         }
@@ -511,7 +501,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         int const period1 = period1s [regs [3] & 7] * CLK_MUL;
         {
                 int extra = (end_time - time) - delay;
-                int const per2 = period2();
+                int const per2 = PERIOD2(8);
                 time += delay + ((divider ^ (per2 >> 1)) & (per2 - 1)) * period1;
 
                 int count = (extra < 0 ? 0 : (extra + period1 - 1) / period1);
@@ -524,9 +514,10 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         {
                 unsigned const mask = lfsr_mask();
                 unsigned bits = phase;
+		uint32_t period_value = period1 << 3;
 
-                int per = period2( period1 * 8 );
-                if ( period2_index() >= 0xE )
+                int per = PERIOD2(period_value);
+                if ( PERIOD2_INDEX() >= 0xE )
                 {
                         time = end_time;
                 }

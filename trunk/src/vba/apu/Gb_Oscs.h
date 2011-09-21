@@ -17,6 +17,14 @@
 
 #define	CLK_MUL	GB_APU_OVERCLOCK
 #define DAC_BIAS 7
+#define LENGTH_ENABLED 0x40
+
+#define GB_OSC_CLOCK_LENGTH(osc) \
+        if ( (osc.regs [4] & LENGTH_ENABLED) && osc.length_ctr) \
+        { \
+                if ( --osc.length_ctr <= 0 ) \
+                        osc.enabled = false; \
+        }
 
 class Gb_Osc
 {
@@ -34,8 +42,6 @@ class Gb_Osc
 	int length_ctr;			// length counter
 	unsigned phase;			// waveform phase (or equivalent)
 	bool enabled;			// internal enabled flag
-
-	void clock_length();
 	protected:
 	// 11-bit frequency in NRx3 and NRx4
 	int frequency() const { return (regs [4] & 7) * 0x100 + regs [3]; }
@@ -128,6 +134,9 @@ class Gb_Sweep_Square : public Gb_Square
 
 #define	PERIOD2_MASK 0x1FFFF
 
+#define PERIOD2_INDEX() (regs [3] >> 4)
+#define PERIOD2(base) base << PERIOD2_INDEX()
+
 class Gb_Noise : public Gb_Env
 {
 	public:
@@ -149,8 +158,6 @@ class Gb_Noise : public Gb_Env
 		delay = 4 * CLK_MUL; // TODO: remove?
 	}
 	private:
-	int period2_index() const { return regs [3] >> 4; }
-	int period2( int base = 8 ) const { return base << period2_index(); }
 	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
 };
 

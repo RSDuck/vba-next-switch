@@ -171,7 +171,7 @@ Gb_Apu::Gb_Apu()
 
 void Gb_Apu::run_until_( int32_t end_time )
 {
-   do
+	do
 	{
 		// run oscillators
 		int32_t time = end_time;
@@ -191,25 +191,25 @@ void Gb_Apu::run_until_( int32_t end_time )
 		frame_time += frame_period * CLK_MUL;
 		switch ( frame_phase++ )
 		{
-		case 2:
-		case 6:
-			// 128 Hz
-			square1.clock_sweep();
-		case 0:
-		case 4:
-			// 256 Hz
-			square1.clock_length();
-			square2.clock_length();
-			wave   .clock_length();
-			noise  .clock_length();
-			break;
+			case 2:
+			case 6:
+				// 128 Hz
+				square1.clock_sweep();
+			case 0:
+			case 4:
+				// 256 Hz
+				GB_OSC_CLOCK_LENGTH(square1);
+				GB_OSC_CLOCK_LENGTH(square2);
+				GB_OSC_CLOCK_LENGTH(wave);
+				GB_OSC_CLOCK_LENGTH(noise);
+				break;
 
-		case 7:
-			// 64 Hz
-			frame_phase = 0;
-			square1.clock_envelope();
-			square2.clock_envelope();
-			noise  .clock_envelope();
+			case 7:
+				// 64 Hz
+				frame_phase = 0;
+				square1.clock_envelope();
+				square2.clock_envelope();
+				noise  .clock_envelope();
 		}
 	}while(1);
 }
