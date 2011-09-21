@@ -113,8 +113,6 @@ class Gb_Apu
 	Gb_Osc::Med_Synth   med_synth;
 
 	void apply_stereo();
-	void apply_volume();
-	void synth_volume( int );
 	void run_until_( int32_t );
 	void run_until( int32_t );
 	void silence_osc( Gb_Osc& );

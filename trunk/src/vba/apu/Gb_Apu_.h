@@ -46,21 +46,22 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 	}while ( i < osc );
 }
 
-void Gb_Apu::synth_volume( int iv )
-{
-	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv;
-	good_synth.volume_unit( v * 1.0 );
-	med_synth .volume_unit( v * 1.0 );
+#define synth_volume(iv) \
+{ \
+	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv; \
+	good_synth.volume_unit( v * 1.0 ); \
+	med_synth .volume_unit( v * 1.0 ); \
 }
 
-void Gb_Apu::apply_volume()
-{
-	// TODO: Doesn't handle differing left and right volumes (panning).
-	// Not worth the complexity.
-	int data  = regs [vol_reg - start_addr];
-	int left  = data >> 4 & 7;
-	int right = data & 7;
-	synth_volume( max( left, right ) + 1 );
+#define apply_volume() \
+{ \
+	/* TODO: Doesn't handle differing left and right volumes (panning). */ \
+	/* Not worth the complexity. */ \
+	int data  = regs [vol_reg - start_addr]; \
+	int left  = data >> 4 & 7; \
+	int right = data & 7; \
+	int iv = max(left, right) + 1; \
+	synth_volume(iv); \
 }
 
 void Gb_Apu::volume( double v )
@@ -462,8 +463,8 @@ int32_t Gb_Apu::load_state( gb_apu_state_t const& in )
 	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );
 
 	apply_stereo();
-	synth_volume( 0 );          // suppress output for the moment
-	run_until_( last_time );    // get last_amp updated
+	synth_volume(0);          // suppress output for the moment
+	run_until_(last_time);    // get last_amp updated
 	apply_volume();             // now use correct volume
 
 	return 0;
