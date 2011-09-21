@@ -134,6 +134,9 @@ class blip_eq_t;
 
 #define blip_sample_bits 30
 
+// Sets overall volume of waveform
+#define blip_synth_volume_unit(blip_synth, new_unit) blip_synth.delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5);
+
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
 // amplitudes (max - min).
@@ -145,8 +148,6 @@ class Blip_Synth {
 		int last_amp;
 		int delta_factor;
 
-		// Sets overall volume of waveform
-		void volume_unit(double new_unit) { delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5); };
 		void output( Blip_Buffer* b )               { impl_buf = b; last_amp = 0; }
 
 		// Updates amplitude of waveform at given time. Using this requires a separate

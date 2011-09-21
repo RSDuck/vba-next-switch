@@ -49,8 +49,8 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 #define synth_volume(iv) \
 { \
 	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv; \
-	good_synth.volume_unit( v * 1.0 ); \
-	med_synth .volume_unit( v * 1.0 ); \
+	blip_synth_volume_unit(good_synth, v * 1.0 ); \
+	blip_synth_volume_unit(med_synth, v * 1.0 ); \
 }
 
 #define apply_volume() \
