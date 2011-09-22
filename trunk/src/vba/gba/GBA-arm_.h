@@ -9,8 +9,10 @@
 static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 {
 	// CPU Undefined Exception - ghetto inline
+	uint32_t PC = reg[15].I;
+	bool savedArmState = armState;
 	CPUSwitchMode(0x1b, true, false);
-	reg[14].I = reg[15].I - (armState ? 4 : 2);
+	reg[14].I = PC - (savedArmState ? 4 : 2);
 	reg[15].I = 0x04;
 	armState = true;
 	armIrqEnable = false;
@@ -55,11 +57,11 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 
 #define C_SETCOND_LOGICAL \
     N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res) ? false : true;                 \
+    Z_FLAG = (res == 0) ? true : false;                 \
     C_FLAG = C_OUT;
 #define C_SETCOND_ADD \
     N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res) ? false : true;                 \
+    Z_FLAG = (res == 0) ? true : false;                 \
     V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) |        \
               (POS(lhs) & POS(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & NEG(rhs)) |                   \
@@ -67,7 +69,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
               (NEG(rhs) & POS(res))) ? true : false;
 #define C_SETCOND_SUB \
     N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res) ? false : true;                 \
+    Z_FLAG = (res == 0) ? true : false;                 \
     V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) |        \
               (POS(lhs) & NEG(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & POS(rhs)) |                   \
@@ -87,8 +89,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
     if (!shift) {  /* LSL #0 most common? */    \
         value = reg[opcode & 0x0F].I;                   \
     } else {                                            \
-        C_OUT = (reg[opcode & 0x0F].I >> (32 - shift)) & 1 ? true : false; \
-        value = reg[opcode & 0x0F].I << shift;                             \
+        uint32_t v = reg[opcode & 0x0F].I;                   \
+        C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
+        value = v << shift;                             \
     }
 #endif
 // OP Rd,Rb,Rm LSL Rs
@@ -100,8 +103,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
             value = 0;                                  \
             C_OUT = (reg[opcode & 0x0F].I & 1 ? true : false);\
         } else if (shift < 32) {                \
-            C_OUT = (reg[opcode & 0x0F].I >> (32 - shift)) & 1 ? true : false;\
-            value = reg[opcode & 0x0F].I << shift;                         \
+            uint32_t v = reg[opcode & 0x0F].I;               \
+            C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
+            value = v << shift;                         \
         } else {                                        \
             value = 0;                                  \
             C_OUT = false;                              \
@@ -578,7 +582,7 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
         clockTicks += 2;                                \
     else                                                \
         clockTicks += 3;                                \
-    if (!busPrefetchCount)                          \
+    if (busPrefetchCount == 0)                          \
         busPrefetchCount = ((busPrefetchCount+1)<<clockTicks) - 1; \
     clockTicks += 1 + codeTicksAccess32(armNextPC);
 
@@ -641,7 +645,8 @@ static INSN_REGPARM void arm109(uint32_t opcode)
 	uint32_t temp = CPUReadMemory(address);
 	CPUWriteMemory(address, reg[opcode&15].I);
 	reg[(opcode >> 12) & 15].I = temp;
-	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address) + codeTicksAccess32(armNextPC);
+	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
+		+ codeTicksAccess32(armNextPC);
 }
 
 // SWPB Rd, Rm, [Rn]
@@ -651,7 +656,8 @@ static INSN_REGPARM void arm149(uint32_t opcode)
 	uint32_t temp = CPUReadByte(address);
 	CPUWriteByte(address, reg[opcode&15].B.B0);
 	reg[(opcode>>12)&15].I = temp;
-	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address) + codeTicksAccess32(armNextPC);
+	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
+		+ codeTicksAccess32(armNextPC);
 }
 
 // MRS Rd, CPSR
@@ -889,7 +895,7 @@ static INSN_REGPARM void arm121(uint32_t opcode)
 #define WRITEBACK_POSTINC  reg[base].I = address + offset
 
 #define LDRSTR_INIT(CALC_OFFSET, CALC_ADDRESS) \
-    if (!busPrefetchCount)                          \
+    if (busPrefetchCount == 0)                          \
         busPrefetch = busPrefetchEnable;                \
     int dest = (opcode >> 12) & 15;                     \
     int base = (opcode >> 16) & 15;                     \
@@ -1489,7 +1495,7 @@ static INSN_REGPARM void arm7F6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_
 // STMDA Rn, {Rlist}
 static INSN_REGPARM void arm800(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1504,7 +1510,7 @@ static INSN_REGPARM void arm800(uint32_t opcode)
 // LDMDA Rn, {Rlist}
 static INSN_REGPARM void arm810(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1519,7 +1525,7 @@ static INSN_REGPARM void arm810(uint32_t opcode)
 // STMDA Rn!, {Rlist}
 static INSN_REGPARM void arm820(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1534,7 +1540,7 @@ static INSN_REGPARM void arm820(uint32_t opcode)
 // LDMDA Rn!, {Rlist}
 static INSN_REGPARM void arm830(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1551,7 +1557,7 @@ static INSN_REGPARM void arm830(uint32_t opcode)
 // STMDA Rn, {Rlist}^
 static INSN_REGPARM void arm840(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1566,7 +1572,7 @@ static INSN_REGPARM void arm840(uint32_t opcode)
 // LDMDA Rn, {Rlist}^
 static INSN_REGPARM void arm850(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1582,7 +1588,7 @@ static INSN_REGPARM void arm850(uint32_t opcode)
 // STMDA Rn!, {Rlist}^
 static INSN_REGPARM void arm860(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1597,7 +1603,7 @@ static INSN_REGPARM void arm860(uint32_t opcode)
 // LDMDA Rn!, {Rlist}^
 static INSN_REGPARM void arm870(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1615,7 +1621,7 @@ static INSN_REGPARM void arm870(uint32_t opcode)
 // STMIA Rn, {Rlist}
 static INSN_REGPARM void arm880(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1628,7 +1634,7 @@ static INSN_REGPARM void arm880(uint32_t opcode)
 // LDMIA Rn, {Rlist}
 static INSN_REGPARM void arm890(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1641,7 +1647,7 @@ static INSN_REGPARM void arm890(uint32_t opcode)
 // STMIA Rn!, {Rlist}
 static INSN_REGPARM void arm8A0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1656,7 +1662,7 @@ static INSN_REGPARM void arm8A0(uint32_t opcode)
 // LDMIA Rn!, {Rlist}
 static INSN_REGPARM void arm8B0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1672,7 +1678,7 @@ static INSN_REGPARM void arm8B0(uint32_t opcode)
 // STMIA Rn, {Rlist}^
 static INSN_REGPARM void arm8C0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1685,7 +1691,7 @@ static INSN_REGPARM void arm8C0(uint32_t opcode)
 // LDMIA Rn, {Rlist}^
 static INSN_REGPARM void arm8D0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1699,7 +1705,7 @@ static INSN_REGPARM void arm8D0(uint32_t opcode)
 // STMIA Rn!, {Rlist}^
 static INSN_REGPARM void arm8E0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1713,7 +1719,7 @@ static INSN_REGPARM void arm8E0(uint32_t opcode)
 // LDMIA Rn!, {Rlist}^
 static INSN_REGPARM void arm8F0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1732,7 +1738,7 @@ static INSN_REGPARM void arm8F0(uint32_t opcode)
 // STMDB Rn, {Rlist}
 static INSN_REGPARM void arm900(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1746,7 +1752,7 @@ static INSN_REGPARM void arm900(uint32_t opcode)
 // LDMDB Rn, {Rlist}
 static INSN_REGPARM void arm910(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1760,7 +1766,7 @@ static INSN_REGPARM void arm910(uint32_t opcode)
 // STMDB Rn!, {Rlist}
 static INSN_REGPARM void arm920(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1774,7 +1780,7 @@ static INSN_REGPARM void arm920(uint32_t opcode)
 // LDMDB Rn!, {Rlist}
 static INSN_REGPARM void arm930(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1790,7 +1796,7 @@ static INSN_REGPARM void arm930(uint32_t opcode)
 // STMDB Rn, {Rlist}^
 static INSN_REGPARM void arm940(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1804,7 +1810,7 @@ static INSN_REGPARM void arm940(uint32_t opcode)
 // LDMDB Rn, {Rlist}^
 static INSN_REGPARM void arm950(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1819,7 +1825,7 @@ static INSN_REGPARM void arm950(uint32_t opcode)
 // STMDB Rn!, {Rlist}^
 static INSN_REGPARM void arm960(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1833,7 +1839,7 @@ static INSN_REGPARM void arm960(uint32_t opcode)
 // LDMDB Rn!, {Rlist}^
 static INSN_REGPARM void arm970(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1852,7 +1858,7 @@ static INSN_REGPARM void arm970(uint32_t opcode)
 // STMIB Rn, {Rlist}
 static INSN_REGPARM void arm980(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1865,7 +1871,7 @@ static INSN_REGPARM void arm980(uint32_t opcode)
 // LDMIB Rn, {Rlist}
 static INSN_REGPARM void arm990(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1878,7 +1884,7 @@ static INSN_REGPARM void arm990(uint32_t opcode)
 // STMIB Rn!, {Rlist}
 static INSN_REGPARM void arm9A0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1892,7 +1898,7 @@ static INSN_REGPARM void arm9A0(uint32_t opcode)
 // LDMIB Rn!, {Rlist}
 static INSN_REGPARM void arm9B0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1908,7 +1914,7 @@ static INSN_REGPARM void arm9B0(uint32_t opcode)
 // STMIB Rn, {Rlist}^
 static INSN_REGPARM void arm9C0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1921,7 +1927,7 @@ static INSN_REGPARM void arm9C0(uint32_t opcode)
 // LDMIB Rn, {Rlist}^
 static INSN_REGPARM void arm9D0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1935,7 +1941,7 @@ static INSN_REGPARM void arm9D0(uint32_t opcode)
 // STMIB Rn!, {Rlist}^
 static INSN_REGPARM void arm9E0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1949,7 +1955,7 @@ static INSN_REGPARM void arm9E0(uint32_t opcode)
 // LDMIB Rn!, {Rlist}^
 static INSN_REGPARM void arm9F0(uint32_t opcode)
 {
-	if (!busPrefetchCount)
+	if (busPrefetchCount == 0)
 		busPrefetch = busPrefetchEnable;
 
 	int base = (opcode & 0x000F0000) >> 16;
@@ -1971,7 +1977,7 @@ static INSN_REGPARM void arm9F0(uint32_t opcode)
 static INSN_REGPARM void armA00(uint32_t opcode)
 {
 	int codeTicksVal = 0;
-
+	int ct = 0;
 	int offset = opcode & 0x00FFFFFF;
 	if (offset & 0x00800000)
 		offset |= 0xFF000000;  // negative offset
@@ -1981,15 +1987,18 @@ static INSN_REGPARM void armA00(uint32_t opcode)
 	ARM_PREFETCH;
 
 	codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+	ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
 
 	busPrefetchCount = 0;
-	clockTicks = (codeTicksVal<<1) + 5 + codeTicksAccess32(armNextPC);
+	clockTicks = ct;
 }
 
 // BL <offset>
 static INSN_REGPARM void armB00(uint32_t opcode)
 {
 	int codeTicksVal = 0;
+	int ct = 0;
 
 	int offset = opcode & 0x00FFFFFF;
 	if (offset & 0x00800000)
@@ -2001,9 +2010,11 @@ static INSN_REGPARM void armB00(uint32_t opcode)
 	ARM_PREFETCH;
 
 	codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+	ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
 
 	busPrefetchCount = 0;
-	clockTicks = (codeTicksVal<<1) + 5 + codeTicksAccess32(armNextPC);
+	clockTicks = ct;
 }
 
 
@@ -2020,11 +2031,20 @@ static INSN_REGPARM void armE01(uint32_t opcode)
 // SWI <comment>
 static INSN_REGPARM void armF00(uint32_t opcode)
 {
-	int codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	int codeTicksVal = 0;
+	int ct = 0;
+
+	//clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
+	//clockTicks += 2 + codeTicksAccess32(armNextPC)
+	//                + codeTicksAccessSeq32(armNextPC);
+
+	codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+	ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
 
 	busPrefetchCount = 0;
 
-	clockTicks = (codeTicksVal<<1) + 5 + codeTicksAccess32(armNextPC);
+	clockTicks = ct;
 	CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
 
 }
