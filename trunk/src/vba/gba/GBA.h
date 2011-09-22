@@ -71,8 +71,7 @@ extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
 extern void CPUInit(const char *,bool);
 extern void CPUReset();
-
-extern void CPUCheckDMA(int,int);
+extern void CPUCheckDMA(int reason, int dmamask);
 
 #ifdef USE_PNG
 extern bool CPUWritePNGFile(const char *);

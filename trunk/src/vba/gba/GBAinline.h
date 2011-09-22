@@ -310,8 +310,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteMemory(u32 addres
 				CPUUpdateRegister((address & 0x3FC), value & 0xFFFF);
 				CPUUpdateRegister((address & 0x3FC) + 2, (value >> 16));
 			}
-			else
-				goto unwritable;
 			break;
 		case 0x05:
 			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
@@ -335,7 +333,7 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteMemory(u32 addres
 				eepromWrite(address, value);
 				break;
 			}
-			goto unwritable;
+			break;
 		case 0x0E:
 			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)
 			{
@@ -344,7 +342,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteMemory(u32 addres
 			}
 			// default
 		default:
-unwritable:
 			break;
 	}
 }
@@ -363,7 +360,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteHalfWord(u32 addr
 		case 4:
 			if(address < 0x4000400)
 				CPUUpdateRegister(address & 0x3fe, value);
-			else goto unwritable;
 			break;
 		case 5:
 			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
@@ -386,27 +382,26 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteHalfWord(u32 addr
 			{
 #endif
 				if(!rtcWrite(address, value))
-					goto unwritable;
+					break;
 #ifdef USE_AGBPRINT
-			} else if(!agbPrintWrite(address, value)) goto unwritable;
+			}
+			else if(!agbPrintWrite(address, value))
+				break;
 #endif
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
 			{
 				eepromWrite(address, (u8)value);
-				break;
 			}
-			goto unwritable;
+			break;
 		case 14:
 			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)
 			{
 				(*cpuSaveGameFunc)(address, (u8)value);
-				break;
 			}
-			goto unwritable;
+			break;
 		default:
-unwritable:
 			break;
 	}
 }
@@ -488,8 +483,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteByte(u32 address,
 				}
 				break;
 			}
-			else
-				goto unwritable;
 			break;
 		case 5:
 			// no need to switch
@@ -518,7 +511,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteByte(u32 address,
 				eepromWrite(address, b);
 				break;
 			}
-			goto unwritable;
 		case 14:
 			if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled))
 			{
@@ -527,7 +519,6 @@ __attribute__ ((__always_inline__)) static inline void CPUWriteByte(u32 address,
 			}
 			// default
 		default:
-unwritable:
 			break;
 	}
 }
