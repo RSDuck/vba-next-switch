@@ -1,10 +1,8 @@
 static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
 {
 	// CPU Undefined Exception - ghetto inline
-	uint32_t PC = reg[15].I;
-	bool savedArmState = armState;
 	CPUSwitchMode(0x1b, true, false);
-	reg[14].I = PC - (savedArmState ? 4 : 2);
+	reg[14].I = reg[15].I - (armState ? 4 : 2);
 	reg[15].I = 0x04;
 	armState = true;
 	armIrqEnable = false;
@@ -49,7 +47,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = reg[N].I;\
      uint32_t res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
@@ -62,7 +60,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = N;\
      uint32_t res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
@@ -78,7 +76,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = (opcode & 255);\
      uint32_t res = lhs + rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
@@ -90,7 +88,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t lhs = reg[dest].I;\
      uint32_t rhs = value;\
      uint32_t res = lhs + rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
@@ -103,7 +101,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = value;\
      uint32_t res = lhs + rhs + (uint32_t)C_FLAG;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
@@ -116,7 +114,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = reg[N].I;\
      uint32_t res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -129,7 +127,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = N;\
      uint32_t res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -145,7 +143,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = (opcode & 255);\
      uint32_t res = lhs - rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -167,7 +165,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t lhs = reg[(d)].I;\
      uint32_t rhs = (opcode & 255);\
      uint32_t res = lhs - rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -180,7 +178,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = value;\
      uint32_t res = lhs - rhs - !((uint32_t)C_FLAG);\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -243,7 +241,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t rhs = 0;\
      uint32_t res = rhs - lhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(rhs, lhs, res);\
      SUBOVERFLOW(rhs, lhs, res);\
@@ -255,7 +253,7 @@ static INSN_REGPARM void thumbUnknownInsn(uint32_t opcode)
      uint32_t lhs = reg[dest].I;\
      uint32_t rhs = value;\
      uint32_t res = lhs - rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
+     Z_FLAG = (res) ? false : true;\
      N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
@@ -1060,6 +1058,14 @@ static INSN_REGPARM void thumbB0(uint32_t opcode)
     address += 4;                                           \
   }
 
+#define PUSH_REG_COUNT0(val, r)                             \
+  if (opcode & (val)) {                                     \
+    CPUWriteMemory(address, reg[(r)].I);                    \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+
 #define POP_REG(val, r)                                     \
   if (opcode & (val)) {                                     \
     reg[(r)].I = CPUReadMemory(address);                    \
@@ -1068,6 +1074,14 @@ static INSN_REGPARM void thumbB0(uint32_t opcode)
     } else {                                                \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
     }                                                       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+ 
+#define POP_REG_COUNT0(val, r)			            \
+  if (opcode & (val)){                                     \
+    reg[(r)].I = CPUReadMemory(address);                    \
+    clockTicks += 1 + dataTicksAccess32(address);	\
     count++;                                                \
     address += 4;                                           \
   }
@@ -1081,7 +1095,7 @@ static INSN_REGPARM void thumbB4(uint32_t opcode)
 	int count = 0;
 	uint32_t temp = reg[13].I - 4 * cpuBitsSet[opcode & 0xff];
 	uint32_t address = temp & 0xFFFFFFFC;
-	PUSH_REG(1, 0);
+	PUSH_REG_COUNT0(1, 0);
 	PUSH_REG(2, 1);
 	PUSH_REG(4, 2);
 	PUSH_REG(8, 3);
@@ -1102,7 +1116,7 @@ static INSN_REGPARM void thumbB5(uint32_t opcode)
 	int count = 0;
 	uint32_t temp = reg[13].I - 4 - 4 * cpuBitsSet[opcode & 0xff];
 	uint32_t address = temp & 0xFFFFFFFC;
-	PUSH_REG(1, 0);
+	PUSH_REG_COUNT0(1, 0);
 	PUSH_REG(2, 1);
 	PUSH_REG(4, 2);
 	PUSH_REG(8, 3);
@@ -1124,7 +1138,7 @@ static INSN_REGPARM void thumbBC(uint32_t opcode)
 	int count = 0;
 	uint32_t address = reg[13].I & 0xFFFFFFFC;
 	uint32_t temp = reg[13].I + 4*cpuBitsSet[opcode & 0xFF];
-	POP_REG(1, 0);
+	POP_REG_COUNT0(1, 0);
 	POP_REG(2, 1);
 	POP_REG(4, 2);
 	POP_REG(8, 3);
@@ -1145,7 +1159,7 @@ static INSN_REGPARM void thumbBD(uint32_t opcode)
 	int count = 0;
 	uint32_t address = reg[13].I & 0xFFFFFFFC;
 	uint32_t temp = reg[13].I + 4 + 4*cpuBitsSet[opcode & 0xFF];
-	POP_REG(1, 0);
+	POP_REG_COUNT0(1, 0);
 	POP_REG(2, 1);
 	POP_REG(4, 2);
 	POP_REG(8, 3);
@@ -1249,9 +1263,9 @@ static INSN_REGPARM void thumbC8(uint32_t opcode)
 // BEQ offset
 static INSN_REGPARM void thumbD0(uint32_t opcode)
 {
-	int val;
 	if(Z_FLAG)
 	{
+		int val;
 		reg[15].I += ((s8)(opcode & 0xFF)) << 1;
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
@@ -1259,8 +1273,7 @@ static INSN_REGPARM void thumbD0(uint32_t opcode)
 #if defined (SPEEDHAX)
 		clockTicks = 30;
 #else
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 #endif
 		busPrefetchCount=0;
 	}
@@ -1275,8 +1288,7 @@ static INSN_REGPARM void thumbD1(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1290,8 +1302,7 @@ static INSN_REGPARM void thumbD2(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1305,8 +1316,7 @@ static INSN_REGPARM void thumbD3(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1320,8 +1330,7 @@ static INSN_REGPARM void thumbD4(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1335,8 +1344,7 @@ static INSN_REGPARM void thumbD5(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1466,8 +1474,7 @@ static INSN_REGPARM void thumbDD(uint32_t opcode)
 // SWI #comment
 static INSN_REGPARM void thumbDF(uint32_t opcode)
 {
-	uint32_t address = 0;
-	clockTicks = codeTicksAccessSeq16(address) + codeTicksAccessSeq16(address) + codeTicksAccess16(address)+3;
+	clockTicks = codeTicksAccessSeq16(0) + codeTicksAccessSeq16(0) + codeTicksAccess16(0)+3;
 	busPrefetchCount=0;
 	CPUSoftwareInterrupt(opcode & 0xFF);
 }
