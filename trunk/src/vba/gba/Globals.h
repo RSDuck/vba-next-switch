@@ -18,19 +18,10 @@
 
 extern reg_pair reg[45];
 extern bool ioReadable[0x400];
-extern u32 stop;
 extern int saveType;
-extern bool useBios;
-extern bool skipBios;
-extern int frameSkip;
 #ifdef USE_FRAMESKIP
 extern bool speedup;
 #endif
-extern bool cpuIsMultiBoot;
-extern bool parseDebug;
-extern int layerSettings;
-extern int layerEnable;
-extern bool speedHack;
 extern int cpuSaveType;
 extern bool cheatsEnabled;
 extern bool mirroringEnable;

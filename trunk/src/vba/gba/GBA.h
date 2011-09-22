@@ -59,15 +59,8 @@ extern uint8_t biosProtected[4];
 extern uint64_t joy;
 extern void (*cpuSaveGameFunc)(uint32_t,uint8_t);
 
-extern bool CPUReadGSASnapshot(const char *);
-extern bool CPUReadGSASPSnapshot(const char *);
-extern bool CPUWriteGSASnapshot(const char *, const char *, const char *, const char *);
 extern bool CPUWriteBatteryFile(const char *);
 extern bool CPUReadBatteryFile(const char *);
-extern bool CPUExportEepromFile(const char *);
-extern bool CPUImportEepromFile(const char *);
-extern void CPUCleanUp();
-extern void CPUUpdateRender();
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
 extern bool CPUWriteMemState(char *, int);
@@ -76,7 +69,6 @@ extern bool CPUWriteState(const char *);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
-extern void applyTimer ();
 extern void CPUInit(const char *,bool);
 extern void CPUReset();
 
