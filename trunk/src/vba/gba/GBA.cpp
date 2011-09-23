@@ -1733,6 +1733,7 @@ static void mode0RenderLineNoWindow()
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
+
 	if(layerEnable & 0x0100)
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 
@@ -1887,22 +1888,6 @@ static void mode0RenderLineAll()
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
-	if((layerEnable & 0x0100))
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
-
-	if((layerEnable & 0x0200))
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-
-	if((layerEnable & 0x0400))
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
-
-	if((layerEnable & 0x0800))
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
-
-	gfxDrawSprites();
-
-	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
-
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
@@ -1928,7 +1913,22 @@ static void mode0RenderLineAll()
 			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
 	}
 
+	if((layerEnable & 0x0100))
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+
+	if((layerEnable & 0x0200))
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+
+	if((layerEnable & 0x0400))
+		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
+
+	if((layerEnable & 0x0800))
+		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+
+	gfxDrawSprites();
 	gfxDrawOBJWin();
+
+	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	uint8_t inWin0Mask = WININ & 0xFF;
 	uint8_t inWin1Mask = WININ >> 8;
@@ -3922,55 +3922,57 @@ static void mode5RenderLineAll()
 	//gfxLastVCOUNT = VCOUNT;
 }
 
+void (*renderLine)() = mode0RenderLine;
+
 #define CPUUpdateRender() \
   switch(DISPCNT & 7) { \
   case 0: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode0RenderLine(); \
+      renderLine = mode0RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode0RenderLineNoWindow(); \
+      renderLine = mode0RenderLineNoWindow; \
     else \
-      mode0RenderLineAll(); \
+      renderLine = mode0RenderLineAll; \
     break; \
   case 1: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode1RenderLine(); \
+      renderLine = mode1RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode1RenderLineNoWindow(); \
+      renderLine = mode1RenderLineNoWindow; \
     else \
-      mode1RenderLineAll(); \
+      renderLine = mode1RenderLineAll; \
     break; \
   case 2: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode2RenderLine(); \
+      renderLine = mode2RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode2RenderLineNoWindow(); \
+      renderLine = mode2RenderLineNoWindow; \
     else \
-      mode2RenderLineAll(); \
+      renderLine = mode2RenderLineAll; \
     break; \
   case 3: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode3RenderLine(); \
+      renderLine = mode3RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode3RenderLineNoWindow(); \
+      renderLine = mode3RenderLineNoWindow; \
     else \
-      mode3RenderLineAll(); \
+      renderLine = mode3RenderLineAll; \
     break; \
   case 4: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode4RenderLine(); \
+      renderLine = mode4RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode4RenderLineNoWindow(); \
+      renderLine = mode4RenderLineNoWindow; \
     else \
-      mode4RenderLineAll(); \
+      renderLine = mode4RenderLineAll; \
     break; \
   case 5: \
     if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
-      mode5RenderLine(); \
+      renderLine = mode5RenderLine; \
     else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
-      mode5RenderLineNoWindow(); \
+      renderLine = mode5RenderLineNoWindow; \
     else \
-      mode5RenderLineAll(); \
+      renderLine = mode5RenderLineAll; \
   default: \
     break; \
   }
@@ -4022,6 +4024,8 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 	//// Copypasta stuff ...
 	// set pointers!
 	layerEnable = layerSettings & DISPCNT;
+
+	CPUUpdateRender();
 
 	// CPU Update Render Buffers set to true
 	CLEAR_ARRAY(line[0]);
@@ -4221,6 +4225,8 @@ static bool CPUReadState(gzFile gzFile)
 
 	// set pointers!
 	layerEnable = layerSettings & DISPCNT;
+
+	CPUUpdateRender();
 
 	// CPU Update Render Buffers set to true
 	CLEAR_ARRAY(line[0]);
@@ -5130,6 +5136,8 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 						CPUCompareVCOUNT();
 					}
 				}
+				CPUUpdateRender();
+
 				// we only care about changes in BG0-BG3
 				if(changeBG)
 				{
@@ -5307,6 +5315,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			BLDMOD = value & 0x3FFF;
 			UPDATE_REG(0x50, BLDMOD);
 			fxOn = ((BLDMOD>>6)&3) != 0;
+			CPUUpdateRender();
 			break;
 		case 0x52:
 			COLEV = value & 0x1F1F;
@@ -6001,6 +6010,7 @@ void CPUReset()
 	dma3Source = 0;
 	dma3Dest = 0;
 	cpuSaveGameFunc = flashSaveDecide;
+	renderLine = mode0RenderLine;
 	fxOn = false;
 	windowOn = false;
 #ifdef USE_FRAMESKIP
@@ -6417,7 +6427,7 @@ updateLoop:
 						if(frameCount >= framesToSkip)
 						{
 #endif
-							CPUUpdateRender();
+							(*renderLine)();
 #if 0
 							switch(systemColorDepth)
 							{
