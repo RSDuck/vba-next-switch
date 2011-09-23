@@ -14,7 +14,6 @@ static uint32_t line[7][240];
 static bool gfxInWin[2][240];
 static int lineOBJpixleft[128];
 uint64_t joy = 0;
-static uint32_t clockTicks;
 
 #include "EEprom.h"
 #include "Flash.h"
@@ -56,13 +55,13 @@ char special_action_msg[256];
 
 int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
-int gfxBG2Changed = 0;
-int gfxBG3Changed = 0;
+static int gfxBG2Changed = 0;
+static int gfxBG3Changed = 0;
 
-int gfxBG2X = 0;
-int gfxBG2Y = 0;
-int gfxBG3X = 0;
-int gfxBG3Y = 0;
+static int gfxBG2X = 0;
+static int gfxBG2Y = 0;
+static int gfxBG3X = 0;
+static int gfxBG3Y = 0;
 //int gfxLastVCOUNT = 0;
 
 // GLOBALS.CPP 
@@ -72,15 +71,14 @@ int gfxBG3Y = 0;
 reg_pair reg[45];
 memoryMap map[256];
 bool ioReadable[0x400];
-bool N_FLAG = 0;
-bool C_FLAG = 0;
-bool Z_FLAG = 0;
-bool V_FLAG = 0;
-bool armState = true;
-bool armIrqEnable = true;
-uint32_t armNextPC = 0x00000000;
-int armMode = 0x1f;
-uint32_t stop = 0x08000568;
+static bool N_FLAG = 0;
+static bool C_FLAG = 0;
+static bool Z_FLAG = 0;
+static bool V_FLAG = 0;
+static bool armState = true;
+static bool armIrqEnable = true;
+static uint32_t armNextPC = 0x00000000;
+static int armMode = 0x1f;
 int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
@@ -93,8 +91,7 @@ bool speedup = false;
 bool cpuIsMultiBoot = false;
 bool parseDebug = true;
 int layerSettings = 0xff00;
-int layerEnable = 0xff00;
-bool speedHack = true;
+static int layerEnable = 0xff00;
 int cpuSaveType = 0;
 
 #ifdef USE_CHEATS
@@ -110,118 +107,113 @@ bool skipSaveGameCheats = false;
 
 uint8_t *bios = 0;
 uint8_t *rom = 0;
-uint8_t *internalRAM = 0;
-uint8_t *workRAM = 0;
-uint8_t *paletteRAM = 0;
-uint8_t *vram = 0;
+static uint8_t *internalRAM = 0;
+static uint8_t *workRAM = 0;
+static uint8_t *paletteRAM = 0;
+static uint8_t *vram = 0;
 uint8_t *pix = 0;
-uint8_t *oam = 0;
+static uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
-uint16_t DISPCNT  = 0x0080;
-uint16_t DISPSTAT = 0x0000;
-uint16_t VCOUNT   = 0x0000;
-uint16_t BG0CNT   = 0x0000;
-uint16_t BG1CNT   = 0x0000;
-uint16_t BG2CNT   = 0x0000;
-uint16_t BG3CNT   = 0x0000;
-uint16_t BG0HOFS  = 0x0000;
-uint16_t BG0VOFS  = 0x0000;
-uint16_t BG1HOFS  = 0x0000;
-uint16_t BG1VOFS  = 0x0000;
-uint16_t BG2HOFS  = 0x0000;
-uint16_t BG2VOFS  = 0x0000;
-uint16_t BG3HOFS  = 0x0000;
-uint16_t BG3VOFS  = 0x0000;
-uint16_t BG2PA    = 0x0100;
-uint16_t BG2PB    = 0x0000;
-uint16_t BG2PC    = 0x0000;
-uint16_t BG2PD    = 0x0100;
-uint16_t BG2X_L   = 0x0000;
-uint16_t BG2X_H   = 0x0000;
-uint16_t BG2Y_L   = 0x0000;
-uint16_t BG2Y_H   = 0x0000;
-uint16_t BG3PA    = 0x0100;
-uint16_t BG3PB    = 0x0000;
-uint16_t BG3PC    = 0x0000;
-uint16_t BG3PD    = 0x0100;
-uint16_t BG3X_L   = 0x0000;
-uint16_t BG3X_H   = 0x0000;
-uint16_t BG3Y_L   = 0x0000;
-uint16_t BG3Y_H   = 0x0000;
-uint16_t WIN0H    = 0x0000;
-uint16_t WIN1H    = 0x0000;
-uint16_t WIN0V    = 0x0000;
-uint16_t WIN1V    = 0x0000;
-uint16_t WININ    = 0x0000;
-uint16_t WINOUT   = 0x0000;
-uint16_t MOSAIC   = 0x0000;
-uint16_t BLDMOD   = 0x0000;
-uint16_t COLEV    = 0x0000;
-uint16_t COLY     = 0x0000;
-uint16_t DM0SAD_L = 0x0000;
-uint16_t DM0SAD_H = 0x0000;
-uint16_t DM0DAD_L = 0x0000;
-uint16_t DM0DAD_H = 0x0000;
-uint16_t DM0CNT_L = 0x0000;
-uint16_t DM0CNT_H = 0x0000;
-uint16_t DM1SAD_L = 0x0000;
-uint16_t DM1SAD_H = 0x0000;
-uint16_t DM1DAD_L = 0x0000;
-uint16_t DM1DAD_H = 0x0000;
-uint16_t DM1CNT_L = 0x0000;
-uint16_t DM1CNT_H = 0x0000;
-uint16_t DM2SAD_L = 0x0000;
-uint16_t DM2SAD_H = 0x0000;
-uint16_t DM2DAD_L = 0x0000;
-uint16_t DM2DAD_H = 0x0000;
-uint16_t DM2CNT_L = 0x0000;
-uint16_t DM2CNT_H = 0x0000;
-uint16_t DM3SAD_L = 0x0000;
-uint16_t DM3SAD_H = 0x0000;
-uint16_t DM3DAD_L = 0x0000;
-uint16_t DM3DAD_H = 0x0000;
-uint16_t DM3CNT_L = 0x0000;
-uint16_t DM3CNT_H = 0x0000;
-uint16_t TM0D     = 0x0000;
-uint16_t TM0CNT   = 0x0000;
-uint16_t TM1D     = 0x0000;
-uint16_t TM1CNT   = 0x0000;
-uint16_t TM2D     = 0x0000;
-uint16_t TM2CNT   = 0x0000;
-uint16_t TM3D     = 0x0000;
-uint16_t TM3CNT   = 0x0000;
-uint16_t P1       = 0xFFFF;
-uint16_t IE       = 0x0000;
-uint16_t IF       = 0x0000;
-uint16_t IME      = 0x0000;
+static uint16_t DISPCNT  = 0x0080;
+static uint16_t DISPSTAT = 0x0000;
+static uint16_t VCOUNT   = 0x0000;
+static uint16_t BG0CNT   = 0x0000;
+static uint16_t BG1CNT   = 0x0000;
+static uint16_t BG2CNT   = 0x0000;
+static uint16_t BG3CNT   = 0x0000;
+static uint16_t BG0HOFS  = 0x0000;
+static uint16_t BG0VOFS  = 0x0000;
+static uint16_t BG1HOFS  = 0x0000;
+static uint16_t BG1VOFS  = 0x0000;
+static uint16_t BG2HOFS  = 0x0000;
+static uint16_t BG2VOFS  = 0x0000;
+static uint16_t BG3HOFS  = 0x0000;
+static uint16_t BG3VOFS  = 0x0000;
+static uint16_t BG2PA    = 0x0100;
+static uint16_t BG2PB    = 0x0000;
+static uint16_t BG2PC    = 0x0000;
+static uint16_t BG2PD    = 0x0100;
+static uint16_t BG2X_L   = 0x0000;
+static uint16_t BG2X_H   = 0x0000;
+static uint16_t BG2Y_L   = 0x0000;
+static uint16_t BG2Y_H   = 0x0000;
+static uint16_t BG3PA    = 0x0100;
+static uint16_t BG3PB    = 0x0000;
+static uint16_t BG3PC    = 0x0000;
+static uint16_t BG3PD    = 0x0100;
+static uint16_t BG3X_L   = 0x0000;
+static uint16_t BG3X_H   = 0x0000;
+static uint16_t BG3Y_L   = 0x0000;
+static uint16_t BG3Y_H   = 0x0000;
+static uint16_t WIN0H    = 0x0000;
+static uint16_t WIN1H    = 0x0000;
+static uint16_t WIN0V    = 0x0000;
+static uint16_t WIN1V    = 0x0000;
+static uint16_t WININ    = 0x0000;
+static uint16_t WINOUT   = 0x0000;
+static uint16_t MOSAIC   = 0x0000;
+static uint16_t BLDMOD   = 0x0000;
+static uint16_t COLEV    = 0x0000;
+static uint16_t COLY     = 0x0000;
+static uint16_t DM0SAD_L = 0x0000;
+static uint16_t DM0SAD_H = 0x0000;
+static uint16_t DM0DAD_L = 0x0000;
+static uint16_t DM0DAD_H = 0x0000;
+static uint16_t DM0CNT_L = 0x0000;
+static uint16_t DM0CNT_H = 0x0000;
+static uint16_t DM1SAD_L = 0x0000;
+static uint16_t DM1SAD_H = 0x0000;
+static uint16_t DM1DAD_L = 0x0000;
+static uint16_t DM1DAD_H = 0x0000;
+static uint16_t DM1CNT_L = 0x0000;
+static uint16_t DM1CNT_H = 0x0000;
+static uint16_t DM2SAD_L = 0x0000;
+static uint16_t DM2SAD_H = 0x0000;
+static uint16_t DM2DAD_L = 0x0000;
+static uint16_t DM2DAD_H = 0x0000;
+static uint16_t DM2CNT_L = 0x0000;
+static uint16_t DM2CNT_H = 0x0000;
+static uint16_t DM3SAD_L = 0x0000;
+static uint16_t DM3SAD_H = 0x0000;
+static uint16_t DM3DAD_L = 0x0000;
+static uint16_t DM3DAD_H = 0x0000;
+static uint16_t DM3CNT_L = 0x0000;
+static uint16_t DM3CNT_H = 0x0000;
+static uint16_t TM0D     = 0x0000;
+static uint16_t TM0CNT   = 0x0000;
+static uint16_t TM1D     = 0x0000;
+static uint16_t TM1CNT   = 0x0000;
+static uint16_t TM2D     = 0x0000;
+static uint16_t TM2CNT   = 0x0000;
+static uint16_t TM3D     = 0x0000;
+static uint16_t TM3CNT   = 0x0000;
+static uint16_t P1       = 0xFFFF;
+static uint16_t IE       = 0x0000;
+static uint16_t IF       = 0x0000;
+static uint16_t IME      = 0x0000;
 
 //END OF GLOBALS.CPP
 
-#ifdef USE_SWITICKS
-int SWITicks = 0;
-#endif
-int IRQTicks = 0;
 
 uint32_t mastercode = 0;
-int layerEnableDelay = 0;
-bool busPrefetch = false;
-bool busPrefetchEnable = false;
-uint32_t busPrefetchCount = 0;
-int cpuDmaTicksToUpdate = 0;
+static int layerEnableDelay = 0;
+static bool busPrefetch = false;
+static bool busPrefetchEnable = false;
+static uint32_t busPrefetchCount = 0;
 int cpuDmaCount = 0;
 //bool cpuDmaHack = false;
 //uint32_t cpuDmaLast = 0;
-int dummyAddress = 0;
+static int dummyAddress = 0;
 
-bool cpuBreakLoop = false;
-int cpuNextEvent = 0;
+static bool cpuBreakLoop = false;
+static int cpuNextEvent = 0;
 
 int gbaSaveType = 0; // used to remember the save type on reset
-bool intState = false;
-bool stopState = false;
-bool holdState = false;
-int holdType = 0;
+static bool intState = false;
+static bool stopState = false;
+static bool holdState = false;
+static int holdType = 0;
 bool cpuSramEnabled = true;
 bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
@@ -229,7 +221,6 @@ bool cpuEEPROMSensorEnabled = false;
 
 uint32_t cpuPrefetch[2];
 
-int cpuTotalTicks = 0;
 
 #ifdef PROFILING
 int profilingTicks = 0;
@@ -237,39 +228,35 @@ int profilingTicksReload = 0;
 static profile_segment *profilSegment = NULL;
 #endif
 
-int lcdTicks = (useBios && !skipBios) ? 1008 : 208;
-uint8_t timerOnOffDelay = 0;
-uint16_t timer0Value = 0;
-bool timer0On = false;
-int timer0Ticks = 0;
-int timer0Reload = 0;
-int timer0ClockReload  = 0;
-uint16_t timer1Value = 0;
-bool timer1On = false;
-int timer1Ticks = 0;
-int timer1Reload = 0;
-int timer1ClockReload  = 0;
-uint16_t timer2Value = 0;
-bool timer2On = false;
-int timer2Ticks = 0;
-int timer2Reload = 0;
-int timer2ClockReload  = 0;
-uint16_t timer3Value = 0;
-bool timer3On = false;
-int timer3Ticks = 0;
-int timer3Reload = 0;
-int timer3ClockReload  = 0;
-uint32_t dma0Source = 0;
-uint32_t dma0Dest = 0;
-uint32_t dma1Source = 0;
-uint32_t dma1Dest = 0;
-uint32_t dma2Source = 0;
-uint32_t dma2Dest = 0;
-uint32_t dma3Source = 0;
-uint32_t dma3Dest = 0;
+static uint8_t timerOnOffDelay = 0;
+static uint16_t timer0Value = 0;
+static bool timer0On = false;
+static int timer0Reload = 0;
+static int timer0ClockReload  = 0;
+static uint16_t timer1Value = 0;
+static bool timer1On = false;
+static int timer1Reload = 0;
+static int timer1ClockReload  = 0;
+static uint16_t timer2Value = 0;
+static bool timer2On = false;
+static int timer2Reload = 0;
+static int timer2ClockReload  = 0;
+static uint16_t timer3Value = 0;
+static bool timer3On = false;
+static int timer3Reload = 0;
+static int timer3ClockReload  = 0;
+static uint32_t dma0Source = 0;
+static uint32_t dma0Dest = 0;
+static uint32_t dma1Source = 0;
+static uint32_t dma1Dest = 0;
+static uint32_t dma2Source = 0;
+static uint32_t dma2Dest = 0;
+static uint32_t dma3Source = 0;
+static uint32_t dma3Dest = 0;
+static bool fxOn = false;
+static bool windowOn = false;
+
 void (*cpuSaveGameFunc)(uint32_t,uint8_t) = flashSaveDecide;
-bool fxOn = false;
-bool windowOn = false;
 
 #ifdef USE_FRAMESKIP
 int frameCount = 0;
@@ -277,9 +264,7 @@ uint32_t lastTime = 0;
 int count = 0;
 #endif
 
-char buffer[1024];
-
-const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
+static const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
 const uint32_t  objTilesAddress [3] = {0x010000, 0x014000, 0x014000};
 const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
@@ -291,13 +276,13 @@ const bool isInRom [16]=
   { false, false, false, false, false, false, false, false,
     true, true, true, true, true, true, false, false };
 
-uint8_t memoryWait[16] =
+static uint8_t memoryWait[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 0 };
-uint8_t memoryWait32[16] =
+static uint8_t memoryWait32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 7, 7, 9, 9, 13, 13, 4, 0 };
-uint8_t memoryWaitSeq[16] =
+static uint8_t memoryWaitSeq[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 4, 4, 8, 8, 4, 0 };
-uint8_t memoryWaitSeq32[16] =
+static uint8_t memoryWaitSeq32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 5, 5, 9, 9, 17, 17, 4, 0 };
 
 uint8_t biosProtected[4];
@@ -481,6 +466,29 @@ uint32_t myROM[] = {
 0x09FFC000,
 0x03007FE0
 };
+
+//TICK VARIABLES
+static uint32_t clockTicks;
+int cpuTotalTicks = 0;
+static int cpuDmaTicksToUpdate = 0;
+
+#ifdef USE_SWITICKS
+static int SWITicks = 0;
+#endif
+static int IRQTicks = 0;
+
+static int lcdTicks = (useBios && !skipBios) ? 1008 : 208;
+static int timer0Ticks = 0;
+static int timer1Ticks = 0;
+static int timer2Ticks = 0;
+static int timer3Ticks = 0;
+
+// 1 / 100th of a second
+#define SOUND_CLOCK_TICKS_ 167772
+// Number of 16.8 MHz clocks between calls to soundTick()
+int32_t   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
+// Number of 16.8 MHz clocks until soundTick() will be called
+int32_t   soundTicks         = SOUND_CLOCK_TICKS_;
 
 variable_desc saveGameStruct[] = {
   { &DISPCNT  , sizeof(uint16_t) },
@@ -4820,7 +4828,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	cpuDmaTicksToUpdate += totalTicks;
 }
 
-void CPUCheckDMA(int reason, int dmamask)
+static void CPUCheckDMA(int reason, int dmamask)
 {
 	// DMA 0
 	if((DM0CNT_H & 0x8000) && (dmamask & 1))
@@ -5485,7 +5493,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xDE:
 			{
-				bool start = ((DM3CNT_H ^ value) & 0x8000) ? true : false;
+				uint32_t start = ((DM3CNT_H ^ value) & 0x8000) ? 1 : 0; 
 
 				value &= 0xFFE0;
 
@@ -6825,3 +6833,6 @@ updateLoop:
 
 #include "Sram_.h"
 
+// Sound
+
+#include "Sound_.h"

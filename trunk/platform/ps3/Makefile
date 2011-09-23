@@ -63,7 +63,6 @@ VBA_CPPSRCS		+= $(SRC_DIR)/ps3video.cpp \
 		$(VBA_API_DIR)/gb/gbSGB.cpp \
 		$(VBA_API_DIR)/gb/gbSound.cpp \
 		$(VBA_API_DIR)/gba/GBA.cpp \
-		$(VBA_API_DIR)/gba/Sound.cpp \
 		$(VBA_API_DIR)/gba/EEprom.cpp \
 		$(VBA_API_DIR)/gba/Flash.cpp \
 		$(VBA_API_DIR)/gba/RTC.cpp \

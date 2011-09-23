@@ -1,19 +1,7 @@
-#include <string.h>
-
 #include "Sound.h"
-
-#include "GBA.h"
-#include "Globals.h"
-#include "../Util.h"
-#include "../common/Port.h"
-#include "../System.h"
 
 #include "../apu/Gb_Apu.h"
 #include "../apu/Sound_Buffer.h"
-
-#ifdef __CELLOS_LV2__
-#include "../../../platform/ps3/src/emu-ps3.hpp"
-#endif
 
 #define NR10 0x60
 #define NR11 0x62
@@ -37,18 +25,11 @@
 #define NR51 0x81
 #define NR52 0x84
 
-extern bool stopState;      // TODO: silence sound when true
 extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
-
-// 1 / 100th of a second
-#define SOUND_CLOCK_TICKS_ 167772
-
 static uint16_t   soundFinalWave [1600];
 long  soundSampleRate    = 22050;
 bool  soundPaused        = true;
 
-int32_t   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
-int32_t   soundTicks         = SOUND_CLOCK_TICKS_;
 
 //static float soundVolume     = 1.0f;
 //static float soundVolume = 0.5f;
@@ -57,7 +38,9 @@ static int soundEnableFlag   = 0x3ff; // emulator channels enabled
 
 #ifdef USE_SOUND_FILTERING
 static float soundFiltering_ = -1;
+// 1 if PCM should have low-pass filtering
 bool  soundInterpolation = true;
+// 0.0 = none, 1.0 = max
 float soundFiltering     = 0.5f;
 #endif
 

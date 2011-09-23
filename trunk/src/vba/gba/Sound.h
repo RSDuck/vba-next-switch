@@ -1,9 +1,9 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-// Sound emulation setup/options and GBA sound emulation
+#include <zlib.h>
 
-#include "../System.h"
+// Sound emulation setup/options and GBA sound emulation
 
 // GBA sound registers
 #define SGCNT0_H 0x82
@@ -12,14 +12,7 @@
 #define FIFOB_L 0xa4
 #define FIFOB_H 0xa6
 
-extern int SOUND_CLOCK_TICKS;   // Number of 16.8 MHz clocks between calls to soundTick()
-extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() will be called
 class Simple_Effects_Buffer;
-
-#ifdef USE_SOUND_FILTERING
-extern bool soundInterpolation; // 1 if PCM should have low-pass filtering
-extern float soundFiltering;    // 0.0 = none, 1.0 = max
-#endif
 
 //// Setup/options (these affect GBA and GB sound)
 
@@ -75,14 +68,11 @@ int gba_to_gb_sound(int addr);
 // Notifies emulator that a timer has overflowed
 void soundTimerOverflow(int which);
 
-// Notifies emulator that PCM rate may have changed
-void interp_rate(void);
-
 // Notifies emulator that SOUND_CLOCK_TICKS clocks have passed
 void psoundTickfn(void);
 
 // Saves/loads emulator state
-void soundSaveGame(gzFile);
+void soundSaveGame(gzFile out);
 void soundReadGame(gzFile, int version );
 
 #ifdef __LIBGBA__

@@ -453,4 +453,4 @@ class Simple_Effects_Buffer : public Effects_Buffer
 
 #endif
 
-void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
+extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );

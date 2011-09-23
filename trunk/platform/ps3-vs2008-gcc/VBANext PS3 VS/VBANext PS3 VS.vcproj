@@ -278,10 +278,6 @@
 							RelativePath="..\..\..\src\vba\gba\RTC.cpp"
 							>
 						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\Sound.cpp"
-							>
-						</File>
 					</Filter>
 				</Filter>
 				<Filter
