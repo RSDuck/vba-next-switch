@@ -18,7 +18,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 bool const cgb_02 = false; // enables bug in early CGB units that causes problems in some games
 bool const cgb_05 = false; // enables CGB-05 zombie behavior
 
-#define trigger_mask 0x80
+#define TRIGGER_MASK 0x80
 
 #define GB_OSC_UPDATE_AMP(time, new_amp) \
         output->set_modified(); \
@@ -50,7 +50,7 @@ void Gb_Env::clock_envelope()
         }
 }
 
-#define reload_sweep_timer() \
+#define RELOAD_SWEEP_TIMER() \
         sweep_delay = (regs [0] & PERIOD_MASK) >> 4; \
         if ( !sweep_delay ) \
                 sweep_delay = 8;
@@ -79,7 +79,7 @@ void Gb_Sweep_Square::clock_sweep()
 {
         if ( --sweep_delay <= 0 )
         {
-                reload_sweep_timer();
+                RELOAD_SWEEP_TIMER();
                 if ( sweep_enabled && (regs [0] & PERIOD_MASK) )
                 {
                         calc_sweep( true  );
@@ -116,7 +116,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
                         length_ctr--;
         }
 
-        if ( data & trigger_mask )
+        if (data & TRIGGER_MASK)
         {
                 enabled = true;
                 if ( !length_ctr )
@@ -130,7 +130,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
         if ( !length_ctr )
                 enabled = false;
 
-        return data & trigger_mask;
+        return data & TRIGGER_MASK;
 }
 
 inline void Gb_Env::zombie_volume( int old, int data )
@@ -180,7 +180,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 			break;
 
 		case 2:
-			if ( !(gb_env_dac_enabled()) )
+			if (!(GB_ENV_DAC_ENABLED()))
 				enabled = false;
 
 			zombie_volume( old, data );
@@ -200,7 +200,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 				env_enabled = true;
 				if ( frame_phase == 7 )
 					env_delay++;
-				if ( !(gb_env_dac_enabled()) )
+				if (!(GB_ENV_DAC_ENABLED()))
 					enabled = false;
 				return true;
 			}
@@ -212,7 +212,7 @@ bool Gb_Square::write_register( int frame_phase, int reg, int old_data, int data
 {
         bool result = Gb_Env::write_register( frame_phase, reg, old_data, data );
         if ( result )
-                delay = (delay & (4 * CLK_MUL - 1)) + period();
+                delay = (delay & ((CLK_MUL << 2) - 1)) + period();
         return result;
 }
 
@@ -221,7 +221,7 @@ inline void Gb_Noise::write_register( int frame_phase, int reg, int old_data, in
         if ( Gb_Env::write_register( frame_phase, reg, old_data, data ) )
         {
                 phase = 0x7FFF;
-                delay += 8 * CLK_MUL;
+                delay += CLK_MUL << 3;
         }
 }
 
@@ -234,7 +234,7 @@ inline void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_d
         {
                 sweep_freq = frequency();
                 sweep_neg = false;
-                reload_sweep_timer();
+                RELOAD_SWEEP_TIMER();
                 sweep_enabled = (regs [0] & (PERIOD_MASK | SHIFT_MASK)) != 0;
                 if ( regs [0] & SHIFT_MASK)
                         calc_sweep( false );
@@ -256,7 +256,7 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
         switch ( reg )
 	{
 		case 0:
-			if ( !dac_enabled() )
+			if (!(GBA_WAVE_DAC_ENABLED()))
 				enabled = false;
 			break;
 
@@ -265,12 +265,11 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			break;
 
 		case 4:
-			bool was_enabled = enabled;
-			if ( write_trig( frame_phase, 256, old_data ) )
+			if(write_trig(frame_phase, 256, old_data))
 			{
-				if ( !dac_enabled() )
+				if (!(GBA_WAVE_DAC_ENABLED()))
 					enabled = false;
-				else if ( mode == MODE_DMG && was_enabled && (unsigned) (delay - 2 * CLK_MUL) < 2 * CLK_MUL)
+				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL << 1)) < (CLK_MUL << 1))
 					corrupt_wave();
 
 				phase = 0;
@@ -291,10 +290,10 @@ void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 			square2.write_register( frame_phase, reg, old_data, data );
 			break;
 		case 2:
-			wave   .write_register( frame_phase, reg, old_data, data );
+			wave.write_register( frame_phase, reg, old_data, data );
 			break;
 		case 3:
-			noise  .write_register( frame_phase, reg, old_data, data );
+			noise.write_register( frame_phase, reg, old_data, data );
 			break;
 	}
 }
@@ -311,8 +310,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         int32_t duty = duties [duty_code];
         if (mode == MODE_AGB)
         {
-                // AGB uses inverted duty
-                duty_offset -= duty;
+                duty_offset -= duty;	// AGB uses inverted duty
                 duty = 8 - duty;
         }
         int ph = (phase + duty_offset) & 7;
@@ -323,9 +321,9 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( gb_env_dac_enabled() )
+                if (GB_ENV_DAC_ENABLED())
                 {
-                        if ( enabled )
+                        if (enabled)
                                 vol = volume;
 
                         amp = -DAC_BIAS;
@@ -333,7 +331,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 amp = -(vol >> 1);
 
                         // Play inaudible frequencies as constant amplitude
-                        if ( frequency() >= 0x7FA && delay < 32 * CLK_MUL)
+                        if ( frequency() >= 0x7FA && delay < (CLK_MUL << 5))
                         {
                                 amp += (vol * duty) >> 3;
                                 vol = 0;
@@ -446,7 +444,7 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 
 		// Each iteration is equivalent to clocking LFSR 7 times
 		// (interesting similarity to single clocking below)
-		while ( (count -= 7) > 0 )
+		while ((count -= 7) > 0)
 			s ^= ((s & 4) * (3 << 5)) ^ (s >> 1);
 		count += 7;
 
@@ -470,16 +468,16 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( gb_env_dac_enabled() )
+                if (GB_ENV_DAC_ENABLED())
                 {
-                        if ( enabled )
+                        if (enabled)
                                 vol = volume;
 
                         amp = -DAC_BIAS;
                         if (mode == MODE_AGB)
                                 amp = -(vol >> 1);
 
-                        if ( !(phase & 1) )
+                        if (!(phase & 1))
                         {
                                 amp += vol;
                                 vol = -vol;
@@ -493,7 +491,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         amp    = -amp;
                 }
 
-                GB_OSC_UPDATE_AMP( time, amp );
+                GB_OSC_UPDATE_AMP(time, amp);
         }
 
         // Run timer and calculate time of next LFSR clock
@@ -553,9 +551,9 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         }
 }
 
-#define volume_shift	2
-#define volume_shift_plus_four	6
-#define size20_mask 0x20
+#define VOLUME_SHIFT	2
+#define VOLUME_SHIFT_PLUS_FOUR	6
+#define SIZE20_MASK 0x20
 
 void Gb_Wave::run( int32_t time, int32_t end_time )
 {
@@ -570,7 +568,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if(GBA_WAVE_DAC_ENABLED())
                 {
                         // Play inaudible frequencies as constant amplitude
                         amp = 8 << 4; // really depends on average of all samples in wave
@@ -578,15 +576,15 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                         // if delay is larger, constant amplitude won't start yet
                         if ( frequency() <= 0x7FB || delay > 15 * CLK_MUL)
                         {
-                                if ( volume_mul )
+                                if (volume_mul)
                                         playing = (int) enabled;
 
                                 amp = (sample_buf << (phase << 2 & 4) & 0xF0) * playing;
                         }
 
-                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - DAC_BIAS;
+                        amp = ((amp * volume_mul) >> (VOLUME_SHIFT_PLUS_FOUR)) - DAC_BIAS;
                 }
-                GB_OSC_UPDATE_AMP( time, amp );
+                GB_OSC_UPDATE_AMP(time, amp);
         }
 
         // Generate wave
@@ -597,11 +595,11 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
 
                 // wave size and bank
                 int const flags = regs [0] & agb_mask;
-                int const wave_mask = (flags & size20_mask) | 0x1F;
+                int const wave_mask = (flags & SIZE20_MASK) | 0x1F;
                 int swap_banks = 0;
                 if (flags & BANK40_MASK)
                 {
-                        swap_banks = flags & size20_mask;
+                        swap_banks = flags & SIZE20_MASK;
                         wave += BANK_SIZE/2 - (swap_banks >> 1);
                 }
 
@@ -627,7 +625,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 ph = (ph + 1) & wave_mask;
 
                                 // Scale by volume
-                                int amp = (nybble * volume_mul) >> (volume_shift_plus_four);
+                                int amp = (nybble * volume_mul) >> (VOLUME_SHIFT_PLUS_FOUR);
 
                                 int delta = amp - lamp;
                                 if ( delta )
@@ -636,8 +634,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                         offset_resampled(med_synth->delta_factor, time * out->factor_ + out->offset_, delta, out );
                                 }
                                 time += per;
-                        }
-                        while ( time < end_time );
+                        }while ( time < end_time );
                         last_amp = lamp - DAC_BIAS;
                 }
                 ph = (ph - 1) & wave_mask; // undo pre-advance and mask position

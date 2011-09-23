@@ -123,12 +123,8 @@ class Blip_Buffer
 	int bass_freq_;
 };
 
-
-
-
 // Internal
-#define blip_widest_impulse_ 16
-#define blip_buffer_extra_ 18
+#define BLIP_BUFFER_EXTRA_ 18
 
 #ifdef USE_SOUND_FILTERING
 class blip_eq_t;
@@ -236,7 +232,7 @@ struct blip_buffer_state_t
 {
         uint32_t offset_;
         int32_t reader_accum_;
-        int32_t buf[blip_buffer_extra_];
+        int32_t buf[BLIP_BUFFER_EXTRA_];
 };
 
 #undef BLIP_FWD

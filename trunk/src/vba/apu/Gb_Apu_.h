@@ -26,7 +26,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #define OSC_COUNT 4
 
-#define calc_output(osc) \
+#define CALC_OUTPUT(osc) \
 	int bits = regs [STEREO_REG - START_ADDR] >> osc; \
 	bits = (bits >> 3 & 2) | (bits & 1);
 
@@ -39,7 +39,7 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 		o.outputs [1] = right;
 		o.outputs [2] = left;
 		o.outputs [3] = center;
-		calc_output(i);
+		CALC_OUTPUT(i);
 		o.output = o.outputs [bits];
 		++i;
 	}while ( i < osc );
@@ -216,7 +216,7 @@ void Gb_Apu::run_until_( int32_t end_time )
 
 void Gb_Apu::end_frame( int32_t end_time )
 {
-	run_until(end_time);
+	RUN_UNTIL(end_time);
 
 	frame_time -= end_time;
 
@@ -255,7 +255,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			data &= 0x3F; // clear square duty
 	}
 
-	run_until(time);
+	RUN_UNTIL(time);
 
 	if ( addr >= WAVE_RAM )
 	{
@@ -285,7 +285,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			for ( int i = OSC_COUNT; --i >= 0; )
 			{
 				Gb_Osc& o = *oscs [i];
-				calc_output(i);
+				CALC_OUTPUT(i);
 				Blip_Buffer* out = o.outputs [bits];
 				if ( o.output != out )
 				{
@@ -329,7 +329,7 @@ void Gb_Apu::apply_stereo()
 	for ( int i = OSC_COUNT; --i >= 0; )
 	{
 		Gb_Osc& o = *oscs [i];
-		calc_output(i);
+		CALC_OUTPUT(i);
 		Blip_Buffer* out = o.outputs [bits];
 		if ( o.output != out )
 		{
@@ -342,7 +342,7 @@ void Gb_Apu::apply_stereo()
 
 int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
-	run_until(time);
+	RUN_UNTIL(time);
 
 	int reg = addr - START_ADDR;
 	if ( (unsigned) reg >= REGISTER_COUNT)

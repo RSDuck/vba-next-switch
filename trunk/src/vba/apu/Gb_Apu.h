@@ -51,7 +51,7 @@ struct gb_apu_state_t;
 #define agb_treble	0
 #define agb_bass	30
 
-#define run_until(time) \
+#define RUN_UNTIL(time) \
 	if (time > last_time) \
 	{ \
 		run_until_(time); \

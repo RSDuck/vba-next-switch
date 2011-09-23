@@ -49,7 +49,7 @@ class Gb_Osc
 };
 
 // Non-zero if DAC is enabled
-#define gb_env_dac_enabled() regs[2] & 0xF8
+#define GB_ENV_DAC_ENABLED() regs[2] & 0xF8
 
 class Gb_Env : public Gb_Osc
 {
@@ -164,6 +164,9 @@ class Gb_Noise : public Gb_Env
 #define BANK40_MASK	0x40
 #define BANK_SIZE	32
 
+// Non-zero if DAC is enabled
+#define GBA_WAVE_DAC_ENABLED() regs[0] & 0x80
+
 class Gb_Wave : public Gb_Osc
 {
 	public:
@@ -191,9 +194,6 @@ class Gb_Wave : public Gb_Osc
 	private:
 	// Frequency timer period
 	int period() const { return (2048 - frequency()) * (2 * CLK_MUL); }
-
-	// Non-zero if DAC is enabled
-	int dac_enabled() const { return regs [0] & 0x80; }
 
 	void corrupt_wave();
 

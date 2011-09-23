@@ -48,7 +48,7 @@ Blip_Buffer::Blip_Buffer()
 }
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
-#define blip_buffer_remove_silence(count) \
+#define BLIP_BUFFER_REMOVE_SILENCE(count) \
 { \
    if ( (b.last_non_silence -= count) < 0) \
       b.last_non_silence = 0; \
@@ -72,7 +72,7 @@ void Blip_Buffer::clear(void)
         reader_accum_ = 0;
         modified_     = 0;
         if ( buffer_ )
-                __builtin_memset( buffer_, 0, (buffer_size_ + blip_buffer_extra_) * sizeof(int32_t) );
+                __builtin_memset( buffer_, 0, (buffer_size_ + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
 }
 
 void Blip_Buffer::clear_false(void)
@@ -86,7 +86,7 @@ void Blip_Buffer::clear_false(void)
 	if ( buffer_ )
 	{
 		long count = blip_buffer_samples_avail();
-		__builtin_memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof(int32_t) );
+		__builtin_memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
 	}
 }
 
@@ -97,7 +97,7 @@ int32_t Blip_Buffer::set_sample_rate(long new_rate, int msec)
                 return -1;
 
         // start with maximum length that resampled time can represent
-        long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - blip_buffer_extra_ - 64;
+        long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
         if (msec != BLIP_MAX_LENGTH)
         {
                 long s = (new_rate * (msec + 1) + 999) / 1000;
@@ -107,7 +107,7 @@ int32_t Blip_Buffer::set_sample_rate(long new_rate, int msec)
 
         if ( buffer_size_ != new_size )
         {
-                void* p = realloc( buffer_, (new_size + blip_buffer_extra_) * sizeof(*buffer_));
+                void* p = realloc( buffer_, (new_size + BLIP_BUFFER_EXTRA_) * sizeof(*buffer_));
                 if ( !p )
                         return -1;	// Out of memory
                 buffer_ = (int32_t *) p;
@@ -151,7 +151,7 @@ void Blip_Buffer::end_frame( int32_t t )
 {
         offset_ += t * factor_;
         if ( clear_modified() )
-                last_non_silence = blip_buffer_samples_avail() + blip_buffer_extra_;
+                last_non_silence = blip_buffer_samples_avail() + BLIP_BUFFER_EXTRA_;
 }
 #endif
 
@@ -165,7 +165,7 @@ void Blip_Buffer::remove_samples( long count )
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
 	// copy remaining samples to beginning and clear old samples
-	long remain = blip_buffer_samples_avail() + blip_buffer_extra_;
+	long remain = blip_buffer_samples_avail() + BLIP_BUFFER_EXTRA_;
 	memmove( buffer_, buffer_ + count, remain * sizeof(*buffer_));
 	__builtin_memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
@@ -303,7 +303,7 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
                                 // TODO: might miss non-silence setting since it checks END of last read
                                 if ( !b.non_silent() )
             {
-                                        blip_buffer_remove_silence( mixer_samples_read );
+                                        BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
             }
                                 else
             #endif
@@ -987,7 +987,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
                                         b.remove_samples( mixer_samples_read );
                                 else
             {
-                                        blip_buffer_remove_silence( mixer_samples_read );
+                                        BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
             }
             #endif
                         }
