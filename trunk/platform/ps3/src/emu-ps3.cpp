@@ -645,12 +645,6 @@ bool Emulator_IsROMLoaded()
 	return current_rom != NULL && need_load_rom == false;
 }
 
-
-bool IsROMRunning()
-{
-	return is_running;
-}
-
 static void emulator_shutdown()
 {
 	if (Emulator_IsROMLoaded())
@@ -819,40 +813,40 @@ init_setting_uint(string_concat_ps3_controls(padno, AnalogR_Right_Type), PS3Inpu
 #define map_ps3_button_array(buttonarray) \
    for(int i = 0; i < MAX_PADS; i++) \
    { \
-      Input_MapButton(PS3Input.DPad_Up[i],false,              buttonarray[0]); \
-      Input_MapButton(PS3Input.DPad_Down[i],false,            buttonarray[1]); \
-      Input_MapButton(PS3Input.DPad_Left[i],false,            buttonarray[2]); \
-      Input_MapButton(PS3Input.DPad_Right[i],false,           buttonarray[3]); \
-      Input_MapButton(PS3Input.ButtonCircle[i],false,         buttonarray[4]); \
-      Input_MapButton(PS3Input.ButtonCross[i],false,          buttonarray[5]); \
-      Input_MapButton(PS3Input.ButtonTriangle[i],false,       buttonarray[6]); \
-      Input_MapButton(PS3Input.ButtonSquare[i],false,         buttonarray[7]); \
-      Input_MapButton(PS3Input.ButtonSelect[i],false,         buttonarray[8]); \
-      Input_MapButton(PS3Input.ButtonStart[i],false,          buttonarray[9]); \
-      Input_MapButton(PS3Input.ButtonL1[i],false,             buttonarray[10]); \
-      Input_MapButton(PS3Input.ButtonL2[i],false,             buttonarray[11]); \
-      Input_MapButton(PS3Input.ButtonR2[i],false,             buttonarray[12]); \
-      Input_MapButton(PS3Input.ButtonL3[i],false,             buttonarray[13]); \
-      Input_MapButton(PS3Input.ButtonR3[i],false,             buttonarray[14]); \
-      Input_MapButton(PS3Input.ButtonR1[i],false,             buttonarray[15]); \
-      Input_MapButton(PS3Input.ButtonL2_ButtonL3[i],false,    buttonarray[16]); \
-      Input_MapButton(PS3Input.ButtonL2_ButtonR2[i],false,    buttonarray[17]); \
-      Input_MapButton(PS3Input.ButtonL2_ButtonR3[i],false,    buttonarray[18]); \
-      Input_MapButton(PS3Input.ButtonR2_ButtonR3[i],false,    buttonarray[19]); \
-      Input_MapButton(PS3Input.AnalogR_Up[i],false,           buttonarray[20]); \
-      Input_MapButton(PS3Input.AnalogR_Down[i],false,         buttonarray[21]); \
-      Input_MapButton(PS3Input.AnalogR_Left[i],false,         buttonarray[22]); \
-      Input_MapButton(PS3Input.AnalogR_Right[i],false,        buttonarray[23]); \
-      Input_MapButton(PS3Input.ButtonL2_AnalogR_Right[i],false, buttonarray[24]); \
-      Input_MapButton(PS3Input.ButtonL2_AnalogR_Left[i],false, buttonarray[25]); \
-      Input_MapButton(PS3Input.ButtonL2_AnalogR_Up[i],false, buttonarray[26]); \
-      Input_MapButton(PS3Input.ButtonL2_AnalogR_Down[i],false, buttonarray[27]); \
-      Input_MapButton(PS3Input.ButtonR2_AnalogR_Right[i],false, buttonarray[28]); \
-      Input_MapButton(PS3Input.ButtonR2_AnalogR_Left[i],false, buttonarray[29]); \
-      Input_MapButton(PS3Input.ButtonR2_AnalogR_Up[i],false, buttonarray[30]); \
-      Input_MapButton(PS3Input.ButtonR2_AnalogR_Down[i],false, buttonarray[31]); \
-      Input_MapButton(PS3Input.ButtonL2_ButtonR2_AnalogR_Down[i],false, buttonarray[32]); \
-      Input_MapButton(PS3Input.ButtonR3_ButtonL3[i],false, buttonarray[33]); \
+      INPUT_MAPBUTTON(PS3Input.DPad_Up[i],false,              buttonarray[0]); \
+      INPUT_MAPBUTTON(PS3Input.DPad_Down[i],false,            buttonarray[1]); \
+      INPUT_MAPBUTTON(PS3Input.DPad_Left[i],false,            buttonarray[2]); \
+      INPUT_MAPBUTTON(PS3Input.DPad_Right[i],false,           buttonarray[3]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonCircle[i],false,         buttonarray[4]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonCross[i],false,          buttonarray[5]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonTriangle[i],false,       buttonarray[6]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonSquare[i],false,         buttonarray[7]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonSelect[i],false,         buttonarray[8]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonStart[i],false,          buttonarray[9]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL1[i],false,             buttonarray[10]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2[i],false,             buttonarray[11]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2[i],false,             buttonarray[12]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL3[i],false,             buttonarray[13]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR3[i],false,             buttonarray[14]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR1[i],false,             buttonarray[15]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_ButtonL3[i],false,    buttonarray[16]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_ButtonR2[i],false,    buttonarray[17]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_ButtonR3[i],false,    buttonarray[18]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2_ButtonR3[i],false,    buttonarray[19]); \
+      INPUT_MAPBUTTON(PS3Input.AnalogR_Up[i],false,           buttonarray[20]); \
+      INPUT_MAPBUTTON(PS3Input.AnalogR_Down[i],false,         buttonarray[21]); \
+      INPUT_MAPBUTTON(PS3Input.AnalogR_Left[i],false,         buttonarray[22]); \
+      INPUT_MAPBUTTON(PS3Input.AnalogR_Right[i],false,        buttonarray[23]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_AnalogR_Right[i],false, buttonarray[24]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_AnalogR_Left[i],false, buttonarray[25]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_AnalogR_Up[i],false, buttonarray[26]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_AnalogR_Down[i],false, buttonarray[27]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2_AnalogR_Right[i],false, buttonarray[28]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2_AnalogR_Left[i],false, buttonarray[29]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2_AnalogR_Up[i],false, buttonarray[30]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR2_AnalogR_Down[i],false, buttonarray[31]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonL2_ButtonR2_AnalogR_Down[i],false, buttonarray[32]); \
+      INPUT_MAPBUTTON(PS3Input.ButtonR3_ButtonL3[i],false, buttonarray[33]); \
       PS3Input.AnalogR_Up_Type[i] = buttonarray[34]; \
       PS3Input.AnalogR_Down_Type[i] = buttonarray[35]; \
       PS3Input.AnalogR_Left_Type[i] = buttonarray[36]; \
@@ -1995,7 +1989,7 @@ int main(int argc, char **argv)
 
 	emulator_init_settings();
 
-#if(CELL_SDK_VERSION == 0x340001)
+#if(CELL_SDK_VERSION > 0x340000)
 	if (Settings.ScreenshotsEnabled)
 	{
 		cellSysmoduleLoadModule(CELL_SYSMODULE_SYSUTIL_SCREENSHOT);

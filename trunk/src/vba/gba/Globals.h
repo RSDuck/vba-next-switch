@@ -1,9 +1,6 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "../common/Types.h"
-#include "GBA.h"
-
 #define VERBOSE_SWI                  1
 #define VERBOSE_UNALIGNED_MEMORY     2
 #define VERBOSE_ILLEGAL_WRITE        4
@@ -29,8 +26,8 @@ extern bool enableRtc;
 extern bool skipSaveGameBattery; // skip battery data when reading save states
 extern bool skipSaveGameCheats;  // skip cheat list data when reading save states
 
-extern u8 *rom;
-extern u8 *pix;
-extern u8 *ioMem;
+extern uint8_t *rom;
+extern uint8_t *pix;
+extern uint8_t *ioMem;
 
 #endif // GLOBALS_H

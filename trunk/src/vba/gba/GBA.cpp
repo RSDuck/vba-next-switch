@@ -276,13 +276,13 @@ const bool isInRom [16]=
   { false, false, false, false, false, false, false, false,
     true, true, true, true, true, true, false, false };
 
-static uint8_t memoryWait[16] =
+static uint32_t memoryWait[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 0 };
-static uint8_t memoryWait32[16] =
+static uint32_t memoryWait32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 7, 7, 9, 9, 13, 13, 4, 0 };
-static uint8_t memoryWaitSeq[16] =
+static uint32_t memoryWaitSeq[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 4, 4, 8, 8, 4, 0 };
-static uint8_t memoryWaitSeq32[16] =
+static uint32_t memoryWaitSeq32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 5, 5, 9, 9, 17, 17, 4, 0 };
 
 uint8_t biosProtected[4];
@@ -1618,7 +1618,7 @@ void doMirroring (bool b)
 	}
 }
 
-#define brightness_switch() \
+#define BRIGHTNESS_SWITCH() \
       switch((BLDMOD >> 6) & 3) \
       { \
          case 2: \
@@ -1629,12 +1629,12 @@ void doMirroring (bool b)
                break; \
       }
 
-#define alpha_blend_brightness_switch() \
+#define ALPHA_BLEND_BRIGHTNESS_SWITCH() \
       if(top2 & (BLDMOD>>8)) \
         color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
       else if(BLDMOD & top) \
       { \
-         brightness_switch(); \
+         BRIGHTNESS_SWITCH(); \
       }
 
 static void mode0RenderLine()
@@ -1722,7 +1722,7 @@ static void mode0RenderLine()
 				top2 = 0x08;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -1877,7 +1877,7 @@ static void mode0RenderLineNoWindow()
 				top2 = 0x08;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -2008,7 +2008,7 @@ static void mode0RenderLineAll()
 				top2 = 0x08;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 		else if((mask & 32) && (top & BLDMOD))
 		{
@@ -2172,7 +2172,7 @@ static void mode1RenderLine()
 				}
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -2334,7 +2334,7 @@ static void mode1RenderLineNoWindow()
 				}
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -2474,7 +2474,7 @@ static void mode1RenderLineAll()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 		else if(mask & 32)
 		{
@@ -2634,7 +2634,7 @@ static void mode2RenderLine()
 				}
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -2763,7 +2763,7 @@ static void mode2RenderLineNoWindow()
 				}
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -2888,7 +2888,7 @@ static void mode2RenderLineAll()
 				top2 = 0x08;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		} else if(mask & 32) {
 			// special FX on the window
 			switch((BLDMOD >> 6) & 3) {
@@ -2995,7 +2995,7 @@ static void mode3RenderLine()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3098,7 +3098,7 @@ static void mode3RenderLineNoWindow()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3210,7 +3210,7 @@ static void mode3RenderLineAll()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 		else if(mask & 32)
 		{
@@ -3320,7 +3320,7 @@ static void mode4RenderLine()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3424,7 +3424,7 @@ static void mode4RenderLineNoWindow()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3536,7 +3536,7 @@ static void mode4RenderLineAll()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 		else if(mask & 32)
 		{
@@ -3650,7 +3650,7 @@ static void mode5RenderLine()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3756,7 +3756,7 @@ static void mode5RenderLineNoWindow()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 
 		line[lineMix][x] = color;
@@ -3870,7 +3870,7 @@ static void mode5RenderLineAll()
 				top2 = 0x04;
 			}
 
-			alpha_blend_brightness_switch();
+			ALPHA_BLEND_BRIGHTNESS_SWITCH();
 		}
 		else if(mask & 32)
 		{
@@ -4081,6 +4081,12 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 }
 #endif
 
+#define SWAP(a,b,c) \
+		temp = (a);\
+		(a) = (b)<<16|(c);\
+		(b) = (temp) >> 16;\
+		(c) = (temp) & 0xFFFF;
+
 static bool CPUReadState(gzFile gzFile)
 {
 	int version = utilReadInt(gzFile);
@@ -4194,11 +4200,6 @@ static bool CPUReadState(gzFile gzFile)
 	if(version <= SAVE_GAME_VERSION_7)
 	{
 		uint32_t temp;
-#define SWAP(a,b,c) \
-		temp = (a);\
-		(a) = (b)<<16|(c);\
-		(b) = (temp) >> 16;\
-		(c) = (temp) & 0xFFFF;
 
 		SWAP(dma0Source, DM0SAD_H, DM0SAD_L);
 		SWAP(dma0Dest,   DM0DAD_H, DM0DAD_L);
@@ -4363,8 +4364,7 @@ bool CPUReadMemState(char *memory, int available)
 	*a = c; \
 }
 
-
-void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
+static void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 {
 	//  if(armMode == mode)
 	//    return;
@@ -4472,9 +4472,6 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 				reg[17].I = reg[SPSR_UND].I;
 			break;
 		default:
-#ifdef VBA_DEBUG
-			systemMessage(MSG_UNSUPPORTED_ARM_MODE, N_("Unsupported ARM mode %02x"), mode);
-#endif
 			break;
 	}
 	armMode = mode;
@@ -4483,7 +4480,7 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 }
 
 
-void CPUSoftwareInterrupt(int comment)
+static void CPUSoftwareInterrupt(int comment)
 {
 	if(armState) comment >>= 16;
 #ifdef PROFILING
@@ -4759,9 +4756,6 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	sm = ((((15) & sm_gt_15_mask) | ((((sm) & ~(sm_gt_15_mask))))));
 	dm = ((((15) & dm_gt_15_mask) | ((((dm) & ~(dm_gt_15_mask))))));
 
-	//if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-	//    blank = (((DISPSTAT | ((DISPSTAT>>1)&1))==1) ?  true : false);
-
 	if(transfer32)
 	{
 		s &= 0xFFFFFFFC;
@@ -4830,48 +4824,18 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 
 static void CPUCheckDMA(int reason, int dmamask)
 {
+	uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
+	uint32_t sourceIncrement, destIncrement;
 	// DMA 0
 	if((DM0CNT_H & 0x8000) && (dmamask & 1))
 	{
 		if(((DM0CNT_H >> 12) & 3) == reason)
 		{
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
-			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM0CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM0CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM0CNT_H >> 7) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM0CNT_H >> 5) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
-			doDMA(dma0Source, dma0Dest, sourceIncrement, destIncrement,
-					DM0CNT_L ? DM0CNT_L : 0x4000,
-					DM0CNT_H & 0x0400);
+			doDMA(dma0Source, dma0Dest, sourceIncrement, destIncrement, DM0CNT_L ? DM0CNT_L : 0x4000, DM0CNT_H & 0x0400);
 			//cpuDmaHack = true;
 
 			if(DM0CNT_H & 0x4000)
@@ -4897,40 +4861,10 @@ static void CPUCheckDMA(int reason, int dmamask)
 	{
 		if(((DM1CNT_H >> 12) & 3) == reason)
 		{
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
-			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM1CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM1CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM1CNT_H >> 7) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM1CNT_H >> 5) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			uint32_t di_value, c_value, transfer_value;
 			if(reason == 3)
 			{
@@ -4970,40 +4904,10 @@ static void CPUCheckDMA(int reason, int dmamask)
 	{
 		if(((DM2CNT_H >> 12) & 3) == reason)
 		{
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
-			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM2CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM2CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM2CNT_H >> 7) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM2CNT_H >> 5) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			uint32_t di_value, c_value, transfer_value;
 			if(reason == 3)
 			{
@@ -5043,43 +4947,12 @@ static void CPUCheckDMA(int reason, int dmamask)
 	{
 		if(((DM3CNT_H >> 12) & 3) == reason)
 		{
-#ifdef SWITCH_TO_ARRAYVAL
 			//TODO - Which is faster?
-			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM3CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM3CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM3CNT_H >> 7) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM3CNT_H >> 5) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
-			doDMA(dma3Source, dma3Dest, sourceIncrement, destIncrement,
-					DM3CNT_L ? DM3CNT_L : 0x10000,
-					DM3CNT_H & 0x0400);
+			doDMA(dma3Source, dma3Dest, sourceIncrement, destIncrement, DM3CNT_L ? DM3CNT_L : 0x10000, DM3CNT_H & 0x0400);
 
 			if(DM3CNT_H & 0x4000)
 			{

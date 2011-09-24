@@ -47,8 +47,8 @@ void soundShutdown(void);
 
 //// GBA sound options
 
-long soundGetSampleRate(void);
-void soundSetSampleRate(long sampleRate);
+uint32_t soundGetSampleRate(void);
+void soundSetSampleRate(uint32_t sampleRate);
 
 // Sound settings
 

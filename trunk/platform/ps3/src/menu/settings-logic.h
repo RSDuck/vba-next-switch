@@ -442,7 +442,7 @@ static void producesettingentry(uint64_t switchvalue)
 				Graphics->set_vsync(Settings.Throttled);
 				Settings.ScreenshotsEnabled = false;
 				emulator_implementation_set_texture(DEFAULT_BORDER_FILE);
-#if(CELL_SDK_VERSION == 0x340001)
+#if(CELL_SDK_VERSION > 0x340000)
 				cellScreenShotDisable();
 				cellSysmoduleUnloadModule(CELL_SYSMODULE_SYSUTIL_SCREENSHOT);
 #endif

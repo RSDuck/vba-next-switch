@@ -300,11 +300,12 @@ void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 
 // Synthesis
 
+// Calc duty and phase
+static uint8_t const duty_offsets [4] = { 1, 1, 3, 7 };
+static uint8_t const duties       [4] = { 1, 2, 4, 6 };
+
 void Gb_Square::run( int32_t time, int32_t end_time )
 {
-        // Calc duty and phase
-        static unsigned char const duty_offsets [4] = { 1, 1, 3, 7 };
-        static unsigned char const duties       [4] = { 1, 2, 4, 6 };
         int const duty_code = regs [1] >> 6;
         int32_t duty_offset = duty_offsets [duty_code];
         int32_t duty = duties [duty_code];
@@ -354,9 +355,9 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                 if ( !vol )
                 {
                         // Maintain phase when not playing
-                        int count = (end_time - time + per - 1) / per;
+                        int32_t count = (end_time - time + per - 1) / per;
                         ph += count; // will be masked below
-                        time += (int32_t) count * per;
+                        time += count * per;
                 }
                 else
                 {
@@ -460,6 +461,8 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 	return s;
 }
 
+static uint8_t const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
+
 void Gb_Noise::run( int32_t time, int32_t end_time )
 {
         // Determine what will be generated
@@ -495,7 +498,6 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         }
 
         // Run timer and calculate time of next LFSR clock
-        static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
         int const period1 = period1s [regs [3] & 7] * CLK_MUL;
         {
                 int extra = (end_time - time) - delay;
@@ -523,7 +525,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 {
                         // Maintain phase when not playing
                         int count = (end_time - time + per - 1) / per;
-                        time += (int32_t) count * per;
+                        time += count * per;
                         bits = run_lfsr( bits, ~mask, count );
                 }
                 else
@@ -555,10 +557,11 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
 #define VOLUME_SHIFT_PLUS_FOUR	6
 #define SIZE20_MASK 0x20
 
+// Calc volume
+static uint8_t const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
+
 void Gb_Wave::run( int32_t time, int32_t end_time )
 {
-        // Calc volume
-        static unsigned char const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
         int const volume_idx = regs [2] >> 5 & (agb_mask | 3); // 2 bits on DMG/CGB, 3 on AGB
         int const volume_mul = volumes [volume_idx];
 
@@ -610,9 +613,9 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 if ( !playing )
                 {
                         // Maintain phase when not playing
-                        int count = (end_time - time + per - 1) / per;
+                        int32_t count = (end_time - time + per - 1) / per;
                         ph += count; // will be masked below
-                        time += (int32_t) count * per;
+                        time += count * per;
                 }
                 else
                 {

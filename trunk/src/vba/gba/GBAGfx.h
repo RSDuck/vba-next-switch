@@ -80,14 +80,17 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, uint32_t *
 			line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
 
 			++xxx;
-			if(xxx == 256) {
+			if(xxx == 256)
+			{
 				if(sizeX > 256)
 					screenSource = screenBase + 0x400 + yshift;
-				else {
+				else
+				{
 					screenSource = screenBase + yshift;
 					xxx = 0;
 				}
-			} else if(xxx >= sizeX) {
+			} else if(xxx >= sizeX)
+			{
 				xxx = 0;
 				screenSource = screenBase + yshift;
 			}
@@ -123,14 +126,18 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, uint32_t *
 			line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
 
 			++xxx;
-			if(xxx == 256) {
+			if(xxx == 256)
+			{
 				if(sizeX > 256)
 					screenSource = screenBase + 0x400 + yshift;
-				else {
+				else
+				{
 					screenSource = screenBase + yshift;
 					xxx = 0;
 				}
-			} else if(xxx >= sizeX) {
+			}
+			else if(xxx >= sizeX)
+			{
 				xxx = 0;
 				screenSource = screenBase + yshift;
 			}
@@ -212,21 +219,23 @@ static inline void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 
 	if(VCOUNT == 0)
 		changed = 3;
 
-	if(changed & 1) {
+	if(changed & 1)
+	{
 		currentX = (x_l) | ((x_h & 0x07FF)<<16);
 		if(x_h & 0x0800)
 			currentX |= 0xF8000000;
-	} else {
-		currentX += dmx;
 	}
+	else
+		currentX += dmx;
 
-	if(changed & 2) {
+	if(changed & 2)
+	{
 		currentY = (y_l) | ((y_h & 0x07FF)<<16);
 		if(y_h & 0x0800)
 			currentY |= 0xF8000000;
-	} else {
-		currentY += dmy;
 	}
+	else
+		currentY += dmy;
 
 	int realX = currentX;
 	int realY = currentY;
@@ -238,8 +247,10 @@ static inline void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 
 		realY -= y*dmy;
 	}
 
-	if(control & 0x2000) {
-		for(uint32_t x = 0; x < 240u; ++x) {
+	if(control & 0x2000)
+	{
+		for(uint32_t x = 0; x < 240u; ++x)
+		{
 			int xxx = (realX >> 8) & maskX;
 			int yyy = (realY >> 8) & maskY;
 
@@ -622,7 +633,7 @@ static inline void gfxDrawSprites(void)
 	// lineOBJpix is used to keep track of the drawn OBJs
 	// and to stop drawing them if the 'maximum number of OBJ per line'
 	// has been reached.
-	unsigned int lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
+	int32_t lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
 	int m=0;
 
 	CLEAR_ARRAY(line[lineOBJ]);

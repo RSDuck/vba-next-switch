@@ -1060,6 +1060,22 @@ static INSN_REGPARM void thumbB0(uint32_t opcode)
     address += 4;                                           \
   }
 
+#define PUSH_REG_COUNT0(val, r)                                    \
+  if (opcode & (val)) {                                     \
+    CPUWriteMemory(address, reg[(r)].I);                    \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+
+#define POP_REG_COUNT0(val, r)                              \
+  if (opcode & (val)) {                                     \
+    reg[(r)].I = CPUReadMemory(address);                    \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+
 #define POP_REG(val, r)                                     \
   if (opcode & (val)) {                                     \
     reg[(r)].I = CPUReadMemory(address);                    \
@@ -1081,7 +1097,7 @@ static INSN_REGPARM void thumbB4(uint32_t opcode)
 	int count = 0;
 	uint32_t temp = reg[13].I - 4 * cpuBitsSet[opcode & 0xff];
 	uint32_t address = temp & 0xFFFFFFFC;
-	PUSH_REG(1, 0);
+	PUSH_REG_COUNT0(1, 0);
 	PUSH_REG(2, 1);
 	PUSH_REG(4, 2);
 	PUSH_REG(8, 3);
@@ -1102,7 +1118,7 @@ static INSN_REGPARM void thumbB5(uint32_t opcode)
 	int count = 0;
 	uint32_t temp = reg[13].I - 4 - 4 * cpuBitsSet[opcode & 0xff];
 	uint32_t address = temp & 0xFFFFFFFC;
-	PUSH_REG(1, 0);
+	PUSH_REG_COUNT0(1, 0);
 	PUSH_REG(2, 1);
 	PUSH_REG(4, 2);
 	PUSH_REG(8, 3);
@@ -1124,7 +1140,7 @@ static INSN_REGPARM void thumbBC(uint32_t opcode)
 	int count = 0;
 	uint32_t address = reg[13].I & 0xFFFFFFFC;
 	uint32_t temp = reg[13].I + 4*cpuBitsSet[opcode & 0xFF];
-	POP_REG(1, 0);
+	POP_REG_COUNT0(1, 0);
 	POP_REG(2, 1);
 	POP_REG(4, 2);
 	POP_REG(8, 3);
@@ -1145,7 +1161,7 @@ static INSN_REGPARM void thumbBD(uint32_t opcode)
 	int count = 0;
 	uint32_t address = reg[13].I & 0xFFFFFFFC;
 	uint32_t temp = reg[13].I + 4 + 4*cpuBitsSet[opcode & 0xFF];
-	POP_REG(1, 0);
+	POP_REG_COUNT0(1, 0);
 	POP_REG(2, 1);
 	POP_REG(4, 2);
 	POP_REG(8, 3);
@@ -1171,6 +1187,15 @@ static INSN_REGPARM void thumbBD(uint32_t opcode)
 
 // Load/store multiple ////////////////////////////////////////////////////
 
+#define THUMB_STM_REG_COUNT0(val,r,b)                              \
+  if(opcode & (val)) {                                      \
+    CPUWriteMemory(address, reg[(r)].I);                    \
+    reg[(b)].I = temp;                                      \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+
 #define THUMB_STM_REG(val,r,b)                              \
   if(opcode & (val)) {                                      \
     CPUWriteMemory(address, reg[(r)].I);                    \
@@ -1180,6 +1205,14 @@ static INSN_REGPARM void thumbBD(uint32_t opcode)
     } else {                                                \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
     }                                                       \
+    count++;                                                \
+    address += 4;                                           \
+  }
+
+#define THUMB_LDM_REG_COUNT0(val,r)                                \
+  if(opcode & (val)) {                                      \
+    reg[(r)].I = CPUReadMemory(address);                    \
+        clockTicks += 1 + dataTicksAccess32(address);       \
     count++;                                                \
     address += 4;                                           \
   }
@@ -1208,7 +1241,7 @@ static INSN_REGPARM void thumbC0(uint32_t opcode)
 	uint32_t temp = reg[regist].I + 4*cpuBitsSet[opcode & 0xff];
 	int count = 0;
 	// store
-	THUMB_STM_REG(1, 0, regist);
+	THUMB_STM_REG_COUNT0(1, 0, regist);
 	THUMB_STM_REG(2, 1, regist);
 	THUMB_STM_REG(4, 2, regist);
 	THUMB_STM_REG(8, 3, regist);
@@ -1231,7 +1264,7 @@ static INSN_REGPARM void thumbC8(uint32_t opcode)
 	uint32_t temp = reg[regist].I + 4*cpuBitsSet[opcode & 0xFF];
 	int count = 0;
 	// load
-	THUMB_LDM_REG(1, 0);
+	THUMB_LDM_REG_COUNT0(1, 0);
 	THUMB_LDM_REG(2, 1);
 	THUMB_LDM_REG(4, 2);
 	THUMB_LDM_REG(8, 3);
@@ -1275,8 +1308,7 @@ static INSN_REGPARM void thumbD1(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 3;
 		busPrefetchCount=0;
 	}
 }
@@ -1290,8 +1322,7 @@ static INSN_REGPARM void thumbD2(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1305,8 +1336,7 @@ static INSN_REGPARM void thumbD3(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC)+3;
 		busPrefetchCount=0;
 	}
 }
@@ -1455,8 +1485,7 @@ static INSN_REGPARM void thumbDD(uint32_t opcode)
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 		THUMB_PREFETCH;
-		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) +
-			codeTicksAccess16(armNextPC)+3;
+		clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 3;
 		busPrefetchCount=0;
 	}
 }
@@ -1513,7 +1542,7 @@ static INSN_REGPARM void thumbF8(uint32_t opcode)
 	reg[15].I = (reg[14].I + (offset<<1))&0xFFFFFFFE;
 	armNextPC = reg[15].I;
 	reg[15].I += 2;
-	reg[14].I = temp|1;
+	reg[14].I = temp | 1;
 	THUMB_PREFETCH;
 	clockTicks = codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + codeTicksAccessSeq16(armNextPC) + 3;
 	busPrefetchCount = 0;
@@ -1658,7 +1687,7 @@ static insnfunc_t thumbInsnTable[1024] = {
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
 
-static int thumbExecute()
+static uint32_t thumbExecute()
 {
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, it's used during operations and generates LHS without it
@@ -1669,7 +1698,7 @@ static int thumbExecute()
 #endif
 #endif
 
-	int ct = 0;
+	int32_t ct = 0;
 
 	do
 	{

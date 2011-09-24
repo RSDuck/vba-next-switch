@@ -82,14 +82,12 @@ enum {
 float Emulator_GetFontSize();
 void Emulator_StopROMRunning();
 void Emulator_StartROMRunning(uint32_t set_is_running = 1);
-bool IsROMRunning();
 void Emulator_RequestLoadROM(const char * filename);
 bool Emulator_IsROMLoaded();
 void vba_toggle_sgb_border(bool set_border);
 void emulator_save_settings(uint64_t filetosave);
 extern void emulator_implementation_set_shader_preset(const char * fname);
 void emulator_implementation_button_mapping_settings(int map_button_option_enum);
-void LoadImagePreferences();
 void emulator_implementation_switch_control_scheme();
 void emulator_toggle_sound(uint64_t soundmode);
 void emulator_implementation_save_custom_controls(bool showdialog);

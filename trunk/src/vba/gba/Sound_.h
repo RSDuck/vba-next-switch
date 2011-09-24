@@ -27,7 +27,7 @@
 
 extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
 static uint16_t   soundFinalWave [1600];
-long  soundSampleRate    = 22050;
+uint32_t  soundSampleRate    = 22050;
 bool  soundPaused        = true;
 
 
@@ -603,7 +603,7 @@ long soundGetSampleRate()
 }
 #endif
 
-void soundSetSampleRate(long sampleRate)
+void soundSetSampleRate(uint32_t sampleRate)
 {
 	if ( soundSampleRate != sampleRate )
 	{

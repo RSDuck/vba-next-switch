@@ -32,12 +32,12 @@
 #define BLIP_RES 256
 
 #ifdef FASTER_SOUND_HACK_NON_SILENCE
-#define blip_buffer_end_frame(blip, t) blip.offset_ += t * blip.factor_
+#define BLIP_BUFFER_END_FRAME(blip, t) blip.offset_ += t * blip.factor_
 #endif
 
 // Number of samples available for reading with read_samples()
-#define blip_buffer_samples_avail() (offset_ >> BLIP_BUFFER_ACCURACY)
-#define blip_buffer_samples_avail_inst(blip) (blip.offset_ >> BLIP_BUFFER_ACCURACY)
+#define BLIP_BUFFER_SAMPLES_AVAIL() (offset_ >> BLIP_BUFFER_ACCURACY)
+#define BLIP_BUFFER_SAMPLES_AVAIL_INST(blip) (blip.offset_ >> BLIP_BUFFER_ACCURACY)
 
 struct blip_buffer_state_t;
 
@@ -53,10 +53,10 @@ class Blip_Buffer
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
 	// to 1/4 second) and clears buffer. If there isn't enough memory, leaves buffer
 	// untouched and returns -1, otherwise returns 0.
-	int32_t set_sample_rate(long samples_per_sec, int msec_length = 1000 / 4);
+	int32_t set_sample_rate(int32_t samples_per_sec, int msec_length = 1000 / 4);
 
 	// Sets number of source time units per second
-	void clock_rate( long clocks_per_sec );
+	void clock_rate(int32_t clocks_per_sec);
 
 	#ifndef FASTER_SOUND_HACK_NON_SILENCE
 	// Ends current time frame of specified duration and makes its samples available
@@ -69,7 +69,7 @@ class Blip_Buffer
 	// the buffer. Returns number of samples actually read and removed. If stereo is
 	// true, increments 'dest' one extra time after writing each sample, to allow
 	// easy interleving of two channels into a stereo output buffer.
-	long read_samples( int16_t* dest, long count);
+	int32_t read_samples( int16_t* dest, int32_t count);
 
 	// Removes all available samples and clear buffer to silence.
 	void clear(void);
@@ -79,7 +79,7 @@ class Blip_Buffer
 
 
 	// Removes 'count' samples from those waiting to be read
-	void remove_samples( long count );
+	void remove_samples(int32_t count);
 
 	// Sets frequency high-pass filter frequency, where higher values reduce bass more
 	void bass_freq( int frequency );
@@ -111,9 +111,9 @@ class Blip_Buffer
 	Blip_Buffer* modified_; // non-zero = true (more optimal than using bool, heh)
 	int32_t last_non_silence;
 	// Current output sample rate
-	long sample_rate_;
+	int32_t sample_rate_;
 	// Number of source time units per second
-	long clock_rate_;
+	int32_t clock_rate_;
 	// Length of buffer in milliseconds
 	int length_;
 	private:
@@ -239,7 +239,7 @@ struct blip_buffer_state_t
 #undef BLIP_REV
 
 
-inline void Blip_Buffer::clock_rate( long cps )
+inline void Blip_Buffer::clock_rate(int32_t cps )
 {
 	clock_rate_ = cps;
 	double ratio = (double) sample_rate_ / clock_rate_;
@@ -268,7 +268,7 @@ typedef struct channel_t {
 #ifdef FASTER_SOUND_HACK_NON_SILENCE
 #define stereo_buffer_end_frame(stereo_buf, time) \
         for ( int i = BUFFERS_SIZE; --i >= 0; ) \
-		blip_buffer_end_frame(stereo_buf->bufs_buffer[i], time);
+		BLIP_BUFFER_END_FRAME(stereo_buf->bufs_buffer[i], time);
 #endif
 
 // Uses three buffers (one for center) and outputs stereo sample pairs.
@@ -276,25 +276,25 @@ class Stereo_Buffer {
 	public:
 		Stereo_Buffer();
 		~Stereo_Buffer();
-		int32_t set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH );
-		void clock_rate( long );
+		int32_t set_sample_rate(int32_t, int msec = BLIP_DEFAULT_LENGTH );
+		void clock_rate(int32_t);
 		void clear();
 
 	#ifndef FASTER_SOUND_HACK_NON_SILENCE
 		void end_frame( int32_t );
 		#endif
 
-		long samples_avail() { return (blip_buffer_samples_avail_inst(bufs_buffer [0]) - mixer_samples_read) << 1; }
-		long read_samples( int16_t*, long );
+		int32_t samples_avail() { return (BLIP_BUFFER_SAMPLES_AVAIL_INST(bufs_buffer [0]) - mixer_samples_read) << 1; }
+		int32_t read_samples( int16_t*, int32_t);
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer[BUFFERS_SIZE];
 		bool immediate_removal_;
-		long sample_rate_;
+		int32_t sample_rate_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
-		blargg_long mixer_samples_read;
+		int32_t mixer_samples_read;
 		channel_t chan;
-		long samples_avail_;
+		int32_t samples_avail_;
 
 		//from Multi_Buffer
 
@@ -321,7 +321,7 @@ class Effects_Buffer {
 	public:
 		// To reduce memory usage, fewer buffers can be used (with a best-fit
 		// approach if there are too few), and maximum echo delay can be reduced
-		Effects_Buffer( int max_bufs = 32, long echo_size = 24 * 1024L );
+		Effects_Buffer( int max_bufs = 32, int32_t echo_size = 24 * 1024L );
 		virtual ~Effects_Buffer();
 
 		// Global configuration
@@ -352,23 +352,23 @@ class Effects_Buffer {
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
 		void clear();
-		int32_t set_sample_rate(long samples_per_sec, int msec = BLIP_DEFAULT_LENGTH);
+		int32_t set_sample_rate(int32_t samples_per_sec, int msec = BLIP_DEFAULT_LENGTH);
 
 		// Sets the number of channels available and optionally their types
 		// (type information used by Effects_Buffer)
 		int32_t set_channel_count( int, int const* = 0 );
-		void clock_rate( long );
+		void clock_rate(int32_t);
 		void bass_freq( int );
 
 		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int i);
 		void end_frame( int32_t );
-		long read_samples( int16_t*, long );
-		long samples_avail() const { return (blip_buffer_samples_avail_inst(bufs_buffer [0]) - mixer_samples_read) * 2; }
+		int32_t read_samples( int16_t*, int32_t);
+		int32_t samples_avail() const { return (BLIP_BUFFER_SAMPLES_AVAIL_INST(bufs_buffer [0]) - mixer_samples_read) * 2; }
 		enum { stereo = 2 };
 		void mixer_read_pairs( int16_t* out, int count );
 		bool immediate_removal_;
-		long sample_rate_;
+		int32_t sample_rate_;
 		int length_;
 		int channel_count_;
 		int const* channel_types_;
@@ -377,14 +377,14 @@ class Effects_Buffer {
 		void channels_changed() { channels_changed_count_++; }
 	private:
 		config_t config_;
-		long clock_rate_;
+		int32_t clock_rate_;
 		int bass_freq_;
 
-		blargg_long echo_size;
+		int32_t echo_size;
 
 		struct chan_t
 		{
-			blargg_long vol [stereo];
+			int32_t vol [stereo];
 			chan_config_t cfg;
 			channel_t channel;
 		};
@@ -392,7 +392,7 @@ class Effects_Buffer {
 
 		struct buf_t : Blip_Buffer
 		{
-			blargg_long vol [stereo];
+			int32_t vol [stereo];
 			bool echo;
 
 			void* operator new ( size_t, void* p ) { return p; }
@@ -404,17 +404,17 @@ class Effects_Buffer {
 		int bufs_size;
 		int bufs_max; // bufs_size <= bufs_max, to limit memory usage
 		Blip_Buffer* mixer_bufs [3];
-		blargg_long mixer_samples_read;
+		int32_t mixer_samples_read;
 
 		struct {
-			long delay [stereo];
-			blargg_long treble;
-			blargg_long feedback;
-			blargg_long low_pass [stereo];
+			int32_t delay [stereo];
+			int32_t treble;
+			int32_t feedback;
+			int32_t low_pass [stereo];
 		} s_struct;
 
-		blargg_vector<blargg_long> echo;
-		blargg_long echo_pos;
+		blargg_vector<int32_t> echo;
+		int32_t echo_pos;
 
 		bool no_effects;
 		bool no_echo;

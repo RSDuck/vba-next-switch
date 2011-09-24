@@ -11,10 +11,6 @@
         #define GB_APU_OVERCLOCK 1
 #endif
 
-#if GB_APU_OVERCLOCK & (GB_APU_OVERCLOCK - 1)
-        #error "GB_APU_OVERCLOCK must be a power of 2"
-#endif
-
 #define	CLK_MUL	GB_APU_OVERCLOCK
 #define DAC_BIAS 7
 #define LENGTH_ENABLED 0x40

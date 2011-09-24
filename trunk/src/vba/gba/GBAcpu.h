@@ -9,14 +9,6 @@
 //# define INSN_REGPARM __declspec(passinreg)
 #endif
 
-#ifdef __GNUC__
-# define LIKELY(x) __builtin_expect(!!(x),1)
-# define UNLIKELY(x) __builtin_expect(!!(x),0)
-#else
-# define LIKELY(x) (x)
-# define UNLIKELY(x) (x)
-#endif
-
 #define UPDATE_REG(address, value)\
   {\
     WRITE16LE(((u16 *)&ioMem[address]),value);\
@@ -41,10 +33,10 @@
   cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
  
 // Waitstates when accessing data
-static inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
+static inline uint32_t dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
 {
 	int addr = (address>>24)&15;
-	int value =  memoryWait[addr];
+	uint32_t value =  memoryWait[addr];
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
@@ -61,10 +53,10 @@ static inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
 	return value;
 }
 
-static inline int dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
+static inline uint32_t dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
 {
 	int addr = (address>>24)&15;
-	int value = memoryWait32[addr];
+	uint32_t value = memoryWait32[addr];
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
@@ -81,10 +73,10 @@ static inline int dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
 	return value;
 }
 
-static inline int dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
+static inline uint32_t dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
 {
 	int addr = (address>>24)&15;
-	int value = memoryWaitSeq[addr];
+	uint32_t value = memoryWaitSeq[addr];
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
@@ -101,10 +93,10 @@ static inline int dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
 	return value;
 }
 
-static inline int dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
+static inline uint32_t dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
 {
 	int addr = (address>>24)&15;
-	int value =  memoryWaitSeq32[addr];
+	uint32_t value =  memoryWaitSeq32[addr];
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
@@ -139,17 +131,9 @@ static int codeTicksAccess16(u32 address) // THUMB NON SEQ
 			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr]-1;
 		}
-		else
-		{
-			busPrefetchCount=0;
-			return memoryWait[addr];
-		}
 	}
-	else
-	{
-		busPrefetchCount = 0;
-		return memoryWait[addr];
-	}
+	busPrefetchCount = 0;
+	return memoryWait[addr];
 }
 
 static int codeTicksAccess32(u32 address) // ARM NON SEQ
@@ -168,20 +152,12 @@ static int codeTicksAccess32(u32 address) // ARM NON SEQ
 			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr] - 1;
 		}
-		else
-		{
-			busPrefetchCount = 0;
-			return memoryWait32[addr];
-		}
 	}
-	else
-	{
-		busPrefetchCount = 0;
-		return memoryWait32[addr];
-	}
+	busPrefetchCount = 0;
+	return memoryWait32[addr];
 }
 
-static int codeTicksAccessSeq16(u32 address) // THUMB SEQ
+static uint32_t codeTicksAccessSeq16(u32 address) // THUMB SEQ
 {
 	int addr = (address>>24)&15;
 
@@ -192,23 +168,18 @@ static int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
 			return 0;
 		}
-		else
-			if (busPrefetchCount>0xFF)
-			{
-				busPrefetchCount=0;
-				return memoryWait[addr];
-			}
-			else
-				return memoryWaitSeq[addr];
+		else if (busPrefetchCount>0xFF)
+		{
+			busPrefetchCount=0;
+			return memoryWait[addr];
+		}
 	}
 	else
-	{
 		busPrefetchCount = 0;
-		return memoryWaitSeq[addr];
-	}
+	return memoryWaitSeq[addr];
 }
 
-static int codeTicksAccessSeq32(u32 address) // ARM SEQ
+static uint32_t codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
 	int addr = (address>>24)&15;
 
@@ -224,19 +195,13 @@ static int codeTicksAccessSeq32(u32 address) // ARM SEQ
 			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr];
 		}
-		else
-			if (busPrefetchCount>0xFF)
-			{
-				busPrefetchCount=0;
-				return memoryWait32[addr];
-			}
-			else
-				return memoryWaitSeq32[addr];
+		else if (busPrefetchCount>0xFF)
+		{
+			busPrefetchCount=0;
+			return memoryWait32[addr];
+		}
 	}
-	else
-	{
-		return memoryWaitSeq32[addr];
-	}
+	return memoryWaitSeq32[addr];
 }
 
 

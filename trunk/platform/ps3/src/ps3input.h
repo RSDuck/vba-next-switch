@@ -38,7 +38,7 @@ extern "C" {
 
 #define MAX_PADS 7
 
-#define Input_MapButton(buttonmap, next, defaultbutton) \
+#define INPUT_MAPBUTTON(buttonmap, next, defaultbutton) \
 	if(defaultbutton == NULL) \
 		buttonmap = Input_GetAdjacentButtonmap(buttonmap, next); \
 	else \

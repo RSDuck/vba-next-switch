@@ -170,18 +170,18 @@ static void RenderBrowser(FileBrowser* b)
 		\
 		if(CTRL_LEFT(state) | CTRL_LSTICK_LEFT(state)) \
 		{ \
-			Input_MapButton(settingsptr,false,NULL); \
+			INPUT_MAPBUTTON(settingsptr,false,NULL); \
 			sys_timer_usleep(FILEBROWSER_DELAY);  \
 		} \
 		if(CTRL_RIGHT(state)  || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(button_was_pressed)) \
 		{ \
-			Input_MapButton(settingsptr,true,NULL); \
+			INPUT_MAPBUTTON(settingsptr,true,NULL); \
 			sys_timer_usleep(FILEBROWSER_DELAY); \
 		} \
 		\
 		if(CTRL_START(state)) \
 		{ \
-			Input_MapButton(settingsptr,true,defaultvalue); \
+			INPUT_MAPBUTTON(settingsptr,true,defaultvalue); \
 		} \
 		old_state = state; \
 	}
