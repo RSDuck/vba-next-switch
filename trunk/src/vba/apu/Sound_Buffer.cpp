@@ -504,8 +504,8 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 }
 
 #define FIXED_SHIFT 12
-#define TO_FIXED( f )   int32_t((f) * ((int32_t) 1 << fixed_shift))
-#define FROM_FIXED( f ) ((f) >> fixed_shift)
+#define TO_FIXED( f )   int32_t((f) * ((int32_t) 1 << FIXED_SHIFT))
+#define FROM_FIXED( f ) ((f) >> FIXED_SHIFT)
 
 int const max_read = 2560; // determines minimum delay
 
