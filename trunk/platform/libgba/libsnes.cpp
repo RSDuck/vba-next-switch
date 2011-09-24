@@ -236,7 +236,7 @@ void systemSoundReset()
 void systemSoundResume()
 {}
 
-void systemOnWriteDataToSoundBuffer(uint16_t *finalWave, int length)
+void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 {
    for (int i = 0; i < length; i += 2)
       audio_cb(finalWave[i + 0], finalWave[i + 1]);

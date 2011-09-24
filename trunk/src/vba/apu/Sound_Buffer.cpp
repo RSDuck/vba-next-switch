@@ -287,14 +287,12 @@ void Stereo_Buffer::end_frame( int32_t time )
 
 int32_t Stereo_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
-        out_size = min( out_size, samples_avail() );
-
         int pair_count = int (out_size >> 1);
         if ( pair_count )
         {
                 mixer_read_pairs( out, pair_count );
 
-                if ( samples_avail() <= 0 || immediate_removal_ )
+                if ( out_size <= 0 || immediate_removal_ )
                 {
                         for ( int i = BUFFERS_SIZE; --i >= 0; )
                         {
@@ -505,7 +503,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 #endif
 }
 
-int const fixed_shift = 12;
+#define FIXED_SHIFT 12
 #define TO_FIXED( f )   int32_t((f) * ((int32_t) 1 << fixed_shift))
 #define FROM_FIXED( f ) ((f) >> fixed_shift)
 
@@ -934,8 +932,6 @@ void Effects_Buffer::end_frame( int32_t time )
 
 int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
-        out_size = min( out_size, samples_avail() );
-
         int pair_count = int (out_size >> 1);
         if ( pair_count )
         {
@@ -974,7 +970,7 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
                         while ( pairs_remain );
                 }
 
-                if ( samples_avail() <= 0 || immediate_removal_ )
+                if ( out_size <= 0 || immediate_removal_ )
                 {
                         for ( int i = bufs_size; --i >= 0; )
                         {

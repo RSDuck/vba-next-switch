@@ -2165,7 +2165,7 @@ void systemSoundResume()
 	audio_driver->unpause(audio_handle);
 }
 
-void systemOnWriteDataToSoundBuffer(uint16_t * finalWave, int length)
+void systemOnWriteDataToSoundBuffer(int16_t * finalWave, int length)
 {
-	audio_driver->write(audio_handle,(int16_t*)finalWave, length);
+	audio_driver->write(audio_handle,finalWave, length);
 }

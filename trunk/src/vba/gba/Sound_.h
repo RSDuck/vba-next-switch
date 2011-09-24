@@ -26,7 +26,7 @@
 #define NR52 0x84
 
 extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
-static uint16_t   soundFinalWave [1600];
+static int16_t   soundFinalWave [1600];
 uint32_t  soundSampleRate    = 22050;
 bool  soundPaused        = true;
 
@@ -62,15 +62,15 @@ static const int32_t table [0x40] =
 typedef struct gba_pcm_struct
 {
 	Blip_Buffer* output;
-	int last_time;
-	int last_amp;
-	int shift;
+	int32_t last_time;
+	int32_t last_amp;
+	int32_t shift;
 };
 
 class Gba_Pcm_Fifo
 {
 	public:
-	int     which;
+	uint32_t which;
 	struct gba_pcm_struct pcm_s;
 
 	void write_control( int data );
@@ -78,13 +78,13 @@ class Gba_Pcm_Fifo
 	void timer_overflowed( int which_timer );
 
 	// public only so save state routines can access it
-	int  readIndex;
-	int  count;
-	int  writeIndex;
-	int  dac;
+	int32_t  readIndex;
+	int32_t  count;
+	int32_t  writeIndex;
+	int32_t  dac;
 	uint8_t   fifo [32];
 	private:
-	int  timer;
+	int32_t  timer;
 	bool enabled;
 };
 
@@ -94,13 +94,11 @@ static Stereo_Buffer*   stereo_buffer;
 
 static struct Blip_Synth pcm_synth;
 
-static void init_gba_pcm(gba_pcm_struct * pcm_s)
-{
-	pcm_s->output    = 0;
-	pcm_s->last_time = 0;
-	pcm_s->last_amp  = 0;
-	pcm_s->shift     = 0;
-}
+#define INIT_GBA_PCM(pcm_s) \
+	pcm_s.output    = 0; \
+	pcm_s.last_time = 0; \
+	pcm_s.last_amp  = 0; \
+	pcm_s.shift     = 0;
 
 static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 {
@@ -125,43 +123,51 @@ static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 	}
 }
 
-static void end_frame_gba_pcm(gba_pcm_struct * pcm_s, int time )
-{
-	pcm_s->last_time -= time;
-	if ( pcm_s->last_time < -2048 )
-		pcm_s->last_time = -2048;
-
-	if (pcm_s->output)
-		pcm_s->output->set_modified();
-}
-
-static void update_gba_pcm(gba_pcm_struct * pcm_s, int dac)
-{
-	int time = SOUND_CLOCK_TICKS -  soundTicks;
-
-	dac = (int8_t) dac >> pcm_s->shift;
-	int delta = dac - pcm_s->last_amp;
-	if ( delta )
-	{
-		pcm_s->last_amp = dac;
+#define END_FRAME_GBA_PCM(pcm_s, time) \
+	pcm_s.last_time -= time; \
+	if ( pcm_s.last_time < -2048 ) \
+		pcm_s.last_time = -2048; \
+	\
+	if (pcm_s.output) \
+		pcm_s.output->set_modified();
 
 #ifdef USE_SOUNDINTERPOLATION
-		int filter = 0;
-		// base filtering on how long since last sample was output
-		int period = time - pcm_s->last_time;
-
-		int idx = (unsigned) period / 512;
-		if ( idx >= 3 )
-			idx = 3;
-
-		static int const filters [4] = { 0, 0, 1, 2 };
-		filter = filters [idx];
+#define UPDATE_GBA_PCM(pcm_s, dac) \
+	int time = SOUND_CLOCK_TICKS -  soundTicks; \
+	\
+	dac = (int8_t) dac >> pcm_s.shift; \
+	int delta = dac - pcm_s.last_amp; \
+	if(delta) \
+	{ \
+		pcm_s.last_amp = dac; \
+		\
+		int filter = 0; \
+		/* base filtering on how long since last sample was output */ \
+		int period = time - pcm_s->last_time; \
+		\
+		int idx = (unsigned) period / 512; \
+		if ( idx >= 3 ) \
+			idx = 3; \
+		\
+		static int const filters [4] = { 0, 0, 1, 2 }; \
+		filter = filters [idx]; \
+		\
+		offset_resampled(pcm_synth.delta_factor, time * pcm_s.output->factor_ + pcm_s.output->offset_, delta, pcm_s.output ); \
+	} \
+	pcm_s.last_time = time;
+#else
+#define UPDATE_GBA_PCM(pcm_s, dac) \
+	int time = SOUND_CLOCK_TICKS -  soundTicks; \
+	\
+	dac = (int8_t) dac >> pcm_s.shift; \
+	int delta = dac - pcm_s.last_amp; \
+	if (delta) \
+	{ \
+		pcm_s.last_amp = dac; \
+		offset_resampled(pcm_synth.delta_factor, time * pcm_s.output->factor_ + pcm_s.output->offset_, delta, pcm_s.output ); \
+	} \
+	pcm_s.last_time = time;
 #endif
-
-		offset_resampled(pcm_synth.delta_factor, time * pcm_s->output->factor_ + pcm_s->output->offset_, delta, pcm_s->output );
-	}
-	pcm_s->last_time = time;
-}
 
 static void soundEvent_u16_parallel(uint32_t address[])
 {
@@ -232,7 +238,7 @@ void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 		count--;
 		dac = fifo [readIndex];
 		readIndex = (readIndex + 1) & 31;
-		update_gba_pcm(&pcm_s, dac);
+		UPDATE_GBA_PCM(pcm_s, dac);
 	}
 }
 
@@ -252,7 +258,7 @@ void Gba_Pcm_Fifo::write_control( int data )
 	}
 
 	apply_control_gba_pcm(&pcm_s, which);
-	update_gba_pcm(&pcm_s, dac);
+	UPDATE_GBA_PCM(pcm_s, dac);
 }
 
 void Gba_Pcm_Fifo::write_fifo( int data )
@@ -377,7 +383,7 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 {
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = buffer->read_samples((int16_t*)soundFinalWave, buffer->samples_avail());
+	uint32_t numSamples = buffer->read_samples(soundFinalWave, buffer->samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
@@ -402,15 +408,15 @@ static void apply_filtering(void)
 void psoundTickfn(void)
 {
 	// Run sound hardware to present
-	end_frame_gba_pcm(&pcm[0].pcm_s, SOUND_CLOCK_TICKS);
-	end_frame_gba_pcm(&pcm[1].pcm_s, SOUND_CLOCK_TICKS);
+	END_FRAME_GBA_PCM(pcm[0].pcm_s, SOUND_CLOCK_TICKS);
+	END_FRAME_GBA_PCM(pcm[1].pcm_s, SOUND_CLOCK_TICKS);
 
 	gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
 	stereo_buffer_end_frame(stereo_buffer, SOUND_CLOCK_TICKS);
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail());
+	uint32_t numSamples = stereo_buffer->read_samples(soundFinalWave, stereo_buffer->samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 
 #ifdef USE_SOUND_FILTERING
@@ -456,8 +462,8 @@ static void remake_stereo_buffer(void)
 		return;
 
 	// Clears pointers kept to old stereo_buffer
-	init_gba_pcm(&pcm[0].pcm_s);
-	init_gba_pcm(&pcm[1].pcm_s);
+	INIT_GBA_PCM(pcm[0].pcm_s);
+	INIT_GBA_PCM(pcm[1].pcm_s);
 
 	// Stereo_Buffer
 	if ( !stereo_buffer)

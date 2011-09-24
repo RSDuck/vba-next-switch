@@ -61,7 +61,7 @@ extern void systemSoundResume();
 extern void systemSoundReset();
 extern void systemSoundSetThrottle(unsigned short throttle);
 extern void systemSoundNonblock(bool enable);
-extern void systemOnWriteDataToSoundBuffer(uint16_t * finalWave, int length);
+extern void systemOnWriteDataToSoundBuffer(int16_t * finalWave, int length);
 extern void systemOnSoundShutdown();
 
 //extern uint16_t systemColorMap16[0x10000];
