@@ -21,7 +21,6 @@ bool const cgb_05 = false; // enables CGB-05 zombie behavior
 #define TRIGGER_MASK 0x80
 
 #define GB_OSC_UPDATE_AMP(time, new_amp) \
-        output->set_modified(); \
         int delta = new_amp - last_amp; \
         if ( delta ) \
         { \

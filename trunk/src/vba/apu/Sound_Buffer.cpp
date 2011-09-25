@@ -53,7 +53,6 @@ void Blip_Buffer::clear(void)
 {
         offset_       = 0;
         reader_accum_ = 0;
-        modified_     = 0;
         if ( buffer_ )
                 __builtin_memset( buffer_, 0, (buffer_size_ + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
 }
@@ -62,7 +61,6 @@ void Blip_Buffer::clear_false(void)
 {
 	offset_       = 0;
 	reader_accum_ = 0;
-	modified_     = 0;
 	if ( buffer_ )
 	{
 		int32_t count = BLIP_BUFFER_SAMPLES_AVAIL();
