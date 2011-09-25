@@ -70,9 +70,6 @@ class Blip_Buffer
 	// Removes 'count' samples from those waiting to be read
 	void remove_samples(int32_t count);
 
-	// Sets frequency high-pass filter frequency, where higher values reduce bass more
-	void bass_freq( int frequency );
-
 	// Experimental features
 
 	// Saves state, including high-pass filter and tails of last deltas.
@@ -89,23 +86,16 @@ class Blip_Buffer
 	int32_t * buffer_;
 	int32_t buffer_size_;
 	int32_t reader_accum_;
-	int bass_shift_;
 	// Current output sample rate
 	int32_t sample_rate_;
 	// Number of source time units per second
 	int32_t clock_rate_;
 	// Length of buffer in milliseconds
 	int length_;
-	private:
-	int bass_freq_;
 };
 
 // Internal
 #define BLIP_BUFFER_EXTRA_ 18
-
-#ifdef USE_SOUND_FILTERING
-class blip_eq_t;
-#endif
 
 // BLIP_SYNTH
 
@@ -113,7 +103,7 @@ class blip_eq_t;
 #define BLIP_SAMPLE_BITS_MINUS_16 14
 
 // Sets overall volume of waveform
-#define BLIP_SYNTH_VOLUME_UNIT(blip_synth, new_unit) blip_synth.delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
+#define BLIP_SYNTH_VOLUME_UNIT(blip_synth, new_unit) blip_synth = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
 
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
 #define BLIP_RESTRICT __restrict
@@ -126,30 +116,8 @@ class blip_eq_t;
 // amplitudes (max - min).
 typedef struct Blip_Synth
 {
-	int32_t last_amp;
 	int32_t delta_factor;
 };
-
-#ifdef USE_SOUND_FILTERING
-// Low-pass equalization parameters
-class blip_eq_t {
-	public:
-		// Logarithmic rolloff to treble dB at half sampling rate. Negative values reduce
-		// treble, small positive values (0 to 5.0) increase treble.
-		blip_eq_t( double treble_db = 0 );
-		blip_eq_t( double treble, long rolloff_freq, long sample_rate, long cutoff_freq = 0 );
-	private:
-		double treble;
-		long rolloff_freq;
-		long sample_rate;
-		long cutoff_freq;
-		void generate( float* out, int count ) const;
-};
-
-inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
-inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
-#endif
-
 
 // Optimized reading from Blip_Buffer, for use in custom sample output
 
@@ -328,7 +296,6 @@ class Effects_Buffer {
 		// (type information used by Effects_Buffer)
 		int32_t set_channel_count( int, int const* = 0 );
 		void clock_rate(int32_t);
-		void bass_freq( int );
 
 		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int i);
@@ -343,7 +310,6 @@ class Effects_Buffer {
 	private:
 		config_t config_;
 		int32_t clock_rate_;
-		int bass_freq_;
 
 		int32_t echo_size;
 
@@ -401,4 +367,4 @@ class Simple_Effects_Buffer : public Effects_Buffer
 
 #endif
 
-extern void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );
+extern void offset_resampled(int32_t delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf );

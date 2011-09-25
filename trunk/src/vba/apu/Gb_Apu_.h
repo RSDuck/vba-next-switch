@@ -33,8 +33,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 #define SYNTH_VOLUME(iv) \
 { \
 	float v = volume_ * 0.60 / OSC_COUNT / 15 /*steps*/ / 8 /*master vol range*/ * iv; \
-	BLIP_SYNTH_VOLUME_UNIT(good_synth, v * 1.0 ); \
-	BLIP_SYNTH_VOLUME_UNIT(med_synth, v * 1.0 ); \
+	BLIP_SYNTH_VOLUME_UNIT(good_synth.delta_factor, v * 1.0 ); \
+	BLIP_SYNTH_VOLUME_UNIT(med_synth.delta_factor, v * 1.0 ); \
 }
 
 #define apply_volume() \
