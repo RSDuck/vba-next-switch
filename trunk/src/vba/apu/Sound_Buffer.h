@@ -288,7 +288,6 @@ class Stereo_Buffer {
 		int32_t read_samples( int16_t*, int32_t);
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer[BUFFERS_SIZE];
-		bool immediate_removal_;
 		int32_t sample_rate_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
@@ -367,7 +366,6 @@ class Effects_Buffer {
 		int32_t samples_avail() const { return (BLIP_BUFFER_SAMPLES_AVAIL_INST(bufs_buffer [0]) - mixer_samples_read) * 2; }
 		enum { stereo = 2 };
 		void mixer_read_pairs( int16_t* out, int count );
-		bool immediate_removal_;
 		int32_t sample_rate_;
 		int length_;
 		int channel_count_;
