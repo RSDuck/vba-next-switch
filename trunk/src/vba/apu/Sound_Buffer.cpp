@@ -208,17 +208,14 @@ void Stereo_Buffer::clear()
 int32_t Stereo_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
 	int pair_count = int (out_size >> 1);
-	if ( pair_count )
-	{
-		mixer_read_pairs( out, pair_count );
+	mixer_read_pairs( out, pair_count );
 
-		for ( int i = BUFFERS_SIZE; --i >= 0; )
-		{
-			Blip_Buffer & b = bufs_buffer [i];
-			b.remove_samples( mixer_samples_read );
-		}
-		mixer_samples_read = 0;
+	for ( int i = BUFFERS_SIZE; --i >= 0; )
+	{
+		Blip_Buffer & b = bufs_buffer [i];
+		b.remove_samples( mixer_samples_read );
 	}
+	mixer_samples_read = 0;
 	return out_size;
 }
 
@@ -773,51 +770,48 @@ void Effects_Buffer::end_frame( int32_t time )
 int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
 	int pair_count = int (out_size >> 1);
-	if ( pair_count )
+	if ( no_effects )
 	{
-		if ( no_effects )
-		{
-			mixer_read_pairs( out, pair_count );
-		}
-		else
-		{
-			int pairs_remain = pair_count;
-			do
-			{
-				// mix at most max_read pairs at a time
-				int count = MAX_READ;
-				if ( count > pairs_remain )
-					count = pairs_remain;
-
-				if ( no_echo )
-				{
-					// optimization: clear echo here to keep mix_effects() a leaf function
-					echo_pos = 0;
-					__builtin_memset( echo.begin_, 0, count * STEREO * sizeof(echo [0]));
-				}
-
-				mix_effects( out, count );
-
-				int32_t new_echo_pos = echo_pos + count * STEREO;
-				if ( new_echo_pos >= echo_size )
-					new_echo_pos -= echo_size;
-				echo_pos = new_echo_pos;
-
-				out += count * STEREO;
-				mixer_samples_read += count;
-				pairs_remain -= count;
-			}
-			while ( pairs_remain );
-		}
-
-		for ( int i = bufs_size; --i >= 0; )
-		{
-			buf_t& b = bufs_buffer [i];
-			// TODO: might miss non-silence settling since it checks END of last read
-			b.remove_samples( mixer_samples_read );
-		}
-		mixer_samples_read = 0;
+		mixer_read_pairs( out, pair_count );
 	}
+	else
+	{
+		int pairs_remain = pair_count;
+		do
+		{
+			// mix at most max_read pairs at a time
+			int count = MAX_READ;
+			if ( count > pairs_remain )
+				count = pairs_remain;
+
+			if ( no_echo )
+			{
+				// optimization: clear echo here to keep mix_effects() a leaf function
+				echo_pos = 0;
+				__builtin_memset( echo.begin_, 0, count * STEREO * sizeof(echo [0]));
+			}
+
+			mix_effects( out, count );
+
+			int32_t new_echo_pos = echo_pos + count * STEREO;
+			if ( new_echo_pos >= echo_size )
+				new_echo_pos -= echo_size;
+			echo_pos = new_echo_pos;
+
+			out += count * STEREO;
+			mixer_samples_read += count;
+			pairs_remain -= count;
+		}
+		while ( pairs_remain );
+	}
+
+	for ( int i = bufs_size; --i >= 0; )
+	{
+		buf_t& b = bufs_buffer [i];
+		// TODO: might miss non-silence settling since it checks END of last read
+		b.remove_samples( mixer_samples_read );
+	}
+	mixer_samples_read = 0;
 	return out_size;
 }
 
