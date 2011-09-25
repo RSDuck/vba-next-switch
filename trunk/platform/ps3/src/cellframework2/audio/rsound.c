@@ -6,11 +6,11 @@
 typedef struct
 {
    rsound_t *rd;
-   volatile u32 is_alive;
-   u32 is_paused;
+   volatile uint32_t is_alive;
+   uint32_t is_paused;
 
    void *userdata;
-   u32 (*audio_cb)(s16*, u32, void*);
+   uint32_t (*audio_cb)(int16_t*, uint32_t, void*);
 } rsd_t;
 
 static void err_cb(void *userdata)
@@ -22,8 +22,8 @@ static void err_cb(void *userdata)
 static ssize_t audio_cb(void *data, size_t bytes, void *userdata)
 {
    rsd_t *rd = userdata;
-   ssize_t ret = rd->audio_cb(data, bytes / sizeof(s16), rd->userdata);
-   return ret * sizeof(s16);
+   ssize_t ret = rd->audio_cb(data, bytes / sizeof(int16_t), rd->userdata);
+   return ret * sizeof(int16_t);
 }
 
 static cell_audio_handle_t rsound_init(const struct cell_audio_params *params)
@@ -39,7 +39,7 @@ static cell_audio_handle_t rsound_init(const struct cell_audio_params *params)
    int chans = params->channels;
    int rate = params->samplerate;
 
-   int latency = params->buffer_size * 1000 / (rate * chans * sizeof(s16));
+   int latency = params->buffer_size * 1000 / (rate * chans * sizeof(int16_t));
    if (latency == 0)
       latency = 64;
 
@@ -72,19 +72,19 @@ error:
    return NULL;
 }
 
-static s32 rsound_write(cell_audio_handle_t handle, const s16* data, u32 samples)
+static int32_t rsound_write(cell_audio_handle_t handle, const int16_t* data, uint32_t samples)
 {
    rsd_t *rd = handle;
    rsd_delay_wait(rd->rd);
-   if (rsd_write(rd->rd, data, samples * sizeof(s16)) == 0)
+   if (rsd_write(rd->rd, data, samples * sizeof(int16_t)) == 0)
       return -1;
    return samples;
 }
 
-static u32 rsound_write_avail(cell_audio_handle_t handle)
+static uint32_t rsound_write_avail(cell_audio_handle_t handle)
 {
    rsd_t *rd = handle;
-   return rsd_get_avail(rd->rd) / sizeof(s16);
+   return rsd_get_avail(rd->rd) / sizeof(int16_t);
 }
 
 static void rsound_pause(cell_audio_handle_t handle)
@@ -94,7 +94,7 @@ static void rsound_pause(cell_audio_handle_t handle)
    rsd_pause(rd->rd, 1);
 }
 
-static s32 rsound_unpause(cell_audio_handle_t handle)
+static int32_t rsound_unpause(cell_audio_handle_t handle)
 {
    rsd_t *rd = handle;
    rd->is_paused = 0;
@@ -105,10 +105,10 @@ static s32 rsound_unpause(cell_audio_handle_t handle)
    else
       rd->is_alive = 1;
 
-   return (s32)ret;
+   return (int32_t)ret;
 }
 
-static u32 rsound_is_paused(cell_audio_handle_t handle)
+static uint32_t rsound_is_paused(cell_audio_handle_t handle)
 {
    rsd_t *rd = handle;
    return rd->is_paused;
@@ -122,7 +122,7 @@ static void rsound_free(cell_audio_handle_t handle)
    free(rd);
 }
 
-static u32 rsound_alive(cell_audio_handle_t handle)
+static uint32_t rsound_alive(cell_audio_handle_t handle)
 {
    rsd_t *rd = handle;
    return rd->is_alive;

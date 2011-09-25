@@ -16,8 +16,6 @@
 #ifndef __BUFFER_H
 #define __BUFFER_H
 
-#include "../common/celltypes.h"
-
 typedef struct fifo_buffer fifo_buffer_t;
 
 fifo_buffer_t* fifo_new(uint32_t size);
