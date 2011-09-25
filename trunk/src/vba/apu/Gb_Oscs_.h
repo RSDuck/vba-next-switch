@@ -211,7 +211,7 @@ bool Gb_Square::write_register( int frame_phase, int reg, int old_data, int data
 {
         bool result = Gb_Env::write_register( frame_phase, reg, old_data, data );
         if ( result )
-                delay = (delay & ((CLK_MUL << 2) - 1)) + period();
+                delay = (delay & ((CLK_MUL_TIMES_4) - 1)) + period();
         return result;
 }
 
@@ -220,7 +220,7 @@ inline void Gb_Noise::write_register( int frame_phase, int reg, int old_data, in
         if ( Gb_Env::write_register( frame_phase, reg, old_data, data ) )
         {
                 phase = 0x7FFF;
-                delay += CLK_MUL << 3;
+                delay += CLK_MUL_TIMES_8;
         }
 }
 
@@ -268,11 +268,11 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if (!(GBA_WAVE_DAC_ENABLED()))
 					enabled = false;
-				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL << 1)) < (CLK_MUL << 1))
+				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL_TIMES_2)) < (CLK_MUL_TIMES_2))
 					corrupt_wave();
 
 				phase = 0;
-				delay    = period() + 6 * CLK_MUL;
+				delay    = period() + CLK_MUL_TIMES_6;
 			}
 	}
 }
@@ -331,7 +331,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 amp = -(vol >> 1);
 
                         // Play inaudible frequencies as constant amplitude
-                        if ( frequency() >= 0x7FA && delay < (CLK_MUL << 5))
+                        if ( frequency() >= 0x7FA && delay < (CLK_MUL_TIMES_5))
                         {
                                 amp += (vol * duty) >> 3;
                                 vol = 0;

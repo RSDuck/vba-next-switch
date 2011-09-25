@@ -67,7 +67,6 @@ class Blip_Buffer
 	// Clear out any samples waiting rather than entire buffer
 	void clear_false(void);
 
-
 	// Removes 'count' samples from those waiting to be read
 	void remove_samples(int32_t count);
 
@@ -84,10 +83,6 @@ class Blip_Buffer
 	// settings during same run of program. States can NOT be stored on disk.
 	// Clears buffer before loading state.
 	void load_state( blip_buffer_state_t const& in );
-
-	// Signals that sound has been added to buffer. Could be done automatically in
-	// Blip_Synth, but that would affect performance more, as you can arrange that
-	// this is called only once per time frame rather than for every delta.
 
 	uint32_t factor_;
 	uint32_t offset_;
@@ -118,6 +113,7 @@ class blip_eq_t;
 // BLIP_SYNTH
 
 #define BLIP_SAMPLE_BITS 30
+#define BLIP_SAMPLE_BITS_MINUS_16 14
 
 // Sets overall volume of waveform
 #define BLIP_SYNTH_VOLUME_UNIT(blip_synth, new_unit) blip_synth.delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
@@ -165,15 +161,12 @@ inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t )
         const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
-// Gets value to pass to BLIP_READER_NEXT()
-#define BLIP_READER_BASS( blip_buffer ) ((blip_buffer).bass_shift_)
-
 // Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
 // code at the cost of having no bass control
 #define BLIP_READER_DEFAULT_BASS 9
 
 // Current sample
-#define BLIP_READER_READ( name )        (name##_reader_accum >> (BLIP_SAMPLE_BITS - 16))
+#define BLIP_READER_READ( name )        (name##_reader_accum >> (BLIP_SAMPLE_BITS_MINUS_16))
 
 // Current raw sample in full internal resolution
 #define BLIP_READER_READ_RAW( name )    (name##_reader_accum)
@@ -277,12 +270,9 @@ class Stereo_Buffer {
 
 		// Count of changes to channel configuration. Incremented whenever
 		// a change is made to any of the Blip_Buffers for any channel.
-		unsigned channels_changed_count_;
 		// Length of buffer, in milliseconds
 		int length_;
 		int channel_count_;
-		// Number of samples per output frame (1 = mono, 2 = stereo)
-		int samples_per_frame_;
 		int const* channel_types_;
 };
 
@@ -347,8 +337,6 @@ class Effects_Buffer {
 		int length_;
 		int channel_count_;
 		int const* channel_types_;
-	protected:
-		void channels_changed() { channels_changed_count_++; }
 	private:
 		config_t config_;
 		int32_t clock_rate_;
@@ -395,9 +383,6 @@ class Effects_Buffer {
 
 		void mix_effects( int16_t* out, int pair_count );
 		int32_t new_bufs( int size );
-		//from Multi_Buffer
-		unsigned channels_changed_count_;
-		int samples_per_frame_;
 };
 
 // Simpler interface and lower memory usage
