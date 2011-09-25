@@ -30,6 +30,24 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 	int bits = regs [STEREO_REG - START_ADDR] >> osc; \
 	bits = (bits >> 3 & 2) | (bits & 1);
 
+#define SYNTH_VOLUME(iv) \
+{ \
+	float v = volume_ * 0.60 / OSC_COUNT / 15 /*steps*/ / 8 /*master vol range*/ * iv; \
+	BLIP_SYNTH_VOLUME_UNIT(good_synth, v * 1.0 ); \
+	BLIP_SYNTH_VOLUME_UNIT(med_synth, v * 1.0 ); \
+}
+
+#define apply_volume() \
+{ \
+	/* TODO: Doesn't handle differing left and right volumes (panning). */ \
+	/* Not worth the complexity. */ \
+	int data  = regs [VOL_REG - START_ADDR]; \
+	int left  = data >> 4 & 7; \
+	int right = data & 7; \
+	int iv = max(left, right) + 1; \
+	SYNTH_VOLUME(iv); \
+}
+
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
 	int i = osc;
@@ -45,25 +63,8 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 	}while ( i < osc );
 }
 
-#define synth_volume(iv) \
-{ \
-	double v = volume_ * 0.60 / OSC_COUNT / 15 /*steps*/ / 8 /*master vol range*/ * iv; \
-	blip_synth_volume_unit(good_synth, v * 1.0 ); \
-	blip_synth_volume_unit(med_synth, v * 1.0 ); \
-}
 
-#define apply_volume() \
-{ \
-	/* TODO: Doesn't handle differing left and right volumes (panning). */ \
-	/* Not worth the complexity. */ \
-	int data  = regs [VOL_REG - START_ADDR]; \
-	int left  = data >> 4 & 7; \
-	int right = data & 7; \
-	int iv = max(left, right) + 1; \
-	synth_volume(iv); \
-}
-
-void Gb_Apu::volume( double v )
+void Gb_Apu::volume(float v )
 {
 	if ( volume_ != v )
 	{
@@ -463,7 +464,7 @@ int32_t Gb_Apu::load_state( gb_apu_state_t const& in )
 	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );
 
 	apply_stereo();
-	synth_volume(0);          // suppress output for the moment
+	SYNTH_VOLUME(0);          // suppress output for the moment
 	run_until_(last_time);    // get last_amp updated
 	apply_volume();             // now use correct volume
 

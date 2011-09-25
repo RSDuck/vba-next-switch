@@ -412,7 +412,7 @@ void psoundTickfn(void)
 	END_FRAME_GBA_PCM(pcm[1].pcm_s, SOUND_CLOCK_TICKS);
 
 	gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
-	stereo_buffer_end_frame(stereo_buffer, SOUND_CLOCK_TICKS);
+	STEREO_BUFFER_END_FRAME(stereo_buffer, SOUND_CLOCK_TICKS);
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
@@ -504,8 +504,8 @@ static void remake_stereo_buffer(void)
 
 	gb_apu->volume(soundVolume_ * apu_vols [ioMem [SGCNT0_H] & 3] );
 
-	double tempvolume = (0.66 / 256 * soundVolume_) * 1.0;
-	blip_synth_volume_unit(pcm_synth, tempvolume);
+	float tempvolume = (0.66 / 256 * soundVolume_) * 1.0;
+	BLIP_SYNTH_VOLUME_UNIT(pcm_synth, tempvolume);
 	//End of Apply Volume - False
 }
 
