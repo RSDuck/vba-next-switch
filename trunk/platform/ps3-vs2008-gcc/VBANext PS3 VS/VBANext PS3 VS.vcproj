@@ -41,7 +41,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="-g -Wall -fno-exceptions -fno-rtti"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\common\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\vba\gba&quot;;&quot;$(SolutionDir)\..\..\src\vba\gb&quot;;&quot;$(SolutionDir)\..\..\vba\common&quot;;&quot;$(SolutionDir)\..\..\vba\apu&quot;;&quot;$(SolutionDir)\..\..\vba&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;;&quot;$(SolutionDir)\..\..\..\ps3\src&quot;"
-				PreprocessorDefinitions="SN_TARGET_PS3;_DEBUG;__GCC__;__CELL_ASSERT__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;SWITCH_TO_ARRAYVAL=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;__ppc__;SPEEDHAX;__POWERPC__;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__"
+				PreprocessorDefinitions="SN_TARGET_PS3;_DEBUG;__GCC__;__CELL_ASSERT__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;PATH_MAX=1024;__ppc__;SPEEDHAX;__POWERPC__;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__"
 				ProgramDataBaseFileName=""
 				CompileAs="0"
 			/>
@@ -112,7 +112,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="-Wall -fno-exceptions -fno-rtti -O2"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\common\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\vba\gba&quot;;&quot;$(SolutionDir)\..\..\src\vba\gb&quot;;&quot;$(SolutionDir)\..\..\src\vba\common&quot;;&quot;$(SolutionDir)\..\..\src\vba\apu&quot;;&quot;$(SolutionDir)\..\..\src\vba&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;"
-				PreprocessorDefinitions="SN_TARGET_PS3;NDEBUG;__GCC__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;SWITCH_TO_ARRAYVAL=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;__ppc__;SPEEDHAX;__POWERPC__;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__"
+				PreprocessorDefinitions="SN_TARGET_PS3;NDEBUG;__GCC__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;PATH_MAX=1024;__ppc__;SPEEDHAX;__POWERPC__;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__"
 				ProgramDataBaseFileName=""
 				CompileAs="0"
 			/>
