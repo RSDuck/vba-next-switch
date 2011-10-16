@@ -57,7 +57,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="-fno-exceptions -fno-rtti"
-				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
+				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_screenshot_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
 				OutputFile="$(OutDir)/$(ProjectName).ppu.elf"
 				AdditionalLibraryDirectories="C:\usr\local\cell\target\ppu\lib\PSGL\RSX\opt"
 				ProgramDatabaseFile=""
@@ -242,22 +242,6 @@
 					<Filter
 						Name="gba"
 						>
-						<File
-							RelativePath="..\..\..\src\vba\gba\agbprint.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\bios.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\Cheats.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\CheatSearch.cpp"
-							>
-						</File>
 						<File
 							RelativePath="..\..\..\src\vba\gba\EEprom.cpp"
 							>
