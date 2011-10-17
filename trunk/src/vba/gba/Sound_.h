@@ -243,7 +243,7 @@ void Gba_Pcm_Fifo::write_control( int data )
 		readIndex  = 0;
 		count      = 0;
 		dac        = 0;
-		__builtin_memset( fifo, 0, sizeof fifo );
+		memset( fifo, 0, sizeof fifo );
 	}
 
 	apply_control_gba_pcm(&pcm_s, which);
@@ -751,7 +751,7 @@ void soundSaveGame( gzFile out )
 	gb_apu->save_state( &state.apu );
 
 	// Be sure areas for expansion get written as zero
-	__builtin_memset( dummy_state, 0, sizeof dummy_state );
+	memset( dummy_state, 0, sizeof dummy_state );
 
 	utilWriteData( out, gba_state );
 }
@@ -760,7 +760,7 @@ void soundSaveGame( gzFile out )
 void soundSaveGameMem(uint8_t *& data)
 {
 	gb_apu->save_state(&state.apu);
-	__builtin_memset(dummy_state, 0, sizeof dummy_state);
+	memset(dummy_state, 0, sizeof dummy_state);
 	utilWriteDataMem(data, gba_state);
 }
 #endif
@@ -799,8 +799,8 @@ static void soundReadGameOld( gzFile in, int version )
 	state.apu.regs [gba_to_gb_sound( NR52 ) - 0xFF10] = ioMem [NR52];
 
 	// Copy wave RAM to both banks
-	__builtin_memcpy( &state.apu.regs [0x20], &ioMem [0x90], 0x10 );
-	__builtin_memcpy( &state.apu.regs [0x30], &ioMem [0x90], 0x10 );
+	memcpy( &state.apu.regs [0x20], &ioMem [0x90], 0x10 );
+	memcpy( &state.apu.regs [0x30], &ioMem [0x90], 0x10 );
 
 	// Read both banks of wave RAM if available
 	if ( version >= SAVE_GAME_VERSION_3 )
@@ -865,8 +865,8 @@ void soundReadGame( gzFile in, int version )
 		state.apu.regs [gba_to_gb_sound( NR52 ) - 0xFF10] = ioMem [NR52];
 
 		// Copy wave RAM to both banks
-		__builtin_memcpy( &state.apu.regs [0x20], &ioMem [0x90], 0x10 );
-		__builtin_memcpy( &state.apu.regs [0x30], &ioMem [0x90], 0x10 );
+		memcpy( &state.apu.regs [0x20], &ioMem [0x90], 0x10 );
+		memcpy( &state.apu.regs [0x30], &ioMem [0x90], 0x10 );
 
 		// Read both banks of wave RAM if available
 		if ( version >= SAVE_GAME_VERSION_3 )

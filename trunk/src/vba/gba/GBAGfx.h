@@ -4,7 +4,7 @@
 #define CLEAR_ARRAY(a) \
 {\
 	uint32_t *array = (a);\
-	__builtin_memset(array, -1, sizeof(uint32_t)*240);\
+	memset(array, -1, sizeof(uint32_t)*240);\
 }
 
 static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, uint32_t *line)

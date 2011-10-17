@@ -27,7 +27,7 @@ variable_desc eepromSaveData[] = {
 
 void eepromInit(void)
 {
-	__builtin_memset(eepromData, 255, sizeof(eepromData));
+	memset(eepromData, 255, sizeof(eepromData));
 }
 
 void eepromReset(void)

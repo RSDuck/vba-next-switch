@@ -52,7 +52,7 @@ void Blip_Buffer::clear(void)
         offset_       = 0;
         reader_accum_ = 0;
         if ( buffer_ )
-                __builtin_memset( buffer_, 0, (buffer_size_ + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
+                memset( buffer_, 0, (buffer_size_ + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
 }
 
 void Blip_Buffer::clear_false(void)
@@ -62,7 +62,7 @@ void Blip_Buffer::clear_false(void)
 	if ( buffer_ )
 	{
 		int32_t count = BLIP_BUFFER_SAMPLES_AVAIL();
-		__builtin_memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
+		memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof(int32_t) );
 	}
 }
 
@@ -115,7 +115,7 @@ void Blip_Buffer::remove_samples(int32_t count )
 	// copy remaining samples to beginning and clear old samples
 	int32_t remain = BLIP_BUFFER_SAMPLES_AVAIL() + BLIP_BUFFER_EXTRA_;
 	memmove( buffer_, buffer_ + count, remain * sizeof(*buffer_));
-	__builtin_memset( buffer_ + remain, 0, count * sizeof(*buffer_));
+	memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
 
 int32_t Blip_Buffer::read_samples( int16_t * out, int32_t count)
@@ -145,7 +145,7 @@ void Blip_Buffer::save_state( blip_buffer_state_t* out )
 {
         out->offset_       = offset_;
         out->reader_accum_ = reader_accum_;
-        __builtin_memcpy( out->buf, &buffer_ [offset_ >> BLIP_BUFFER_ACCURACY], sizeof(out->buf));
+        memcpy( out->buf, &buffer_ [offset_ >> BLIP_BUFFER_ACCURACY], sizeof(out->buf));
 }
 
 void Blip_Buffer::load_state( blip_buffer_state_t const& in )
@@ -154,7 +154,7 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
         offset_       = in.offset_;
         reader_accum_ = in.reader_accum_;
-        __builtin_memcpy( buffer_, in.buf, sizeof(in.buf));
+        memcpy( buffer_, in.buf, sizeof(in.buf));
 }
 
 // Stereo_Buffer
@@ -392,7 +392,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
         config_.side_chans [0].vol = 1.0f;
         config_.side_chans [1].vol = 1.0f;
 
-        __builtin_memset( &s_struct, 0, sizeof(s_struct));
+        memset( &s_struct, 0, sizeof(s_struct));
         echo_pos       = 0;
         s_struct.low_pass [0] = 0;
         s_struct.low_pass [1] = 0;
@@ -402,7 +402,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
                 bufs_buffer [i].clear();
 
         if ( echo.size_ )
-                __builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
+                memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 }
 
 Effects_Buffer::~Effects_Buffer()
@@ -421,7 +421,7 @@ Effects_Buffer::~Effects_Buffer()
 // avoid using new []
 int32_t Effects_Buffer::new_bufs( int size )
 {
-        bufs_buffer = (buf_t*) __builtin_malloc( size * sizeof(*bufs_buffer));
+        bufs_buffer = (buf_t*)realloc(bufs_buffer, size * sizeof(*bufs_buffer));
         CHECK_ALLOC( bufs_buffer );
         for ( int i = 0; i < size; i++ )
                 new (bufs_buffer + i) buf_t;
@@ -504,7 +504,7 @@ int32_t Effects_Buffer::set_channel_count( int count, int const* types )
         for ( int i = bufs_size; --i >= 0; )
                 bufs_buffer [i].clear();
         if ( echo.size_ )
-                __builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
+                memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 
         return 0;
 }
@@ -755,7 +755,7 @@ void Effects_Buffer::apply_config()
 	if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
 	{
 		if (echo.size_)
-			__builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
+			memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 	}
 }
 
@@ -788,7 +788,7 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 			{
 				// optimization: clear echo here to keep mix_effects() a leaf function
 				echo_pos = 0;
-				__builtin_memset( echo.begin_, 0, count * STEREO * sizeof(echo [0]));
+				memset( echo.begin_, 0, count * STEREO * sizeof(echo [0]));
 			}
 
 			mix_effects( out, count );
