@@ -27,23 +27,23 @@
 
 #else
 #define READ16LE(x) \
-  (*((u16 *)(x))<<8)|(*((u16 *)(x))>>8);
+  (*((uint16_t *)(x))<<8)|(*((uint16_t *)(x))>>8);
 #define READ32LE(x) \
-  (*((u32 *)(x))<<24)|((*((u32 *)(x))<<8)&0xff0000)|((((*((u32 *)(x))x>>8)&0xff00)|(*((u32 *)(x))>>24);
+  (*((uint32_t *)(x))<<24)|((*((uint32_t *)(x))<<8)&0xff0000)|((((*((uint32_t *)(x))x>>8)&0xff00)|(*((uint32_t *)(x))>>24);
 #define WRITE16LE(x,v) \
-  *((u16 *)x) = (*((u16 *)(v))<<8)|(*((u16 *)(v))>>8);
+  *((uint16_t *)x) = (*((uint16_t *)(v))<<8)|(*((uint16_t *)(v))>>8);
 #define WRITE32LE(x,v) \
-  *((u32 *)x) = (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
+  *((uint32_t *)x) = (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
 #endif
 #else
 #define READ16LE(x) \
-  *((u16 *)x)
+  *((uint16_t *)x)
 #define READ32LE(x) \
-  *((u32 *)x)
+  *((uint32_t *)x)
 #define WRITE16LE(x,v) \
-  *((u16 *)x) = (v)
+  *((uint16_t *)x) = (v)
 #define WRITE32LE(x,v) \
-  *((u32 *)x) = (v)
+  *((uint32_t *)x) = (v)
 #endif
 
 #endif // PORT_H

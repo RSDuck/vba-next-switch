@@ -3,7 +3,6 @@
  *
  *  Created on: May 4, 2011
 ********************************************************************************/
-#include <string>
 
 #include <sys/timer.h>
 #include <sys/return_code.h>
@@ -13,6 +12,8 @@
 #include <sysutil/sysutil_msgdialog.h>
 
 #include <cell/sysmodule.h>
+#include <cell/cell_fs.h>
+#include <string>
 #include "sys/types.h"
 
 #include "../../../src/vba/gba/GBA.h"
@@ -894,9 +895,25 @@ void emulator_implementation_button_mapping_settings(int map_button_option_enum)
 	}
 }
 
+static bool file_exists(const char * filename)
+{
+	CellFsStat sb;
+	if(cellFsStat(filename,&sb) == CELL_FS_SUCCEEDED)
+		return true;
+	else
+		return false;
+}
+
 static void emulator_init_settings()
 {
 	memset((&Settings), 0, (sizeof(Settings)));
+
+	if(!file_exists(SYS_CONFIG_FILE))
+	{
+		FILE * f;
+		f = fopen(SYS_CONFIG_FILE, "w");
+		fclose(f);
+	}
 
 	config_file_t * currentconfig = config_file_new(SYS_CONFIG_FILE);
 

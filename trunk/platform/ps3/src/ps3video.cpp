@@ -485,7 +485,6 @@ void PS3Graphics::Draw(uint8_t *XBuf)
 		texture_backdrop(0);
 
 		glDrawArrays(GL_QUADS, 0, 4);
-		glFlush();
 
 		glBindFramebufferOES(GL_FRAMEBUFFER_OES, 0);
 		glBindTexture(GL_TEXTURE_2D, fbo_tex);
@@ -514,7 +513,6 @@ void PS3Graphics::Draw(uint8_t *XBuf)
 
 		glBufferSubData(GL_ARRAY_BUFFER, 256, sizeof(fbo_tex_coord), fbo_tex_coord);
 		glDrawArrays(GL_QUADS, 0, 4);
-		glFlush();
 		glTexCoordPointer(2, GL_FLOAT, 0, (void*)128);
 
 		cgGLBindProgram(_vertexProgram[0]);
@@ -534,7 +532,6 @@ void PS3Graphics::Draw(uint8_t *XBuf)
 		texture_backdrop(0);
 
 		glDrawArrays(GL_QUADS, 0, 4);
-		glFlush();
 		write_fps();
 	}
 }
