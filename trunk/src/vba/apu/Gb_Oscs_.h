@@ -15,8 +15,10 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #include "blargg_source.h"
 
+#ifndef USE_GBA_ONLY
 bool const cgb_02 = false; // enables bug in early CGB units that causes problems in some games
 bool const cgb_05 = false; // enables CGB-05 zombie behavior
+#endif
 
 #define TRIGGER_MASK 0x80
 
@@ -92,12 +94,14 @@ int Gb_Wave::access( unsigned addr ) const
         if ( enabled )
         {
                 addr = phase & (BANK_SIZE - 1);
+		#ifndef USE_GBA_ONLY
                 if (mode == MODE_DMG)
                 {
                         addr++;
                         if (delay > CLK_MUL)
                                 return -1; // can only access within narrow time window while playing
                 }
+		#endif
                 addr >>= 1;
         }
         return addr & 0x0F;
@@ -111,7 +115,11 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 
         if ( (frame_phase & 1) && !(old_data & LENGTH_ENABLED) && length_ctr )
         {
-                if ( (data & LENGTH_ENABLED) || cgb_02 )
+		#ifdef USE_GBA_ONLY
+		if ( (data & LENGTH_ENABLED))
+		#else
+		if ( (data & LENGTH_ENABLED) || cgb_02)
+		#endif
                         length_ctr--;
         }
 
@@ -135,8 +143,10 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 inline void Gb_Env::zombie_volume( int old, int data )
 {
         int v = volume;
+	#ifndef USE_GBA_ONLY
         if ( mode == MODE_AGB || cgb_05 )
         {
+	#endif
                 // CGB-05 behavior, very close to AGB behavior as well
                 if ( (old ^ data) & 8 )
                 {
@@ -153,6 +163,7 @@ inline void Gb_Env::zombie_volume( int old, int data )
                 {
                         v++;
                 }
+	#ifndef USE_GBA_ONLY
         }
         else
         {
@@ -165,6 +176,7 @@ inline void Gb_Env::zombie_volume( int old, int data )
                 if ( (old ^ data) & 8 )
                         v = 16 - v;
         }
+	#endif
         volume = v & 0x0F;
 }
 
@@ -268,8 +280,10 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if (!(GBA_WAVE_DAC_ENABLED()))
 					enabled = false;
+				#ifndef USE_GBA_ONLY
 				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL_TIMES_2)) < (CLK_MUL_TIMES_2))
 					corrupt_wave();
+				#endif
 
 				phase = 0;
 				delay    = period() + CLK_MUL_TIMES_6;
@@ -308,11 +322,15 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         int const duty_code = regs [1] >> 6;
         int32_t duty_offset = duty_offsets [duty_code];
         int32_t duty = duties [duty_code];
+	#ifndef USE_GBA_ONLY
         if (mode == MODE_AGB)
         {
+	#endif
                 duty_offset -= duty;	// AGB uses inverted duty
                 duty = 8 - duty;
+	#ifndef USE_GBA_ONLY
         }
+	#endif
         int ph = (phase + duty_offset) & 7;
 
         // Determine what will be generated
@@ -327,7 +345,9 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 vol = volume;
 
                         amp = -DAC_BIAS;
+			#ifndef USE_GBA_ONLY
                         if (mode == MODE_AGB)
+			#endif
                                 amp = -(vol >> 1);
 
                         // Play inaudible frequencies as constant amplitude
@@ -476,7 +496,9 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                                 vol = volume;
 
                         amp = -DAC_BIAS;
+			#ifndef USE_GBA_ONLY
                         if (mode == MODE_AGB)
+			#endif
                                 amp = -(vol >> 1);
 
                         if (!(phase & 1))
@@ -487,11 +509,15 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
 
                 // AGB negates final output
+		#ifndef USE_GBA_ONLY
                 if (mode == MODE_AGB)
                 {
+		#endif
                         vol = -vol;
                         amp    = -amp;
+		#ifndef USE_GBA_ONLY
                 }
+		#endif
 
                 GB_OSC_UPDATE_AMP(time, amp);
         }

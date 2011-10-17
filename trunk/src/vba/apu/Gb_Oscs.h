@@ -29,7 +29,9 @@ class Gb_Osc
 	Blip_Buffer* outputs [4];	// NULL, right, left, center
 	Blip_Buffer* output;		// where to output sound
 	uint8_t * regs;			// osc's 5 registers
+	#ifndef USE_GBA_ONLY
 	int mode;			// MODE_DMG, MODE_CGB, MODE_AGB
+	#endif
 	int dac_off_amp;		// amplitude when DAC is off
 	int last_amp;			// current amplitude in Blip_Buffer
 	Blip_Synth * good_synth;
