@@ -124,7 +124,7 @@ class blip_eq_t;
 #define BLIP_SAMPLE_BITS 30
 
 // Sets overall volume of waveform
-#define BLIP_SYNTH_VOLUME_UNIT(blip_synth, new_unit) blip_synth.delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
+#define blip_synth_volume_unit(blip_synth, new_unit) blip_synth.delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
 
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
 #define BLIP_RESTRICT __restrict
@@ -137,8 +137,8 @@ class blip_eq_t;
 // amplitudes (max - min).
 typedef struct Blip_Synth
 {
-	int32_t last_amp;
-	int32_t delta_factor;
+	int last_amp;
+	int delta_factor;
 };
 
 #ifdef USE_SOUND_FILTERING
@@ -231,7 +231,7 @@ struct blip_buffer_state_t
 inline void Blip_Buffer::clock_rate(int32_t cps )
 {
 	clock_rate_ = cps;
-	float ratio = (float) sample_rate_ / clock_rate_;
+	double ratio = (double) sample_rate_ / clock_rate_;
 	int32_t factor = (int32_t) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5);
 	factor_ = (uint32_t)factor;
 }
@@ -254,7 +254,7 @@ typedef struct channel_t {
 
 #define BUFFERS_SIZE 3
 
-#define STEREO_BUFFER_END_FRAME(stereo_buf, time) \
+#define stereo_buffer_end_frame(stereo_buf, time) \
         for ( int i = BUFFERS_SIZE; --i >= 0; ) \
 		BLIP_BUFFER_END_FRAME(stereo_buf->bufs_buffer[i], time);
 

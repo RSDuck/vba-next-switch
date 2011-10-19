@@ -760,7 +760,7 @@ inline int CPUUpdateTicks()
 	int x00_window0 = WIN0H>>8; \
 	int x01_window0 = WIN0H & 255; \
 	int x00_lte_x01 = x00_window0 <= x01_window0; \
-	for(uint32_t i = 0; i < 240; i++) \
+	for(int i = 0; i < 240; i++) \
 		gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
 }
 
@@ -769,7 +769,7 @@ inline int CPUUpdateTicks()
 	int x00_window1 = WIN1H>>8; \
 	int x01_window1 = WIN1H & 255; \
 	int x00_lte_x01 = x00_window1 <= x01_window1; \
-	for(uint32_t i = 0; i < 240; i++) \
+	for(int i = 0; i < 240; i++) \
 	gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
 }
 

@@ -617,18 +617,6 @@ void Simple_Effects_Buffer::apply_config()
         Effects_Buffer::apply_config();
 }
 
-#define CALC_LEVELS( vols, sum, diff, surround ) \
-					int32_t sum, diff;\
-					bool surround = false;\
-					{\
-						int32_t vol_0 = vols [0];\
-						if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
-						int32_t vol_1 = vols [1];\
-						if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
-						sum  = vol_0 + vol_1;\
-						diff = vol_0 - vol_1;\
-					}
-
 void Effects_Buffer::apply_config()
 {
 	int i;
@@ -715,6 +703,17 @@ void Effects_Buffer::apply_config()
 				int32_t best_dist = TO_FIXED( 8 );
 				for ( int h = buf_count; --h >= 0; )
 				{
+#define CALC_LEVELS( vols, sum, diff, surround ) \
+					int32_t sum, diff;\
+					bool surround = false;\
+					{\
+						int32_t vol_0 = vols [0];\
+						if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
+						int32_t vol_1 = vols [1];\
+						if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
+						sum  = vol_0 + vol_1;\
+						diff = vol_0 - vol_1;\
+					}
 					CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
 					CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
 

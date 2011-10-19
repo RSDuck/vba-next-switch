@@ -86,7 +86,7 @@ class Gb_Apu
 	// Sound adjustments
 
 	// Sets overall volume, where 1.0 is normal.
-	void volume( float );
+	void volume( double );
 
 	// If true, reduces clicking by disabling DAC biasing. Note that this reduces
 	// emulation accuracy, since the clicks are authentic.
@@ -109,7 +109,7 @@ class Gb_Apu
 	Gb_Osc*		oscs [OSC_COUNT];
 	int32_t		last_time;          // time sound emulator has been run to
 	int32_t		frame_period;       // clocks between each frame sequencer step
-	float		volume_;
+	double		volume_;
 	bool		reduce_clicks_;
 
 	Gb_Sweep_Square square1;
