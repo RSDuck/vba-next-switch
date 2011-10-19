@@ -32,7 +32,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 Blip_Buffer::Blip_Buffer()
 {
-        factor_       = LONG_MAX;
+        factor_       = (uint32_t)-1;
         buffer_       = 0;
         buffer_size_  = 0;
         sample_rate_  = 0;
@@ -97,7 +97,7 @@ int32_t Blip_Buffer::set_sample_rate(int32_t new_rate, int msec)
                 return -1;
 
         // start with maximum length that resampled time can represent
-        int32_t new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
+        int32_t new_size = (((uint32_t)-1) >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
         if (msec != BLIP_MAX_LENGTH)
         {
                 int32_t s = (new_rate * (msec + 1) + 999) / 1000;
