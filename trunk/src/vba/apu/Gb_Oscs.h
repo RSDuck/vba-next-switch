@@ -7,12 +7,11 @@
 #include "blargg_common.h"
 #include "Sound_Buffer.h"
 
-#define	CLK_MUL	4
-#define CLK_MUL_TIMES_2 8
-#define CLK_MUL_TIMES_4 16
-#define CLK_MUL_TIMES_5 20
-#define CLK_MUL_TIMES_6 24
-#define CLK_MUL_TIMES_8 32
+#ifndef GB_APU_OVERCLOCK
+        #define GB_APU_OVERCLOCK 1
+#endif
+
+#define	CLK_MUL	GB_APU_OVERCLOCK
 #define DAC_BIAS 7
 #define LENGTH_ENABLED 0x40
 
@@ -94,7 +93,7 @@ class Gb_Square : public Gb_Env
 	}
 	private:
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (CLK_MUL_TIMES_4); }
+	int period() const { return (2048 - frequency()) * (4 * CLK_MUL); }
 };
 
 #define	PERIOD_MASK 0x70
@@ -154,7 +153,7 @@ class Gb_Noise : public Gb_Env
 		delay    = 0;
 		phase    = 0;
 		enabled  = false;
-		delay = CLK_MUL_TIMES_4; // TODO: remove?
+		delay = 4 * CLK_MUL; // TODO: remove?
 	}
 	private:
 	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
@@ -192,7 +191,7 @@ class Gb_Wave : public Gb_Osc
 
 	private:
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (CLK_MUL_TIMES_2); }
+	int period() const { return (2048 - frequency()) * (2 * CLK_MUL); }
 
 	void corrupt_wave();
 

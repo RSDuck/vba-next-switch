@@ -177,8 +177,10 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
 Stereo_Buffer::Stereo_Buffer()
 {
+	samples_per_frame_      = 2;
 	length_                 = 0;
 	sample_rate_            = 0;
+	channels_changed_count_ = 1;
 	channel_types_          = 0;
 	channel_count_          = 0;
 
@@ -385,8 +387,10 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 {
 	//from Multi_Buffer
+	samples_per_frame_      = STEREO;
 	length_                 = 0;
 	sample_rate_            = 0;
+	channels_changed_count_ = 1;
 	channel_types_          = 0;
 	channel_count_          = 0;
 
@@ -785,6 +789,8 @@ void Effects_Buffer::apply_config()
 		if (echo.size_)
 			__builtin_memset( echo.begin_, 0, echo.size_ * sizeof(echo [0]));
 	}
+
+	channels_changed();
 }
 
 // Mixing
