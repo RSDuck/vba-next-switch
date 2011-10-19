@@ -15,6 +15,7 @@ static snes_video_refresh_t video_cb = NULL;
 static snes_audio_sample_t audio_cb = NULL;
 static snes_input_poll_t poll_cb = NULL;
 static snes_input_state_t input_cb = NULL;
+extern uint64_t joy;
 
 unsigned snes_library_revision_major(void)
 {
@@ -97,9 +98,60 @@ void snes_power(void)
 void snes_reset(void)
 {}
 
+void systemReadJoypadGB(int numplayer)
+{
+   poll_cb();
+
+   u32 J = 0;
+
+   static const unsigned binds[] = {
+      SNES_DEVICE_ID_JOYPAD_A,
+      SNES_DEVICE_ID_JOYPAD_B,
+      SNES_DEVICE_ID_JOYPAD_SELECT,
+      SNES_DEVICE_ID_JOYPAD_START,
+      SNES_DEVICE_ID_JOYPAD_RIGHT,
+      SNES_DEVICE_ID_JOYPAD_LEFT,
+      SNES_DEVICE_ID_JOYPAD_UP,
+      SNES_DEVICE_ID_JOYPAD_DOWN,
+      SNES_DEVICE_ID_JOYPAD_R,
+      SNES_DEVICE_ID_JOYPAD_L
+   };
+
+   for (unsigned i = 0; i < 10; i++)
+      J |= input_cb(SNES_PORT_1, SNES_DEVICE_JOYPAD, 0, binds[i]) << i;
+
+   gbJoymask[numplayer] =  J;
+}
+
+static void systemReadJoypadGBA(void)
+{
+   poll_cb();
+
+   u32 J = 0;
+
+   static const unsigned binds[] = {
+      SNES_DEVICE_ID_JOYPAD_A,
+      SNES_DEVICE_ID_JOYPAD_B,
+      SNES_DEVICE_ID_JOYPAD_SELECT,
+      SNES_DEVICE_ID_JOYPAD_START,
+      SNES_DEVICE_ID_JOYPAD_RIGHT,
+      SNES_DEVICE_ID_JOYPAD_LEFT,
+      SNES_DEVICE_ID_JOYPAD_UP,
+      SNES_DEVICE_ID_JOYPAD_DOWN,
+      SNES_DEVICE_ID_JOYPAD_R,
+      SNES_DEVICE_ID_JOYPAD_L
+   };
+
+   for (unsigned i = 0; i < 10; i++)
+      J |= input_cb(SNES_PORT_1, SNES_DEVICE_JOYPAD, 0, binds[i]) << i;
+
+   joy =  J;
+}
+
 void snes_run(void)
 {
    CPULoop();
+   systemReadJoypadGBA();
 }
 
 
@@ -274,30 +326,7 @@ int systemBlueShift = 0;
 void systemMessage(int, const char*, ...)
 {}
 
-u32 systemReadJoypad(int)
-{
-   poll_cb();
 
-   u32 J = 0;
-
-   static const unsigned binds[] = {
-      SNES_DEVICE_ID_JOYPAD_A,
-      SNES_DEVICE_ID_JOYPAD_B,
-      SNES_DEVICE_ID_JOYPAD_SELECT,
-      SNES_DEVICE_ID_JOYPAD_START,
-      SNES_DEVICE_ID_JOYPAD_RIGHT,
-      SNES_DEVICE_ID_JOYPAD_LEFT,
-      SNES_DEVICE_ID_JOYPAD_UP,
-      SNES_DEVICE_ID_JOYPAD_DOWN,
-      SNES_DEVICE_ID_JOYPAD_R,
-      SNES_DEVICE_ID_JOYPAD_L
-   };
-
-   for (unsigned i = 0; i < 10; i++)
-      J |= input_cb(SNES_PORT_1, SNES_DEVICE_JOYPAD, 0, binds[i]) << i;
-
-   return J;
-}
 
 bool systemSoundInit()
 {

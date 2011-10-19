@@ -1,11 +1,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-#ifdef __CELLOS_LV2__
-#include "../../platform/common/utils/zlib/zlib.h"
-#else
+#include <stdint.h>
 #include <zlib.h>
-#endif
 
 // For backwards compatibility with the original VBA defines
 #ifdef FRAMESKIP
@@ -30,7 +27,7 @@ extern void systemDrawScreen();
 
 // updates the joystick data
 // return information about the given joystick, -1 for default joystick
-extern void systemReadJoypadGB(int);
+extern void systemReadJoypadGB(int numplayer);
 
 extern uint32_t systemGetClock();
 extern void systemMessage(int, const char *, ...);

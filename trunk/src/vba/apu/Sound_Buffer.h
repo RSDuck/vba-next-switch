@@ -31,9 +31,7 @@
 //blip_res = 1 << BLIP_PHASE_BITS
 #define BLIP_RES 256
 
-#ifdef FASTER_SOUND_HACK_NON_SILENCE
 #define BLIP_BUFFER_END_FRAME(blip, t) blip.offset_ += t * blip.factor_
-#endif
 
 // Number of samples available for reading with read_samples()
 #define BLIP_BUFFER_SAMPLES_AVAIL() (offset_ >> BLIP_BUFFER_ACCURACY)
@@ -265,11 +263,9 @@ typedef struct channel_t {
 
 #define BUFFERS_SIZE 3
 
-#ifdef FASTER_SOUND_HACK_NON_SILENCE
 #define stereo_buffer_end_frame(stereo_buf, time) \
         for ( int i = BUFFERS_SIZE; --i >= 0; ) \
 		BLIP_BUFFER_END_FRAME(stereo_buf->bufs_buffer[i], time);
-#endif
 
 // Uses three buffers (one for center) and outputs stereo sample pairs.
 class Stereo_Buffer {

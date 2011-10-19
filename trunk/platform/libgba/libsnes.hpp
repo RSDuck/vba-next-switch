@@ -3,6 +3,19 @@
 
 #include <stdint.h>
 
+#ifndef u8
+#define u8 uint8_t
+#endif
+#ifndef u16
+#define u16 uint16_t
+#endif
+#ifndef u32
+#define u32 uint32_t
+#endif
+#ifndef u64
+#define u64 uint64_t
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

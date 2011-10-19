@@ -1,3 +1,6 @@
+#include <string.h>
+#include <time.h>
+
 #include "../System.h"
 #include "GBA.h"
 #include "Globals.h"
@@ -5,7 +8,6 @@
 #include "../Util.h"
 #include "../NLS.h"
 
-#include <time.h>
 
 #define IDLE		0
 #define COMMAND		1

@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <cstdlib>
 
 uint8_t *gbMemoryMap[16];

@@ -1,6 +1,7 @@
 #ifndef SOUND_H
 #define SOUND_H
 
+#include <stdint.h>
 #include <zlib.h>
 
 // Sound emulation setup/options and GBA sound emulation

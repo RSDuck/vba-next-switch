@@ -1,4 +1,30 @@
-TARGET = libsnes.so
+ifeq ($(platform),)
+platform = unix
+ifeq ($(shell uname -a),)
+   platform = win
+else ifneq ($(findstring MINGW,$(shell uname -a)),)
+   platform = win
+else ifneq ($(findstring windows32,$(shell uname -a)),)
+   platform = win
+else ifneq ($(findstring Darwin,$(shell uname -a)),)
+   platform = osx
+endif
+endif
+
+ifeq ($(platform), unix)
+   TARGET := libsnes.so
+   fpic := -fPIC
+   SHARED := -shared
+else ifeq ($(platform), osx)
+   TARGET := libsnes.dylib
+   fpic := -fPIC
+   SHARED := -dynamiclib
+else
+   TARGET := vbanext-git-x86_64.dll
+   CC = gcc
+   CXX = g++
+   SHARED := -shared
+endif
 
 VBA_DIR := ../../src/vba
 
@@ -21,7 +47,7 @@ INCDIRS := -I$(VBA_DIR)
 LIBS := -lz
 
 $(TARGET): $(OBJS)
-	$(CXX) -o $@ -shared $(OBJS) $(LDFLAGS) $(LIBS)
+	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
 
 %.o: %.cpp
 	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCDIRS)
@@ -30,7 +56,7 @@ $(TARGET): $(OBJS)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INCDIRS)
 
 clean:
-	rm -f $(TARGET)
 	rm -f $(OBJS)
+	rm -f $(TARGET)
 
 .PHONY: clean

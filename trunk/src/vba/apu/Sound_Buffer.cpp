@@ -1,14 +1,13 @@
-#include "Sound_Buffer.h"
-
-#include "Gb_Apu_.h"
-
-#include "Gb_Oscs_.h"
-// Blip_Buffer 0.4.1. http://www.slack.net/~ant/
-
-#include "../System.h"
 #include <string.h>
 #include <stdlib.h>
+#include <new>
 
+#include "Sound_Buffer.h"
+#include "Gb_Apu_.h"
+#include "Gb_Oscs_.h"
+#include "../System.h"
+
+// Blip_Buffer 0.4.1. http://www.slack.net/~ant/
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
 General Public License as published by the Free Software Foundation; either
@@ -29,6 +28,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 /* BLIP BUFFER */
 
 #define SILENT_BUF_SIZE 1
+#define STEREO 2
 
 Blip_Buffer::Blip_Buffer()
 {
@@ -329,7 +329,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
 	{
 #endif
-		int16_t * BLIP_RESTRICT outtemp = out + count * stereo;
+		int16_t * BLIP_RESTRICT outtemp = out + count * STEREO;
 
 		// do left + center and right + center separately to reduce register load
 		Blip_Buffer* const* buf = &mixer_bufs [2];
@@ -353,7 +353,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
@@ -378,7 +378,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 				BLIP_CLAMP( s, s );
 
 				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
@@ -393,7 +393,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
-		typedef int16_t stereo_blip_sample_t [stereo];
+		typedef int16_t stereo_blip_sample_t [STEREO];
 		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
 		int offset = -count;
 		do
@@ -485,7 +485,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
-		typedef int16_t stereo_blip_sample_t [stereo];
+		typedef int16_t stereo_blip_sample_t [STEREO];
 		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
 		int offset = -count;
 		do
@@ -512,7 +512,7 @@ int const max_read = 2560; // determines minimum delay
 Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 {
 	//from Multi_Buffer
-	samples_per_frame_      = stereo;
+	samples_per_frame_      = STEREO;
 	length_                 = 0;
 	sample_rate_            = 0;
 	channels_changed_count_ = 1;
@@ -520,7 +520,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 	channel_count_          = 0;
 	immediate_removal_      = true;
 
-        echo_size   = max( max_read * (int32_t)stereo, echo_size_ & ~1 );
+        echo_size   = max( max_read * STEREO, echo_size_ & ~1 );
         clock_rate_ = 0;
         bass_freq_  = 90;
         bufs_buffer       = 0;
@@ -584,7 +584,7 @@ int32_t Effects_Buffer::set_sample_rate( int32_t rate, int msec )
         // extra to allow farther past-the-end pointers
         mixer_samples_read = 0;
 
-        int32_t retval = echo.resize(echo_size + stereo);
+        int32_t retval = echo.resize(echo_size + STEREO);
 	if(retval != 0)
 		return retval;
 

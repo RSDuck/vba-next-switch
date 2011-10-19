@@ -1,5 +1,6 @@
-#include <zlib.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <zlib.h>
 #include <math.h>
 
 #ifdef __LIBGBA__
