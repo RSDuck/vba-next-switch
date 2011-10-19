@@ -97,6 +97,9 @@ class Blip_Buffer
 	// Length of buffer in milliseconds
 	int length_;
 	private:
+	// noncopyable
+	Blip_Buffer( const Blip_Buffer& );
+	Blip_Buffer& operator = ( const Blip_Buffer& );
 	int bass_freq_;
 };
 
@@ -281,12 +284,6 @@ typedef struct pan_vol_t
 
 // See Simple_Effects_Buffer (below) for a simpler interface
 
-typedef struct buf_t : Blip_Buffer
-{
-	int32_t vol[STEREO];
-	bool echo;
-};
-
 class Effects_Buffer {
 	public:
 		// To reduce memory usage, fewer buffers can be used (with a best-fit
@@ -355,6 +352,16 @@ class Effects_Buffer {
 		};
 		blargg_vector<chan_t> chans;
 
+		struct buf_t : Blip_Buffer
+		{
+			int32_t vol[STEREO];
+			bool echo;
+
+			void* operator new ( size_t, void* p ) { return p; }
+			void operator delete ( void* ) { }
+
+			~buf_t() { }
+		};
 		buf_t* bufs_buffer;
 		int bufs_size;
 		int bufs_max; // bufs_size <= bufs_max, to limit memory usage
