@@ -232,6 +232,7 @@ Stereo_Buffer::Stereo_Buffer()
 	channels_changed_count_ = 1;
 	channel_types_          = 0;
 	channel_count_          = 0;
+	immediate_removal_      = true;
 
         chan.center = mixer_bufs [2] = &bufs_buffer [2];
         chan.left   = mixer_bufs [0] = &bufs_buffer [0];
@@ -286,27 +287,30 @@ void Stereo_Buffer::end_frame( int32_t time )
 
 int32_t Stereo_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
-	int pair_count = int (out_size >> 1);
-	if ( pair_count )
-	{
-		mixer_read_pairs( out, pair_count );
+        int pair_count = int (out_size >> 1);
+        if ( pair_count )
+        {
+                mixer_read_pairs( out, pair_count );
 
-		for ( int i = BUFFERS_SIZE; --i >= 0; )
-		{
-			Blip_Buffer & b = bufs_buffer [i];
-#ifndef FASTER_SOUND_HACK_NON_SILENCE
-			// TODO: might miss non-silence setting since it checks END of last read
-			if ( !b.non_silent() )
-			{
-				BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
-			}
-			else
-#endif
-				b.remove_samples( mixer_samples_read );
-		}
-		mixer_samples_read = 0;
-	}
-	return out_size;
+                if ( out_size <= 0 || immediate_removal_ )
+                {
+                        for ( int i = BUFFERS_SIZE; --i >= 0; )
+                        {
+                                Blip_Buffer & b = bufs_buffer [i];
+            #ifndef FASTER_SOUND_HACK_NON_SILENCE
+                                // TODO: might miss non-silence setting since it checks END of last read
+                                if ( !b.non_silent() )
+            {
+                                        BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
+            }
+                                else
+            #endif
+                                        b.remove_samples( mixer_samples_read );
+                        }
+                        mixer_samples_read = 0;
+                }
+        }
+        return out_size;
 }
 
 
@@ -514,6 +518,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 	channels_changed_count_ = 1;
 	channel_types_          = 0;
 	channel_count_          = 0;
+	immediate_removal_      = true;
 
         echo_size   = max( max_read * (int32_t)stereo, echo_size_ & ~1 );
         clock_rate_ = 0;
@@ -929,59 +934,62 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
         int pair_count = int (out_size >> 1);
         if ( pair_count )
-	{
-		if ( no_effects )
-		{
-			mixer_read_pairs( out, pair_count );
-		}
-		else
-		{
-			int pairs_remain = pair_count;
-			do
-			{
-				// mix at most max_read pairs at a time
-				int count = max_read;
-				if ( count > pairs_remain )
-					count = pairs_remain;
+        {
+                if ( no_effects )
+                {
+                        mixer_read_pairs( out, pair_count );
+                }
+                else
+                {
+                        int pairs_remain = pair_count;
+                        do
+                        {
+                                // mix at most max_read pairs at a time
+                                int count = max_read;
+                                if ( count > pairs_remain )
+                                        count = pairs_remain;
 
-				if ( no_echo )
-				{
-					// optimization: clear echo here to keep mix_effects() a leaf function
-					echo_pos = 0;
-					__builtin_memset( echo.begin_, 0, count * stereo * sizeof(echo [0]));
-				}
+                                if ( no_echo )
+                                {
+                                        // optimization: clear echo here to keep mix_effects() a leaf function
+                                        echo_pos = 0;
+                                        __builtin_memset( echo.begin_, 0, count * stereo * sizeof(echo [0]));
+                                }
 
-				mix_effects( out, count );
+                                mix_effects( out, count );
 
-				int32_t new_echo_pos = echo_pos + count * stereo;
-				if ( new_echo_pos >= echo_size )
-					new_echo_pos -= echo_size;
-				echo_pos = new_echo_pos;
+                                int32_t new_echo_pos = echo_pos + count * stereo;
+                                if ( new_echo_pos >= echo_size )
+                                        new_echo_pos -= echo_size;
+                                echo_pos = new_echo_pos;
 
-				out += count * stereo;
-				mixer_samples_read += count;
-				pairs_remain -= count;
-			}
-			while ( pairs_remain );
-		}
+                                out += count * stereo;
+                                mixer_samples_read += count;
+                                pairs_remain -= count;
+                        }
+                        while ( pairs_remain );
+                }
 
-		for ( int i = bufs_size; --i >= 0; )
-		{
-			buf_t& b = bufs_buffer [i];
-			// TODO: might miss non-silence settling since it checks END of last read
-#ifdef FASTER_SOUND_HACK_NON_SILENCE
-			b.remove_samples( mixer_samples_read );
-#else
-			if ( b.non_silent() )
-				b.remove_samples( mixer_samples_read );
-			else
-			{
-				BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
-			}
-#endif
-		}
-		mixer_samples_read = 0;
-	}
+                if ( out_size <= 0 || immediate_removal_ )
+                {
+                        for ( int i = bufs_size; --i >= 0; )
+                        {
+                                buf_t& b = bufs_buffer [i];
+                                // TODO: might miss non-silence settling since it checks END of last read
+            #ifdef FASTER_SOUND_HACK_NON_SILENCE
+                                b.remove_samples( mixer_samples_read );
+            #else
+                                if ( b.non_silent() )
+                                        b.remove_samples( mixer_samples_read );
+                                else
+            {
+                                        BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
+            }
+            #endif
+                        }
+                        mixer_samples_read = 0;
+                }
+        }
         return out_size;
 }
 
