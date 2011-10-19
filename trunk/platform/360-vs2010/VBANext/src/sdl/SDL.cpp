@@ -1942,17 +1942,12 @@ void systemMessage(int num, const char *msg, ...)
 
 void drawScreenMessage(u8 *screen, int pitch, int x, int y, unsigned int duration)
 {
-  if(screenMessage) {
-    if(cartridgeType == 1 && gbBorderOn) {
+  if(screenMessage) 
+  {
+    if(cartridgeType == 1 && gbBorderOn)
       gbSgbRenderBorder();
-    }
-    if(((systemGetClock() - screenMessageTime) < duration) &&
-       !disableStatusMessages) {
-      drawText(screen, pitch, x, y,
-               screenMessageBuffer, false);
-    } else {
+
       screenMessage = false;
-    }
   }
 }
 
@@ -1965,8 +1960,6 @@ void drawSpeed(u8 *screen, int pitch, int x, int y)
     sprintf(buffer, "%3d%%(%d, %d fps)", systemSpeed,
             systemFrameSkip,
             showRenderedFrames);
-
-  drawText(screen, pitch, x, y, buffer, showSpeedTransparent);
 }
 
 void systemDrawScreen()

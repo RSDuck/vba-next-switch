@@ -41,7 +41,7 @@ extern int linktime;
 extern void StartLink(u16);
 extern void StartGPLink(u16);
 extern void LinkSSend(u16);
-extern void LinkUpdate(int);
+//extern void LinkUpdate(int);
 extern int linktime2;
 extern bool linkenable;
 
@@ -4058,7 +4058,7 @@ void CPULoop(int ticks)
 		  //JoyBusUpdate(clockTicks);
 
 	  //if (gba_link_enabled)
-		  LinkUpdate(clockTicks);
+		 // LinkUpdate(clockTicks);
 
       cpuNextEvent = CPUUpdateTicks();
 

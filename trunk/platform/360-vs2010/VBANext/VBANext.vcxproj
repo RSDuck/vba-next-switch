@@ -406,24 +406,7 @@
     <ClCompile Include="src\gb\gbPrinter.cpp" />
     <ClCompile Include="src\gb\gbSGB.cpp" />
     <ClCompile Include="src\gb\gbSound.cpp" />
-    <ClCompile Include="src\sdl\dummy.cpp" />
     <ClCompile Include="src\sdl\filters.cpp" />
-    <ClCompile Include="src\sdl\getopt.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Profile|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Profile_FastCap|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
-    <ClCompile Include="src\sdl\getopt1.c">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Profile|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Profile_FastCap|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">CompileAsC</CompileAs>
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
-    </ClCompile>
     <ClCompile Include="src\sdl\gl_fakegl.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">CompileAsC</CompileAs>
@@ -434,7 +417,6 @@
     </ClCompile>
     <ClCompile Include="src\sdl\inputSDL.cpp" />
     <ClCompile Include="src\sdl\SDL.cpp" />
-    <ClCompile Include="src\sdl\text.cpp" />
     <ClCompile Include="src\Util.cpp" />
     <ClCompile Include="src\Xbox\Favorites.cpp" />
     <ClCompile Include="src\Xbox\GeneralFunctions.cpp" />

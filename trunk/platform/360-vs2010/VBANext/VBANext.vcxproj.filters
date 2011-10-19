@@ -421,19 +421,7 @@
     <ClCompile Include="src\gba\Sound.cpp">
       <Filter>Source Files\vba\gba</Filter>
     </ClCompile>
-    <ClCompile Include="src\sdl\text.cpp">
-      <Filter>Source Files\vba\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sdl\dummy.cpp">
-      <Filter>Source Files\vba\sdl</Filter>
-    </ClCompile>
     <ClCompile Include="src\sdl\filters.cpp">
-      <Filter>Source Files\vba\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sdl\getopt1.c">
-      <Filter>Source Files\vba\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sdl\getopt.c">
       <Filter>Source Files\vba\sdl</Filter>
     </ClCompile>
     <ClCompile Include="src\sdl\inputSDL.cpp">
