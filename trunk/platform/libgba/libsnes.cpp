@@ -80,7 +80,7 @@ static void gba_init(void)
    CPUReset();
 
    soundInit();
-   soundSetSampleRate(31900);
+   soundSetSampleRate(32000);
    soundReset();
    soundResume();
 

@@ -4,7 +4,7 @@ ifeq ($(shell uname -a),)
    platform = win
 else ifneq ($(findstring MINGW,$(shell uname -a)),)
    platform = win
-else ifneq ($(findstring windows32,$(shell uname -a)),)
+else ifneq ($(findstring win,$(shell uname -a)),)
    platform = win
 else ifneq ($(findstring Darwin,$(shell uname -a)),)
    platform = osx
@@ -20,7 +20,7 @@ else ifeq ($(platform), osx)
    fpic := -fPIC
    SHARED := -dynamiclib
 else
-   TARGET := vbanext-git-x86_64.dll
+   TARGET := snes.dll
    CC = gcc
    CXX = g++
    SHARED := -shared
@@ -39,8 +39,8 @@ OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) libsnes.o
 
 VBA_DEFINES := -D__LIBGBA__
 
-CFLAGS += -O3 -g -std=gnu99 -fPIC $(VBA_DEFINES)
-CXXFLAGS += -O3 -g -fPIC $(VBA_DEFINES)
+CFLAGS += -O0 -g -std=gnu99 -fPIC $(VBA_DEFINES)
+CXXFLAGS += -O0 -g -fPIC $(VBA_DEFINES)
 LDFLAGS += -Wl,-no-undefined
 
 INCDIRS := -I$(VBA_DIR)

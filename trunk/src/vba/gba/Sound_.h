@@ -59,7 +59,7 @@ static const int32_t table [0x40] =
 		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
 };
 
-typedef struct gba_pcm_struct
+struct gba_pcm_struct
 {
 	Blip_Buffer* output;
 	int32_t last_time;
