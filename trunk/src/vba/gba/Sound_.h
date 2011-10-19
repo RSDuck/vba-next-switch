@@ -115,6 +115,7 @@ static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 	{
 		if ( pcm_s->output )
 		{
+			pcm_s->output->set_modified();
 			offset_resampled(pcm_synth.delta_factor, (SOUND_CLOCK_TICKS - soundTicks) * pcm_s->output->factor_ + pcm_s->output->offset_, -pcm_s->last_amp, pcm_s->output );
 		}
 		pcm_s->last_amp = 0;
@@ -125,7 +126,10 @@ static void apply_control_gba_pcm(gba_pcm_struct * pcm_s, int idx)
 #define END_FRAME_GBA_PCM(pcm_s, time) \
 	pcm_s.last_time -= time; \
 	if ( pcm_s.last_time < -2048 ) \
-		pcm_s.last_time = -2048;
+		pcm_s.last_time = -2048; \
+	\
+	if (pcm_s.output) \
+		pcm_s.output->set_modified();
 
 #ifdef USE_SOUNDINTERPOLATION
 #define UPDATE_GBA_PCM(pcm_s, dac) \

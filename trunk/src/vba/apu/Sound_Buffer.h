@@ -88,13 +88,17 @@ class Blip_Buffer
 	// Signals that sound has been added to buffer. Could be done automatically in
 	// Blip_Synth, but that would affect performance more, as you can arrange that
 	// this is called only once per time frame rather than for every delta.
+	void set_modified() { modified_ = this; }
 
+	// not documented yet
+	Blip_Buffer* clear_modified() { Blip_Buffer* b = modified_; modified_ = 0; return b; }
 	uint32_t factor_;
 	uint32_t offset_;
 	int32_t * buffer_;
 	int32_t buffer_size_;
 	int32_t reader_accum_;
 	int bass_shift_;
+	Blip_Buffer* modified_; // non-zero = true (more optimal than using bool, heh)
 	// Current output sample rate
 	int32_t sample_rate_;
 	// Number of source time units per second
