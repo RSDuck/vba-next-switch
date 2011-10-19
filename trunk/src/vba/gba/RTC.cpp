@@ -205,7 +205,7 @@ bool rtcWrite(uint32_t address, uint16_t value)
 
 void rtcReset(void)
 {
-	memset(&rtcClockData, 0, sizeof(rtcClockData));
+	__builtin_memset(&rtcClockData, 0, sizeof(rtcClockData));
 
 	rtcClockData.byte0 = 0;
 	rtcClockData.byte1 = 0;

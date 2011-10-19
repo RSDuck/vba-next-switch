@@ -214,7 +214,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, uint8_t *pix)
 		uint8_t importantcolors[4];
 		//    uint8_t pad[2];
 	} bmpheader;
-	memset(&bmpheader, 0, sizeof(bmpheader));
+	__builtin_memset(&bmpheader, 0, sizeof(bmpheader));
 
 	bmpheader.ident[0] = 'B';
 	bmpheader.ident[1] = 'M';
@@ -503,8 +503,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 	if(image == NULL)
 	{
 		// allocate buffer memory if none was passed to the function
-		int size_tmp = utilGetSize(size);
-		image = (uint8_t *)realloc(image, size_tmp);
+		image = (uint8_t *)__builtin_malloc(utilGetSize(size));
 		if(image == NULL)
 		{
 			fex_close(fe);
@@ -544,8 +543,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 	if(image == NULL)
 	{
 		//allocate buffer memory if none was passed to the function
-		int size_tmp = utilGetSize(size);
-		image = (uint8_t *)realloc(image, size_tmp);
+		image = (uint8_t *)__builtin_malloc(utilGetSize(size));
 		if(image == NULL)
 		{
 			systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
@@ -557,7 +555,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 	if(utilIsZipFile(file))
 	{
 		FILE *gd = NULL;
-		uint8_t * buf = (uint8_t *)realloc(buf, 64*1024*1024);
+		uint8_t * buf = (uint8_t *)malloc(64*1024*1024);
 		printf("ZIP file detected: %s\n", file);
 
 		// Open file 

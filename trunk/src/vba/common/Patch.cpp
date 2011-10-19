@@ -257,7 +257,7 @@ static bool patchApplyUPS(const char *patchname, u8 **rom, int *size)
   }
   if (dataSize > *size) {
     *rom = (u8*)realloc(*rom, dataSize);
-    memset(*rom + *size, 0, dataSize - *size);
+    __builtin_memset(*rom + *size, 0, dataSize - *size);
     *size = dataSize;
   }
 

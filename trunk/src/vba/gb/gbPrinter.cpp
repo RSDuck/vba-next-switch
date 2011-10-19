@@ -94,19 +94,19 @@ void gbPrinterReceiveData()
       if(control & 0x80) { // repeated data
         control &= 0x7f;
         control += 2;
-        memset(dest, *data++, control);
+        __builtin_memset(dest, *data++, control);
         len += control;
         dest += control;
       } else { // raw data
         control++;
-        memcpy(dest, data, control);
+        __builtin_memcpy(dest, data, control);
         dest += control;
         data += control;
         len += control;
       }
     }
   } else {
-    memcpy(&gbPrinterData[gbPrinterDataCount],
+    __builtin_memcpy(&gbPrinterData[gbPrinterDataCount],
            &gbPrinterPacket[6],
            gbPrinterDataSize);
     gbPrinterDataCount += gbPrinterDataSize;

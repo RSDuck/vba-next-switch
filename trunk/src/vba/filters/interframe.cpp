@@ -20,11 +20,11 @@ extern u32 qRGB_COLOR_MASK[2];
 
 static void Init()
 {
-  frm1 = (u8 *)calloc(322*242,4);
+  frm1 = (u8 *)__builtin_calloc(322*242,4);
   // 1 frame ago
-  frm2 = (u8 *)calloc(322*242,4);
+  frm2 = (u8 *)__builtin_calloc(322*242,4);
   // 2 frames ago
-  frm3 = (u8 *)calloc(322*242,4);
+  frm3 = (u8 *)__builtin_calloc(322*242,4);
   // 3 frames ago
 }
 

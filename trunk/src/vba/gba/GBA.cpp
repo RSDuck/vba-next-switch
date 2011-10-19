@@ -646,18 +646,18 @@ static void BIOS_RegisterRamReset(uint32_t flags)
 	if(flags)
 	{
 		if(flags & 0x01)
-			memset(workRAM, 0, 0x40000);	// clear work RAM
+			__builtin_memset(workRAM, 0, 0x40000);	// clear work RAM
 		if(flags & 0x02)
-			memset(internalRAM, 0, 0x7e00); // don't clear 0x7e00-0x7fff	// clear internal RAM
+			__builtin_memset(internalRAM, 0, 0x7e00); // don't clear 0x7e00-0x7fff	// clear internal RAM
 
 		if(flags & 0x04)
-			memset(paletteRAM, 0, 0x400);	// clear palette RAM
+			__builtin_memset(paletteRAM, 0, 0x400);	// clear palette RAM
 
 		if(flags & 0x08)
-			memset(vram, 0, 0x18000);	// clear VRAM
+			__builtin_memset(vram, 0, 0x18000);	// clear VRAM
 
 		if(flags & 0x10)
-			memset(oam, 0, 0x400);	// clean OAM
+			__builtin_memset(oam, 0, 0x400);	// clean OAM
 
 		if(flags & 0x80)
 		{
@@ -1048,7 +1048,7 @@ bool CPUReadGSASnapshot(const char *fileName)
 		if(buffer[i] < 32)
 			buffer[i] = 32;
 
-	memcpy(buffer2, &rom[0xa0], 16);
+	__builtin_memcpy(buffer2, &rom[0xa0], 16);
 	buffer2[16] = 0;
 
 	for(i = 0; i < 16; i++)
@@ -1111,7 +1111,7 @@ bool CPUReadGSASPSnapshot(const char *fileName)
 	fread(savename, 1, namesz, file);
 	savename[namesz] = 0;
 
-	memcpy(romname, &rom[0xa0], namesz);
+	__builtin_memcpy(romname, &rom[0xa0], namesz);
 	romname[namesz] = 0;
 
 	if(memcmp(romname, savename, namesz))
@@ -1190,14 +1190,14 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 	fwrite(buffer, 1, 4, file);
 
 	char *temp = new char[0x2001c];
-	memset(temp, 0, 28);
-	memcpy(temp, &rom[0xa0], 16); // copy internal name
+	__builtin_memset(temp, 0, 28);
+	__builtin_memcpy(temp, &rom[0xa0], 16); // copy internal name
 	temp[0x10] = rom[0xbe]; // reserved area (old checksum)
 	temp[0x11] = rom[0xbf]; // reserved area (old checksum)
 	temp[0x12] = rom[0xbd]; // complement check
 	temp[0x13] = rom[0xb0]; // maker
 	temp[0x14] = 1; // 1 save ?
-	memcpy(&temp[0x1c], flashSaveMemory, saveSize); // copy save
+	__builtin_memcpy(&temp[0x1c], flashSaveMemory, saveSize); // copy save
 	fwrite(temp, 1, totalSize, file); // write save + header
 	uint32_t crc = 0;
 
@@ -1440,7 +1440,7 @@ int CPULoadRom(const char *szFile)
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	rom = (uint8_t *)realloc(rom, 0x2000000);
+	rom = (uint8_t *)__builtin_malloc(0x2000000);
 	if(rom == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1449,7 +1449,7 @@ int CPULoadRom(const char *szFile)
 #endif
 		return 0;
 	}
-	workRAM = (uint8_t *)calloc(1, 0x40000);
+	workRAM = (uint8_t *)__builtin_calloc(1, 0x40000);
 	if(workRAM == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1512,7 +1512,7 @@ int CPULoadRom(const char *szFile)
 		temp++;
 	}
 
-	bios = (uint8_t *)calloc(1,0x4000);
+	bios = (uint8_t *)__builtin_calloc(1,0x4000);
 	if(bios == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1522,7 +1522,7 @@ int CPULoadRom(const char *szFile)
 		CPUCleanUp();
 		return 0;
 	}
-	internalRAM = (uint8_t *)calloc(1,0x8000);
+	internalRAM = (uint8_t *)__builtin_calloc(1,0x8000);
 	if(internalRAM == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1533,7 +1533,7 @@ int CPULoadRom(const char *szFile)
 		return 0;
 	}
 
-	paletteRAM = (uint8_t *)calloc(1,0x400);
+	paletteRAM = (uint8_t *)__builtin_calloc(1,0x400);
 	if(paletteRAM == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1543,7 +1543,7 @@ int CPULoadRom(const char *szFile)
 		CPUCleanUp();
 		return 0;
 	}
-	vram = (uint8_t *)calloc(1, 0x20000);
+	vram = (uint8_t *)__builtin_calloc(1, 0x20000);
 	if(vram == NULL) {
 #ifdef VBA_DEBUG
 		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
@@ -1552,7 +1552,7 @@ int CPULoadRom(const char *szFile)
 		CPUCleanUp();
 		return 0;
 	}
-	oam = (uint8_t *)calloc(1, 0x400);
+	oam = (uint8_t *)__builtin_calloc(1, 0x400);
 	if(oam == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1563,7 +1563,7 @@ int CPULoadRom(const char *szFile)
 		return 0;
 	}
 
-	pix = (uint8_t *)calloc(1, 4 * 241 * 162);
+	pix = (uint8_t *)__builtin_calloc(1, 4 * 241 * 162);
 	if(pix == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1574,7 +1574,7 @@ int CPULoadRom(const char *szFile)
 		return 0;
 	}
 
-	ioMem = (uint8_t *)calloc(1, 0x400);
+	ioMem = (uint8_t *)__builtin_calloc(1, 0x400);
 	if(ioMem == NULL)
 	{
 #ifdef VBA_DEBUG
@@ -1612,7 +1612,7 @@ void doMirroring (bool b)
 
 		while (mirroredRomAddress<0x01000000)
 		{
-			memcpy((uint16_t *)(rom+mirroredRomAddress), (uint16_t *)(rom), mirroredRomSize);
+			__builtin_memcpy((uint16_t *)(rom+mirroredRomAddress), (uint16_t *)(rom), mirroredRomSize);
 			mirroredRomAddress+=mirroredRomSize;
 		}
 	}
@@ -5593,7 +5593,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	}
 
 	if(!useBios)
-		memcpy(bios, myROM, sizeof(myROM));
+		__builtin_memcpy(bios, myROM, sizeof(myROM));
 
 	int i = 0;
 
@@ -5704,22 +5704,22 @@ void CPUReset()
 	rtcReset();
 
 	// clean registers
-	memset(&reg[0], 0, sizeof(reg));
+	__builtin_memset(&reg[0], 0, sizeof(reg));
 
 	// clean OAM
-	memset(oam, 0, 0x400);
+	__builtin_memset(oam, 0, 0x400);
 
 	// clean palette
-	memset(paletteRAM, 0, 0x400);
+	__builtin_memset(paletteRAM, 0, 0x400);
 
 	// clean picture
-	memset(pix, 0, 4*160*240);
+	__builtin_memset(pix, 0, 4*160*240);
 
 	// clean vram
-	memset(vram, 0, 0x20000);
+	__builtin_memset(vram, 0, 0x20000);
 
 	// clean io memory
-	memset(ioMem, 0, 0x400);
+	__builtin_memset(ioMem, 0, 0x400);
 
 	DISPCNT  = 0x0080;
 	DISPSTAT = 0x0000;

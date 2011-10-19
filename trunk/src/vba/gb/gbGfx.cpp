@@ -45,7 +45,7 @@ extern int layerSettings;
 
 void gbRenderLine()
 {
-  memset(gbLineMix, 0, sizeof(gbLineMix));
+  __builtin_memset(gbLineMix, 0, sizeof(gbLineMix));
   uint8_t * bank0;
   uint8_t * bank1;
   if(gbCgbMode) {
@@ -538,7 +538,7 @@ void gbDrawSprites(bool draw)
   int size = (register_LCDC & 4);
 
   if (!draw)
-    memset (gbSpritesTicks, 0, sizeof(gbSpritesTicks));
+    __builtin_memset (gbSpritesTicks, 0, sizeof(gbSpritesTicks));
 
   if(!(register_LCDC & 0x80))
     return;

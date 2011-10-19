@@ -1401,9 +1401,10 @@ void cheatsDelete(int number, bool restore)
         break;
       }
     }
-    if((x+1) <  cheatsNumber)
-	    memcpy(&cheatsList[x], &cheatsList[x+1], sizeof(CheatsData) * (cheatsNumber-x-1));
-
+    if((x+1) <  cheatsNumber) {
+      __builtin_memcpy(&cheatsList[x], &cheatsList[x+1], sizeof(CheatsData)*
+             (cheatsNumber-x-1));
+    }
     cheatsNumber--;
   }
 }

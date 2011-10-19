@@ -427,9 +427,9 @@ inline int32_t Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 
 	// Registers and wave RAM
 	if ( save )
-		memcpy( io->regs, regs, sizeof io->regs );
+		__builtin_memcpy( io->regs, regs, sizeof io->regs );
 	else
-		memcpy( regs, io->regs, sizeof     regs );
+		__builtin_memcpy( regs, io->regs, sizeof     regs );
 
 	// Frame sequencer
 	REFLECT( frame_time,  frame_time  );

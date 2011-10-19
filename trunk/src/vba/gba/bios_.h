@@ -872,7 +872,7 @@ static void BIOS_SoftReset(void)
 	reg[SPSR_SVC].I = 0x00000000;
 	u8 b = internalRAM[0x7ffa];
 
-	memset(&internalRAM[0x7e00], 0, 0x200);
+	__builtin_memset(&internalRAM[0x7e00], 0, 0x200);
 
 	if(b)
 	{
