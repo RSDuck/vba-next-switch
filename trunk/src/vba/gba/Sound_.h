@@ -36,6 +36,13 @@ bool  soundPaused        = true;
 #define soundVolume 0.5f
 static int soundEnableFlag   = 0x3ff; // emulator channels enabled
 
+#ifdef USE_SOUND_FILTERING
+static float soundFiltering_ = -1;
+// 1 if PCM should have low-pass filtering
+bool  soundInterpolation = true;
+// 0.0 = none, 1.0 = max
+float soundFiltering     = 0.5f;
+#endif
 
 //static float soundVolume_    = -1;
 #define soundVolume_ -1
@@ -376,6 +383,24 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
+#ifdef USE_SOUND_FILTERING
+static void apply_filtering(void)
+{
+	soundFiltering_ = soundFiltering;
+
+	int const base_freq = (int) (32768 - soundFiltering_ * 16384);
+	int const nyquist = stereo_buffer->sample_rate_ / 2;
+
+	for ( int i = 0; i < 3; i++ )
+	{
+		int cutoff = base_freq >> i;
+		if ( cutoff > nyquist )
+			cutoff = nyquist;
+		pcm_synth[i].treble_eq(blip_eq_t( 0, 0, stereo_buffer->sample_rate_, cutoff));
+	}
+}
+#endif
+
 void psoundTickfn(void)
 {
 	// Run sound hardware to present
@@ -389,6 +414,22 @@ void psoundTickfn(void)
 	// VBA will only ever store 1 frame worth of samples
 	uint32_t numSamples = stereo_buffer->read_samples(soundFinalWave, stereo_buffer->samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
+
+#ifdef USE_SOUND_FILTERING
+	if (soundFiltering_ != soundFiltering )
+		apply_filtering();
+
+	if (soundVolume_ != soundVolume )
+	{
+		//Apply Volume - False
+		soundVolume_ = soundVolume;
+
+		gb_apu->volume(soundVolume_ * apu_vols [ioMem [SGCNT0_H] & 3] );
+
+		pcm_synth.volume( 0.66 / 256 * soundVolume_);
+		//End of Apply Volume = False
+	}
+#endif
 }
 
 static void apply_muting(void)
@@ -431,6 +472,9 @@ static void remake_stereo_buffer(void)
 	// PCM
 	pcm[0].which = 0;
 	pcm[1].which = 1;
+#ifdef USE_SOUND_FILTERING
+	apply_filtering();
+#endif
 
 	// APU
 	if ( !gb_apu )
@@ -457,7 +501,7 @@ static void remake_stereo_buffer(void)
 	gb_apu->volume(soundVolume_ * apu_vols [ioMem [SGCNT0_H] & 3] );
 
 	float tempvolume = (0.66 / 256 * soundVolume_) * 1.0;
-	BLIP_SYNTH_VOLUME_UNIT(pcm_synth.delta_factor, tempvolume);
+	BLIP_SYNTH_VOLUME_UNIT(pcm_synth, tempvolume);
 	//End of Apply Volume - False
 }
 

@@ -36,7 +36,9 @@ Blip_Buffer::Blip_Buffer()
         buffer_       = 0;
         buffer_size_  = 0;
         sample_rate_  = 0;
+        bass_shift_   = 0;
         clock_rate_   = 0;
+        bass_freq_    = 16;
         length_       = 0;
         clear();
 }
@@ -98,10 +100,24 @@ int32_t Blip_Buffer::set_sample_rate(int32_t new_rate, int msec)
         // update these since they depend on sample rate
         if ( clock_rate_ )
                 clock_rate( clock_rate_ );
+        bass_freq( bass_freq_ );
 
         clear();
 
         return 0; // success
+}
+
+void Blip_Buffer::bass_freq( int freq )
+{
+        bass_freq_ = freq;
+        int shift = 31;
+        if ( freq > 0 )
+        {
+                shift = 13;
+                int32_t f = (freq << 16) / sample_rate_;
+                while ( (f >>= 1) && --shift ) { }
+        }
+        bass_shift_ = shift;
 }
 
 // Ends current time frame of specified duration and makes its samples available
@@ -376,6 +392,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 
         echo_size   = max(MAX_READ_TIMES_STEREO, echo_size_ & ~1 );
         clock_rate_ = 0;
+        bass_freq_  = 90;
         bufs_buffer       = 0;
         bufs_size   = 0;
         bufs_max    = max( max_bufs, EXTRA_CHANS);
@@ -453,6 +470,13 @@ void Effects_Buffer::clock_rate( int32_t rate )
                 bufs_buffer [i].clock_rate( clock_rate_ );
 }
 
+void Effects_Buffer::bass_freq( int freq )
+{
+        bass_freq_ = freq;
+        for ( int i = bufs_size; --i >= 0; )
+                bufs_buffer [i].bass_freq( bass_freq_ );
+}
+
 int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 {
 	channel_count_ = count;
@@ -498,6 +522,7 @@ int32_t Effects_Buffer::set_channel_count( int count, int const* types )
         chans [3].cfg.echo = true;
 
         clock_rate( clock_rate_ );
+        bass_freq( bass_freq_ );
         apply_config();
         echo_pos       = 0;
         s_struct.low_pass [0] = 0;
@@ -970,7 +995,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
 // The actual change in amplitude is delta * (volume / range)
 
 // Works directly in terms of fractional output samples. Contact author for more info.
-void offset_resampled(int32_t delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf )
+void offset_resampled(int delta_factor, uint32_t time, int delta, Blip_Buffer* blip_buf )
 {
 	delta *= delta_factor;
 	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);

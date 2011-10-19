@@ -34,8 +34,8 @@ class Gb_Osc
 	#endif
 	int dac_off_amp;		// amplitude when DAC is off
 	int last_amp;			// current amplitude in Blip_Buffer
-	Blip_Synth * good_synth;
-	Blip_Synth * med_synth;
+	Blip_Synth const* good_synth;
+	Blip_Synth const* med_synth;
 
 	int delay;			// clocks until frequency timer expires
 	int length_ctr;			// length counter
