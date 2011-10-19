@@ -212,7 +212,6 @@ static void cpuMasterCodeCheck(void)
 	if((mastercode) && (mastercode == armNextPC))
 	{
 		u32 joy = 0;
-		joy = systemReadJoypad(-1);
 		u32 ext = (joy >> 10);
 		cpuTotalTicks += cheatsCheckKeys(P1^0x3FF, ext);
 	}

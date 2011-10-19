@@ -204,12 +204,6 @@ void systemGbPrint(uint8_t *data,int pages,int feed,int palette, int contrast)
 }
 
 // updates the joystick data
-#if 0
-__attribute__ ((__always_inline__)) bool systemReadJoypads()
-{
-	return true;
-}
-#endif
 
 static void ingame_menu_enable (int enable)
 {
@@ -508,7 +502,7 @@ static void ingame_menu_enable (int enable)
 		} \
 	}
 
-void systemReadJoypad(int n)
+void systemReadJoypadGB(int n)
 {
 	//n is the max amount of players connected for us to loop through
 	const uint64_t pads_connected = cell_pad_input_pads_connected();

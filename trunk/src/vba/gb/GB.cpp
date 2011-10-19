@@ -4884,24 +4884,21 @@ gbRedoLoop:
 									}
 #endif
 
-#if 0
-									if(systemReadJoypads()) {
-#endif
 										// read joystick
 										if(gbSgbMode && gbSgbMultiplayer)
 										{
 											if(gbSgbFourPlayers)
 											{
-												systemReadJoypad(4);
+												systemReadJoypadGB(4);
 											}
 											else
 											{
-												systemReadJoypad(2);
+												systemReadJoypadGB(2);
 											}
 										}
 										else
 										{
-											systemReadJoypad(1);
+											systemReadJoypadGB(1);
 										}
 										//}
 									int newmask = gbJoymask[0] & 255;
@@ -5132,22 +5129,21 @@ gbRedoLoop:
 								systemDrawScreen();
 							}
 						}
-						//if(systemReadJoypads()) {
 						// read joystick
 						if(gbSgbMode && gbSgbMultiplayer)
 						{
 							if(gbSgbFourPlayers)
 							{
-								systemReadJoypad(4);
+								systemReadJoypadGB(4);
 							}
 							else
 							{
-								systemReadJoypad(2);
+								systemReadJoypadGB(2);
 							}
 						}
 						else
 						{
-							systemReadJoypad(1);
+							systemReadJoypadGB(1);
 						}
 						//}
 						gbFrameCount++;
@@ -5397,18 +5393,17 @@ gbRedoLoop:
 		{
 			if(!(register_LCDC & 0x80))
 			{
-				//if(systemReadJoypads()) {
 				// read joystick
 				if(gbSgbMode && gbSgbMultiplayer)
 				{
 					if(gbSgbFourPlayers)
-						systemReadJoypad(4);
+						systemReadJoypadGB(4);
 					else
-						systemReadJoypad(2);
+						systemReadJoypadGB(2);
 				}
 				else
 				{
-					systemReadJoypad(1);
+					systemReadJoypadGB(1);
 				}
 				//}
 			}

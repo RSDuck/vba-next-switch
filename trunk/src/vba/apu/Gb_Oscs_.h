@@ -281,12 +281,8 @@ inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if (!(GBA_WAVE_DAC_ENABLED()))
 					enabled = false;
-<<<<<<< HEAD
 				#ifndef USE_GBA_ONLY
-				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL_TIMES_2)) < (CLK_MUL_TIMES_2))
-=======
 				else if ( mode == MODE_DMG && enabled && (unsigned) (delay - (CLK_MUL << 1)) < (CLK_MUL << 1))
->>>>>>> parent of 19d52fb... channels_changed functions and variables removed - unused/unneeded
 					corrupt_wave();
 				#endif
 

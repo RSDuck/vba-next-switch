@@ -29,10 +29,8 @@ extern void systemDrawScreen();
 #endif
 
 // updates the joystick data
-extern bool systemReadJoypads();
-
 // return information about the given joystick, -1 for default joystick
-extern void systemReadJoypad(int);
+extern void systemReadJoypadGB(int);
 
 extern uint32_t systemGetClock();
 extern void systemMessage(int, const char *, ...);
