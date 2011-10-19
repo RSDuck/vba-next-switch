@@ -1,0 +1,5 @@
+<Settings>
+	<MappedDrive DriveName="GAME (XeX Location)" Path="GAME:\ROMS\"/>
+	<MappedDrive DriveName="USB Drive"  Path="USB0:\_Emus\Genesis\"/>	
+	<PreviewPath>hdd:\_Emus\Genesis360\Preview\</PreviewPath> 
+</Settings>

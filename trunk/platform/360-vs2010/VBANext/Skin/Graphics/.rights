@@ -1,0 +1,69 @@
+<!-- Type 'XBRIGHTS.EXE <filename>' to see the rights for a specific file -->
+
+<Rights>
+    <Right Name="Sample Code" English="Unless otherwise set forth in your Xbox 360 Development Kit License, that\nagreement allows you to reproduce, modify, and make derivative works of the\nSample Code, only for incorporation into one or more Xbox 360 Software Titles.\n" Japanese=""/>
+    <Right Name="Source Code Version of Redistributable Code" English="Unless otherwise set forth in your Xbox 360 Development Kit License, that\nagreement allows you to use the Source Code Version of the Redistributable\nCode in source code form internally only, and only to create and maintain\none or more Xbox 360 Software Titles.\n" Japanese=""/>
+    <Right Name="Object Code Version of Redistributable Code" English="Unless otherwise set forth in your Xbox 360 Development Kit License, that\nagreement allows you to reproduce and incorporate the Object Code Version\nof Redistributable Code in object code form only in and as an inseparable\npart of the Xbox 360 Software Titles.\n" Japanese=""/>
+    <Right Name="Source Code Version of Tools" English="Unless otherwise set forth in your Xbox 360 Development Kit License, that\nagreement allows you to reproduce, modify, and make derivative works of the\nSource Code Version of Tools, but only for internal use, and only to create\nand maintain one or more Xbox 360 Software Titles.\n" Japanese=""/>
+    <Right Name="Object Code Version of Tools" English="Unless otherwise set forth in your Xbox 360 Development Kit License, that\nagreement allows you to use the Object Code Version of Tools internally\nonly for developing and testing Xbox 360 Software Titles.\n" Japanese=""/>
+    <Right Name="Third Party Code" English="Third Party Code may only be used in accordance with the license terms set\nforth in a third party license agreement that applies to such code, or in\naccordance with supplemental license terms provided by Microsoft that apply\nto such code.\n" Japanese=""/>
+    <File Name=".rights" Rights="Object Code Version of Tools"/>
+    <File Name="arrow_grey.png" Rights="Object Code Version of Tools"/>
+    <File Name="arrow_orange.png" Rights="Object Code Version of Tools"/>
+    <File Name="arrow_yellow.png" Rights="Object Code Version of Tools"/>
+    <File Name="a_graphic.png" Rights="Object Code Version of Tools"/>
+    <File Name="blackcircle.png" Rights="Object Code Version of Tools"/>
+    <File Name="btn_Back.wav" Rights="Object Code Version of Tools"/>
+    <File Name="btn_Focus.wav" Rights="Object Code Version of Tools"/>
+    <File Name="btn_Select.wav" Rights="Object Code Version of Tools"/>
+    <File Name="Button_box_Disable.png" Rights="Object Code Version of Tools"/>
+    <File Name="button_box_normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="button_box_orange.png" Rights="Object Code Version of Tools"/>
+    <File Name="button_box_yellow.png" Rights="Object Code Version of Tools"/>
+    <File Name="b_graphic.png" Rights="Object Code Version of Tools"/>
+    <File Name="Focus_circle.png" Rights="Object Code Version of Tools"/>
+    <File Name="graphic_scene.png" Rights="Object Code Version of Tools"/>
+    <File Name="graphic_X.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Blu_Focus.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Blu_Normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Disable.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Green_Focus.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Green_Normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Red_Focus.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Red_Normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Yello_Focus.png" Rights="Object Code Version of Tools"/>
+    <File Name="Legend_Button_Yello_Normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="pattern1.png" Rights="Object Code Version of Tools"/>
+    <File Name="radialdialstick_glow.png" Rights="Object Code Version of Tools"/>
+    <File Name="radialdial_hovergraphic.png" Rights="Object Code Version of Tools"/>
+    <File Name="radialdial_shine.png" Rights="Object Code Version of Tools"/>
+    <File Name="radial_slider_disabled.png" Rights="Object Code Version of Tools"/>
+    <File Name="radial_slider_grey.png" Rights="Object Code Version of Tools"/>
+    <File Name="radial_slider_orange.png" Rights="Object Code Version of Tools"/>
+    <File Name="radiobutton_disable.png" Rights="Object Code Version of Tools"/>
+    <File Name="radiobutton_dot.png" Rights="Object Code Version of Tools"/>
+    <File Name="radiobutton_focus.png" Rights="Object Code Version of Tools"/>
+    <File Name="radiobutton_normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="radiobutton_normalselect.png" Rights="Object Code Version of Tools"/>
+    <File Name="scenehighlight.png" Rights="Object Code Version of Tools"/>
+    <File Name="scene_shine.png" Rights="Object Code Version of Tools"/>
+    <File Name="scrollbackground.png" Rights="Object Code Version of Tools"/>
+    <File Name="scrollbackground_vert.png" Rights="Object Code Version of Tools"/>
+    <File Name="scrollbutton_gry.png" Rights="Object Code Version of Tools"/>
+    <File Name="scrollbutton_gry_vert.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_arrow_down.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_arrow_left.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_arrow_right.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_arrow_up.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_circle_press.png" Rights="Object Code Version of Tools"/>
+    <File Name="shine_cirlce_normal.png" Rights="Object Code Version of Tools"/>
+    <File Name="Shine_Pill.png" Rights="Object Code Version of Tools"/>
+    <File Name="Shine_Pill_Press.png" Rights="Object Code Version of Tools"/>
+    <File Name="slider.png" Rights="Object Code Version of Tools"/>
+    <File Name="slider2.png" Rights="Object Code Version of Tools"/>
+    <File Name="sliderbutton.png" Rights="Object Code Version of Tools"/>
+    <File Name="sliderbutton2.png" Rights="Object Code Version of Tools"/>
+    <File Name="textbox.png" Rights="Object Code Version of Tools"/>
+    <File Name="x_graphic.png" Rights="Object Code Version of Tools"/>
+    <File Name="y_graphic.png" Rights="Object Code Version of Tools"/>
+</Rights>

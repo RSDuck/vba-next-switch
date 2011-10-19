@@ -1,0 +1,90 @@
+<XuiCanvas version="000c">
+<Properties>
+<Width>1280.000000</Width>
+<Height>720.000000</Height>
+</Properties>
+<XuiScene>
+<Properties>
+<Id>XuiScene1</Id>
+<Width>1280.000000</Width>
+<Height>720.000000</Height>
+<ClassOverride>ScnPickPath</ClassOverride>
+<DefaultFocus>BtnUsb</DefaultFocus>
+</Properties>
+<XuiControl>
+<Properties>
+<Id>XuiControl1</Id>
+<Width>980.000000</Width>
+<Height>559.000000</Height>
+<Position>150.000000,83.000000,0.000000</Position>
+<Visual>BackgroundPanel</Visual>
+</Properties>
+</XuiControl>
+<XuiText>
+<Properties>
+<Id>XuiText1</Id>
+<Width>1280.000000</Width>
+<Height>84.000008</Height>
+<Position>0.000000,114.000000,0.000000</Position>
+<Text>Freestyle XBox 360 Dashboard</Text>
+<TextColor>0xffebebeb</TextColor>
+<DropShadowColor>0x800f0f0f</DropShadowColor>
+<PointSize>44.000000</PointSize>
+<Font>Arial Unicode MS</Font>
+<TextStyle>1041</TextStyle>
+</Properties>
+</XuiText>
+<XuiText>
+<Properties>
+<Id>XuiText2</Id>
+<Width>1280.000000</Width>
+<Height>60.000000</Height>
+<Position>0.000000,243.000000,0.000000</Position>
+<Text>Please select where to save the dashboard data
+</Text>
+<TextColor>0xffebebeb</TextColor>
+<DropShadowColor>0x800f0f0f</DropShadowColor>
+<PointSize>28.000000</PointSize>
+<TextStyle>1041</TextStyle>
+</Properties>
+</XuiText>
+<XuiButton>
+<Properties>
+<Id>BtnUsb</Id>
+<Width>250.000000</Width>
+<Height>45.000000</Height>
+<Position>515.000000,329.000000,0.000000</Position>
+<Visual>btn_single</Visual>
+<NavDown>BtnHDD</NavDown>
+<Text>USB Drive</Text>
+</Properties>
+</XuiButton>
+<XuiButton>
+<Properties>
+<Id>BtnHDD</Id>
+<Width>250.000000</Width>
+<Height>45.000000</Height>
+<Position>515.000000,377.000000,0.000000</Position>
+<Visual>btn_single</Visual>
+<NavUp>BtnUsb</NavUp>
+<Text>XBox Hard Drive</Text>
+</Properties>
+</XuiButton>
+<XuiText>
+<Properties>
+<Id>XuiText3</Id>
+<Width>1280.000000</Width>
+<Height>138.000000</Height>
+<Position>0.000000,435.000000,0.000000</Position>
+<Text>Data will be placed in a folder called 'fsdata' in the root directory of the selected drive.
+
+If you choose the xbox hard drive, you will only be able to run the content indexer via ftp.
+
+To get artwork, genres, and descriptions for the games you need to run the content indexer.</Text>
+<TextColor>0xffebebeb</TextColor>
+<DropShadowColor>0x800f0f0f</DropShadowColor>
+<TextStyle>1025</TextStyle>
+</Properties>
+</XuiText>
+</XuiScene>
+</XuiCanvas>
