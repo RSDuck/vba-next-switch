@@ -1,11 +1,3 @@
-//--------------------------------------------------------------------------------------
-// XuiTutorial.cpp
-//
-// Shows how to display and use a simple XUI scene.
-//
-// Xbox Advanced Technology Group.
-// Copyright (C) Microsoft Corporation. All rights reserved.
-//--------------------------------------------------------------------------------------
 #include <xtl.h>
 #include <xui.h>
 #include <xuiapp.h>
@@ -15,8 +7,6 @@
 #include <vector>
 
 #include "GeneralFunctions.h"
-
-
 
 #ifndef INGAMEOPTIONS_H
 #define INGAMEOPTIONS_H
@@ -46,20 +36,19 @@ void InGameMenuFirstFunc(XUIMessage *pMsg, InGameMenuStruct* pData, int iVal1);
 //--------------------------------------------------------------------------------------
 class CInGameOptions : public CXuiSceneImpl
 {
+	protected:
 
-protected:
-
-    // Control and Element wrapper objects.
-    CXuiControl m_SaveState;
-    CXuiControl m_LoadState;
+	// Control and Element wrapper objects.
+	CXuiControl m_SaveState;
+	CXuiControl m_LoadState;
 
 	CXuiControl m_BackToGame;
 
 	CXuiControl m_ExitGame;
 	CXuiControl m_TakePreview;
 	CXuiControl m_Reset;
- 
-	
+
+
 	CXuiControl m_Simple2x;
 	CXuiControl m_Scanlines;
 	CXuiCheckbox m_Scale2x;
@@ -77,33 +66,21 @@ protected:
 	CXuiRadioGroup m_FilterGroup;
 
 	CRITICAL_SECTION m_CriticalSection;
-	
 
-    // Message map.
-    XUI_BEGIN_MSG_MAP()
+
+	// Message map.
+	XUI_BEGIN_MSG_MAP()
 		XUI_ON_XM_INIT( OnInit )
 		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )	
 		XUI_ON_XM_MESSAGE_ON_INGAME_MENU( OnInGameMenu )
-    XUI_END_MSG_MAP()
-
-	
-
-
- 
-public:
-    HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
-	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
-	HRESULT OnInGameMenu ( int iVal1, BOOL& bHandled );
-
-	 
-public:
-
-    // Define the class. The class name must match the ClassOverride property
-    // set for the scene in the UI Authoring tool.
-    XUI_IMPLEMENT_CLASS( CInGameOptions, L"InGameOptions", XUI_CLASS_SCENE )
+		XUI_END_MSG_MAP()
+	public:
+		long OnInit( XUIMessageInit* pInitData, int& bHandled );
+		long OnNotifyPress( HXUIOBJ hObjPressed, int& bHandled );
+		long OnInGameMenu ( int iVal1, int& bHandled );
+		// Define the class. The class name must match the ClassOverride property
+		// set for the scene in the UI Authoring tool.
+		XUI_IMPLEMENT_CLASS( CInGameOptions, L"InGameOptions", XUI_CLASS_SCENE )
 };
-
-
- 
 
 #endif

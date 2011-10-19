@@ -9,9 +9,8 @@
 
 class CXAudio2 : public IXAudio2VoiceCallback 
 {
-private:
- 
-	
+	private:
+
 	HANDLE threadHandle;
 
 	bool initDone;							// has init been called successfully?
@@ -19,7 +18,7 @@ private:
 	XAUDIO2_VOICE_STATE                               vState;
 	IXAudio2*                                               pXAudio2;
 	IXAudio2MasteringVoice* pMasteringVoice;
-	
+
 	WAVEFORMATEX    wfx;
 
 	//SOund TEST
@@ -29,18 +28,18 @@ private:
 
 	int cbLoopLen;                                                 
 	int nXAudio2Fps;             
-	
+
 	int nAudSegCount;
-	
+
 
 	volatile bool exitThread;				// switch to exit the thread 
-	
+
 	volatile LONG emptyBuffers;	
- 
+
 
 	void PushBuffer(UINT32 AudioBytes,BYTE *pAudioData,void *pContext);	
 
-	
+
 	bool InitXAudio2(void);
 	void DeInitXAudio2(void);
 
@@ -48,16 +47,16 @@ private:
 
 	CRITICAL_SECTION audSection;
 
-public:
+	public:
 	CXAudio2(void);
 	~CXAudio2(void);
-		
+
 	// inherited from IXAudio2VoiceCallback - we only use OnBufferEnd
 	STDMETHODIMP_(void) OnBufferEnd(void *pBufferContext);
 	STDMETHODIMP_(void) OnBufferStart(void *pBufferContext){}
 	STDMETHODIMP_(void) OnLoopEnd(void *pBufferContext){}
 	STDMETHODIMP_(void) OnStreamEnd() {}
-	STDMETHODIMP_(void) OnVoiceError(void *pBufferContext, HRESULT Error) {}
+	STDMETHODIMP_(void) OnVoiceError(void *pBufferContext, long Error) {}
 	STDMETHODIMP_(void) OnVoiceProcessingPassEnd() {}
 	STDMETHODIMP_(void) OnVoiceProcessingPassStart(UINT32 BytesRequired) {}
 

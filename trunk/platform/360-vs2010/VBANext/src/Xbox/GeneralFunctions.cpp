@@ -1,5 +1,3 @@
-
-
 #include "GeneralFunctions.h"
 //#include "Direct3D.h"
 #include "KernelExports.h"
@@ -7,13 +5,13 @@
 
 //extern CDirect3D Direct3D;
 
-long DXTRACE_ERR_MSGBOX( char *str, HRESULT hr )
+long DXTRACE_ERR_MSGBOX( char *str, long hr)
 {
 	// stubbed code
 	return S_OK;
 }
 
-long DXTRACE_ERR( char *str, HRESULT hr )
+long DXTRACE_ERR( char *str, long hr)
 {
 	// stubbed code
 	return S_OK;
@@ -34,19 +32,19 @@ unsigned long CheckMenuItem(HMENU hmenu, unsigned int uIDCheckItem, unsigned int
 
 const char *GetFilename (char *path, const char *InFileName, char *fext)
 {
-    static char filename [MAX_PATH + 1];
-    char dir [_MAX_DIR + 1];
-    char drive [_MAX_DRIVE + 1];
-    char fname [42];
-    char ext [_MAX_EXT + 1];
-   _splitpath (InFileName, drive, dir, fname, ext);
+	static char filename [MAX_PATH + 1];
+	char dir [_MAX_DIR + 1];
+	char drive [_MAX_DRIVE + 1];
+	char fname [42];
+	char ext [_MAX_EXT + 1];
+	_splitpath (InFileName, drive, dir, fname, ext);
 
-   std::string fatxfname(fname);
+	std::string fatxfname(fname);
 	if (fatxfname.length() > 37)
-			fatxfname = fatxfname.substr(0,36);
+		fatxfname = fatxfname.substr(0,36);
 
-   _snprintf(filename, sizeof(filename),  "%s%s.%s",path, fatxfname.c_str(), fext);
-    return (filename);
+	_snprintf(filename, sizeof(filename),  "%s%s.%s",path, fatxfname.c_str(), fext);
+	return (filename);
 }
 
 
@@ -56,47 +54,47 @@ const char *GetFilename (char *path, const char *InFileName, char *fext)
 //--------------------------------------------------------------------------------------
 long LoadFile( const char * strFileName, VOID** ppFileData, unsigned long * pdwFileSize )
 {
-    if( pdwFileSize )
-        *pdwFileSize = 0L;
+	if( pdwFileSize )
+		*pdwFileSize = 0L;
 
-    // Open the file for reading
-    HANDLE hFile = CreateFile( strFileName, GENERIC_READ, 0, NULL,
-                               OPEN_EXISTING, 0, NULL );
+	// Open the file for reading
+	HANDLE hFile = CreateFile( strFileName, GENERIC_READ, 0, NULL,
+			OPEN_EXISTING, 0, NULL );
 
-    if( INVALID_HANDLE_VALUE == hFile )
-        return E_HANDLE;
+	if( INVALID_HANDLE_VALUE == hFile )
+		return E_HANDLE;
 
-    unsigned long dwFileSize = GetFileSize( hFile, NULL );
-    VOID* pFileData = malloc( dwFileSize );
+	unsigned long dwFileSize = GetFileSize( hFile, NULL );
+	VOID* pFileData = malloc( dwFileSize );
 
-    if( NULL == pFileData )
-    {
-        CloseHandle( hFile );
-        return E_OUTOFMEMORY;
-    }
+	if( NULL == pFileData )
+	{
+		CloseHandle( hFile );
+		return E_OUTOFMEMORY;
+	}
 
-    unsigned long dwBytesRead;
-    if( !ReadFile( hFile, pFileData, dwFileSize, &dwBytesRead, NULL ) )
-    {
-        CloseHandle( hFile );
-        free( pFileData );
-        return E_FAIL;
-    }
+	unsigned long dwBytesRead;
+	if( !ReadFile( hFile, pFileData, dwFileSize, &dwBytesRead, NULL ) )
+	{
+		CloseHandle( hFile );
+		free( pFileData );
+		return E_FAIL;
+	}
 
-    // Finished reading file
-    CloseHandle( hFile );
+	// Finished reading file
+	CloseHandle( hFile );
 
-    if( dwBytesRead != dwFileSize )
-    {
-        free( pFileData );
-        return E_FAIL;
-    }
+	if( dwBytesRead != dwFileSize )
+	{
+		free( pFileData );
+		return E_FAIL;
+	}
 
-    if( pdwFileSize )
-        *pdwFileSize = dwFileSize;
-    *ppFileData = pFileData;
+	if( pdwFileSize )
+		*pdwFileSize = dwFileSize;
+	*ppFileData = pFileData;
 
-    return S_OK;
+	return S_OK;
 }
 
  

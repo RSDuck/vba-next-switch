@@ -35,7 +35,6 @@ int xbox_input_update(void);
  
 void SaveConfig(void)
 {
-
 	HANDLE hEventComplete = NULL;
 	XOVERLAPPED xov = {0};
 
@@ -43,9 +42,9 @@ void SaveConfig(void)
 	hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
 
 	xov.hEvent = hEventComplete;
-	
+
 	HANDLE stream = xStorage.OpenStream("VBAConfig", L"Visual Boy Advance 360 Configuration", &xov, &hEventComplete);
-	
+
 	if (stream)
 	{
 		xStorage.WriteStream(stream, (char *)&config, sizeof(config));
@@ -89,7 +88,7 @@ void LoadSRAM(void)
 	swprintf_s(contentData.szDisplayName,romName);
 	strcpy_s(contentData.szFileName,srmName);
 
-//	xStorage.ReadSaveGame(&contentData, (char *)sram.sram, 0x10000, (DWORD *)len);
+//	xStorage.ReadSaveGame(&contentData, (char *)sram.sram, 0x10000, (unsigned long *)len);
 
 }
 
@@ -101,7 +100,7 @@ void InRescanRomsFirstFunc(XUIMessage *pMsg, InRescanRomsStruct* pData, char *sz
 	
 }
 
-void AddToFavorites(char *path, char*file, DWORD numFavs)
+void AddToFavorites(char *path, char*file, unsigned long numFavs)
 {
 	FAVORITE fav;
 
@@ -129,48 +128,41 @@ void AddToFavorites(char *path, char*file, DWORD numFavs)
 	config.numfavs++;
 }
 
-void AddAllToFavorites(char *buff, DWORD size)
-{
-	
-
-
-}
-
+void AddAllToFavorites(char *buff, unsigned long size) {}
 
 // Handler for the XM_NOTIFY message
-HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed, 
-       BOOL& bHandled )
-    {
-		int nIndex;
+long CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed, int& bHandled )
+{
+	int nIndex;
 
-        if ( hObjPressed == m_RomList )
-        {
-			 
-			nIndex = m_RomList.GetCurSel();
-						 
-			//XuiSceneCreate( L"file://game:/media/VBASkin.xzp#Skin\\", L"InGameOptions.xur", NULL, &hScene );
-			//this->NavigateForward(hScene);	
+	if ( hObjPressed == m_RomList )
+	{
 
-			strcpy(InGamePreview, (char *)GetFilename((char *)romPaths.m_PreviewPath.c_str(), (char *)m_ListData[nIndex].c_str(), "png"));
-			
-			gba_main((char *)romPath->second.c_str(), (char *)m_ListData[nIndex].c_str());
+		nIndex = m_RomList.GetCurSel();
 
-			SaveConfig();
-			 
-			bHandled = TRUE;
-			return S_OK;
-			
-        }
-		else if (hObjPressed == m_AddToFavorites)
+		//XuiSceneCreate( L"file://game:/media/VBASkin.xzp#Skin\\", L"InGameOptions.xur", NULL, &hScene );
+		//this->NavigateForward(hScene);	
+
+		strcpy(InGamePreview, (char *)GetFilename((char *)romPaths.m_PreviewPath.c_str(), (char *)m_ListData[nIndex].c_str(), "png"));
+
+		gba_main((char *)romPath->second.c_str(), (char *)m_ListData[nIndex].c_str());
+
+		SaveConfig();
+
+		bHandled = TRUE;
+		return S_OK;
+
+	}
+	else if (hObjPressed == m_AddToFavorites)
+	{
+		const WCHAR * button_text = L"OK";
+
+		if (m_ListData.size() > 0)
 		{
-			const WCHAR * button_text = L"OK";
-
-			if (m_ListData.size() > 0)
-			{
-			DWORD nIndex = m_RomList.GetCurSel();
+			unsigned long nIndex = m_RomList.GetCurSel();
 
 			map<string, string>::const_iterator it = favList.find(m_ListData[nIndex]);
-			 
+
 			if ( it == favList.end() || favList.size() == 0 )
 			{
 				AddToFavorites((char *)romPath->second.c_str(), (char *)m_ListData[nIndex].c_str(), config.numfavs);				
@@ -181,84 +173,84 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			{
 				ShowMessageBoxEx(NULL,NULL,L"Favorites", L"Game already in your Favorites", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
 			}
-			}
-
 		}
-		else if (hObjPressed == m_NextDevice)
+
+	}
+	else if (hObjPressed == m_NextDevice)
+	{
+		XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
+
+		romPath++;
+
+		if (romPath == romPaths.GetDeviceMapEnd())
 		{
-			XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
-
-			romPath++;
- 
-			if (romPath == romPaths.GetDeviceMapEnd())
-			{
-				romPath = romPaths.GetDeviceMapBegin();
-			}
-
-
-			XUIMessage xuiMsg;
-			InRescanRomsStruct msgData;
-			InRescanRomsFirstFunc( &xuiMsg, &msgData, (char *)romPath->second.c_str() );
-			XuiSendMessage( m_RomList.m_hObj, &xuiMsg );
-
-			strcpy((char *)szRomPath, romPath->first.c_str());
-			swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
-			m_DeviceText.SetText(DeviceText);			
-			m_RomList.SetCurSel(0);			 
-
-
-			SaveConfig();
-
-			return S_OK;
-
+			romPath = romPaths.GetDeviceMapBegin();
 		}
 
-		if( XuiControlIsBackButton( hObjPressed ) )
-		{
-			this->NavigateBack();
 
-		}
-		
- 
-		 
-        bHandled = TRUE;
-        return S_OK;
-    }
+		XUIMessage xuiMsg;
+		InRescanRomsStruct msgData;
+		InRescanRomsFirstFunc( &xuiMsg, &msgData, (char *)romPath->second.c_str() );
+		XuiSendMessage( m_RomList.m_hObj, &xuiMsg );
 
-
-    //----------------------------------------------------------------------------------
-    // Performs initialization tasks - retreives controls.
-    //----------------------------------------------------------------------------------
-HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
-    {
- 
-        // Retrieve controls for later use.
-        GetChildById( L"XuiAddToFavorites", &m_AddToFavorites );
-        GetChildById( L"XuiPlay", &m_PlayRom );
-        GetChildById( L"XuiMainMenu", &m_Back );		 
-		GetChildById( L"XuiRomList", &m_RomList );
-		GetChildById( L"XuiRomPreview", &m_PreviewImage );	 		 
-		//GetChildById( L"XuiBackVideoRoms", &m_BackVideo );
-		GetChildById( L"XuiCurrentDeviceText", &m_DeviceText);
-		GetChildById( L"XuiNextDeviceButton", &m_NextDevice);
-
-		//m_BackVideo.SetVolume(-96.0);		 
-		//m_BackVideo.Play( L"file://game:/media/Genesis360.xzp#Skin\\GenesisVideo.wmv" );
-
-		phObj = this->m_hObj;
-
-		m_RomList.DiscardResources(XUI_DISCARD_ALL);
-		m_RomList.SetFocus();
-		m_RomList.SetCurSel(0);
- 
+		strcpy((char *)szRomPath, romPath->first.c_str());
 		swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
-		m_DeviceText.SetText(DeviceText);
+		m_DeviceText.SetText(DeviceText);			
+		m_RomList.SetCurSel(0);			 
 
-		BuildFavorites(); 
 
-		bHandled = TRUE;
-        return S_OK;
-    }
+		SaveConfig();
+
+		return S_OK;
+
+	}
+
+	if( XuiControlIsBackButton( hObjPressed ) )
+	{
+		this->NavigateBack();
+
+	}
+
+
+
+	bHandled = TRUE;
+	return S_OK;
+}
+
+
+//----------------------------------------------------------------------------------
+// Performs initialization tasks - retrieves controls.
+//----------------------------------------------------------------------------------
+long CRomListScene::OnInit( XUIMessageInit* pInitData, int& bHandled )
+{
+
+	// Retrieve controls for later use.
+	GetChildById( L"XuiAddToFavorites", &m_AddToFavorites );
+	GetChildById( L"XuiPlay", &m_PlayRom );
+	GetChildById( L"XuiMainMenu", &m_Back );		 
+	GetChildById( L"XuiRomList", &m_RomList );
+	GetChildById( L"XuiRomPreview", &m_PreviewImage );	 		 
+	//GetChildById( L"XuiBackVideoRoms", &m_BackVideo );
+	GetChildById( L"XuiCurrentDeviceText", &m_DeviceText);
+	GetChildById( L"XuiNextDeviceButton", &m_NextDevice);
+
+	//m_BackVideo.SetVolume(-96.0);		 
+	//m_BackVideo.Play( L"file://game:/media/Genesis360.xzp#Skin\\GenesisVideo.wmv" );
+
+	phObj = this->m_hObj;
+
+	m_RomList.DiscardResources(XUI_DISCARD_ALL);
+	m_RomList.SetFocus();
+	m_RomList.SetCurSel(0);
+
+	swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
+	m_DeviceText.SetText(DeviceText);
+
+	BuildFavorites(); 
+
+	bHandled = TRUE;
+	return S_OK;
+}
 
 CRomList::CRomList()
 {
@@ -298,10 +290,10 @@ CRomList::CRomList()
 }
  
 
-HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
+long CRomList::OnNotify( XUINotify *hObj, int& bHandled )
 {
 	wchar_t previewPath[MAX_PATH];
-	 
+
 
 	HXUIOBJ hPreviewImage;
 
@@ -309,17 +301,17 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 	switch(hObj->dwNotify)
 	{
 		case XN_SELCHANGED:
-			 						 
+
 			nIndex = XuiListGetCurSel( this->m_hObj, NULL );
-			
+
 			const char *fname = GetFilename((char *)romPaths.m_PreviewPath.c_str(), (char *)m_ListData[nIndex].c_str(), "png");
 			XuiElementGetChildById( phObj, 
-                L"XuiRomPreview", &hPreviewImage );
+					L"XuiRomPreview", &hPreviewImage );
 
 			if (GetFileAttributes(fname) != -1)
 			{
 				string previewName(fname);
-	 
+
 				swprintf_s(previewPath,L"file://%S", ReplaceCharInString(romPaths.m_PreviewPath, '\\', "/").c_str());
 				XuiElementDiscardResources(hPreviewImage, XUI_DISCARD_ALL);
 				XuiElementSetBasePath(hPreviewImage, previewPath);
@@ -333,7 +325,7 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 				XuiElementDiscardResources(hPreviewImage, XUI_DISCARD_ALL);
 				XuiImageElementSetImagePath(hPreviewImage, L"nintendo_blue.jpg");
 			}
-						 
+
 			break;
 
 	}

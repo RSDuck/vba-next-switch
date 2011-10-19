@@ -1,4 +1,3 @@
-
 #include <xtl.h>
 #include <string.h>
 #include <fcntl.h>
@@ -15,17 +14,14 @@ extern u8 *pix;
  
 bool DoScreenshot(int width, int height)
 {
- 
 	emulator.emuWritePNG("game:\\previewsnap.png");
 	return TRUE;
-
 }
 
 
 bool DoScreenshot(int width, int height, char *fname)
 {
 	emulator.emuWritePNG(fname);
-    return TRUE;
-
+	return TRUE;
 }
 

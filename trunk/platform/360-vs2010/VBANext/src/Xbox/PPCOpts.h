@@ -3,11 +3,11 @@
 #ifndef PPCOPTS_H
 #define PPCOPTS_H
 
-static __inline int isel( int a, int x, int y )
+static inline int isel( int a, int x, int y )
 {
-    int mask = (a >> 31); // arithmetic shift right, splat out the sign bit
-    // mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.
-    return (x & (~mask)) + (y & mask);
+	int mask = (a >> 31); // arithmetic shift right, splat out the sign bit
+	// mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.
+	return (x & (~mask)) + (y & mask);
 };
 
 template <typename T> FORCEINLINE T VariableShiftLeft(T nVal, int nShift)
@@ -53,17 +53,17 @@ const DWORD g_dwDefaultBufferSizes[] =
 const DWORD         g_dwLargestBufferSize = g_dwDefaultBufferSizes[ARRAYSIZE( g_dwDefaultBufferSizes ) - 1];
 static DWORD        g_dwBufferSizeIndex = 0;
 
-template <typename t_type> static __inline BOOL AlignedToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
+template <typename t_type> static inline BOOL AlignedToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
 {
     return ( ( ( DWORD )t ) & ( dwPowerOf2 - 1 ) ) == 0;
 }
 
-template <typename t_type> static __inline t_type RoundDownToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
+template <typename t_type> static inline t_type RoundDownToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
 {
     return ( t_type )( ( ( DWORD )t ) & ~( dwPowerOf2 - 1 ) );
 }
 
-template <typename t_type> static __inline t_type RoundUpToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
+template <typename t_type> static inline t_type RoundUpToPowerOf2( const t_type& t, DWORD dwPowerOf2 )
 {
     return ( t_type )( ( ( ( DWORD )t ) + ( dwPowerOf2 - 1 ) ) & ~( dwPowerOf2 - 1 ) );
 }

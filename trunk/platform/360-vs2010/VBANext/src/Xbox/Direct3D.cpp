@@ -123,78 +123,77 @@ returns true if successful, false otherwise
 */
 bool CDirect3D::initialize(D3DDevice *pDev)
 {
- 
-	HRESULT hr;
+	long hr;
 	pDevice = pDev;
 	VOID* pCode = NULL;
-    DWORD dwSize = 0;
+	DWORD dwSize = 0;
 
 	ZeroMemory(&dPresentParams, sizeof(dPresentParams));	  
 	dPresentParams.BackBufferFormat = D3DFMT_X8R8G8B8; 
 	dPresentParams.BackBufferWidth = 1280;
 	dPresentParams.BackBufferHeight = 720;
 	dPresentParams.PresentationInterval = D3DPRESENT_INTERVAL_ONE ;
- 
+
 	pDevice->Reset(&dPresentParams);
- 
 
-	    // Compile pixel shader.
-    ID3DXBuffer* pPixelShaderCode;
-    ID3DXBuffer*  pPixelErrorMsg;
-    hr = D3DXCompileShader( g_strPixelShaderProgram,
-                            ( UINT )strlen( g_strPixelShaderProgram ),
-                            NULL,
-                            NULL,
-                            "main",
-                            "ps_2_0",
-                            0,
-                            &pPixelShaderCode,
-                            &pPixelErrorMsg,
-                            NULL );
-    if( FAILED( hr ) )
-    {
-        if( pPixelErrorMsg )
-            OutputDebugString( ( char* )pPixelErrorMsg->GetBufferPointer() );
-        return E_FAIL;
-    }
 
-    // Create pixel shader.
-    pDevice->CreatePixelShader( ( DWORD* )pPixelShaderCode->GetBufferPointer(),
-                                     &g_pPixelShader );
+	// Compile pixel shader.
+	ID3DXBuffer* pPixelShaderCode;
+	ID3DXBuffer*  pPixelErrorMsg;
+	hr = D3DXCompileShader( g_strPixelShaderProgram,
+			( UINT )strlen( g_strPixelShaderProgram ),
+			NULL,
+			NULL,
+			"main",
+			"ps_2_0",
+			0,
+			&pPixelShaderCode,
+			&pPixelErrorMsg,
+			NULL );
+	if( FAILED( hr ) )
+	{
+		if( pPixelErrorMsg )
+			OutputDebugString( ( char* )pPixelErrorMsg->GetBufferPointer() );
+		return E_FAIL;
+	}
 
-	    // Create vertex declaration
-    if( NULL == g_pGradientVertexDecl )
-    {
-        static const D3DVERTEXELEMENT9 decl[] =
-        {
+	// Create pixel shader.
+	pDevice->CreatePixelShader( ( DWORD* )pPixelShaderCode->GetBufferPointer(),
+			&g_pPixelShader );
+
+	// Create vertex declaration
+	if( NULL == g_pGradientVertexDecl )
+	{
+		static const D3DVERTEXELEMENT9 decl[] =
+		{
 			{ 0, 0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 },
 			{ 0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
-            D3DDECL_END()
-        };
+			D3DDECL_END()
+		};
 
-        if( FAILED( pDevice->CreateVertexDeclaration( decl, &g_pGradientVertexDecl ) ) )
-            return E_FAIL;
-    }
- 
-	    // Create vertex shader
-    if( NULL == g_pGradientVertexShader )
-    {
-        ID3DXBuffer* pShaderCode;
-        if( FAILED( D3DXCompileShader( g_strGradientShader, strlen( g_strGradientShader ),
-                                       NULL, NULL, "GradientVertexShader", "vs_2_0", 0,
-                                       &pShaderCode, NULL, NULL ) ) )
-            return false;
+		if( FAILED( pDevice->CreateVertexDeclaration( decl, &g_pGradientVertexDecl ) ) )
+			return E_FAIL;
+	}
 
-        if( FAILED( pDevice->CreateVertexShader( ( DWORD* )pShaderCode->GetBufferPointer(),
-                                                      &g_pGradientVertexShader ) ) )
-            return false;
+	// Create vertex shader
+	if( NULL == g_pGradientVertexShader )
+	{
+		ID3DXBuffer* pShaderCode;
+		if( FAILED( D3DXCompileShader( g_strGradientShader, strlen( g_strGradientShader ),
+						NULL, NULL, "GradientVertexShader", "vs_2_0", 0,
+						&pShaderCode, NULL, NULL ) ) )
+			return false;
+
+		if( FAILED( pDevice->CreateVertexShader( ( DWORD* )pShaderCode->GetBufferPointer(),
+						&g_pGradientVertexShader ) ) )
+			return false;
 
 		if (pShaderCode)
 		{
 			pShaderCode->Release();
 			pShaderCode = NULL;
 		}
-    }
+	}
 
 	if (NULL == vertexDeclaration)
 	{
@@ -221,11 +220,11 @@ bool CDirect3D::initialize(D3DDevice *pDev)
 	//}
 
 	//D3DXCompileShaderFromFile("game:\\Media\\Shaders\\Super2xSaI.fx",NULL,NULL,"S_FRAGMENT","ps_3_0",D3DXSHADER_MICROCODE_BACKEND_NEW,&ppShader,NULL,NULL);
-	 
+
 	//hr = pDevice->CreatePixelShader((DWORD*)ppShader->GetBufferPointer(),&g_pPixelShader);
-	  
+
 	//VideoMemory controls if we want bilinear filtering
-	 
+
 	if (config.pointfilter == 1)
 	{
 		pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
@@ -236,24 +235,24 @@ bool CDirect3D::initialize(D3DDevice *pDev)
 		pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 		pDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
 	}
-	 
+
 
 	pDevice->SetVertexShader( g_pGradientVertexShader );		
 	pDevice->SetPixelShader( g_pPixelShader );
 
-    pDevice->SetVertexDeclaration( g_pGradientVertexDecl );
+	pDevice->SetVertexDeclaration( g_pGradientVertexDecl );
 	pDevice->SetRenderState( D3DRS_VIEWPORTENABLE, FALSE );
 
-    
- 
-    // hr = D3DXCreateTextureFromFile( pDevice, 
-	//	"game:\\media\\ingame.png",                                                
-    //                                          &backTexture );
 
-	
-  
-		changeDrawSurfaceSize(2);
- 
+
+	// hr = D3DXCreateTextureFromFile( pDevice, 
+	//	"game:\\media\\ingame.png",                                                
+	//                                          &backTexture );
+
+
+
+	changeDrawSurfaceSize(2);
+
 
 	init_done = true;
 
@@ -325,7 +324,7 @@ void CDirect3D::render()
 	int iNewFilterScale;
 	D3DLOCKED_RECT lr;
 	D3DLOCKED_RECT lrConv;
-	HRESULT hr;
+	long hr;
 
 	if(!init_done) return;
  
@@ -385,7 +384,7 @@ and creates a new texture
 void CDirect3D::createDrawSurface()
 {
 	int neededSize;
-	HRESULT hr;
+	long hr;
 
 	//we need at least 512 pixels (SNES_WIDTH * 2) so we can start with that value
 	quadTextureSize = 512;
@@ -437,7 +436,7 @@ returns true if successful, false otherwise
 bool CDirect3D::blankTexture(LPDIRECT3DTEXTURE9 texture)
 {
 	D3DLOCKED_RECT lr;
-	HRESULT hr;
+	long hr;
 
 	if(FAILED(hr = texture->LockRect(0, &lr, NULL, 0))) {
 		DXTRACE_ERR_MSGBOX( TEXT("Unable to lock texture"), hr);
@@ -482,10 +481,10 @@ void CDirect3D::setupVertices()
 	float minFactor;
 	float renderWidthCalc,renderHeightCalc;
 	RECT drawRect;
-	 
+
 	void *pLockedVertexBuffer;
 	void *pLockedVertexBufferBG;
-	
+
 
 
 	if (config.aspect==0)
@@ -523,8 +522,8 @@ void CDirect3D::setupVertices()
 
 	}
 
-		float tX = (float)afterRenderWidth / bitmap.width;
-		float tY = (float)afterRenderHeight / bitmap.height;
+	float tX = (float)afterRenderWidth / bitmap.width;
+	float tY = (float)afterRenderHeight / bitmap.height;
 
 	//we need to substract -0.5 from the x/y coordinates to match texture with pixel space
 	//see http://msdn.microsoft.com/en-us/library/bb219690(VS.85).aspx
@@ -534,11 +533,11 @@ void CDirect3D::setupVertices()
 	triangleStripVertices[3] = VERTEX((float)drawRect.right - 0.5f,(float)drawRect.top - 0.5f,0.0f,1.0f,tX,0.0f);
 
 	/*triangleStripVerticesBG[0] = VERTEX((float)0 - 0.5f,(float)dPresentParams.BackBufferHeight - 0.5f,0.0f,1.0f,0.0f,1);
-	triangleStripVerticesBG[1] = VERTEX((float)0 - 0.5f,(float)0 - 0.5f,0.0f,1.0f,0.0f,0.0f);
-	triangleStripVerticesBG[2] = VERTEX((float)dPresentParams.BackBufferWidth - 0.5f,(float)dPresentParams.BackBufferHeight - 0.5f,0.0f,1.0f,tX,1);
-	triangleStripVerticesBG[3] = VERTEX((float)dPresentParams.BackBufferWidth - 0.5f,(float)0 - 0.5f,0.0f,1.0f,1,0.0f);*/
+	  triangleStripVerticesBG[1] = VERTEX((float)0 - 0.5f,(float)0 - 0.5f,0.0f,1.0f,0.0f,0.0f);
+	  triangleStripVerticesBG[2] = VERTEX((float)dPresentParams.BackBufferWidth - 0.5f,(float)dPresentParams.BackBufferHeight - 0.5f,0.0f,1.0f,tX,1);
+	  triangleStripVerticesBG[3] = VERTEX((float)dPresentParams.BackBufferWidth - 0.5f,(float)0 - 0.5f,0.0f,1.0f,1,0.0f);*/
 
-	HRESULT hr = vertexBuffer->Lock(0,0,&pLockedVertexBuffer,NULL);
+	long hr = vertexBuffer->Lock(0,0,&pLockedVertexBuffer,NULL);
 	memcpy(pLockedVertexBuffer,triangleStripVertices,sizeof(triangleStripVertices));
 	vertexBuffer->Unlock();
 
@@ -579,9 +578,10 @@ returns true if successful, false otherwise
 */
 bool CDirect3D::resetDevice()
 {
-	if(!pDevice) return false;
+	if(!pDevice)
+		return false;
 
-	HRESULT hr;
+	long hr;
 
 	//release prior to reset
 	destroyDrawSurface();
@@ -593,8 +593,8 @@ bool CDirect3D::resetDevice()
 	dPresentParams.BackBufferFormat = D3DFMT_X8R8G8B8;  
 	dPresentParams.Windowed = false;
 	dPresentParams.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
-	
- 
+
+
 
 	if(FAILED(hr = pDevice->Reset(&dPresentParams))) {
 		DXTRACE_ERR(TEXT("Unable to reset device"), hr);
@@ -602,10 +602,10 @@ bool CDirect3D::resetDevice()
 	}
 
 	//VideoMemory controls if we want bilinear filtering
-    pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+	pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 	pDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
 	pDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-	
+
 	//recreate the surface
 	createDrawSurface();
 	return true;

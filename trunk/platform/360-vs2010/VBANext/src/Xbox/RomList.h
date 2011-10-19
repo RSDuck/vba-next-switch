@@ -1,11 +1,3 @@
-//--------------------------------------------------------------------------------------
-// XuiTutorial.cpp
-//
-// Shows how to display and use a simple XUI scene.
-//
-// Xbox Advanced Technology Group.
-// Copyright (C) Microsoft Corporation. All rights reserved.
-//--------------------------------------------------------------------------------------
 #include <xtl.h>
 #include <xui.h>
 #include <xuiapp.h>
@@ -50,7 +42,7 @@ void InRescanRomsFirstFunc(XUIMessage *pMsg, InRescanRomsStruct* pData, char *sz
 
 class CRomList : CXuiListImpl
 {
-public:
+	public:
 
 	XUI_IMPLEMENT_CLASS(CRomList, L"SnesRomList", XUI_CLASS_LIST);
 
@@ -61,15 +53,15 @@ public:
 		//XUI_ON_XM_GET_CURSEL(OnGetCurSel)
 		XUI_ON_XM_NOTIFY( OnNotify )
 		XUI_ON_XM_MESSAGE_ON_RESCAN_ROMS( OnRescanRoms )
-	XUI_END_MSG_MAP()
+		XUI_END_MSG_MAP()
 
-	CRomList();
-    HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
-	HRESULT OnNotify( XUINotify *hObj, BOOL& bHandled );
-	HRESULT OnGetSourceDataText(XUIMessageGetSourceText *pGetSourceTextData, BOOL& bHandled);
-	HRESULT OnGetItemCountAll(XUIMessageGetItemCount *pGetItemCountData, BOOL& bHandled);
-	HRESULT OnRescanRoms ( char *szPath, BOOL& bHandled );
-	 
+		CRomList();
+	long OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
+	long OnNotify( XUINotify *hObj, BOOL& bHandled );
+	long OnGetSourceDataText(XUIMessageGetSourceText *pGetSourceTextData, BOOL& bHandled);
+	long OnGetItemCountAll(XUIMessageGetItemCount *pGetItemCountData, BOOL& bHandled);
+	long OnRescanRoms ( char *szPath, BOOL& bHandled );
+
 };
 
 //--------------------------------------------------------------------------------------
@@ -77,40 +69,33 @@ public:
 //--------------------------------------------------------------------------------------
 class CRomListScene : public CXuiSceneImpl
 {
+	protected:
 
-protected:
-
-    // Control and Element wrapper objects.
-    CXuiControl m_AddToFavorites;
-    CXuiControl m_PlayRom;
+	// Control and Element wrapper objects.
+	CXuiControl m_AddToFavorites;
+	CXuiControl m_PlayRom;
 	CXuiControl m_Back; 
 	CXuiElement m_PreviewImage;
 	CXuiList m_RomList;
 	//CXuiVideo   m_BackVideo;
 	CXuiTextElement m_DeviceText;
 	CXuiControl m_NextDevice;
- 
-   
 
-    // Message map.
-    XUI_BEGIN_MSG_MAP()
+	// Message map.
+	XUI_BEGIN_MSG_MAP()
 		XUI_ON_XM_INIT( OnInit )
 		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )
-    XUI_END_MSG_MAP()
+		XUI_END_MSG_MAP()
 
-	
+	public:
+		long OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
+		long OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 
+	public:
 
- 
-public:
-    HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
-	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
- 
-public:
-
-    // Define the class. The class name must match the ClassOverride property
-    // set for the scene in the UI Authoring tool.
-    XUI_IMPLEMENT_CLASS( CRomListScene, L"RomListScene", XUI_CLASS_SCENE )
+		// Define the class. The class name must match the ClassOverride property
+		// set for the scene in the UI Authoring tool.
+		XUI_IMPLEMENT_CLASS( CRomListScene, L"RomListScene", XUI_CLASS_SCENE )
 };
 
 

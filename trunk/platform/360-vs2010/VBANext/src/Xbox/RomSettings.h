@@ -1,4 +1,3 @@
-
 #ifndef TINYXML_H
 #define TINYXML_H
 #pragma once

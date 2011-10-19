@@ -16,20 +16,20 @@
 */
 typedef struct
 {
-  int sample_rate;  /* Sample rate (8000-48000) */
-  int enabled;      /* 1= sound emulation is enabled */
-  int buffer_size;  /* Size of sound buffer (in bytes) */
-  int16 *buffer[2]; /* Signed 16-bit stereo sound data */
-  struct
-  {
-    int pos;
-    int16 *buffer[2];
-  } fm;
-  struct
-  {
-    int pos;
-    int16 *buffer;
-  } psg;
+	int sample_rate;  /* Sample rate (8000-48000) */
+	int enabled;      /* 1= sound emulation is enabled */
+	int buffer_size;  /* Size of sound buffer (in bytes) */
+	int16 *buffer[2]; /* Signed 16-bit stereo sound data */
+	struct
+	{
+		int pos;
+		int16 *buffer[2];
+	} fm;
+	struct
+	{
+		int pos;
+		int16 *buffer;
+	} psg;
 } t_snd;
 
 #define SAMPLERATE 48000
@@ -67,7 +67,7 @@ bool CXAudio2::InitXAudio2(void)
 	XAudio2Create( &pXAudio2, 0, XboxThread2 );
 	//eventHandle = CreateEvent(NULL,0,0,NULL);
 	//threadHandle = (HANDLE)_beginthreadex(NULL,0,&SoundThread,(void *)this,0,NULL);
- 
+
 	initDone = true;
 
 	InitializeCriticalSection(&audSection);
@@ -178,44 +178,39 @@ void CXAudio2::OnBufferEnd(void *pBufferContext)
 
 bool CXAudio2::SetupSound()
 {
+	nXAudio2Fps = 60*100; //Number of FPS * 100
+	cbLoopLen = 0;  // Loop length (in bytes) calculated
+	currentBuffer = 0;
+	pAudioBuffers = NULL;
+	nAudSegCount = 6;
 
-    nXAudio2Fps = 60*100; //Number of FPS * 100
-    cbLoopLen = 0;  // Loop length (in bytes) calculated
-    currentBuffer = 0;
-    pAudioBuffers = NULL;
-    nAudSegCount = 6;
+	nAudSegLen = (SAMPLERATE * 100 + (nXAudio2Fps >> 1)) / nXAudio2Fps;
+	nAudAllocSegLen = nAudSegLen << 2;
+	cbLoopLen = (nAudSegLen * nAudSegCount) << 2;
 
-    nAudSegLen = (SAMPLERATE * 100 + (nXAudio2Fps >> 1)) / nXAudio2Fps;
-    nAudAllocSegLen = nAudSegLen << 2;
-    cbLoopLen = (nAudSegLen * nAudSegCount) << 2;
- 
-    // Allocate sound Buffer	 
-    m_mixbuf = new short[nAudAllocSegLen];
-    pAudioBuffers = (BYTE *)malloc(cbLoopLen);
+	// Allocate sound Buffer	 
+	m_mixbuf = new short[nAudAllocSegLen];
+	pAudioBuffers = (BYTE *)malloc(cbLoopLen);
 	memset(m_mixbuf,0x00, nAudAllocSegLen);
 	memset(pAudioBuffers,0x00,cbLoopLen);
 
 	pXAudio2->CreateMasteringVoice( &pMasteringVoice );
-    wfx.wBitsPerSample      = 16;
-    wfx.wFormatTag                              = WAVE_FORMAT_PCM;
-    wfx.nChannels                  = 2;
-    wfx.nSamplesPerSec     = SAMPLERATE;
-    wfx.nBlockAlign                                = wfx.wBitsPerSample * wfx.nChannels /8;
-    wfx.nAvgBytesPerSec   = wfx.nSamplesPerSec * wfx.nBlockAlign;
-    wfx.cbSize = 0;
+	wfx.wBitsPerSample      = 16;
+	wfx.wFormatTag		= WAVE_FORMAT_PCM;
+	wfx.nChannels		= 2;
+	wfx.nSamplesPerSec	= SAMPLERATE;
+	wfx.nBlockAlign		= wfx.wBitsPerSample * wfx.nChannels /8;
+	wfx.nAvgBytesPerSec	= wfx.nSamplesPerSec * wfx.nBlockAlign;
+	wfx.cbSize = 0;
 
-	HRESULT hr = pXAudio2->CreateSourceVoice( &pSourceVoice, ( WAVEFORMATEX* )&wfx , XAUDIO2_VOICE_USEFILTER , XAUDIO2_DEFAULT_FREQ_RATIO, NULL, NULL, NULL ) ;
-	
-    pSourceVoice->SetVolume( 1.0 );
+	long hr = pXAudio2->CreateSourceVoice( &pSourceVoice, ( WAVEFORMATEX* )&wfx , XAUDIO2_VOICE_USEFILTER , XAUDIO2_DEFAULT_FREQ_RATIO, NULL, NULL, NULL ) ;
+
+	pSourceVoice->SetVolume( 1.0 );
 	pSourceVoice->FlushSourceBuffers();
-  
-	
+
 	BeginPlayback();
-	
 
-	
 	return true;
-
 }
 
 void CXAudio2::BeginPlayback()
@@ -235,44 +230,42 @@ synchronizes the syncSoundBuffer access with a critical section (if SoundSync is
 */
 void CXAudio2::ProcessSound()
 {
-	 XAUDIO2_VOICE_STATE                               vState;
+	XAUDIO2_VOICE_STATE                               vState;
 
 	if (!pSourceVoice)
 		return;
 
-   //while(emptyBuffers) {
- 
-
-   for (int j=0;j<nAudAllocSegLen>>1;j++)
-   {
+	for (int j=0;j<nAudAllocSegLen>>1;j++)
+	{
 		m_mixbuf[j*2+0]=snd.buffer[0][j]; //Snd L buffer  from the emu
 		m_mixbuf[j*2+1]=snd.buffer[1][j]; //Snd R buffer  from the emu
-   } 
+	} 
 
-    while (true) {
-                                pSourceVoice->GetState(&vState);
- 
-                          
-                                if (vState.BuffersQueued < nAudSegCount - 1) {
-                                                if (vState.BuffersQueued == 0) {
-                                                                // buffers ran dry
-                                                }
-                                                // there is at least one free buffer
-                                                break;
-                                }
-                }
-   
-    // copy & protect the audio data in own memory area while playing it
-   
+	while (true)
+	{
+		pSourceVoice->GetState(&vState);
+
+		if (vState.BuffersQueued < nAudSegCount - 1)
+		{
+#if 0
+			if (vState.BuffersQueued == 0)
+			{
+				// buffers ran dry
+			}
+#endif
+			// there is at least one free buffer
+			break;
+		}
+	}
+
+	// copy & protect the audio data in own memory area while playing it
+
 	memcpy(&pAudioBuffers[currentBuffer * nAudAllocSegLen], m_mixbuf, nAudAllocSegLen);	
 
 	PushBuffer(nAudAllocSegLen, &pAudioBuffers[currentBuffer * nAudAllocSegLen], NULL);
-	
-    currentBuffer++;
-    currentBuffer %= (nAudSegCount);
 
- 
-	 //}
+	currentBuffer++;
+	currentBuffer %= (nAudSegCount);
 }
  
 
@@ -293,7 +286,8 @@ unsigned int __stdcall CXAudio2::SoundThread (LPVOID lpParameter)
 #ifndef _XBOX
 	CoInitializeEx(NULL, COINIT_MULTITHREADED);
 #endif
-	while(1) {
+	do
+	{
 		WaitForSingleObject(XAudio2->eventHandle,INFINITE);
 		if(XAudio2->exitThread) {
 #ifndef _XBOX
@@ -302,6 +296,6 @@ unsigned int __stdcall CXAudio2::SoundThread (LPVOID lpParameter)
 			_endthreadex(0);
 		}
 		XAudio2->ProcessSound();
-	}
+	}while(1);
 	return 0;
 }

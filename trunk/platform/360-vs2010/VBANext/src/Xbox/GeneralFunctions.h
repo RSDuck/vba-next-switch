@@ -48,21 +48,16 @@
 #define MB_RTLREADING               0x00100000L
 #endif
  
-HRESULT DXTRACE_ERR_MSGBOX( char *str, HRESULT hr );
-HRESULT DXTRACE_ERR( char *str, HRESULT hr );
+long DXTRACE_ERR_MSGBOX( char *str, long hr);
+long DXTRACE_ERR( char *str, long hr);
 int MessageBox(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType);
 
-DWORD CheckMenuItem(      
-    HMENU hmenu,
-    UINT uIDCheckItem,
-    UINT uCheck
-);
+unsigned long CheckMenuItem(HMENU hmenu, UINT uIDCheckItem, UINT uCheck);
 
-HRESULT LoadFile( const CHAR* strFileName, VOID** ppFileData,
-                  DWORD* pdwFileSize = NULL );
+long LoadFile(const char * strFileName, VOID** ppFileData, unsigned long * pdwFileSize = NULL );
 VOID UnloadFile( VOID* pFileData );
 
-HRESULT LoadPixelShader( const CHAR* strFileName, LPDIRECT3DPIXELSHADER9* ppPS, LPD3DXCONSTANTTABLE* ppConstantTable = NULL );
+long LoadPixelShader( const CHAR* strFileName, LPDIRECT3DPIXELSHADER9* ppPS, LPD3DXCONSTANTTABLE* ppConstantTable = NULL );
 
 LPCWSTR MultiCharToUniChar(char* mbString);
 
