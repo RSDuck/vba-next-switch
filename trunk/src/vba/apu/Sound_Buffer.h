@@ -144,7 +144,7 @@ class blip_eq_t;
 // Range specifies the greatest expected change in amplitude. Calculate it
 // by finding the difference between the maximum and minimum expected
 // amplitudes (max - min).
-struct Blip_Synth
+typedef struct Blip_Synth
 {
 	int last_amp;
 	int delta_factor;
@@ -255,7 +255,7 @@ inline void Blip_Buffer::clock_rate(int32_t cps )
 #define MIXED_TYPE	WAVE_TYPE | NOISE_TYPE
 #define TYPE_INDEX_MASK	0xFF
 
-struct channel_t {
+typedef struct channel_t {
 	Blip_Buffer* center;
 	Blip_Buffer* left;
 	Blip_Buffer* right;
@@ -305,7 +305,7 @@ class Stereo_Buffer {
 		int const* channel_types_;
 };
 
-struct pan_vol_t
+typedef struct pan_vol_t
 {
 	float vol; // 0.0 = silent, 0.5 = half volume, 1.0 = normal
 	float pan; // -1.0 = left, 0.0 = center, +1.0 = right
