@@ -40,8 +40,22 @@ Blip_Buffer::Blip_Buffer()
         clock_rate_   = 0;
         bass_freq_    = 16;
         length_       = 0;
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+        last_non_silence = 0;
+#endif
+
         clear();
 }
+
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+#define BLIP_BUFFER_REMOVE_SILENCE(count) \
+{ \
+   if ( (b.last_non_silence -= count) < 0) \
+      b.last_non_silence = 0; \
+   \
+   b.offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY; \
+}
+#endif
 
 Blip_Buffer::~Blip_Buffer(void)
 {
@@ -51,6 +65,9 @@ Blip_Buffer::~Blip_Buffer(void)
 
 void Blip_Buffer::clear(void)
 {
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+        last_non_silence = 0;
+#endif
         offset_       = 0;
         reader_accum_ = 0;
         modified_     = 0;
@@ -60,6 +77,9 @@ void Blip_Buffer::clear(void)
 
 void Blip_Buffer::clear_false(void)
 {
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	last_non_silence = 0;
+#endif
 	offset_       = 0;
 	reader_accum_ = 0;
 	modified_     = 0;
@@ -126,8 +146,22 @@ void Blip_Buffer::bass_freq( int freq )
 // (along with any still-unread samples) for reading with read_samples(). Begins
 // a new time frame at the end of the current frame.
 
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+void Blip_Buffer::end_frame( int32_t t )
+{
+        offset_ += t * factor_;
+        if ( clear_modified() )
+                last_non_silence = BLIP_BUFFER_SAMPLES_AVAIL() + BLIP_BUFFER_EXTRA_;
+}
+#endif
+
 void Blip_Buffer::remove_samples(int32_t count )
 {
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	if ( (last_non_silence -= count) < 0 )
+		last_non_silence = 0;
+#endif
+
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
 	// copy remaining samples to beginning and clear old samples
@@ -156,7 +190,12 @@ int32_t Blip_Buffer::read_samples( int16_t * out, int32_t count)
 
 	remove_samples( count );
 
-	return count;
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+		if ( (last_non_silence -= count) < 0 )
+			last_non_silence = 0;
+#endif
+
+		return count;
 }
 
 void Blip_Buffer::save_state( blip_buffer_state_t* out )
@@ -174,6 +213,14 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
         reader_accum_ = in.reader_accum_;
         __builtin_memcpy( buffer_, in.buf, sizeof(in.buf));
 }
+
+
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+uint32_t Blip_Buffer::non_silent() const
+{
+        return last_non_silence | (reader_accum_ >> (BLIP_SAMPLE_BITS - 16));
+}
+#endif
 
 // Stereo_Buffer
 
@@ -225,6 +272,18 @@ void Stereo_Buffer::clear()
                 bufs_buffer [i].clear();
 }
 
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+void Stereo_Buffer::end_frame( int32_t time )
+{
+        for ( int i = BUFFERS_SIZE; --i >= 0; )
+	#ifdef FASTER_SOUND_HACK_NON_SILENCE
+		BLIP_BUFFER_END_FRAME(bufs_buffer[i], time);
+	#else
+                bufs_buffer [i].end_frame( time );
+	#endif
+}
+#endif
+
 int32_t Stereo_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
 	int pair_count = int (out_size >> 1);
@@ -235,7 +294,15 @@ int32_t Stereo_Buffer::read_samples( int16_t * out, int32_t out_size )
 		for ( int i = BUFFERS_SIZE; --i >= 0; )
 		{
 			Blip_Buffer & b = bufs_buffer [i];
-			b.remove_samples( mixer_samples_read );
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+			// TODO: might miss non-silence setting since it checks END of last read
+			if ( !b.non_silent() )
+			{
+				BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
+			}
+			else
+#endif
+				b.remove_samples( mixer_samples_read );
 		}
 		mixer_samples_read = 0;
 	}
@@ -254,63 +321,90 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 	// except that buffer isn't cleared, so caller can encounter
 	// subtle problems and not realize the cause.
 	mixer_samples_read += count;
-	int16_t * BLIP_RESTRICT outtemp = out + count * STEREO;
-
-	// do left + center and right + center separately to reduce register load
-	Blip_Buffer* const* buf = &mixer_bufs [2];
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
 	{
-		--buf;
-		--outtemp;
+#endif
+		int16_t * BLIP_RESTRICT outtemp = out + count * stereo;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
-		BLIP_READER_ADJ_( center, mixer_samples_read );
-
-		int offset = -count;
-		do
+		// do left + center and right + center separately to reduce register load
+		Blip_Buffer* const* buf = &mixer_bufs [2];
 		{
-			int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-			s >>= BLIP_SAMPLE_BITS - 16;
-			BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
-			BLIP_CLAMP( s, s );
+			--buf;
+			--outtemp;
 
-			++offset; // before write since out is decremented to slightly before end
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
-		BLIP_READER_END( side,   **buf );
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= BLIP_SAMPLE_BITS - 16;
+				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * stereo] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+		}
+		{
+			--buf;
+			--outtemp;
+
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= BLIP_SAMPLE_BITS - 16;
+				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * stereo] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+
+			// only end center once
+			BLIP_READER_END( center, *mixer_bufs [2] );
+		}
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
 	}
+	else
 	{
-		--buf;
-		--outtemp;
-
-		BLIP_READER_BEGIN( side,   **buf );
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
+		typedef int16_t stereo_blip_sample_t [stereo];
+		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
 		int offset = -count;
 		do
 		{
-			int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-			s >>= BLIP_SAMPLE_BITS - 16;
-			BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+			int32_t s = BLIP_READER_READ( center );
 			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
 			BLIP_CLAMP( s, s );
 
-			++offset; // before write since out is decremented to slightly before end
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
-
-		BLIP_READER_END( side,   **buf );
-
-		// only end center once
+			outtemp [offset] [0] = (int16_t) s;
+			outtemp [offset] [1] = (int16_t) s;
+		}
+		while ( ++offset );
 		BLIP_READER_END( center, *mixer_bufs [2] );
 	}
+#endif
 }
 
 void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
@@ -319,89 +413,114 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	// except that buffer isn't cleared, so caller can encounter
 	// subtle problems and not realize the cause.
 	mixer_samples_read += count;
-	int16_t* BLIP_RESTRICT outtemp = out + count * STEREO;
-
-	// do left + center and right + center separately to reduce register load
-	Blip_Buffer* const* buf = &mixer_bufs [2];
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
 	{
-		--buf;
-		--outtemp;
+#endif
+		int16_t* BLIP_RESTRICT outtemp = out + count * STEREO;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
-		BLIP_READER_ADJ_( center, mixer_samples_read );
-
-		int offset = -count;
-		do
+		// do left + center and right + center separately to reduce register load
+		Blip_Buffer* const* buf = &mixer_bufs [2];
 		{
-			int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-			s >>= BLIP_SAMPLE_BITS - 16;
-			BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
-			BLIP_CLAMP( s, s );
+			--buf;
+			--outtemp;
 
-			++offset; // before write since out is decremented to slightly before end
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
 
-		BLIP_READER_END( side,   **buf );
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= BLIP_SAMPLE_BITS - 16;
+				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * STEREO] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+		}
+		{
+			--buf;
+			--outtemp;
+
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= BLIP_SAMPLE_BITS - 16;
+				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * STEREO] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+
+			// only end center once
+			BLIP_READER_END( center, *mixer_bufs [2] );
+		}
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
 	}
+	else
 	{
-		--buf;
-		--outtemp;
-
-		BLIP_READER_BEGIN( side,   **buf );
 		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
 
+		typedef int16_t stereo_blip_sample_t [stereo];
+		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
 		int offset = -count;
 		do
 		{
-			int32_t s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-			s >>= BLIP_SAMPLE_BITS - 16;
-			BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
+			int32_t s = BLIP_READER_READ( center );
 			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
 			BLIP_CLAMP( s, s );
 
-			++offset; // before write since out is decremented to slightly before end
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
-
-		BLIP_READER_END( side,   **buf );
-
-		// only end center once
+			outtemp [offset] [0] = (int16_t) s;
+			outtemp [offset] [1] = (int16_t) s;
+		}
+		while ( ++offset );
 		BLIP_READER_END( center, *mixer_bufs [2] );
 	}
+#endif
 }
 
 #define FIXED_SHIFT 12
 #define TO_FIXED( f )   int32_t((f) * ((int32_t) 1 << FIXED_SHIFT))
 #define FROM_FIXED( f ) ((f) >> FIXED_SHIFT)
 
- // determines minimum delay
-#define MAX_READ 2560
-#define MAX_READ_TIMES_STEREO 5120
+int const max_read = 2560; // determines minimum delay
 
 Effects_Buffer::Effects_Buffer( int max_bufs, int32_t echo_size_ )
 {
 	//from Multi_Buffer
-	samples_per_frame_      = STEREO;
+	samples_per_frame_      = stereo;
 	length_                 = 0;
 	sample_rate_            = 0;
 	channels_changed_count_ = 1;
 	channel_types_          = 0;
 	channel_count_          = 0;
 
-        echo_size   = max(MAX_READ_TIMES_STEREO, echo_size_ & ~1 );
+        echo_size   = max( max_read * (int32_t)stereo, echo_size_ & ~1 );
         clock_rate_ = 0;
         bass_freq_  = 90;
         bufs_buffer       = 0;
         bufs_size   = 0;
-        bufs_max    = max( max_bufs, EXTRA_CHANS);
+        bufs_max    = max( max_bufs, (int) extra_chans );
         no_echo     = true;
         no_effects  = true;
 
@@ -460,7 +579,7 @@ int32_t Effects_Buffer::set_sample_rate( int32_t rate, int msec )
         // extra to allow farther past-the-end pointers
         mixer_samples_read = 0;
 
-        int32_t retval = echo.resize(echo_size + STEREO);
+        int32_t retval = echo.resize(echo_size + stereo);
 	if(retval != 0)
 		return retval;
 
@@ -500,11 +619,11 @@ int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 
         mixer_samples_read = 0;
 
-        int32_t retval = chans.resize(count + EXTRA_CHANS);
+        int32_t retval = chans.resize(count + extra_chans);
 	if (retval != 0)
 		return retval;
 
-        retval = new_bufs(min(bufs_max, count + EXTRA_CHANS));
+        retval = new_bufs(min(bufs_max, count + extra_chans));
 	if (retval != 0)
 		return retval;
 
@@ -545,7 +664,7 @@ int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 
 channel_t Effects_Buffer::channel( int i )
 {
-        i += EXTRA_CHANS;
+        i += extra_chans;
         return chans [i].channel;
 }
 
@@ -555,7 +674,7 @@ channel_t Effects_Buffer::channel( int i )
 // 3 wave positions with/without surround, 2 multi (one with same config as wave)
 int const simple_bufs = 3 * 2 + 2 - 1;
 
-Simple_Effects_Buffer::Simple_Effects_Buffer() : Effects_Buffer( EXTRA_CHANS + simple_bufs, 18 * 1024L )
+Simple_Effects_Buffer::Simple_Effects_Buffer() : Effects_Buffer( extra_chans + simple_bufs, 18 * 1024L )
 {
         config_.echo     = 0.20f;
         config_.stereo   = 0.20f;
@@ -634,11 +753,11 @@ void Effects_Buffer::apply_config()
 		echo_dirty = true;
 
 	// delays
-	for ( i = STEREO; --i >= 0; )
+	for ( i = stereo; --i >= 0; )
 	{
-		int32_t delay = config_.delay [i] * sample_rate_ / 1000 * STEREO;
-		delay = max( delay, int32_t(MAX_READ_TIMES_STEREO));
-		delay = min( delay, int32_t(echo_size - MAX_READ_TIMES_STEREO));
+		int32_t delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
+		delay = max( delay, int32_t(max_read * stereo) );
+		delay = min( delay, int32_t(echo_size - max_read * stereo) );
 		if ( s_struct.delay [i] != delay )
 		{
 			s_struct.delay [i] = delay;
@@ -752,7 +871,7 @@ void Effects_Buffer::apply_config()
 	// determine whether effects and echo are needed at all
 	no_effects = true;
 	no_echo    = true;
-	for ( i = chans.size_; --i >= EXTRA_CHANS; )
+	for ( i = chans.size_; --i >= extra_chans; )
 	{
 		chan_t& ch = chans [i];
 		if ( ch.cfg.echo && s_struct.feedback )
@@ -799,13 +918,17 @@ void Effects_Buffer::apply_config()
 void Effects_Buffer::end_frame( int32_t time )
 {
 	for ( int i = bufs_size; --i >= 0; )
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
 		BLIP_BUFFER_END_FRAME(bufs_buffer[i], time);
+#else
+		bufs_buffer [i].end_frame( time );
+#endif
 }
 
 int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 {
-	int pair_count = int (out_size >> 1);
-	if ( pair_count )
+        int pair_count = int (out_size >> 1);
+        if ( pair_count )
 	{
 		if ( no_effects )
 		{
@@ -817,7 +940,7 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 			do
 			{
 				// mix at most max_read pairs at a time
-				int count = MAX_READ;
+				int count = max_read;
 				if ( count > pairs_remain )
 					count = pairs_remain;
 
@@ -825,17 +948,17 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 				{
 					// optimization: clear echo here to keep mix_effects() a leaf function
 					echo_pos = 0;
-					__builtin_memset( echo.begin_, 0, count * STEREO * sizeof(echo [0]));
+					__builtin_memset( echo.begin_, 0, count * stereo * sizeof(echo [0]));
 				}
 
 				mix_effects( out, count );
 
-				int32_t new_echo_pos = echo_pos + count * STEREO;
+				int32_t new_echo_pos = echo_pos + count * stereo;
 				if ( new_echo_pos >= echo_size )
 					new_echo_pos -= echo_size;
 				echo_pos = new_echo_pos;
 
-				out += count * STEREO;
+				out += count * stereo;
 				mixer_samples_read += count;
 				pairs_remain -= count;
 			}
@@ -846,155 +969,168 @@ int32_t Effects_Buffer::read_samples( int16_t * out, int32_t out_size )
 		{
 			buf_t& b = bufs_buffer [i];
 			// TODO: might miss non-silence settling since it checks END of last read
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
 			b.remove_samples( mixer_samples_read );
+#else
+			if ( b.non_silent() )
+				b.remove_samples( mixer_samples_read );
+			else
+			{
+				BLIP_BUFFER_REMOVE_SILENCE( mixer_samples_read );
+			}
+#endif
 		}
 		mixer_samples_read = 0;
 	}
-	return out_size;
+        return out_size;
 }
 
 void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
 {
-	typedef int32_t stereo_fixed_t [STEREO];
+        typedef int32_t stereo_fixed_t [stereo];
 
-	// add channels with echo, do echo, add channels without echo, then convert to 16-bit and output
-	int echo_phase = 1;
-	do
-	{
-		// mix any modified buffers
-		{
-			buf_t* buf = bufs_buffer;
-			int bufs_remain = bufs_size;
-			do
-			{
-				if ( ( buf->echo == !!echo_phase ) )
-				{
-					stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
-					BLIP_READER_BEGIN( in, *buf );
-					BLIP_READER_ADJ_( in, mixer_samples_read );
-					int32_t const vol_0 = buf->vol [0];
-					int32_t const vol_1 = buf->vol [1];
+        // add channels with echo, do echo, add channels without echo, then convert to 16-bit and output
+        int echo_phase = 1;
+        do
+        {
+                // mix any modified buffers
+                {
+                        buf_t* buf = bufs_buffer;
+                        int bufs_remain = bufs_size;
+                        do
+                        {
+            #ifdef FASTER_SOUND_HACK_NON_SILENCE
+                                if ( ( buf->echo == !!echo_phase ) )
+            #else
+                                if ( buf->non_silent() && ( buf->echo == !!echo_phase ) )
+            #endif
+                                {
+                                        stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
+                                        BLIP_READER_BEGIN( in, *buf );
+                                        BLIP_READER_ADJ_( in, mixer_samples_read );
+                                        int32_t const vol_0 = buf->vol [0];
+                                        int32_t const vol_1 = buf->vol [1];
 
-					int count = unsigned (echo_size - echo_pos) / STEREO;
-					int remain = pair_count;
-					if ( count > remain )
-						count = remain;
-					do
-					{
-						remain -= count;
-						BLIP_READER_ADJ_( in, count );
+                                        int count = unsigned (echo_size - echo_pos) / stereo;
+                                        int remain = pair_count;
+                                        if ( count > remain )
+                                                count = remain;
+                                        do
+                                        {
+                                                remain -= count;
+                                                BLIP_READER_ADJ_( in, count );
 
-						out += count;
-						int offset = -count;
-						do
-						{
-							int32_t s = BLIP_READER_READ( in );
-							BLIP_READER_NEXT_IDX_( in, BLIP_READER_DEFAULT_BASS, offset );
+                                                out += count;
+                                                int offset = -count;
+                                                do
+                                                {
+                                                        int32_t s = BLIP_READER_READ( in );
+                                                        BLIP_READER_NEXT_IDX_( in, BLIP_READER_DEFAULT_BASS, offset );
 
-							out [offset] [0] += s * vol_0;
-							out [offset] [1] += s * vol_1;
-						}
-						while ( ++offset );
+                                                        out [offset] [0] += s * vol_0;
+                                                        out [offset] [1] += s * vol_1;
+                                                }
+                                                while ( ++offset );
 
-						out = (stereo_fixed_t*) echo.begin_;
-						count = remain;
-					}
-					while ( remain );
+                                                out = (stereo_fixed_t*) echo.begin_;
+                                                count = remain;
+                                        }
+                                        while ( remain );
 
-					BLIP_READER_END( in, *buf );
-				}
-				buf++;
-			}
-			while ( --bufs_remain );
-		}
+                                        BLIP_READER_END( in, *buf );
+                                }
+                                buf++;
+                        }
+                        while ( --bufs_remain );
+                }
 
-		// add echo
-		if ( echo_phase && !no_echo )
-		{
-			int32_t const feedback = s_struct.feedback;
-			int32_t const treble   = s_struct.treble;
+                // add echo
+                if ( echo_phase && !no_echo )
+                {
+                        int32_t const feedback = s_struct.feedback;
+                        int32_t const treble   = s_struct.treble;
 
-			int i = 1;
-			do
-			{
-				int32_t low_pass = s_struct.low_pass [i];
+                        int i = 1;
+                        do
+                        {
+                                int32_t low_pass = s_struct.low_pass [i];
 
-				int32_t * echo_end = &echo [echo_size + i];
-				int32_t const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
-				int32_t out_offset = echo_pos + i + s_struct.delay [i];
-				if ( out_offset >= echo_size )
-					out_offset -= echo_size;
-				int32_t * BLIP_RESTRICT out_pos = &echo [out_offset];
+                                int32_t * echo_end = &echo [echo_size + i];
+                                int32_t const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
+                                int32_t out_offset = echo_pos + i + s_struct.delay [i];
+                                if ( out_offset >= echo_size )
+                                        out_offset -= echo_size;
+                                int32_t * BLIP_RESTRICT out_pos = &echo [out_offset];
 
-				// break into up to three chunks to avoid having to handle wrap-around
-				// in middle of core loop
-				int remain = pair_count;
-				do
-				{
-					int32_t const* pos = in_pos;
-					if ( pos < out_pos )
-						pos = out_pos;
-					int count = uint32_t((char*) echo_end - (char const*) pos) /
-						unsigned (STEREO * sizeof(int32_t));
-					if ( count > remain )
-						count = remain;
-					remain -= count;
+                                // break into up to three chunks to avoid having to handle wrap-around
+                                // in middle of core loop
+                                int remain = pair_count;
+                                do
+                                {
+                                        int32_t const* pos = in_pos;
+                                        if ( pos < out_pos )
+                                                pos = out_pos;
+                                        int count = uint32_t((char*) echo_end - (char const*) pos) /
+                                                        unsigned (stereo * sizeof(int32_t));
+                                        if ( count > remain )
+                                                count = remain;
+                                        remain -= count;
 
-					in_pos  += count * STEREO;
-					out_pos += count * STEREO;
-					int offset = -count;
-					do
-					{
-						low_pass += FROM_FIXED( in_pos [offset * STEREO] - low_pass ) * treble;
-						out_pos [offset * STEREO] = FROM_FIXED( low_pass ) * feedback;
-					}
-					while ( ++offset );
+                                        in_pos  += count * stereo;
+                                        out_pos += count * stereo;
+                                        int offset = -count;
+                                        do
+                                        {
+                                                low_pass += FROM_FIXED( in_pos [offset * stereo] - low_pass ) * treble;
+                                                out_pos [offset * stereo] = FROM_FIXED( low_pass ) * feedback;
+                                        }
+                                        while ( ++offset );
 
-					if (  in_pos >= echo_end )  in_pos -= echo_size;
-					if ( out_pos >= echo_end ) out_pos -= echo_size;
-				}
-				while ( remain );
+                                        if (  in_pos >= echo_end )  in_pos -= echo_size;
+                                        if ( out_pos >= echo_end ) out_pos -= echo_size;
+                                }
+                                while ( remain );
 
-				s_struct.low_pass [i] = low_pass;
-			}
-			while ( --i >= 0 );
-		}
-	}
-	while ( --echo_phase >= 0 );
+                                s_struct.low_pass [i] = low_pass;
+                        }
+                        while ( --i >= 0 );
+                }
+        }
+        while ( --echo_phase >= 0 );
 
-	// clamp to 16 bits
-	{
-		stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
-		typedef int16_t stereo_blip_sample_t [STEREO];
-		stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
-		int count = unsigned (echo_size - echo_pos) / (unsigned)STEREO;
-		int remain = pair_count;
-		if ( count > remain )
-			count = remain;
-		do
-		{
-			remain -= count;
-			in  += count;
-			out += count;
-			int offset = -count;
-			do
-			{
-				int32_t in_0 = FROM_FIXED( in [offset] [0] );
-				int32_t in_1 = FROM_FIXED( in [offset] [1] );
+        // clamp to 16 bits
+        {
+                stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
+                typedef int16_t stereo_blip_sample_t [stereo];
+                stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
+                int count = unsigned (echo_size - echo_pos) / (unsigned) stereo;
+                int remain = pair_count;
+                if ( count > remain )
+                        count = remain;
+                do
+                {
+                        remain -= count;
+                        in  += count;
+                        out += count;
+                        int offset = -count;
+                        do
+                        {
+                                int32_t in_0 = FROM_FIXED( in [offset] [0] );
+                                int32_t in_1 = FROM_FIXED( in [offset] [1] );
 
-				BLIP_CLAMP( in_0, in_0 );
-				out [offset] [0] = (int16_t) in_0;
+                                BLIP_CLAMP( in_0, in_0 );
+                                out [offset] [0] = (int16_t) in_0;
 
-				BLIP_CLAMP( in_1, in_1 );
-				out [offset] [1] = (int16_t) in_1;
-			}
-			while ( ++offset );
+                                BLIP_CLAMP( in_1, in_1 );
+                                out [offset] [1] = (int16_t) in_1;
+                        }
+                        while ( ++offset );
 
-			in = (stereo_fixed_t*) echo.begin_;
-			count = remain;
-		}
-		while ( remain );
-	}
+                        in = (stereo_fixed_t*) echo.begin_;
+                        count = remain;
+                }
+                while ( remain );
+        }
 }
 
 // Adds an amplitude transition of specified delta, optionally into specified buffer
