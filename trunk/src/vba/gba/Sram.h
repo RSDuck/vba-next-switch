@@ -1,8 +1,8 @@
 #ifndef SRAM_H
 #define SRAM_H
 
-uint8_t sramRead(uint32_t address);
-void sramWrite(uint32_t address, uint8_t byte);
-void sramDelayedWrite(uint32_t address, uint8_t byte);
+u8 sramRead(u32 address);
+void sramWrite(u32 address, u8 byte);
+void sramDelayedWrite(u32 address, u8 byte);
 
 #endif // SRAM_H

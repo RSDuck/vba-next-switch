@@ -1,3 +1,34 @@
+#include <stdarg.h>
+#include <string.h>
+#include "GBA.h"
+#include "GBAcpu.h"
+#include "GBAinline.h"
+#include "Globals.h"
+#include "EEprom.h"
+#include "Flash.h"
+#include "Sound.h"
+#include "Sram.h"
+#include "bios.h"
+#ifdef USE_CHEATS
+#include "Cheats.h"
+#endif
+#include "../NLS.h"
+#ifdef ELF
+#include "elf.h"
+#endif
+#include "../Util.h"
+#include "../System.h"
+#ifdef USE_AGBPRINT
+#include "agbprint.h"
+#endif
+#ifdef PROFILING
+#include "prof/prof.h"
+#endif
+
+#ifdef __CELLOS_LV2__
+#include <ppu_intrinsics.h>
+#endif
+
 #ifdef _MSC_VER
  // Disable "empty statement" warnings
  #pragma warning(disable: 4390)
@@ -6,24 +37,67 @@
  #define offset offset_
 #endif
 
-static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
+///////////////////////////////////////////////////////////////////////////
+
+static int clockTicks;
+
+static INSN_REGPARM void armUnknownInsn(u32 opcode)
 {
-	// CPU Undefined Exception - ghetto inline
-	uint32_t PC = reg[15].I;
-	bool savedArmState = armState;
-	CPUSwitchMode(0x1b, true, false);
-	reg[14].I = PC - (savedArmState ? 4 : 2);
-	reg[15].I = 0x04;
-	armState = true;
-	armIrqEnable = false;
-	armNextPC = 0x04;
-	ARM_PREFETCH;
-	reg[15].I += 4;
-	// CPU Undefined Exception - end of ghetto inline
+    // CPU Undefined Exception - ghetto inline
+  u32 PC = reg[15].I;
+  bool savedArmState = armState;
+  CPUSwitchMode(0x1b, true, false);
+  reg[14].I = PC - (savedArmState ? 4 : 2);
+  reg[15].I = 0x04;
+  armState = true;
+  armIrqEnable = false;
+  armNextPC = 0x04;
+  ARM_PREFETCH;
+  reg[15].I += 4;
+    // CPU Undefined Exception - end of ghetto inline
 }
 
+// Subroutine to count instructions (for debugging/optimizing)
+//#define INSN_COUNTER  // comment out if you don't want it
+#ifdef INSN_COUNTER
+static void count(u32 opcode, int cond_res)
+{
+    static int insncount = 0;    // number of insns seen
+    static int executed = 0;     // number of insns executed
+    static int mergewith[4096];  // map instructions to routines
+    static int count[4096];      // count of each 12-bit code
+    int index = ((opcode>>16)&0xFF0) | ((opcode>>4)&0x0F);
+    static FILE *outfile = NULL;
+
+    if (!insncount) {
+        for (int i = 0; i < 4096; i++) {
+            for (int j = 0; j < i; j++) {
+                if (armInsnTable[i] == armInsnTable[j])
+                    break;
+            }
+            mergewith[i] = j;
+        }
+        outfile = fopen("VBA-armcount.txt", "w");
+    }
+    if (cond_res) {
+        count[mergewith[index]]++;
+        executed++;
+    }
+    insncount++;
+    if (outfile && insncount%1000000 == 0) {
+        fprintf(outfile, "Total instructions: %d\n", insncount);
+        fprintf(outfile, "Instructions executed: %d\n", executed);
+        for (int i = 0; i < 4096; i++) {
+            if (count[i])
+                fprintf(outfile, "arm%03X: %d\n", i, count[i]);
+        }
+    }
+}
+#endif
 
 // Common macros //////////////////////////////////////////////////////////
+
+#define CONSOLE_OUTPUT(a,b)  /* nothing */
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -53,6 +127,581 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 //    RRX_OFFSET: Used to rotate (RRX) the `offset' parameter for LDR and
 //                STR instructions.
 
+#ifndef C_CORE
+
+#if 0  // definitions have changed
+//#ifdef __POWERPC__
+            #define OP_SUBS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("subco. %0, %2, %3\n"              \
+                            "mcrxr cr1\n"                       \
+                            "mfcr %1\n"                         \
+                            : "=r" (Result),                    \
+                              "=r" (Flags)                      \
+                            : "r" (reg[base].I),                \
+                              "r" (value)                       \
+                            );                                  \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_RSBS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("subfco. %0, %2, %3\n"             \
+                            "mcrxr cr1\n"                       \
+                            "mfcr %1\n"                         \
+                            : "=r" (Result),                    \
+                              "=r" (Flags)                      \
+                            : "r" (reg[base].I),                \
+                              "r" (value)                       \
+                            );                                  \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_ADDS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("addco. %0, %2, %3\n"              \
+                            "mcrxr cr1\n"                       \
+                            "mfcr %1\n"                         \
+                            : "=r" (Result),                    \
+                              "=r" (Flags)                      \
+                            : "r" (reg[base].I),                \
+                              "r" (value)                       \
+                            );                                  \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_ADCS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("mtspr xer, %4\n"                  \
+                             "addeo. %0, %2, %3\n"              \
+                             "mcrxr cr1\n"                      \
+                             "mfcr      %1\n"                   \
+                             : "=r" (Result),                   \
+                               "=r" (Flags)                     \
+                             : "r" (reg[base].I),               \
+                               "r" (value),                     \
+                               "r" (C_FLAG << 29)               \
+                             );                                 \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_SBCS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("mtspr xer, %4\n"                  \
+                             "subfeo. %0, %3, %2\n"             \
+                             "mcrxr cr1\n"                      \
+                             "mfcr      %1\n"                   \
+                             : "=r" (Result),                   \
+                               "=r" (Flags)                     \
+                             : "r" (reg[base].I),               \
+                               "r" (value),                     \
+                               "r" (C_FLAG << 29)               \
+                             );                                 \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_RSCS \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("mtspr xer, %4\n"                  \
+                             "subfeo. %0, %2, %3\n"             \
+                             "mcrxr cr1\n"                      \
+                             "mfcr      %1\n"                   \
+                             : "=r" (Result),                   \
+                               "=r" (Flags)                     \
+                             : "r" (reg[base].I),               \
+                               "r" (value),                     \
+                               "r" (C_FLAG << 29)               \
+                             );                                 \
+                reg[dest].I = Result;                           \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_CMP \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("subco. %0, %2, %3\n"              \
+                            "mcrxr cr1\n"                       \
+                            "mfcr %1\n"                         \
+                            : "=r" (Result),                    \
+                              "=r" (Flags)                      \
+                            : "r" (reg[base].I),                \
+                              "r" (value)                       \
+                            );                                  \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+            #define OP_CMN \
+            {\
+                register int Flags;                             \
+                register int Result;                            \
+                asm volatile("addco. %0, %2, %3\n"              \
+                            "mcrxr cr1\n"                       \
+                            "mfcr %1\n"                         \
+                            : "=r" (Result),                    \
+                              "=r" (Flags)                      \
+                            : "r" (reg[base].I),                \
+                              "r" (value)                       \
+                            );                                  \
+                Z_FLAG = (Flags >> 29) & 1;                     \
+                N_FLAG = (Flags >> 31) & 1;                     \
+                C_FLAG = (Flags >> 25) & 1;                     \
+                V_FLAG = (Flags >> 26) & 1;                     \
+            }
+
+#else  // !__POWERPC__
+
+// Macros to emit instructions in the format used by the particular compiler.
+// We use GNU assembler syntax: "op src, dest" rather than "op dest, src"
+
+#ifdef __GNUC__
+ #define ALU_HEADER           asm("mov %%ecx, %%edi; "
+ #define ALU_TRAILER          : "=D" (opcode) : "c" (opcode) : "eax", "ebx", "edx", "esi")
+ #define EMIT0(op)            #op"; "
+ #define EMIT1(op,arg)        #op" "arg"; "
+ #define EMIT2(op,src,dest)   #op" "src", "dest"; "
+ #define CONST(val)           "$"#val
+ #define ASMVAR(cvar)         ASMVAR2 (__USER_LABEL_PREFIX__, cvar)
+ #define ASMVAR2(prefix,cvar) STRING (prefix) cvar
+ #define STRING(x)            #x
+ #define VAR(var)             ASMVAR(#var)
+ #define VARL(var)            ASMVAR(#var)
+ #define REGREF1(index)       ASMVAR("reg("index")")
+ #define REGREF2(index,scale) ASMVAR("reg(,"index","#scale")")
+ #define LABEL(n)             #n": "
+ #define LABELREF(n,dir)      #n#dir
+ #define al "%%al"
+ #define ah "%%ah"
+ #define eax "%%eax"
+ #define bl "%%bl"
+ #define bh "%%bh"
+ #define ebx "%%ebx"
+ #define cl "%%cl"
+ #define ch "%%ch"
+ #define ecx "%%ecx"
+ #define dl "%%dl"
+ #define dh "%%dh"
+ #define edx "%%edx"
+ #define esp "%%esp"
+ #define ebp "%%ebp"
+ #define esi "%%esi"
+ #define edi "%%edi"
+ #define movzx movzb
+#else
+ #define ALU_HEADER           __asm { __asm mov ecx, opcode
+ #define ALU_TRAILER          }
+ #define EMIT0(op)            __asm op
+ #define EMIT1(op,arg)        __asm op arg
+ #define EMIT2(op,src,dest)   __asm op dest, src
+ #define CONST(val)           val
+ #define VAR(var)             var
+ #define VARL(var)            dword ptr var
+ #define REGREF1(index)       reg[index]
+ #define REGREF2(index,scale) reg[index*scale]
+ #define LABEL(n)             __asm l##n:
+ #define LABELREF(n,dir)      l##n
+#endif
+
+//X//#ifndef _MSC_VER
+// ALU op register usage:
+//    EAX -> 2nd operand value, result (RSB/RSC)
+//    EBX -> C_OUT (carry flag from shift/rotate)
+//    ECX -> opcode (input), shift/rotate count
+//    EDX -> Rn (base) value, result (all except RSB/RSC)
+//    ESI -> Rd (destination) index * 4
+
+// Helper macros for loading value / shift count
+#define VALUE_LOAD_IMM \
+        EMIT2(and, CONST(0x0F), eax)            \
+        EMIT2(mov, REGREF2(eax,4), eax)         \
+        EMIT2(shr, CONST(7), ecx)               \
+        EMIT2(and, CONST(0x1F), ecx)
+#define VALUE_LOAD_REG \
+        EMIT2(and, CONST(0x0F), eax)            \
+        EMIT2(mov, REGREF2(eax,4), eax)         \
+        EMIT2(movzx, ch, ecx)                   \
+        EMIT2(and, CONST(0x0F), ecx)            \
+        EMIT2(mov, REGREF2(ecx,4), ecx)
+
+// Helper macros for setting flags
+#define SETCOND_LOGICAL \
+    EMIT1(sets, VAR(N_FLAG))            \
+    EMIT1(setz, VAR(Z_FLAG))            \
+    EMIT2(mov, bl, VAR(C_FLAG))
+#define SETCOND_ADD \
+    EMIT1(sets, VAR(N_FLAG))            \
+    EMIT1(setz, VAR(Z_FLAG))            \
+    EMIT1(seto, VAR(V_FLAG))            \
+    EMIT1(setc, VAR(C_FLAG))
+#define SETCOND_SUB \
+    EMIT1(sets, VAR(N_FLAG))            \
+    EMIT1(setz, VAR(Z_FLAG))            \
+    EMIT1(seto, VAR(V_FLAG))            \
+    EMIT1(setnc, VAR(C_FLAG))
+
+// ALU initialization
+#define ALU_INIT(LOAD_C_FLAG) \
+    ALU_HEADER                          \
+    LOAD_C_FLAG                         \
+    EMIT2(mov, ecx, edx)                \
+    EMIT2(shr, CONST(14), edx)          \
+    EMIT2(mov, ecx, eax)                \
+    EMIT2(mov, ecx, esi)                \
+    EMIT2(shr, CONST(10), esi)          \
+    EMIT2(and, CONST(0x3C), edx)        \
+    EMIT2(mov, REGREF1(edx), edx)       \
+    EMIT2(and, CONST(0x3C), esi)
+
+#define LOAD_C_FLAG_YES EMIT2(mov, VAR(C_FLAG), bl)
+#define LOAD_C_FLAG_NO  /*nothing*/
+#define ALU_INIT_C ALU_INIT(LOAD_C_FLAG_YES)
+#define ALU_INIT_NC ALU_INIT(LOAD_C_FLAG_NO)
+
+// Macros to load the value operand for an ALU op; these all set N/Z
+// according to the value
+
+// OP Rd,Rb,Rm LSL #
+#define VALUE_LSL_IMM_C \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jnz, LABELREF(1,f))           \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(shl, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    LABEL(0)
+#define VALUE_LSL_IMM_NC \
+    VALUE_LOAD_IMM                      \
+    EMIT2(shl, cl, eax)
+
+// OP Rd,Rb,Rm LSL Rs
+#define VALUE_LSL_REG_C \
+    VALUE_LOAD_REG                      \
+    EMIT2(test, cl, cl)                 \
+    EMIT1(jz, LABELREF(0,f))            \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(je, LABELREF(1,f))            \
+    EMIT1(ja, LABELREF(2,f))            \
+    EMIT2(shl, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(test, CONST(1), al)           \
+    EMIT1(setnz, bl)                    \
+    EMIT2(xor, eax, eax)                \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(2)                            \
+    EMIT2(xor, ebx, ebx)                \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+#define VALUE_LSL_REG_NC \
+    VALUE_LOAD_REG                      \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(jae, LABELREF(1,f))           \
+    EMIT2(shl, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+
+// OP Rd,Rb,Rm LSR #
+#define VALUE_LSR_IMM_C \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(shr, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(test, eax, eax)               \
+    EMIT1(sets, bl)                     \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+#define VALUE_LSR_IMM_NC \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(shr, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+
+// OP Rd,Rb,Rm LSR Rs
+#define VALUE_LSR_REG_C \
+    VALUE_LOAD_REG                      \
+    EMIT2(test, cl, cl)                 \
+    EMIT1(jz, LABELREF(0,f))            \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(je, LABELREF(1,f))            \
+    EMIT1(ja, LABELREF(2,f))            \
+    EMIT2(shr, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(test, eax, eax)               \
+    EMIT1(sets, bl)                     \
+    EMIT2(xor, eax, eax)                \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(2)                            \
+    EMIT2(xor, ebx, ebx)                \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+#define VALUE_LSR_REG_NC \
+    VALUE_LOAD_REG                      \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(jae, LABELREF(1,f))           \
+    EMIT2(shr, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(xor, eax, eax)                \
+    LABEL(0)
+
+// OP Rd,Rb,Rm ASR #
+#define VALUE_ASR_IMM_C \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(sar, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(sar, CONST(31), eax)          \
+    EMIT1(sets, bl)                     \
+    LABEL(0)
+#define VALUE_ASR_IMM_NC \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(sar, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(sar, CONST(31), eax)          \
+    LABEL(0)
+
+// OP Rd,Rb,Rm ASR Rs
+#define VALUE_ASR_REG_C \
+    VALUE_LOAD_REG                      \
+    EMIT2(test, cl, cl)                 \
+    EMIT1(jz, LABELREF(0,f))            \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(jae, LABELREF(1,f))           \
+    EMIT2(sar, cl, eax)                 \
+    EMIT1(setc, bl)                     \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(sar, CONST(31), eax)          \
+    EMIT1(sets, bl)                     \
+    LABEL(0)
+#define VALUE_ASR_REG_NC \
+    VALUE_LOAD_REG                      \
+    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT1(jae, LABELREF(1,f))           \
+    EMIT2(sar, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(sar, CONST(31), eax)          \
+    LABEL(0)
+
+// OP Rd,Rb,Rm ROR #
+#define VALUE_ROR_IMM_C \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(ror, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(bt, CONST(0), ebx)            \
+    EMIT2(rcr, CONST(1), eax)           \
+    LABEL(0)                            \
+    EMIT1(setc, bl)
+#define VALUE_ROR_IMM_NC \
+    VALUE_LOAD_IMM                      \
+    EMIT1(jz, LABELREF(1,f))            \
+    EMIT2(ror, cl, eax)                 \
+    EMIT1(jmp, LABELREF(0,f))           \
+    LABEL(1)                            \
+    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT2(rcr, CONST(1), eax)           \
+    LABEL(0)
+
+// OP Rd,Rb,Rm ROR Rs
+#define VALUE_ROR_REG_C \
+    VALUE_LOAD_REG                      \
+    EMIT2(bt, CONST(0), ebx)            \
+    EMIT2(ror, cl, eax)                 \
+    EMIT1(setc, bl)
+#define VALUE_ROR_REG_NC \
+    VALUE_LOAD_REG                      \
+    EMIT2(ror, cl, eax)
+
+// OP Rd,Rb,# ROR #
+#define VALUE_IMM_C \
+    EMIT2(movzx, ch, ecx)               \
+    EMIT2(add, ecx, ecx)                \
+    EMIT2(movzx, al, eax)               \
+    EMIT2(bt, CONST(0), ebx)            \
+    EMIT2(ror, cl, eax)                 \
+    EMIT1(setc, bl)
+#define VALUE_IMM_NC \
+    EMIT2(movzx, ch, ecx)               \
+    EMIT2(add, ecx, ecx)                \
+    EMIT2(movzx, al, eax)               \
+    EMIT2(ror, cl, eax)
+
+// Macros to perform ALU ops
+
+// Set condition codes iff the destination register is not R15 (PC)
+#define CHECK_PC(OP, SETCOND) \
+    EMIT2(cmp, CONST(0x3C), esi)        \
+    EMIT1(je, LABELREF(8,f))            \
+    OP SETCOND                          \
+    EMIT1(jmp, LABELREF(9,f))           \
+    LABEL(8)                            \
+    OP                                  \
+    LABEL(9)
+
+#define OP_AND \
+    EMIT2(and, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_ANDS   CHECK_PC(OP_AND, SETCOND_LOGICAL)
+#define OP_EOR \
+    EMIT2(xor, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_EORS   CHECK_PC(OP_EOR, SETCOND_LOGICAL)
+#define OP_SUB \
+    EMIT2(sub, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_SUBS   CHECK_PC(OP_SUB, SETCOND_SUB)
+#define OP_RSB \
+    EMIT2(sub, edx, eax)                \
+    EMIT2(mov, eax, REGREF1(esi))
+#define OP_RSBS   CHECK_PC(OP_RSB, SETCOND_SUB)
+#define OP_ADD \
+    EMIT2(add, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_ADDS   CHECK_PC(OP_ADD, SETCOND_ADD)
+#define OP_ADC \
+    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT2(adc, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_ADCS   CHECK_PC(OP_ADC, SETCOND_ADD)
+#define OP_SBC \
+    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT0(cmc)                          \
+    EMIT2(sbb, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_SBCS   CHECK_PC(OP_SBC, SETCOND_SUB)
+#define OP_RSC \
+    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT0(cmc)                          \
+    EMIT2(sbb, edx, eax)                \
+    EMIT2(mov, eax, REGREF1(esi))
+#define OP_RSCS   CHECK_PC(OP_RSC, SETCOND_SUB)
+#define OP_TST \
+    EMIT2(and, eax, edx)                \
+    SETCOND_LOGICAL
+#define OP_TEQ \
+    EMIT2(xor, eax, edx)                \
+    SETCOND_LOGICAL
+#define OP_CMP \
+    EMIT2(sub, eax, edx)                \
+    SETCOND_SUB
+#define OP_CMN \
+    EMIT2(add, eax, edx)                \
+    SETCOND_ADD
+#define OP_ORR \
+    EMIT2(or, eax, edx)                 \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_ORRS   CHECK_PC(OP_ORR, SETCOND_LOGICAL)
+#define OP_MOV \
+    EMIT2(mov, eax, REGREF1(esi))
+#define OP_MOVS   CHECK_PC(EMIT2(test,eax,eax) EMIT2(mov,eax,REGREF1(esi)), SETCOND_LOGICAL)
+#define OP_BIC \
+    EMIT1(not, eax)                     \
+    EMIT2(and, eax, edx)                \
+    EMIT2(mov, edx, REGREF1(esi))
+#define OP_BICS   CHECK_PC(OP_BIC, SETCOND_LOGICAL)
+#define OP_MVN \
+    EMIT1(not, eax)                     \
+    EMIT2(mov, eax, REGREF1(esi))
+#define OP_MVNS   CHECK_PC(OP_MVN, SETCOND_LOGICAL)
+
+// ALU cleanup macro
+#define ALU_FINISH  ALU_TRAILER
+
+// End of ALU macros
+//X//#endif //_MSC_VER
+
+#ifdef __GNUC__
+
+#define ROR_IMM_MSR \
+    asm ("ror %%cl, %%eax;"             \
+         : "=a" (value)                 \
+         : "a" (opcode & 0xFF), "c" (shift));
+
+#define ROR_OFFSET \
+    asm("ror %%cl, %0"                  \
+        : "=r" (offset)                 \
+        : "0" (offset), "c" (shift));
+
+#define RRX_OFFSET \
+    asm(EMIT2(btl,CONST(0),VAR(C_FLAG)) \
+        "rcr $1, %0"                    \
+        : "=r" (offset)                 \
+        : "0" (offset));
+
+#else  // !__GNUC__, i.e. Visual C++
+
+#define ROR_IMM_MSR \
+    __asm {                             \
+        __asm mov ecx, shift            \
+        __asm ror value, cl             \
+     }
+
+
+#define ROR_OFFSET \
+    __asm {                             \
+        __asm mov ecx, shift            \
+        __asm ror offset, cl            \
+    }
+
+#define RRX_OFFSET \
+    __asm {                             \
+        __asm bt dword ptr C_FLAG, 0    \
+        __asm rcr offset, 1             \
+    }
+
+#endif  // !__GNUC__
+
+#endif  // !__POWERPC__
+#endif  // !C_CORE
+
 // C core
 
 #define C_SETCOND_LOGICAL \
@@ -80,7 +729,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define ALU_INIT_C \
     int dest = (opcode>>12) & 15;                       \
     bool C_OUT = C_FLAG;                                \
-    uint32_t value;
+    u32 value;
 #endif
 // OP Rd,Rb,Rm LSL #
 #ifndef VALUE_LSL_IMM_C
@@ -89,7 +738,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
     if (!shift) {  /* LSL #0 most common? */    \
         value = reg[opcode & 0x0F].I;                   \
     } else {                                            \
-        uint32_t v = reg[opcode & 0x0F].I;                   \
+        u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
         value = v << shift;                             \
     }
@@ -103,7 +752,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
             value = 0;                                  \
             C_OUT = (reg[opcode & 0x0F].I & 1 ? true : false);\
         } else if (shift < 32) {                \
-            uint32_t v = reg[opcode & 0x0F].I;               \
+            u32 v = reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
             value = v << shift;                         \
         } else {                                        \
@@ -119,7 +768,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define VALUE_LSR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        uint32_t v = reg[opcode & 0x0F].I;                   \
+        u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = v >> shift;                             \
     } else {                                            \
@@ -136,7 +785,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
             value = 0;                                  \
             C_OUT = (reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
         } else if (shift < 32) {                \
-            uint32_t v = reg[opcode & 0x0F].I;               \
+            u32 v = reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
             value = v >> shift;                         \
         } else {                                        \
@@ -152,7 +801,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define VALUE_ASR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        /* VC++ BUG: uint32_t v; (s32)v>>n is optimized to shr! */ \
+        /* VC++ BUG: u32 v; (s32)v>>n is optimized to shr! */ \
         s32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
         value = v >> (int)shift;                        \
@@ -193,12 +842,12 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define VALUE_ROR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        uint32_t v = reg[opcode & 0x0F].I;                   \
+        u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
-        uint32_t v = reg[opcode & 0x0F].I;                   \
+        u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v & 1) ? true : false;                 \
         value = ((v >> 1) |                             \
                  (C_FLAG << 31));                       \
@@ -209,7 +858,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define VALUE_ROR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
     if (shift & 0x1F) {                         \
-        uint32_t v = reg[opcode & 0x0F].I;                   \
+        u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
@@ -224,7 +873,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
  #define VALUE_IMM_C \
     int shift = (opcode & 0xF00) >> 7;                  \
     if (shift) {                              \
-        uint32_t v = opcode & 0xFF;                          \
+        u32 v = opcode & 0xFF;                          \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
@@ -269,7 +918,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #define C_CHECK_PC(SETCOND) if (dest != 15) { SETCOND }
 #ifndef OP_AND
  #define OP_AND \
-    uint32_t res = reg[(opcode>>16)&15].I & value;           \
+    u32 res = reg[(opcode>>16)&15].I & value;           \
     reg[dest].I = res;
 #endif
 #ifndef OP_ANDS
@@ -277,7 +926,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_EOR
  #define OP_EOR \
-    uint32_t res = reg[(opcode>>16)&15].I ^ value;           \
+    u32 res = reg[(opcode>>16)&15].I ^ value;           \
     reg[dest].I = res;
 #endif
 #ifndef OP_EORS
@@ -285,9 +934,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_SUB
  #define OP_SUB \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs - rhs;                                \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs - rhs;                                \
     reg[dest].I = res;
 #endif
 #ifndef OP_SUBS
@@ -295,9 +944,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_RSB
  #define OP_RSB \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = rhs - lhs;                                \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = rhs - lhs;                                \
     reg[dest].I = res;
 #endif
 #ifndef OP_RSBS
@@ -305,9 +954,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_ADD
  #define OP_ADD \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs + rhs;                                \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs + rhs;                                \
     reg[dest].I = res;
 #endif
 #ifndef OP_ADDS
@@ -315,9 +964,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_ADC
  #define OP_ADC \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs + rhs + (uint32_t)C_FLAG;                  \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs + rhs + (u32)C_FLAG;                  \
     reg[dest].I = res;
 #endif
 #ifndef OP_ADCS
@@ -325,9 +974,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_SBC
  #define OP_SBC \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs - rhs - !((uint32_t)C_FLAG);               \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs - rhs - !((u32)C_FLAG);               \
     reg[dest].I = res;
 #endif
 #ifndef OP_SBCS
@@ -335,9 +984,9 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_RSC
  #define OP_RSC \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = rhs - lhs - !((uint32_t)C_FLAG);               \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = rhs - lhs - !((u32)C_FLAG);               \
     reg[dest].I = res;
 #endif
 #ifndef OP_RSCS
@@ -345,31 +994,31 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_TST
  #define OP_TST \
-    uint32_t res = reg[(opcode >> 16) & 0x0F].I & value;     \
+    u32 res = reg[(opcode >> 16) & 0x0F].I & value;     \
     C_SETCOND_LOGICAL;
 #endif
 #ifndef OP_TEQ
  #define OP_TEQ \
-    uint32_t res = reg[(opcode >> 16) & 0x0F].I ^ value;     \
+    u32 res = reg[(opcode >> 16) & 0x0F].I ^ value;     \
     C_SETCOND_LOGICAL;
 #endif
 #ifndef OP_CMP
  #define OP_CMP \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs - rhs;                                \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs - rhs;                                \
     C_SETCOND_SUB;
 #endif
 #ifndef OP_CMN
  #define OP_CMN \
-    uint32_t lhs = reg[(opcode>>16)&15].I;                   \
-    uint32_t rhs = value;                                    \
-    uint32_t res = lhs + rhs;                                \
+    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 rhs = value;                                    \
+    u32 res = lhs + rhs;                                \
     C_SETCOND_ADD;
 #endif
 #ifndef OP_ORR
  #define OP_ORR \
-    uint32_t res = reg[(opcode >> 16) & 0x0F].I | value;     \
+    u32 res = reg[(opcode >> 16) & 0x0F].I | value;     \
     reg[dest].I = res;
 #endif
 #ifndef OP_ORRS
@@ -377,7 +1026,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_MOV
  #define OP_MOV \
-    uint32_t res = value;                                    \
+    u32 res = value;                                    \
     reg[dest].I = res;
 #endif
 #ifndef OP_MOVS
@@ -385,7 +1034,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_BIC
  #define OP_BIC \
-    uint32_t res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
+    u32 res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
     reg[dest].I = res;
 #endif
 #ifndef OP_BICS
@@ -393,7 +1042,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #endif
 #ifndef OP_MVN
  #define OP_MVN \
-    uint32_t res = ~value;                                   \
+    u32 res = ~value;                                   \
     reg[dest].I = res;
 #endif
 #ifndef OP_MVNS
@@ -420,7 +1069,7 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 
 #ifndef ROR_IMM_MSR
  #define ROR_IMM_MSR \
-    uint32_t v = opcode & 0xff;                              \
+    u32 v = opcode & 0xff;                              \
     value = ((v << (32 - shift)) | (v >> shift));
 #endif
 #ifndef ROR_OFFSET
@@ -468,25 +1117,25 @@ static INSN_REGPARM void armUnknownInsn(uint32_t opcode)
 #define MODECHANGE_YES CPUSwitchMode(reg[17].I & 0x1f, false, true);
 
 #define DEFINE_ALU_INSN_C(CODE1, CODE2, OP, MODECHANGE) \
-  static INSN_REGPARM void arm##CODE1##0(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##1(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##2(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##3(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##4(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_ASR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##5(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_ASR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##6(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_ROR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##7(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_ROR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE2##0(uint32_t opcode) { ALU_INSN(ALU_INIT_C, VALUE_IMM_C,     OP_##OP, MODECHANGE_##MODECHANGE, 0); }
+  static INSN_REGPARM void arm##CODE1##0(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##1(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##2(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##3(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##4(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_ASR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##5(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_ASR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##6(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_ROR_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##7(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_ROR_REG_C, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE2##0(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_IMM_C,     OP_##OP, MODECHANGE_##MODECHANGE, 0); }
 #define DEFINE_ALU_INSN_NC(CODE1, CODE2, OP, MODECHANGE) \
-  static INSN_REGPARM void arm##CODE1##0(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSL_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##1(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSL_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##2(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##3(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##4(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ASR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##5(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ASR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE1##6(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ROR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
-  static INSN_REGPARM void arm##CODE1##7(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ROR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
-  static INSN_REGPARM void arm##CODE2##0(uint32_t opcode) { ALU_INSN(ALU_INIT_NC, VALUE_IMM_NC,     OP_##OP, MODECHANGE_##MODECHANGE, 0); }
+  static INSN_REGPARM void arm##CODE1##0(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSL_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##1(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSL_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##2(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##3(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_LSR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##4(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ASR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##5(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ASR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE1##6(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ROR_IMM_NC, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
+  static INSN_REGPARM void arm##CODE1##7(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_ROR_REG_NC, OP_##OP, MODECHANGE_##MODECHANGE, 1); }\
+  static INSN_REGPARM void arm##CODE2##0(u32 opcode) { ALU_INSN(ALU_INIT_NC, VALUE_IMM_NC,     OP_##OP, MODECHANGE_##MODECHANGE, 0); }
 
 // AND
 DEFINE_ALU_INSN_NC(00, 20, AND,  NO)
@@ -567,7 +1216,7 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
 // CYCLES: base cycle count (1, 2, or 3)
 #define MUL_INSN(OP, SETCOND, CYCLES) \
     int mult = (opcode & 0x0F);                         \
-    uint32_t rs = reg[(opcode >> 8) & 0x0F].I;               \
+    u32 rs = reg[(opcode >> 8) & 0x0F].I;               \
     int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     int dest = (opcode >> 16) & 0x0F;  /* or destHi */  \
     OP;                                                 \
@@ -593,252 +1242,231 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
 #define OP_MULL(SIGN) \
     SIGN##64 res = (SIGN##64)(SIGN##32)reg[mult].I      \
                  * (SIGN##64)(SIGN##32)rs;              \
-    reg[acc].I = (uint32_t)res;                              \
-    reg[dest].I = (uint32_t)(res >> 32);
+    reg[acc].I = (u32)res;                              \
+    reg[dest].I = (u32)(res >> 32);
 #define OP_MLAL(SIGN) \
     SIGN##64 res = ((SIGN##64)reg[dest].I<<32 | reg[acc].I)\
                  + ((SIGN##64)(SIGN##32)reg[mult].I     \
                     * (SIGN##64)(SIGN##32)rs);          \
-    reg[acc].I = (uint32_t)res;                              \
-    reg[dest].I = (uint32_t)(res >> 32);
+    reg[acc].I = (u32)res;                              \
+    reg[dest].I = (u32)(res >> 32);
 #define OP_UMULL OP_MULL(u)
 #define OP_UMLAL OP_MLAL(u)
 #define OP_SMULL OP_MULL(s)
 #define OP_SMLAL OP_MLAL(s)
 
 // MUL Rd, Rm, Rs
-static INSN_REGPARM void arm009(uint32_t opcode) { MUL_INSN(OP_MUL, SETCOND_NONE, 1); }
+static INSN_REGPARM void arm009(u32 opcode) { MUL_INSN(OP_MUL, SETCOND_NONE, 1); }
 // MULS Rd, Rm, Rs
-static INSN_REGPARM void arm019(uint32_t opcode) { MUL_INSN(OP_MUL, SETCOND_MUL, 1); }
+static INSN_REGPARM void arm019(u32 opcode) { MUL_INSN(OP_MUL, SETCOND_MUL, 1); }
 
 // MLA Rd, Rm, Rs, Rn
-static INSN_REGPARM void arm029(uint32_t opcode) { MUL_INSN(OP_MLA, SETCOND_NONE, 2); }
+static INSN_REGPARM void arm029(u32 opcode) { MUL_INSN(OP_MLA, SETCOND_NONE, 2); }
 // MLAS Rd, Rm, Rs, Rn
-static INSN_REGPARM void arm039(uint32_t opcode) { MUL_INSN(OP_MLA, SETCOND_MUL, 2); }
+static INSN_REGPARM void arm039(u32 opcode) { MUL_INSN(OP_MLA, SETCOND_MUL, 2); }
 
 // UMULL RdLo, RdHi, Rn, Rs
-static INSN_REGPARM void arm089(uint32_t opcode) { MUL_INSN(OP_UMULL, SETCOND_NONE, 2); }
+static INSN_REGPARM void arm089(u32 opcode) { MUL_INSN(OP_UMULL, SETCOND_NONE, 2); }
 // UMULLS RdLo, RdHi, Rn, Rs
-static INSN_REGPARM void arm099(uint32_t opcode) { MUL_INSN(OP_UMULL, SETCOND_MULL, 2); }
+static INSN_REGPARM void arm099(u32 opcode) { MUL_INSN(OP_UMULL, SETCOND_MULL, 2); }
 
 // UMLAL RdLo, RdHi, Rn, Rs
-static INSN_REGPARM void arm0A9(uint32_t opcode) { MUL_INSN(OP_UMLAL, SETCOND_NONE, 3); }
+static INSN_REGPARM void arm0A9(u32 opcode) { MUL_INSN(OP_UMLAL, SETCOND_NONE, 3); }
 // UMLALS RdLo, RdHi, Rn, Rs
-static INSN_REGPARM void arm0B9(uint32_t opcode) { MUL_INSN(OP_UMLAL, SETCOND_MULL, 3); }
+static INSN_REGPARM void arm0B9(u32 opcode) { MUL_INSN(OP_UMLAL, SETCOND_MULL, 3); }
 
 // SMULL RdLo, RdHi, Rm, Rs
-static INSN_REGPARM void arm0C9(uint32_t opcode) { MUL_INSN(OP_SMULL, SETCOND_NONE, 2); }
+static INSN_REGPARM void arm0C9(u32 opcode) { MUL_INSN(OP_SMULL, SETCOND_NONE, 2); }
 // SMULLS RdLo, RdHi, Rm, Rs
-static INSN_REGPARM void arm0D9(uint32_t opcode) { MUL_INSN(OP_SMULL, SETCOND_MULL, 2); }
+static INSN_REGPARM void arm0D9(u32 opcode) { MUL_INSN(OP_SMULL, SETCOND_MULL, 2); }
 
 // SMLAL RdLo, RdHi, Rm, Rs
-static INSN_REGPARM void arm0E9(uint32_t opcode) { MUL_INSN(OP_SMLAL, SETCOND_NONE, 3); }
+static INSN_REGPARM void arm0E9(u32 opcode) { MUL_INSN(OP_SMLAL, SETCOND_NONE, 3); }
 // SMLALS RdLo, RdHi, Rm, Rs
-static INSN_REGPARM void arm0F9(uint32_t opcode) { MUL_INSN(OP_SMLAL, SETCOND_MULL, 3); }
+static INSN_REGPARM void arm0F9(u32 opcode) { MUL_INSN(OP_SMLAL, SETCOND_MULL, 3); }
 
 // Misc instructions //////////////////////////////////////////////////////
 
 // SWP Rd, Rm, [Rn]
-static INSN_REGPARM void arm109(uint32_t opcode)
+static INSN_REGPARM void arm109(u32 opcode)
 {
-	uint32_t address = reg[(opcode >> 16) & 15].I;
-	uint32_t temp = CPUReadMemory(address);
-	CPUWriteMemory(address, reg[opcode&15].I);
-	reg[(opcode >> 12) & 15].I = temp;
-	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
-		+ codeTicksAccess32(armNextPC);
+    u32 address = reg[(opcode >> 16) & 15].I;
+    u32 temp = CPUReadMemory(address);
+    CPUWriteMemory(address, reg[opcode&15].I);
+    reg[(opcode >> 12) & 15].I = temp;
+    clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
+                   + codeTicksAccess32(armNextPC);
 }
 
 // SWPB Rd, Rm, [Rn]
-static INSN_REGPARM void arm149(uint32_t opcode)
+static INSN_REGPARM void arm149(u32 opcode)
 {
-	uint32_t address = reg[(opcode >> 16) & 15].I;
-	uint32_t temp = CPUReadByte(address);
-	CPUWriteByte(address, reg[opcode&15].B.B0);
-	reg[(opcode>>12)&15].I = temp;
-	clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
-		+ codeTicksAccess32(armNextPC);
+    u32 address = reg[(opcode >> 16) & 15].I;
+    u32 temp = CPUReadByte(address);
+    CPUWriteByte(address, reg[opcode&15].B.B0);
+    reg[(opcode>>12)&15].I = temp;
+    clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
+                   + codeTicksAccess32(armNextPC);
 }
 
 // MRS Rd, CPSR
-static INSN_REGPARM void arm100(uint32_t opcode)
+static INSN_REGPARM void arm100(u32 opcode)
 {
-	if ((opcode & 0x0FFF0FFF) == 0x010F0000)
-	{
-		CPUUpdateCPSR();
-		reg[(opcode >> 12) & 0x0F].I = reg[16].I;
-	}
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FFF0FFF) == 0x010F0000) {
+        CPUUpdateCPSR();
+        reg[(opcode >> 12) & 0x0F].I = reg[16].I;
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // MRS Rd, SPSR
-static INSN_REGPARM void arm140(uint32_t opcode)
+static INSN_REGPARM void arm140(u32 opcode)
 {
-	if ((opcode & 0x0FFF0FFF) == 0x014F0000)
-		reg[(opcode >> 12) & 0x0F].I = reg[17].I;
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FFF0FFF) == 0x014F0000) {
+        reg[(opcode >> 12) & 0x0F].I = reg[17].I;
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // MSR CPSR_fields, Rm
-static INSN_REGPARM void arm120(uint32_t opcode)
+static INSN_REGPARM void arm120(u32 opcode)
 {
-	if ((opcode & 0x0FF0FFF0) == 0x0120F000)
-	{
-		CPUUpdateCPSR();
-		uint32_t value = reg[opcode & 15].I;
-		uint32_t newValue = reg[16].I;
-
-		if (armMode > 0x10)
-		{
-			if (opcode & 0x00010000)
-				newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
-			if (opcode & 0x00020000)
-				newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
-			if (opcode & 0x00040000)
-				newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
-		}
-
-		if (opcode & 0x00080000)
-			newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
-
-		newValue |= 0x10;
-		CPUSwitchMode(newValue & 0x1F, false, true);
-		reg[16].I = newValue;
-		CPUUpdateFlags();
-		if (!armState)
-		{
-			// this should not be allowed, but it seems to work
-			THUMB_PREFETCH;
-			reg[15].I = armNextPC + 2;
-		}
-	}
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FF0FFF0) == 0x0120F000) {
+        CPUUpdateCPSR();
+        u32 value = reg[opcode & 15].I;
+        u32 newValue = reg[16].I;
+        if (armMode > 0x10) {
+            if (opcode & 0x00010000)
+                newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
+            if (opcode & 0x00020000)
+                newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
+            if (opcode & 0x00040000)
+                newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
+        }
+        if (opcode & 0x00080000)
+            newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
+        newValue |= 0x10;
+        CPUSwitchMode(newValue & 0x1F, false, true);
+        reg[16].I = newValue;
+        CPUUpdateFlags();
+        if (!armState) {  // this should not be allowed, but it seems to work
+            THUMB_PREFETCH;
+            reg[15].I = armNextPC + 2;
+        }
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // MSR SPSR_fields, Rm
-static INSN_REGPARM void arm160(uint32_t opcode)
+static INSN_REGPARM void arm160(u32 opcode)
 {
-	if ((opcode & 0x0FF0FFF0) == 0x0160F000)
-	{
-		uint32_t value = reg[opcode & 15].I;
-		if (armMode > 0x10 && armMode < 0x1F)
-		{
-			if (opcode & 0x00010000)
-				reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
-			if (opcode & 0x00020000)
-				reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
-			if (opcode & 0x00040000)
-				reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
-			if (opcode & 0x00080000)
-				reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
-		}
-	}
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FF0FFF0) == 0x0160F000) {
+        u32 value = reg[opcode & 15].I;
+        if (armMode > 0x10 && armMode < 0x1F) {
+            if (opcode & 0x00010000)
+                reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+            if (opcode & 0x00020000)
+                reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+            if (opcode & 0x00040000)
+                reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+            if (opcode & 0x00080000)
+                reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+        }
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // MSR CPSR_fields, #
-static INSN_REGPARM void arm320(uint32_t opcode)
+static INSN_REGPARM void arm320(u32 opcode)
 {
-	if ((opcode & 0x0FF0F000) == 0x0320F000)
-	{
-		CPUUpdateCPSR();
-		uint32_t value = opcode & 0xFF;
-		int shift = (opcode & 0xF00) >> 7;
-		if (shift)
-		{
-			ROR_IMM_MSR;
-		}
+    if ((opcode & 0x0FF0F000) == 0x0320F000) {
+        CPUUpdateCPSR();
+        u32 value = opcode & 0xFF;
+        int shift = (opcode & 0xF00) >> 7;
+        if (shift) {
+            ROR_IMM_MSR;
+        }
+        u32 newValue = reg[16].I;
+        if (armMode > 0x10) {
+            if (opcode & 0x00010000)
+                newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
+            if (opcode & 0x00020000)
+                newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
+            if (opcode & 0x00040000)
+                newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
+        }
+        if (opcode & 0x00080000)
+            newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
 
-		uint32_t newValue = reg[16].I;
+        newValue |= 0x10;
 
-		if (armMode > 0x10)
-		{
-			if (opcode & 0x00010000)
-				newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
-			if (opcode & 0x00020000)
-				newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
-			if (opcode & 0x00040000)
-				newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
-		}
-
-		if (opcode & 0x00080000)
-			newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
-
-		newValue |= 0x10;
-
-		CPUSwitchMode(newValue & 0x1F, false, true);
-		reg[16].I = newValue;
-		CPUUpdateFlags();
-		if (!armState)
-		{
-			// this should not be allowed, but it seems to work
-			THUMB_PREFETCH;
-			reg[15].I = armNextPC + 2;
-		}
-	}
-	else
-		armUnknownInsn(opcode);
+        CPUSwitchMode(newValue & 0x1F, false, true);
+        reg[16].I = newValue;
+        CPUUpdateFlags();
+        if (!armState) {  // this should not be allowed, but it seems to work
+            THUMB_PREFETCH;
+            reg[15].I = armNextPC + 2;
+        }
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // MSR SPSR_fields, #
-static INSN_REGPARM void arm360(uint32_t opcode)
+static INSN_REGPARM void arm360(u32 opcode)
 {
-	if ((opcode & 0x0FF0F000) == 0x0360F000)
-	{
-		if (armMode > 0x10 && armMode < 0x1F)
-		{
-			uint32_t value = opcode & 0xFF;
-			int shift = (opcode & 0xF00) >> 7;
-			if (shift)
-			{
-				ROR_IMM_MSR;
-			}
-
-			if (opcode & 0x00010000)
-				reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
-			if (opcode & 0x00020000)
-				reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
-			if (opcode & 0x00040000)
-				reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
-			if (opcode & 0x00080000)
-				reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
-		}
-	}
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FF0F000) == 0x0360F000) {
+        if (armMode > 0x10 && armMode < 0x1F) {
+            u32 value = opcode & 0xFF;
+            int shift = (opcode & 0xF00) >> 7;
+            if (shift) {
+                ROR_IMM_MSR;
+            }
+            if (opcode & 0x00010000)
+                reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+            if (opcode & 0x00020000)
+                reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+            if (opcode & 0x00040000)
+                reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+            if (opcode & 0x00080000)
+                reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+        }
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // BX Rm
-static INSN_REGPARM void arm121(uint32_t opcode)
+static INSN_REGPARM void arm121(u32 opcode)
 {
-	if ((opcode & 0x0FFFFFF0) == 0x012FFF10)
-	{
-		int base = opcode & 0x0F;
-		busPrefetchCount = 0;
-		armState = reg[base].I & 1 ? false : true;
-		if (armState)
-		{
-			reg[15].I = reg[base].I & 0xFFFFFFFC;
-			armNextPC = reg[15].I;
-			reg[15].I += 4;
-			ARM_PREFETCH;
-			clockTicks = 3 + codeTicksAccessSeq32(armNextPC) + codeTicksAccessSeq32(armNextPC) + codeTicksAccess32(armNextPC);
-		}
-		else
-		{
-			reg[15].I = reg[base].I & 0xFFFFFFFE;
-			armNextPC = reg[15].I;
-			reg[15].I += 2;
-			THUMB_PREFETCH;
-			clockTicks = 3 + codeTicksAccessSeq16(armNextPC) + codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC);
-		}
-	}
-	else
-		armUnknownInsn(opcode);
+    if ((opcode & 0x0FFFFFF0) == 0x012FFF10) {
+        int base = opcode & 0x0F;
+        busPrefetchCount = 0;
+        armState = reg[base].I & 1 ? false : true;
+        if (armState) {
+            reg[15].I = reg[base].I & 0xFFFFFFFC;
+            armNextPC = reg[15].I;
+            reg[15].I += 4;
+            ARM_PREFETCH;
+            clockTicks = 3 + codeTicksAccessSeq32(armNextPC)
+                           + codeTicksAccessSeq32(armNextPC)
+                           + codeTicksAccess32(armNextPC);
+        } else {
+            reg[15].I = reg[base].I & 0xFFFFFFFE;
+            armNextPC = reg[15].I;
+            reg[15].I += 2;
+            THUMB_PREFETCH;
+            clockTicks = 3 + codeTicksAccessSeq16(armNextPC)
+                           + codeTicksAccessSeq16(armNextPC)
+                           + codeTicksAccess16(armNextPC);
+        }
+    } else {
+        armUnknownInsn(opcode);
+    }
 }
 
 // Load/store /////////////////////////////////////////////////////////////
@@ -865,7 +1493,7 @@ static INSN_REGPARM void arm121(uint32_t opcode)
         offset = 0;
 #define OFFSET_ROR \
     int shift = (opcode >> 7) & 31;                     \
-    uint32_t offset = reg[opcode & 15].I;                    \
+    u32 offset = reg[opcode & 15].I;                    \
     if (shift) {                                        \
         ROR_OFFSET;                                     \
     } else {                                            \
@@ -896,7 +1524,7 @@ static INSN_REGPARM void arm121(uint32_t opcode)
     int dest = (opcode >> 12) & 15;                     \
     int base = (opcode >> 16) & 15;                     \
     CALC_OFFSET;                                        \
-    uint32_t address = CALC_ADDRESS;
+    u32 address = CALC_ADDRESS;
 
 #define STR(CALC_OFFSET, CALC_ADDRESS, STORE_DATA, WRITEBACK1, WRITEBACK2, SIZE) \
     LDRSTR_INIT(CALC_OFFSET, CALC_ADDRESS);             \
@@ -949,347 +1577,347 @@ static INSN_REGPARM void arm121(uint32_t opcode)
   LDR(CALC_OFFSET, ADDRESS_PREINC, LOAD_DATA, WRITEBACK_PRE, SIZE)
 
 // STRH Rd, [Rn], -Rm
-static INSN_REGPARM void arm00B(uint32_t opcode) { STR_POSTDEC(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm00B(u32 opcode) { STR_POSTDEC(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn], #-offset
-static INSN_REGPARM void arm04B(uint32_t opcode) { STR_POSTDEC(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm04B(u32 opcode) { STR_POSTDEC(OFFSET_IMM8, OP_STRH, 16); }
 // STRH Rd, [Rn], Rm
-static INSN_REGPARM void arm08B(uint32_t opcode) { STR_POSTINC(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm08B(u32 opcode) { STR_POSTINC(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn], #offset
-static INSN_REGPARM void arm0CB(uint32_t opcode) { STR_POSTINC(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm0CB(u32 opcode) { STR_POSTINC(OFFSET_IMM8, OP_STRH, 16); }
 // STRH Rd, [Rn, -Rm]
-static INSN_REGPARM void arm10B(uint32_t opcode) { STR_PREDEC(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm10B(u32 opcode) { STR_PREDEC(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn, -Rm]!
-static INSN_REGPARM void arm12B(uint32_t opcode) { STR_PREDEC_WB(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm12B(u32 opcode) { STR_PREDEC_WB(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn, -#offset]
-static INSN_REGPARM void arm14B(uint32_t opcode) { STR_PREDEC(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm14B(u32 opcode) { STR_PREDEC(OFFSET_IMM8, OP_STRH, 16); }
 // STRH Rd, [Rn, -#offset]!
-static INSN_REGPARM void arm16B(uint32_t opcode) { STR_PREDEC_WB(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm16B(u32 opcode) { STR_PREDEC_WB(OFFSET_IMM8, OP_STRH, 16); }
 // STRH Rd, [Rn, Rm]
-static INSN_REGPARM void arm18B(uint32_t opcode) { STR_PREINC(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm18B(u32 opcode) { STR_PREINC(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn, Rm]!
-static INSN_REGPARM void arm1AB(uint32_t opcode) { STR_PREINC_WB(OFFSET_REG, OP_STRH, 16); }
+static INSN_REGPARM void arm1AB(u32 opcode) { STR_PREINC_WB(OFFSET_REG, OP_STRH, 16); }
 // STRH Rd, [Rn, #offset]
-static INSN_REGPARM void arm1CB(uint32_t opcode) { STR_PREINC(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm1CB(u32 opcode) { STR_PREINC(OFFSET_IMM8, OP_STRH, 16); }
 // STRH Rd, [Rn, #offset]!
-static INSN_REGPARM void arm1EB(uint32_t opcode) { STR_PREINC_WB(OFFSET_IMM8, OP_STRH, 16); }
+static INSN_REGPARM void arm1EB(u32 opcode) { STR_PREINC_WB(OFFSET_IMM8, OP_STRH, 16); }
 
 // LDRH Rd, [Rn], -Rm
-static INSN_REGPARM void arm01B(uint32_t opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm01B(u32 opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn], #-offset
-static INSN_REGPARM void arm05B(uint32_t opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm05B(u32 opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRH, 16); }
 // LDRH Rd, [Rn], Rm
-static INSN_REGPARM void arm09B(uint32_t opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm09B(u32 opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn], #offset
-static INSN_REGPARM void arm0DB(uint32_t opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm0DB(u32 opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRH, 16); }
 // LDRH Rd, [Rn, -Rm]
-static INSN_REGPARM void arm11B(uint32_t opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm11B(u32 opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn, -Rm]!
-static INSN_REGPARM void arm13B(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm13B(u32 opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn, -#offset]
-static INSN_REGPARM void arm15B(uint32_t opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm15B(u32 opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRH, 16); }
 // LDRH Rd, [Rn, -#offset]!
-static INSN_REGPARM void arm17B(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm17B(u32 opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRH, 16); }
 // LDRH Rd, [Rn, Rm]
-static INSN_REGPARM void arm19B(uint32_t opcode) { LDR_PREINC(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm19B(u32 opcode) { LDR_PREINC(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn, Rm]!
-static INSN_REGPARM void arm1BB(uint32_t opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRH, 16); }
+static INSN_REGPARM void arm1BB(u32 opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRH, 16); }
 // LDRH Rd, [Rn, #offset]
-static INSN_REGPARM void arm1DB(uint32_t opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm1DB(u32 opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRH, 16); }
 // LDRH Rd, [Rn, #offset]!
-static INSN_REGPARM void arm1FB(uint32_t opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRH, 16); }
+static INSN_REGPARM void arm1FB(u32 opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRH, 16); }
 
 // LDRSB Rd, [Rn], -Rm
-static INSN_REGPARM void arm01D(uint32_t opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm01D(u32 opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn], #-offset
-static INSN_REGPARM void arm05D(uint32_t opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm05D(u32 opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn], Rm
-static INSN_REGPARM void arm09D(uint32_t opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm09D(u32 opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn], #offset
-static INSN_REGPARM void arm0DD(uint32_t opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm0DD(u32 opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, -Rm]
-static INSN_REGPARM void arm11D(uint32_t opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm11D(u32 opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, -Rm]!
-static INSN_REGPARM void arm13D(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm13D(u32 opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, -#offset]
-static INSN_REGPARM void arm15D(uint32_t opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm15D(u32 opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, -#offset]!
-static INSN_REGPARM void arm17D(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm17D(u32 opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, Rm]
-static INSN_REGPARM void arm19D(uint32_t opcode) { LDR_PREINC(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm19D(u32 opcode) { LDR_PREINC(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, Rm]!
-static INSN_REGPARM void arm1BD(uint32_t opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRSB, 16); }
+static INSN_REGPARM void arm1BD(u32 opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, #offset]
-static INSN_REGPARM void arm1DD(uint32_t opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm1DD(u32 opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRSB, 16); }
 // LDRSB Rd, [Rn, #offset]!
-static INSN_REGPARM void arm1FD(uint32_t opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRSB, 16); }
+static INSN_REGPARM void arm1FD(u32 opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRSB, 16); }
 
 // LDRSH Rd, [Rn], -Rm
-static INSN_REGPARM void arm01F(uint32_t opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm01F(u32 opcode) { LDR_POSTDEC(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn], #-offset
-static INSN_REGPARM void arm05F(uint32_t opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm05F(u32 opcode) { LDR_POSTDEC(OFFSET_IMM8, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn], Rm
-static INSN_REGPARM void arm09F(uint32_t opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm09F(u32 opcode) { LDR_POSTINC(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn], #offset
-static INSN_REGPARM void arm0DF(uint32_t opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm0DF(u32 opcode) { LDR_POSTINC(OFFSET_IMM8, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, -Rm]
-static INSN_REGPARM void arm11F(uint32_t opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm11F(u32 opcode) { LDR_PREDEC(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, -Rm]!
-static INSN_REGPARM void arm13F(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm13F(u32 opcode) { LDR_PREDEC_WB(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, -#offset]
-static INSN_REGPARM void arm15F(uint32_t opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm15F(u32 opcode) { LDR_PREDEC(OFFSET_IMM8, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, -#offset]!
-static INSN_REGPARM void arm17F(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm17F(u32 opcode) { LDR_PREDEC_WB(OFFSET_IMM8, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, Rm]
-static INSN_REGPARM void arm19F(uint32_t opcode) { LDR_PREINC(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm19F(u32 opcode) { LDR_PREINC(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, Rm]!
-static INSN_REGPARM void arm1BF(uint32_t opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRSH, 16); }
+static INSN_REGPARM void arm1BF(u32 opcode) { LDR_PREINC_WB(OFFSET_REG, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, #offset]
-static INSN_REGPARM void arm1DF(uint32_t opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm1DF(u32 opcode) { LDR_PREINC(OFFSET_IMM8, OP_LDRSH, 16); }
 // LDRSH Rd, [Rn, #offset]!
-static INSN_REGPARM void arm1FF(uint32_t opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRSH, 16); }
+static INSN_REGPARM void arm1FF(u32 opcode) { LDR_PREINC_WB(OFFSET_IMM8, OP_LDRSH, 16); }
 
 // STR[T] Rd, [Rn], -#
 // Note: STR and STRT do the same thing on the GBA (likewise for LDR/LDRT etc)
-static INSN_REGPARM void arm400(uint32_t opcode) { STR_POSTDEC(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm400(u32 opcode) { STR_POSTDEC(OFFSET_IMM, OP_STR, 32); }
 // LDR[T] Rd, [Rn], -#
-static INSN_REGPARM void arm410(uint32_t opcode) { LDR_POSTDEC(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm410(u32 opcode) { LDR_POSTDEC(OFFSET_IMM, OP_LDR, 32); }
 // STRB[T] Rd, [Rn], -#
-static INSN_REGPARM void arm440(uint32_t opcode) { STR_POSTDEC(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm440(u32 opcode) { STR_POSTDEC(OFFSET_IMM, OP_STRB, 16); }
 // LDRB[T] Rd, [Rn], -#
-static INSN_REGPARM void arm450(uint32_t opcode) { LDR_POSTDEC(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm450(u32 opcode) { LDR_POSTDEC(OFFSET_IMM, OP_LDRB, 16); }
 // STR[T] Rd, [Rn], #
-static INSN_REGPARM void arm480(uint32_t opcode) { STR_POSTINC(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm480(u32 opcode) { STR_POSTINC(OFFSET_IMM, OP_STR, 32); }
 // LDR Rd, [Rn], #
-static INSN_REGPARM void arm490(uint32_t opcode) { LDR_POSTINC(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm490(u32 opcode) { LDR_POSTINC(OFFSET_IMM, OP_LDR, 32); }
 // STRB[T] Rd, [Rn], #
-static INSN_REGPARM void arm4C0(uint32_t opcode) { STR_POSTINC(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm4C0(u32 opcode) { STR_POSTINC(OFFSET_IMM, OP_STRB, 16); }
 // LDRB[T] Rd, [Rn], #
-static INSN_REGPARM void arm4D0(uint32_t opcode) { LDR_POSTINC(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm4D0(u32 opcode) { LDR_POSTINC(OFFSET_IMM, OP_LDRB, 16); }
 // STR Rd, [Rn, -#]
-static INSN_REGPARM void arm500(uint32_t opcode) { STR_PREDEC(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm500(u32 opcode) { STR_PREDEC(OFFSET_IMM, OP_STR, 32); }
 // LDR Rd, [Rn, -#]
-static INSN_REGPARM void arm510(uint32_t opcode) { LDR_PREDEC(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm510(u32 opcode) { LDR_PREDEC(OFFSET_IMM, OP_LDR, 32); }
 // STR Rd, [Rn, -#]!
-static INSN_REGPARM void arm520(uint32_t opcode) { STR_PREDEC_WB(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm520(u32 opcode) { STR_PREDEC_WB(OFFSET_IMM, OP_STR, 32); }
 // LDR Rd, [Rn, -#]!
-static INSN_REGPARM void arm530(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm530(u32 opcode) { LDR_PREDEC_WB(OFFSET_IMM, OP_LDR, 32); }
 // STRB Rd, [Rn, -#]
-static INSN_REGPARM void arm540(uint32_t opcode) { STR_PREDEC(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm540(u32 opcode) { STR_PREDEC(OFFSET_IMM, OP_STRB, 16); }
 // LDRB Rd, [Rn, -#]
-static INSN_REGPARM void arm550(uint32_t opcode) { LDR_PREDEC(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm550(u32 opcode) { LDR_PREDEC(OFFSET_IMM, OP_LDRB, 16); }
 // STRB Rd, [Rn, -#]!
-static INSN_REGPARM void arm560(uint32_t opcode) { STR_PREDEC_WB(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm560(u32 opcode) { STR_PREDEC_WB(OFFSET_IMM, OP_STRB, 16); }
 // LDRB Rd, [Rn, -#]!
-static INSN_REGPARM void arm570(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm570(u32 opcode) { LDR_PREDEC_WB(OFFSET_IMM, OP_LDRB, 16); }
 // STR Rd, [Rn, #]
-static INSN_REGPARM void arm580(uint32_t opcode) { STR_PREINC(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm580(u32 opcode) { STR_PREINC(OFFSET_IMM, OP_STR, 32); }
 // LDR Rd, [Rn, #]
-static INSN_REGPARM void arm590(uint32_t opcode) { LDR_PREINC(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm590(u32 opcode) { LDR_PREINC(OFFSET_IMM, OP_LDR, 32); }
 // STR Rd, [Rn, #]!
-static INSN_REGPARM void arm5A0(uint32_t opcode) { STR_PREINC_WB(OFFSET_IMM, OP_STR, 32); }
+static INSN_REGPARM void arm5A0(u32 opcode) { STR_PREINC_WB(OFFSET_IMM, OP_STR, 32); }
 // LDR Rd, [Rn, #]!
-static INSN_REGPARM void arm5B0(uint32_t opcode) { LDR_PREINC_WB(OFFSET_IMM, OP_LDR, 32); }
+static INSN_REGPARM void arm5B0(u32 opcode) { LDR_PREINC_WB(OFFSET_IMM, OP_LDR, 32); }
 // STRB Rd, [Rn, #]
-static INSN_REGPARM void arm5C0(uint32_t opcode) { STR_PREINC(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm5C0(u32 opcode) { STR_PREINC(OFFSET_IMM, OP_STRB, 16); }
 // LDRB Rd, [Rn, #]
-static INSN_REGPARM void arm5D0(uint32_t opcode) { LDR_PREINC(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm5D0(u32 opcode) { LDR_PREINC(OFFSET_IMM, OP_LDRB, 16); }
 // STRB Rd, [Rn, #]!
-static INSN_REGPARM void arm5E0(uint32_t opcode) { STR_PREINC_WB(OFFSET_IMM, OP_STRB, 16); }
+static INSN_REGPARM void arm5E0(u32 opcode) { STR_PREINC_WB(OFFSET_IMM, OP_STRB, 16); }
 // LDRB Rd, [Rn, #]!
-static INSN_REGPARM void arm5F0(uint32_t opcode) { LDR_PREINC_WB(OFFSET_IMM, OP_LDRB, 16); }
+static INSN_REGPARM void arm5F0(u32 opcode) { LDR_PREINC_WB(OFFSET_IMM, OP_LDRB, 16); }
 
 // STR[T] Rd, [Rn], -Rm, LSL #
-static INSN_REGPARM void arm600(uint32_t opcode) { STR_POSTDEC(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm600(u32 opcode) { STR_POSTDEC(OFFSET_LSL, OP_STR, 32); }
 // STR[T] Rd, [Rn], -Rm, LSR #
-static INSN_REGPARM void arm602(uint32_t opcode) { STR_POSTDEC(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm602(u32 opcode) { STR_POSTDEC(OFFSET_LSR, OP_STR, 32); }
 // STR[T] Rd, [Rn], -Rm, ASR #
-static INSN_REGPARM void arm604(uint32_t opcode) { STR_POSTDEC(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm604(u32 opcode) { STR_POSTDEC(OFFSET_ASR, OP_STR, 32); }
 // STR[T] Rd, [Rn], -Rm, ROR #
-static INSN_REGPARM void arm606(uint32_t opcode) { STR_POSTDEC(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm606(u32 opcode) { STR_POSTDEC(OFFSET_ROR, OP_STR, 32); }
 // LDR[T] Rd, [Rn], -Rm, LSL #
-static INSN_REGPARM void arm610(uint32_t opcode) { LDR_POSTDEC(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm610(u32 opcode) { LDR_POSTDEC(OFFSET_LSL, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], -Rm, LSR #
-static INSN_REGPARM void arm612(uint32_t opcode) { LDR_POSTDEC(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm612(u32 opcode) { LDR_POSTDEC(OFFSET_LSR, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], -Rm, ASR #
-static INSN_REGPARM void arm614(uint32_t opcode) { LDR_POSTDEC(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm614(u32 opcode) { LDR_POSTDEC(OFFSET_ASR, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], -Rm, ROR #
-static INSN_REGPARM void arm616(uint32_t opcode) { LDR_POSTDEC(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm616(u32 opcode) { LDR_POSTDEC(OFFSET_ROR, OP_LDR, 32); }
 // STRB[T] Rd, [Rn], -Rm, LSL #
-static INSN_REGPARM void arm640(uint32_t opcode) { STR_POSTDEC(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm640(u32 opcode) { STR_POSTDEC(OFFSET_LSL, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], -Rm, LSR #
-static INSN_REGPARM void arm642(uint32_t opcode) { STR_POSTDEC(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm642(u32 opcode) { STR_POSTDEC(OFFSET_LSR, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], -Rm, ASR #
-static INSN_REGPARM void arm644(uint32_t opcode) { STR_POSTDEC(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm644(u32 opcode) { STR_POSTDEC(OFFSET_ASR, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], -Rm, ROR #
-static INSN_REGPARM void arm646(uint32_t opcode) { STR_POSTDEC(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm646(u32 opcode) { STR_POSTDEC(OFFSET_ROR, OP_STRB, 16); }
 // LDRB[T] Rd, [Rn], -Rm, LSL #
-static INSN_REGPARM void arm650(uint32_t opcode) { LDR_POSTDEC(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm650(u32 opcode) { LDR_POSTDEC(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB[T] Rd, [Rn], -Rm, LSR #
-static INSN_REGPARM void arm652(uint32_t opcode) { LDR_POSTDEC(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm652(u32 opcode) { LDR_POSTDEC(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB[T] Rd, [Rn], -Rm, ASR #
-static INSN_REGPARM void arm654(uint32_t opcode) { LDR_POSTDEC(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm654(u32 opcode) { LDR_POSTDEC(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB Rd, [Rn], -Rm, ROR #
-static INSN_REGPARM void arm656(uint32_t opcode) { LDR_POSTDEC(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm656(u32 opcode) { LDR_POSTDEC(OFFSET_ROR, OP_LDRB, 16); }
 // STR[T] Rd, [Rn], Rm, LSL #
-static INSN_REGPARM void arm680(uint32_t opcode) { STR_POSTINC(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm680(u32 opcode) { STR_POSTINC(OFFSET_LSL, OP_STR, 32); }
 // STR[T] Rd, [Rn], Rm, LSR #
-static INSN_REGPARM void arm682(uint32_t opcode) { STR_POSTINC(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm682(u32 opcode) { STR_POSTINC(OFFSET_LSR, OP_STR, 32); }
 // STR[T] Rd, [Rn], Rm, ASR #
-static INSN_REGPARM void arm684(uint32_t opcode) { STR_POSTINC(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm684(u32 opcode) { STR_POSTINC(OFFSET_ASR, OP_STR, 32); }
 // STR[T] Rd, [Rn], Rm, ROR #
-static INSN_REGPARM void arm686(uint32_t opcode) { STR_POSTINC(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm686(u32 opcode) { STR_POSTINC(OFFSET_ROR, OP_STR, 32); }
 // LDR[T] Rd, [Rn], Rm, LSL #
-static INSN_REGPARM void arm690(uint32_t opcode) { LDR_POSTINC(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm690(u32 opcode) { LDR_POSTINC(OFFSET_LSL, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], Rm, LSR #
-static INSN_REGPARM void arm692(uint32_t opcode) { LDR_POSTINC(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm692(u32 opcode) { LDR_POSTINC(OFFSET_LSR, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], Rm, ASR #
-static INSN_REGPARM void arm694(uint32_t opcode) { LDR_POSTINC(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm694(u32 opcode) { LDR_POSTINC(OFFSET_ASR, OP_LDR, 32); }
 // LDR[T] Rd, [Rn], Rm, ROR #
-static INSN_REGPARM void arm696(uint32_t opcode) { LDR_POSTINC(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm696(u32 opcode) { LDR_POSTINC(OFFSET_ROR, OP_LDR, 32); }
 // STRB[T] Rd, [Rn], Rm, LSL #
-static INSN_REGPARM void arm6C0(uint32_t opcode) { STR_POSTINC(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm6C0(u32 opcode) { STR_POSTINC(OFFSET_LSL, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], Rm, LSR #
-static INSN_REGPARM void arm6C2(uint32_t opcode) { STR_POSTINC(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm6C2(u32 opcode) { STR_POSTINC(OFFSET_LSR, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], Rm, ASR #
-static INSN_REGPARM void arm6C4(uint32_t opcode) { STR_POSTINC(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm6C4(u32 opcode) { STR_POSTINC(OFFSET_ASR, OP_STRB, 16); }
 // STRB[T] Rd, [Rn], Rm, ROR #
-static INSN_REGPARM void arm6C6(uint32_t opcode) { STR_POSTINC(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm6C6(u32 opcode) { STR_POSTINC(OFFSET_ROR, OP_STRB, 16); }
 // LDRB[T] Rd, [Rn], Rm, LSL #
-static INSN_REGPARM void arm6D0(uint32_t opcode) { LDR_POSTINC(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm6D0(u32 opcode) { LDR_POSTINC(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB[T] Rd, [Rn], Rm, LSR #
-static INSN_REGPARM void arm6D2(uint32_t opcode) { LDR_POSTINC(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm6D2(u32 opcode) { LDR_POSTINC(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB[T] Rd, [Rn], Rm, ASR #
-static INSN_REGPARM void arm6D4(uint32_t opcode) { LDR_POSTINC(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm6D4(u32 opcode) { LDR_POSTINC(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB[T] Rd, [Rn], Rm, ROR #
-static INSN_REGPARM void arm6D6(uint32_t opcode) { LDR_POSTINC(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm6D6(u32 opcode) { LDR_POSTINC(OFFSET_ROR, OP_LDRB, 16); }
 // STR Rd, [Rn, -Rm, LSL #]
-static INSN_REGPARM void arm700(uint32_t opcode) { STR_PREDEC(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm700(u32 opcode) { STR_PREDEC(OFFSET_LSL, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, LSR #]
-static INSN_REGPARM void arm702(uint32_t opcode) { STR_PREDEC(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm702(u32 opcode) { STR_PREDEC(OFFSET_LSR, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, ASR #]
-static INSN_REGPARM void arm704(uint32_t opcode) { STR_PREDEC(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm704(u32 opcode) { STR_PREDEC(OFFSET_ASR, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, ROR #]
-static INSN_REGPARM void arm706(uint32_t opcode) { STR_PREDEC(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm706(u32 opcode) { STR_PREDEC(OFFSET_ROR, OP_STR, 32); }
 // LDR Rd, [Rn, -Rm, LSL #]
-static INSN_REGPARM void arm710(uint32_t opcode) { LDR_PREDEC(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm710(u32 opcode) { LDR_PREDEC(OFFSET_LSL, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, LSR #]
-static INSN_REGPARM void arm712(uint32_t opcode) { LDR_PREDEC(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm712(u32 opcode) { LDR_PREDEC(OFFSET_LSR, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, ASR #]
-static INSN_REGPARM void arm714(uint32_t opcode) { LDR_PREDEC(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm714(u32 opcode) { LDR_PREDEC(OFFSET_ASR, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, ROR #]
-static INSN_REGPARM void arm716(uint32_t opcode) { LDR_PREDEC(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm716(u32 opcode) { LDR_PREDEC(OFFSET_ROR, OP_LDR, 32); }
 // STR Rd, [Rn, -Rm, LSL #]!
-static INSN_REGPARM void arm720(uint32_t opcode) { STR_PREDEC_WB(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm720(u32 opcode) { STR_PREDEC_WB(OFFSET_LSL, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, LSR #]!
-static INSN_REGPARM void arm722(uint32_t opcode) { STR_PREDEC_WB(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm722(u32 opcode) { STR_PREDEC_WB(OFFSET_LSR, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, ASR #]!
-static INSN_REGPARM void arm724(uint32_t opcode) { STR_PREDEC_WB(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm724(u32 opcode) { STR_PREDEC_WB(OFFSET_ASR, OP_STR, 32); }
 // STR Rd, [Rn, -Rm, ROR #]!
-static INSN_REGPARM void arm726(uint32_t opcode) { STR_PREDEC_WB(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm726(u32 opcode) { STR_PREDEC_WB(OFFSET_ROR, OP_STR, 32); }
 // LDR Rd, [Rn, -Rm, LSL #]!
-static INSN_REGPARM void arm730(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm730(u32 opcode) { LDR_PREDEC_WB(OFFSET_LSL, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, LSR #]!
-static INSN_REGPARM void arm732(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm732(u32 opcode) { LDR_PREDEC_WB(OFFSET_LSR, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, ASR #]!
-static INSN_REGPARM void arm734(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm734(u32 opcode) { LDR_PREDEC_WB(OFFSET_ASR, OP_LDR, 32); }
 // LDR Rd, [Rn, -Rm, ROR #]!
-static INSN_REGPARM void arm736(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm736(u32 opcode) { LDR_PREDEC_WB(OFFSET_ROR, OP_LDR, 32); }
 // STRB Rd, [Rn, -Rm, LSL #]
-static INSN_REGPARM void arm740(uint32_t opcode) { STR_PREDEC(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm740(u32 opcode) { STR_PREDEC(OFFSET_LSL, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, LSR #]
-static INSN_REGPARM void arm742(uint32_t opcode) { STR_PREDEC(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm742(u32 opcode) { STR_PREDEC(OFFSET_LSR, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, ASR #]
-static INSN_REGPARM void arm744(uint32_t opcode) { STR_PREDEC(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm744(u32 opcode) { STR_PREDEC(OFFSET_ASR, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, ROR #]
-static INSN_REGPARM void arm746(uint32_t opcode) { STR_PREDEC(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm746(u32 opcode) { STR_PREDEC(OFFSET_ROR, OP_STRB, 16); }
 // LDRB Rd, [Rn, -Rm, LSL #]
-static INSN_REGPARM void arm750(uint32_t opcode) { LDR_PREDEC(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm750(u32 opcode) { LDR_PREDEC(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, LSR #]
-static INSN_REGPARM void arm752(uint32_t opcode) { LDR_PREDEC(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm752(u32 opcode) { LDR_PREDEC(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, ASR #]
-static INSN_REGPARM void arm754(uint32_t opcode) { LDR_PREDEC(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm754(u32 opcode) { LDR_PREDEC(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, ROR #]
-static INSN_REGPARM void arm756(uint32_t opcode) { LDR_PREDEC(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm756(u32 opcode) { LDR_PREDEC(OFFSET_ROR, OP_LDRB, 16); }
 // STRB Rd, [Rn, -Rm, LSL #]!
-static INSN_REGPARM void arm760(uint32_t opcode) { STR_PREDEC_WB(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm760(u32 opcode) { STR_PREDEC_WB(OFFSET_LSL, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, LSR #]!
-static INSN_REGPARM void arm762(uint32_t opcode) { STR_PREDEC_WB(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm762(u32 opcode) { STR_PREDEC_WB(OFFSET_LSR, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, ASR #]!
-static INSN_REGPARM void arm764(uint32_t opcode) { STR_PREDEC_WB(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm764(u32 opcode) { STR_PREDEC_WB(OFFSET_ASR, OP_STRB, 16); }
 // STRB Rd, [Rn, -Rm, ROR #]!
-static INSN_REGPARM void arm766(uint32_t opcode) { STR_PREDEC_WB(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm766(u32 opcode) { STR_PREDEC_WB(OFFSET_ROR, OP_STRB, 16); }
 // LDRB Rd, [Rn, -Rm, LSL #]!
-static INSN_REGPARM void arm770(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm770(u32 opcode) { LDR_PREDEC_WB(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, LSR #]!
-static INSN_REGPARM void arm772(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm772(u32 opcode) { LDR_PREDEC_WB(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, ASR #]!
-static INSN_REGPARM void arm774(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm774(u32 opcode) { LDR_PREDEC_WB(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, -Rm, ROR #]!
-static INSN_REGPARM void arm776(uint32_t opcode) { LDR_PREDEC_WB(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm776(u32 opcode) { LDR_PREDEC_WB(OFFSET_ROR, OP_LDRB, 16); }
 // STR Rd, [Rn, Rm, LSL #]
-static INSN_REGPARM void arm780(uint32_t opcode) { STR_PREINC(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm780(u32 opcode) { STR_PREINC(OFFSET_LSL, OP_STR, 32); }
 // STR Rd, [Rn, Rm, LSR #]
-static INSN_REGPARM void arm782(uint32_t opcode) { STR_PREINC(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm782(u32 opcode) { STR_PREINC(OFFSET_LSR, OP_STR, 32); }
 // STR Rd, [Rn, Rm, ASR #]
-static INSN_REGPARM void arm784(uint32_t opcode) { STR_PREINC(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm784(u32 opcode) { STR_PREINC(OFFSET_ASR, OP_STR, 32); }
 // STR Rd, [Rn, Rm, ROR #]
-static INSN_REGPARM void arm786(uint32_t opcode) { STR_PREINC(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm786(u32 opcode) { STR_PREINC(OFFSET_ROR, OP_STR, 32); }
 // LDR Rd, [Rn, Rm, LSL #]
-static INSN_REGPARM void arm790(uint32_t opcode) { LDR_PREINC(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm790(u32 opcode) { LDR_PREINC(OFFSET_LSL, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, LSR #]
-static INSN_REGPARM void arm792(uint32_t opcode) { LDR_PREINC(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm792(u32 opcode) { LDR_PREINC(OFFSET_LSR, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, ASR #]
-static INSN_REGPARM void arm794(uint32_t opcode) { LDR_PREINC(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm794(u32 opcode) { LDR_PREINC(OFFSET_ASR, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, ROR #]
-static INSN_REGPARM void arm796(uint32_t opcode) { LDR_PREINC(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm796(u32 opcode) { LDR_PREINC(OFFSET_ROR, OP_LDR, 32); }
 // STR Rd, [Rn, Rm, LSL #]!
-static INSN_REGPARM void arm7A0(uint32_t opcode) { STR_PREINC_WB(OFFSET_LSL, OP_STR, 32); }
+static INSN_REGPARM void arm7A0(u32 opcode) { STR_PREINC_WB(OFFSET_LSL, OP_STR, 32); }
 // STR Rd, [Rn, Rm, LSR #]!
-static INSN_REGPARM void arm7A2(uint32_t opcode) { STR_PREINC_WB(OFFSET_LSR, OP_STR, 32); }
+static INSN_REGPARM void arm7A2(u32 opcode) { STR_PREINC_WB(OFFSET_LSR, OP_STR, 32); }
 // STR Rd, [Rn, Rm, ASR #]!
-static INSN_REGPARM void arm7A4(uint32_t opcode) { STR_PREINC_WB(OFFSET_ASR, OP_STR, 32); }
+static INSN_REGPARM void arm7A4(u32 opcode) { STR_PREINC_WB(OFFSET_ASR, OP_STR, 32); }
 // STR Rd, [Rn, Rm, ROR #]!
-static INSN_REGPARM void arm7A6(uint32_t opcode) { STR_PREINC_WB(OFFSET_ROR, OP_STR, 32); }
+static INSN_REGPARM void arm7A6(u32 opcode) { STR_PREINC_WB(OFFSET_ROR, OP_STR, 32); }
 // LDR Rd, [Rn, Rm, LSL #]!
-static INSN_REGPARM void arm7B0(uint32_t opcode) { LDR_PREINC_WB(OFFSET_LSL, OP_LDR, 32); }
+static INSN_REGPARM void arm7B0(u32 opcode) { LDR_PREINC_WB(OFFSET_LSL, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, LSR #]!
-static INSN_REGPARM void arm7B2(uint32_t opcode) { LDR_PREINC_WB(OFFSET_LSR, OP_LDR, 32); }
+static INSN_REGPARM void arm7B2(u32 opcode) { LDR_PREINC_WB(OFFSET_LSR, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, ASR #]!
-static INSN_REGPARM void arm7B4(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ASR, OP_LDR, 32); }
+static INSN_REGPARM void arm7B4(u32 opcode) { LDR_PREINC_WB(OFFSET_ASR, OP_LDR, 32); }
 // LDR Rd, [Rn, Rm, ROR #]!
-static INSN_REGPARM void arm7B6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDR, 32); }
+static INSN_REGPARM void arm7B6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDR, 32); }
 // STRB Rd, [Rn, Rm, LSL #]
-static INSN_REGPARM void arm7C0(uint32_t opcode) { STR_PREINC(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm7C0(u32 opcode) { STR_PREINC(OFFSET_LSL, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, LSR #]
-static INSN_REGPARM void arm7C2(uint32_t opcode) { STR_PREINC(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm7C2(u32 opcode) { STR_PREINC(OFFSET_LSR, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, ASR #]
-static INSN_REGPARM void arm7C4(uint32_t opcode) { STR_PREINC(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm7C4(u32 opcode) { STR_PREINC(OFFSET_ASR, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, ROR #]
-static INSN_REGPARM void arm7C6(uint32_t opcode) { STR_PREINC(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm7C6(u32 opcode) { STR_PREINC(OFFSET_ROR, OP_STRB, 16); }
 // LDRB Rd, [Rn, Rm, LSL #]
-static INSN_REGPARM void arm7D0(uint32_t opcode) { LDR_PREINC(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm7D0(u32 opcode) { LDR_PREINC(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, LSR #]
-static INSN_REGPARM void arm7D2(uint32_t opcode) { LDR_PREINC(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7D2(u32 opcode) { LDR_PREINC(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, ASR #]
-static INSN_REGPARM void arm7D4(uint32_t opcode) { LDR_PREINC(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7D4(u32 opcode) { LDR_PREINC(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, ROR #]
-static INSN_REGPARM void arm7D6(uint32_t opcode) { LDR_PREINC(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7D6(u32 opcode) { LDR_PREINC(OFFSET_ROR, OP_LDRB, 16); }
 // STRB Rd, [Rn, Rm, LSL #]!
-static INSN_REGPARM void arm7E0(uint32_t opcode) { STR_PREINC_WB(OFFSET_LSL, OP_STRB, 16); }
+static INSN_REGPARM void arm7E0(u32 opcode) { STR_PREINC_WB(OFFSET_LSL, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, LSR #]!
-static INSN_REGPARM void arm7E2(uint32_t opcode) { STR_PREINC_WB(OFFSET_LSR, OP_STRB, 16); }
+static INSN_REGPARM void arm7E2(u32 opcode) { STR_PREINC_WB(OFFSET_LSR, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, ASR #]!
-static INSN_REGPARM void arm7E4(uint32_t opcode) { STR_PREINC_WB(OFFSET_ASR, OP_STRB, 16); }
+static INSN_REGPARM void arm7E4(u32 opcode) { STR_PREINC_WB(OFFSET_ASR, OP_STRB, 16); }
 // STRB Rd, [Rn, Rm, ROR #]!
-static INSN_REGPARM void arm7E6(uint32_t opcode) { STR_PREINC_WB(OFFSET_ROR, OP_STRB, 16); }
+static INSN_REGPARM void arm7E6(u32 opcode) { STR_PREINC_WB(OFFSET_ROR, OP_STRB, 16); }
 // LDRB Rd, [Rn, Rm, LSL #]!
-static INSN_REGPARM void arm7F0(uint32_t opcode) { LDR_PREINC_WB(OFFSET_LSL, OP_LDRB, 16); }
+static INSN_REGPARM void arm7F0(u32 opcode) { LDR_PREINC_WB(OFFSET_LSL, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, LSR #]!
-static INSN_REGPARM void arm7F2(uint32_t opcode) { LDR_PREINC_WB(OFFSET_LSR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7F2(u32 opcode) { LDR_PREINC_WB(OFFSET_LSR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, ASR #]!
-static INSN_REGPARM void arm7F4(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ASR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7F4(u32 opcode) { LDR_PREINC_WB(OFFSET_ASR, OP_LDRB, 16); }
 // LDRB Rd, [Rn, Rm, ROR #]!
-static INSN_REGPARM void arm7F6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
+static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
 
 // STM/LDM ////////////////////////////////////////////////////////////////
 
@@ -1450,20 +2078,6 @@ static INSN_REGPARM void arm7F6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_
         ARM_PREFETCH;                                   \
         clockTicks += 1 + codeTicksAccessSeq32(armNextPC);\
     }
-#define LDM_ALL_COUNT0 \
-    LDM_LOW;                                            \
-    LDM_HIGH;                                           \
-    if (opcode & (1U<<15)){                            \
-        reg[15].I = CPUReadMemory(address);             \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        count++;                                        \
-    }                                                   \
-    if (opcode & (1U<<15)) {                            \
-        armNextPC = reg[15].I;                          \
-        reg[15].I += 4;                                 \
-        ARM_PREFETCH;                                   \
-        clockTicks += 1 + codeTicksAccessSeq32(armNextPC);\
-    }
 #define STM_ALL_2 \
     STM_LOW(STM_REG);                                   \
     STM_HIGH_2(STM_REG);                                \
@@ -1486,16 +2100,6 @@ static INSN_REGPARM void arm7F6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_
     } else {                                            \
         LDM_HIGH_2;                                     \
     }
-#define LDM_ALL_2_COUNT0 \
-    LDM_LOW;                                            \
-    if (opcode & (1U<<15)) {                            \
-        LDM_HIGH;                                       \
-        reg[15].I = CPUReadMemory(address);             \
-            clockTicks += 1 + dataTicksAccess32(address); \
-        count++;                                        \
-    } else {                                            \
-        LDM_HIGH_2;                                     \
-    }
 #define LDM_ALL_2B \
     if (opcode & (1U<<15)) {                            \
         CPUSwitchMode(reg[17].I & 0x1F, false, true);   \
@@ -1513,523 +2117,511 @@ static INSN_REGPARM void arm7F6(uint32_t opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_
 
 
 // STMDA Rn, {Rlist}
-static INSN_REGPARM void arm800(uint32_t opcode)
+static INSN_REGPARM void arm800(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp + 4) & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp + 4) & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDA Rn, {Rlist}
-static INSN_REGPARM void arm810(uint32_t opcode)
+static INSN_REGPARM void arm810(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp + 4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_COUNT0;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp + 4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMDA Rn!, {Rlist}
-static INSN_REGPARM void arm820(uint32_t opcode)
+static INSN_REGPARM void arm820(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp+4) & 0xFFFFFFFC;
-	int count = 0;
-	STMW_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp+4) & 0xFFFFFFFC;
+    int count = 0;
+    STMW_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDA Rn!, {Rlist}
-static INSN_REGPARM void arm830(uint32_t opcode)
+static INSN_REGPARM void arm830(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp + 4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_COUNT0;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp + 4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
 }
 
 // STMDA Rn, {Rlist}^
-static INSN_REGPARM void arm840(uint32_t opcode)
+static INSN_REGPARM void arm840(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp+4) & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp+4) & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDA Rn, {Rlist}^
-static INSN_REGPARM void arm850(uint32_t opcode)
+static INSN_REGPARM void arm850(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp + 4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp + 4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMDA Rn!, {Rlist}^
-static INSN_REGPARM void arm860(uint32_t opcode)
+static INSN_REGPARM void arm860(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp+4) & 0xFFFFFFFC;
-	int count = 0;
-	STMW_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp+4) & 0xFFFFFFFC;
+    int count = 0;
+    STMW_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDA Rn!, {Rlist}^
-static INSN_REGPARM void arm870(uint32_t opcode)
+static INSN_REGPARM void arm870(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (temp + 4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (temp + 4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIA Rn, {Rlist}
-static INSN_REGPARM void arm880(uint32_t opcode)
+static INSN_REGPARM void arm880(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIA Rn, {Rlist}
-static INSN_REGPARM void arm890(uint32_t opcode)
+static INSN_REGPARM void arm890(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIA Rn!, {Rlist}
-static INSN_REGPARM void arm8A0(uint32_t opcode)
+static INSN_REGPARM void arm8A0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
-	STMW_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
+    STMW_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIA Rn!, {Rlist}
-static INSN_REGPARM void arm8B0(uint32_t opcode)
+static INSN_REGPARM void arm8B0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
 }
 
 // STMIA Rn, {Rlist}^
-static INSN_REGPARM void arm8C0(uint32_t opcode)
+static INSN_REGPARM void arm8C0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIA Rn, {Rlist}^
-static INSN_REGPARM void arm8D0(uint32_t opcode)
+static INSN_REGPARM void arm8D0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIA Rn!, {Rlist}^
-static INSN_REGPARM void arm8E0(uint32_t opcode)
+static INSN_REGPARM void arm8E0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
-	STMW_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
+    STMW_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIA Rn!, {Rlist}^
-static INSN_REGPARM void arm8F0(uint32_t opcode)
+static INSN_REGPARM void arm8F0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = reg[base].I & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
-
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = reg[base].I & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMDB Rn, {Rlist}
-static INSN_REGPARM void arm900(uint32_t opcode)
+static INSN_REGPARM void arm900(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDB Rn, {Rlist}
-static INSN_REGPARM void arm910(uint32_t opcode)
+static INSN_REGPARM void arm910(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMDB Rn!, {Rlist}
-static INSN_REGPARM void arm920(uint32_t opcode)
+static INSN_REGPARM void arm920(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	STMW_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    STMW_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDB Rn!, {Rlist}
-static INSN_REGPARM void arm930(uint32_t opcode)
+static INSN_REGPARM void arm930(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
 }
 
 // STMDB Rn, {Rlist}^
-static INSN_REGPARM void arm940(uint32_t opcode)
+static INSN_REGPARM void arm940(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDB Rn, {Rlist}^
-static INSN_REGPARM void arm950(uint32_t opcode)
+static INSN_REGPARM void arm950(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMDB Rn!, {Rlist}^
-static INSN_REGPARM void arm960(uint32_t opcode)
+static INSN_REGPARM void arm960(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	STMW_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    STMW_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMDB Rn!, {Rlist}^
-static INSN_REGPARM void arm970(uint32_t opcode)
+static INSN_REGPARM void arm970(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I - 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = temp & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
-
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I -
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = temp & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIB Rn, {Rlist}
-static INSN_REGPARM void arm980(uint32_t opcode)
+static INSN_REGPARM void arm980(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIB Rn, {Rlist}
-static INSN_REGPARM void arm990(uint32_t opcode)
+static INSN_REGPARM void arm990(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIB Rn!, {Rlist}
-static INSN_REGPARM void arm9A0(uint32_t opcode)
+static INSN_REGPARM void arm9A0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
-	STMW_ALL;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
+    STMW_ALL;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIB Rn!, {Rlist}
-static INSN_REGPARM void arm9B0(uint32_t opcode)
+static INSN_REGPARM void arm9B0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
 }
 
 // STMIB Rn, {Rlist}^
-static INSN_REGPARM void arm9C0(uint32_t opcode)
+static INSN_REGPARM void arm9C0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	STM_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    STM_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIB Rn, {Rlist}^
-static INSN_REGPARM void arm9D0(uint32_t opcode)
+static INSN_REGPARM void arm9D0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // STMIB Rn!, {Rlist}^
-static INSN_REGPARM void arm9E0(uint32_t opcode)
+static INSN_REGPARM void arm9E0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
-	STMW_ALL_2;
-	clockTicks += 1 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
+    STMW_ALL_2;
+    clockTicks += 1 + codeTicksAccess32(armNextPC);
 }
 
 // LDMIB Rn!, {Rlist}^
-static INSN_REGPARM void arm9F0(uint32_t opcode)
+static INSN_REGPARM void arm9F0(u32 opcode)
 {
-	if (busPrefetchCount == 0)
-		busPrefetch = busPrefetchEnable;
-
-	int base = (opcode & 0x000F0000) >> 16;
-	uint32_t temp = reg[base].I + 4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-	uint32_t address = (reg[base].I+4) & 0xFFFFFFFC;
-	int count = 0;
-	LDM_ALL_2_COUNT0;
-
-	if (!(opcode & (1U << base)))
-		reg[base].I = temp;
-
-	LDM_ALL_2B;
-	clockTicks += 2 + codeTicksAccess32(armNextPC);
+    if (busPrefetchCount == 0)
+        busPrefetch = busPrefetchEnable;
+    int base = (opcode & 0x000F0000) >> 16;
+    u32 temp = reg[base].I +
+        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    int count = 0;
+    LDM_ALL_2;
+    if (!(opcode & (1U << base)))
+        reg[base].I = temp;
+    LDM_ALL_2B;
+    clockTicks += 2 + codeTicksAccess32(armNextPC);
 }
 
 // B/BL/SWI and (unimplemented) coproc support ////////////////////////////
 
 // B <offset>
-static INSN_REGPARM void armA00(uint32_t opcode)
+static INSN_REGPARM void armA00(u32 opcode)
 {
-	uint32_t codeTicksVal = 0;
-	uint32_t ct = 0;
-	int offset = opcode & 0x00FFFFFF;
-	if (offset & 0x00800000)
-		offset |= 0xFF000000;  // negative offset
-	reg[15].I += offset<<2;
-	armNextPC = reg[15].I;
-	reg[15].I += 4;
-	ARM_PREFETCH;
+	int codeTicksVal = 0;
+	int ct = 0;
+    int offset = opcode & 0x00FFFFFF;
+    if (offset & 0x00800000)
+        offset |= 0xFF000000;  // negative offset
+    reg[15].I += offset<<2;
+    armNextPC = reg[15].I;
+    reg[15].I += 4;
+    ARM_PREFETCH;
+	 
+    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+    ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
 
-	codeTicksVal = codeTicksAccessSeq32(armNextPC);
-	ct = (codeTicksVal<<1) + 5 + codeTicksAccess32(armNextPC);
-
-	busPrefetchCount = 0;
+    busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
 // BL <offset>
-static INSN_REGPARM void armB00(uint32_t opcode)
+static INSN_REGPARM void armB00(u32 opcode)
 {
-	uint32_t codeTicksVal = 0;
-	uint32_t ct = 0;
+	int codeTicksVal = 0;
+	int ct = 0;
 
-	int offset = opcode & 0x00FFFFFF;
-	if (offset & 0x00800000)
-		offset |= 0xFF000000;  // negative offset
-	reg[14].I = reg[15].I - 4;
-	reg[15].I += offset<<2;
-	armNextPC = reg[15].I;
-	reg[15].I += 4;
-	ARM_PREFETCH;
+    int offset = opcode & 0x00FFFFFF;
+    if (offset & 0x00800000)
+        offset |= 0xFF000000;  // negative offset
+    reg[14].I = reg[15].I - 4;
+    reg[15].I += offset<<2;
+    armNextPC = reg[15].I;
+    reg[15].I += 4;
+    ARM_PREFETCH;
 
-	codeTicksVal = codeTicksAccessSeq32(armNextPC);
-	ct = (codeTicksVal << 1) + 5 + codeTicksAccess32(armNextPC);
+    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+    ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
 
-	busPrefetchCount = 0;
+    busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
 
 #ifdef GP_SUPPORT
 // MRC
-static INSN_REGPARM void armE01(uint32_t opcode)
+static INSN_REGPARM void armE01(u32 opcode)
 {
 }
 #else
@@ -2038,24 +2630,29 @@ static INSN_REGPARM void armE01(uint32_t opcode)
 
 
 // SWI <comment>
-static INSN_REGPARM void armF00(uint32_t opcode)
+static INSN_REGPARM void armF00(u32 opcode)
 {
-	uint32_t codeTicksVal = 0;
-	uint32_t ct = 0;
+	int codeTicksVal = 0;
+	int ct = 0;
 
-	codeTicksVal = codeTicksAccessSeq32(armNextPC);
-	ct = (codeTicksVal << 1) + 5 + codeTicksAccess32(armNextPC);
+    //clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
+    //clockTicks += 2 + codeTicksAccess32(armNextPC)
+    //                + codeTicksAccessSeq32(armNextPC);
 
-	busPrefetchCount = 0;
+    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+	ct = codeTicksVal + 3;
+    ct += 2 + codeTicksAccess32(armNextPC) + codeTicksVal;
+
+    busPrefetchCount = 0;
 
 	clockTicks = ct;
-	CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
+    CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
 
 }
 
 // Instruction table //////////////////////////////////////////////////////
 
-typedef INSN_REGPARM void (*insnfunc_t)(uint32_t opcode);
+typedef INSN_REGPARM void (*insnfunc_t)(u32 opcode);
 #define REP16(insn) \
     insn,insn,insn,insn,insn,insn,insn,insn,\
     insn,insn,insn,insn,insn,insn,insn,insn
@@ -2246,135 +2843,158 @@ static insnfunc_t armInsnTable[4096] = {
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
-static uint32_t armExecute()
+#if 0
+#include<time.h>
+static void tester(void) {
+  static int ran=0;if(ran)return;ran=1;
+  FILE*f=fopen("p:\\timing.txt","w");if(!f)return;
+  for (int op=/*0*/9; op</*0xF00*/10;op++){if(armInsnTable[op]==arm_UI)continue;
+    int i;for(i=0;i<op;i++)if(armInsnTable[op]==armInsnTable[i])break;if(i<op)continue;
+    for(i=0;i<16;i++)reg[i].I=0x3100000;
+    clock_t s=clock();for(i=0;i<10000000;i++)armInsnTable[op](0);clock_t e=clock();
+    fprintf(f,"arm%03X %6ld\n",op,e-s);fflush(f);
+  }fclose(f);
+}
+#endif
+
+int armExecute()
 {
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, its used during operations and generates LHS without it
-#ifdef __ANDROID__
-	__builtin_prefetch(&clockTicks);
-#else
-	__dcbt(&clockTicks);
+	#ifdef __ANDROID__
+		__builtin_prefetch(&clockTicks);
+	#else
+		 __dcbt(&clockTicks);
+	#endif
 #endif
-#endif
 
-	uint32_t cond1;
-	uint32_t cond2;
+	u32 cond1;
+	u32 cond2;
 
-	int32_t ct = 0;
+	int ct = 0;
 
-	do
-	{
-
+    do {
+		
 		clockTicks = 0;
-
+		
 #ifdef USE_CHEATS
-		if(cheatsEnabled)
+		if( cheatsEnabled ) {
 			cpuMasterCodeCheck();
-#endif
-
-		if ((armNextPC & 0x0803FFFF) == 0x08020000)
-			busPrefetchCount = 0x100;
-
-		uint32_t opcode = cpuPrefetch[0];
-		cpuPrefetch[0] = cpuPrefetch[1];
-
-		busPrefetch = false;
-		int32_t busprefetch_mask = ((busPrefetchCount & 0xFFFFFE00) | -(busPrefetchCount & 0xFFFFFE00)) >> 31;
-		busPrefetchCount = (0x100 | (busPrefetchCount & 0xFF) & busprefetch_mask) | (busPrefetchCount & ~busprefetch_mask);
-#if 0
-		if (busPrefetchCount & 0xFFFFFE00)
-			busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
-#endif
-
-
-		int oldArmNextPC = armNextPC;
-
-		armNextPC = reg[15].I;
-		reg[15].I += 4;
-		ARM_PREFETCH_NEXT;
-
-		int cond = opcode >> 28;
-		bool cond_res = true;
-		if (cond != 0x0E)
-		{  // most opcodes are AL (always)
-			switch(cond)
-			{
-				case 0x00: // EQ
-					cond_res = Z_FLAG;
-					break;
-				case 0x01: // NE
-					cond_res = !Z_FLAG;
-					break;
-				case 0x02: // CS
-					cond_res = C_FLAG;
-					break;
-				case 0x03: // CC
-					cond_res = !C_FLAG;
-					break;
-				case 0x04: // MI
-					cond_res = N_FLAG;
-					break;
-				case 0x05: // PL
-					cond_res = !N_FLAG;
-					break;
-				case 0x06: // VS
-					cond_res = V_FLAG;
-					break;
-				case 0x07: // VC
-					cond_res = !V_FLAG;
-					break;
-				case 0x08: // HI
-					cond_res = C_FLAG && !Z_FLAG;
-					break;
-				case 0x09: // LS
-					cond_res = !C_FLAG || Z_FLAG;
-					break;
-				case 0x0A: // GE
-					cond_res = N_FLAG == V_FLAG;
-					break;
-				case 0x0B: // LT
-					cond_res = N_FLAG != V_FLAG;
-					break;
-				case 0x0C: // GT
-					cond_res = !Z_FLAG &&(N_FLAG == V_FLAG);
-					break;
-				case 0x0D: // LE
-					cond_res = Z_FLAG || (N_FLAG != V_FLAG);
-					break;
-				case 0x0E: // AL (impossible, checked above)
-					cond_res = true;
-					break;
-				case 0x0F:
-				default:
-					// ???
-					cond_res = false;
-					break;
-			}
 		}
+#endif
 
-		if (cond_res)
+        if ((armNextPC & 0x0803FFFF) == 0x08020000)
+          busPrefetchCount = 0x100;
+
+        u32 opcode = cpuPrefetch[0];
+        cpuPrefetch[0] = cpuPrefetch[1];
+
+        busPrefetch = false;
+        int32_t busprefetch_mask = ((busPrefetchCount & 0xFFFFFE00) | -(busPrefetchCount & 0xFFFFFE00)) >> 31;
+        busPrefetchCount = (0x100 | (busPrefetchCount & 0xFF) & busprefetch_mask) | (busPrefetchCount & ~busprefetch_mask);
+        #if 0
+        if (busPrefetchCount & 0xFFFFFE00)
+            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+        #endif
+
+       
+        int oldArmNextPC = armNextPC;
+
+#ifndef FINAL_VERSION
+        if (armNextPC == stop) {
+            armNextPC++;
+        }
+#endif
+
+        armNextPC = reg[15].I;
+        reg[15].I += 4;
+        ARM_PREFETCH_NEXT;
+
+        int cond = opcode >> 28;
+        bool cond_res = true;
+        if (cond != 0x0E) {  // most opcodes are AL (always)
+            switch(cond) {
+              case 0x00: // EQ
+                cond_res = Z_FLAG;
+                break;
+              case 0x01: // NE
+                cond_res = !Z_FLAG;
+                break;
+              case 0x02: // CS
+                cond_res = C_FLAG;
+                break;
+              case 0x03: // CC
+                cond_res = !C_FLAG;
+                break;
+              case 0x04: // MI
+                cond_res = N_FLAG;
+                break;
+              case 0x05: // PL
+                cond_res = !N_FLAG;
+                break;
+              case 0x06: // VS
+                cond_res = V_FLAG;
+                break;
+              case 0x07: // VC
+                cond_res = !V_FLAG;
+                break;
+              case 0x08: // HI
+                cond_res = C_FLAG && !Z_FLAG;
+                break;
+              case 0x09: // LS
+                cond_res = !C_FLAG || Z_FLAG;
+                break;
+              case 0x0A: // GE
+                cond_res = N_FLAG == V_FLAG;
+                break;
+              case 0x0B: // LT
+                cond_res = N_FLAG != V_FLAG;
+                break;
+              case 0x0C: // GT
+                cond_res = !Z_FLAG &&(N_FLAG == V_FLAG);
+                break;
+              case 0x0D: // LE
+                cond_res = Z_FLAG || (N_FLAG != V_FLAG);
+                break;
+              case 0x0E: // AL (impossible, checked above)
+                cond_res = true;
+                break;
+              case 0x0F:
+              default:
+                // ???
+                cond_res = false;
+                break;
+            }
+        }
+
+        if (cond_res)
 		{
 			cond1 = (opcode>>16)&0xFF0;
 			cond2 = (opcode>>4)&0x0F;
 
-			(*armInsnTable[(cond1| cond2)])(opcode);
+            (*armInsnTable[(cond1| cond2)])(opcode);
+
 		}
+#ifdef INSN_COUNTER
+        count(opcode, cond_res);
+#endif		
 		ct = clockTicks;
 
-		if (ct < 0)
-			return 0;
+        if (ct < 0)
+            return 0;
 
 		/// better pipelining
 
-		if (ct == 0)
-			clockTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
+        if (ct == 0)
+            clockTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
 
-		cpuTotalTicks += clockTicks;
+        cpuTotalTicks += clockTicks;
 
 #ifdef USE_SWITICKS
-	} while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
+    } while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
 #else
-	} while ((cpuTotalTicks < cpuNextEvent) & armState & ~holdState);
+    } while ((cpuTotalTicks < cpuNextEvent) & armState & ~holdState);
 #endif
-	return 1;
+
+    return 1;
 }

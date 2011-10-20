@@ -715,8 +715,16 @@ void gbCompareLYToLYC()
 void  gbWriteMemory(register uint16_t address, register uint8_t value)
 {
 
-	if(address < 0x8000)
-	{
+	if(address < 0x8000) {
+#ifndef FINAL_VERSION
+		if(memorydebug && (address>0x3fff || address < 0x2000)) {
+			log("Memory register write %04x=%02x PC=%04x\n",
+					address,
+					value,
+					PC.W);
+		}
+
+#endif
 		if(mapper)
 			(*mapper)(address, value);
 		return;
@@ -740,8 +748,16 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 	if ((address >= 0xe000) && (address < 0xfe00))
 		address &= ~0x2000;
 
-	if(address < 0xc000)
-	{
+	if(address < 0xc000) {
+#ifndef FINAL_VERSION
+		if(memorydebug) {
+			log("Memory register write %04x=%02x PC=%04x\n",
+					address,
+					value,
+					PC.W);
+		}
+#endif
+
 		// Is that a correct fix ??? (it used to be 'if (mapper)')...
 		if(mapperRAM)
 			(*mapperRAM)(address, value);
@@ -1768,8 +1784,15 @@ uint8_t gbReadMemory(register uint16_t address)
 	if ((address >= 0xe000) && (address < 0xfe00))
 		address &= ~0x2000;
 
-	if(address < 0xc000)
-	{
+	if(address < 0xc000) {
+#ifndef FINAL_VERSION
+		if(memorydebug) {
+			log("Memory register read %04x PC=%04x\n",
+					address,
+					PC.W);
+		}
+#endif
+
 		// for the 2kb ram limit (fixes crash in shawu's story
 		// but now its sram test fails, as the it expects 8kb and not 2kb...
 		// So use the 'genericflashcard' option to fix it).
@@ -4435,11 +4458,19 @@ void gbEmulate()
 #endif
 {
 	// emuCount
+#ifdef FINAL_VERSION
 	//70000/4,
 #ifdef USE_FRAMESKIP
 	ticksToStop = 17500;
 #else
 	int ticksToStop = 17500;
+#endif
+#else
+#ifdef USE_FRAMESKIP
+	ticksToStop = 1000;
+#else
+	int ticksToStop = 1000;
+#endif
 #endif
 	gbRegister tempRegister;
 	uint8_t tempValue;
@@ -4456,6 +4487,25 @@ void gbEmulate()
 
 	do
 	{
+#ifndef FINAL_VERSION
+		if(systemDebug)
+		{
+			if(!(IFF & 0x80))
+			{
+				if(systemDebug > 1)
+				{
+					sprintf(gbBuffer,"PC=%04x AF=%04x BC=%04x DE=%04x HL=%04x SP=%04x I=%04x\n",
+							PC.W, AF.W, BC.W, DE.W,HL.W,SP.W,IFF);
+				}
+				else
+				{
+					sprintf(gbBuffer,"PC=%04x I=%02x\n", PC.W, IFF);
+				}
+				log(gbBuffer);
+			}
+		}
+#endif
+
 		uint16_t oldPCW = PC.W;
 
 		if(IFF & 0x80)
@@ -4900,48 +4950,47 @@ gbRedoLoop:
 										{
 											systemReadJoypadGB(1);
 										}
-										//}
-									int newmask = gbJoymask[0] & 255;
+										int newmask = gbJoymask[0] & 255;
 
 #ifdef USE_MOTION_SENSOR
-									if(gbRomType == 0x22) {
-										systemUpdateMotionSensor();
-									}
+										if(gbRomType == 0x22) {
+											systemUpdateMotionSensor();
+										}
 #endif
 
-									if(newmask)
-									{
-										gbMemory[0xff0f] = register_IF |= 16;
-									}
+										if(newmask)
+										{
+											gbMemory[0xff0f] = register_IF |= 16;
+										}
 
 
-									newmask = (gbJoymask[0] >> 10);
+										newmask = (gbJoymask[0] >> 10);
 
 #ifdef USE_FRAMESKIP
-									speedup = (newmask & 1) ? true : false;
+										speedup = (newmask & 1) ? true : false;
 #endif
-									//gbCapture = (newmask & 2) ? true : false;
+										//gbCapture = (newmask & 2) ? true : false;
 
 #if 0
-									if(gbCapture && !gbCapturePrevious) {
-										gbCaptureNumber++;
-										systemScreenCapture(gbCaptureNumber);
-									}
-									gbCapturePrevious = gbCapture;
+										if(gbCapture && !gbCapturePrevious) {
+											gbCaptureNumber++;
+											systemScreenCapture(gbCaptureNumber);
+										}
+										gbCapturePrevious = gbCapture;
 #endif
 
-									if(gbFrameSkipCount >= framesToSkip) {
+										if(gbFrameSkipCount >= framesToSkip) {
 
-										if(!gbSgbMask)
-										{
-											if (gbBorderOn)
-												gbSgbRenderBorder();
-											//if (gbScreenOn)
-											systemDrawScreen();
-										}
-										gbFrameSkipCount = 0;
-									} else
-										gbFrameSkipCount++;
+											if(!gbSgbMask)
+											{
+												if (gbBorderOn)
+													gbSgbRenderBorder();
+												//if (gbScreenOn)
+												systemDrawScreen();
+											}
+											gbFrameSkipCount = 0;
+										} else
+											gbFrameSkipCount++;
 
 								}
 								else
@@ -5145,7 +5194,6 @@ gbRedoLoop:
 						{
 							systemReadJoypadGB(1);
 						}
-						//}
 						gbFrameCount++;
 
 						systemFrame();
@@ -5405,7 +5453,6 @@ gbRedoLoop:
 				{
 					systemReadJoypadGB(1);
 				}
-				//}
 			}
 			return;
 		}

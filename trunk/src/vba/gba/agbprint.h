@@ -3,10 +3,10 @@
 #define AGBPRINT_H
 
 void agbPrintEnable(bool enable);
-bool agbPrintIsEnabled(void);
-void agbPrintReset(void);
-bool agbPrintWrite(uint32_t address, uint16_t value);
-void agbPrintFlush(void);
+bool agbPrintIsEnabled();
+void agbPrintReset();
+bool agbPrintWrite(u32 address, u16 value);
+void agbPrintFlush();
 
 #endif // AGBPRINT_H
 #endif

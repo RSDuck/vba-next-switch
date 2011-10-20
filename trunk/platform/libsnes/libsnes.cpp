@@ -16,6 +16,7 @@ static snes_audio_sample_t audio_cb = NULL;
 static snes_input_poll_t poll_cb = NULL;
 static snes_input_state_t input_cb = NULL;
 extern uint64_t joy;
+extern int gbJoymask[4];
 
 unsigned snes_library_revision_major(void)
 {
@@ -58,8 +59,7 @@ void snes_set_controller_port_device(bool, unsigned)
 void snes_set_cartridge_basename(const char*)
 {}
 
-void snes_init(void)
-{}
+void snes_init(void) {}
 
 static unsigned serialize_size = 0;
 
@@ -76,17 +76,17 @@ static void gba_init(void)
    CPUReset();
 
    soundInit();
-   soundSetSampleRate(32000);
+   soundSetSampleRate(31900);
    soundReset();
    soundResume();
 
    uint8_t *state_buf = new uint8_t[2000000];
+
    serialize_size = CPUWriteState_libgba(state_buf, 2000000);
-   delete [] state_buf;
+   delete[] state_buf;
 }
 
-void snes_term(void)
-{}
+void snes_term(void) {}
 
 void snes_power(void)
 {}
@@ -94,7 +94,7 @@ void snes_power(void)
 void snes_reset(void)
 {}
 
-void systemReadJoypadGB(int numplayer)
+void systemReadJoypadGB(int n)
 {
    poll_cb();
 
@@ -116,7 +116,7 @@ void systemReadJoypadGB(int numplayer)
    for (unsigned i = 0; i < 10; i++)
       J |= input_cb(SNES_PORT_1, SNES_DEVICE_JOYPAD, 0, binds[i]) << i;
 
-   gbJoymask[numplayer] = J;
+   gbJoymask[n] = J;
 }
 
 static void systemReadJoypadGBA(void)
@@ -321,7 +321,6 @@ int systemBlueShift = 0;
 
 void systemMessage(int, const char*, ...)
 {}
-
 
 
 bool systemSoundInit()

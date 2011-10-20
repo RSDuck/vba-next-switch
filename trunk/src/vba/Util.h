@@ -3,9 +3,11 @@
 
 #include "System.h"
 
-#define IMAGE_UNKNOWN	0
-#define IMAGE_GBA	1
-#define IMAGE_GB	2
+enum {
+	IMAGE_UNKNOWN,
+	IMAGE_GBA,
+	IMAGE_GB
+};
 
 // save game
 typedef struct {
@@ -16,21 +18,9 @@ typedef struct {
 #ifdef USE_PNG
 bool utilWritePNGFile(const char *, int, int, uint8_t *);
 #endif
-
 #ifdef USE_BMP
 bool utilWriteBMPFile(const char *, int, int, uint8_t *);
 #endif
-
-#ifdef __LIBGBA__
-void utilWriteIntMem(uint8_t *& data, int);
-void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
-void utilWriteDataMem(uint8_t *& data, variable_desc *);
-
-int utilReadIntMem(const uint8_t *& data);
-void utilReadMem(void *buf, const uint8_t *& data, unsigned size);
-void utilReadDataMem(const uint8_t *& data, variable_desc *);
-#endif
-
 void utilApplyIPS(const char *ips, uint8_t **rom, int *size);
 bool utilIsGBAImage(const char *);
 bool utilIsGBImage(const char *);
@@ -56,6 +46,16 @@ z_off_t utilGzSeek(gzFile file, z_off_t offset, int whence);
 long utilGzMemTell(gzFile file);
 void utilGBAFindSave(const uint8_t *, const int);
 void utilUpdateSystemColorMaps(bool lcd = false);
-bool utilFileExists(const char *filename);
+bool utilFileExists( const char *filename );
+
+#ifdef __LIBGBA__
+void utilWriteIntMem(uint8_t *& data, int);
+void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
+void utilWriteDataMem(uint8_t *& data, variable_desc *);
+
+int utilReadIntMem(const uint8_t *& data);
+void utilReadMem(void *buf, const uint8_t *& data, unsigned size);
+void utilReadDataMem(const uint8_t *& data, variable_desc *);
+#endif
 
 #endif // UTIL_H

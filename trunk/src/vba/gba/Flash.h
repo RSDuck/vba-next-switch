@@ -15,9 +15,9 @@ extern void flashWrite(uint32_t address, uint8_t byte);
 extern void flashDelayedWrite(uint32_t address, uint8_t byte);
 extern uint8_t flashSaveMemory[FLASH_128K_SZ];
 extern void flashSaveDecide(uint32_t address, uint8_t byte);
-extern void flashReset(void);
+extern void flashReset();
 extern void flashSetSize(int size);
-extern void flashInit(void);
+extern void flashInit();
 
 extern int flashSize;
 

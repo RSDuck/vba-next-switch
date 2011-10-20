@@ -11,17 +11,15 @@ extern int systemBlueShift;
 extern u16 systemColorMap16[0x10000];
 extern u32 systemColorMap32[0x10000];
 
-static const unsigned char curve[32] = { 
-0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0e, 0x10, 0x12,
-0x14, 0x16, 0x18, 0x1c, 0x20, 0x28, 0x30, 0x38,
-0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x80,
-0x88, 0x90, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0
-};
+static const unsigned char curve[32] = { 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0e, 0x10, 0x12,
+										 0x14, 0x16, 0x18, 0x1c, 0x20, 0x28, 0x30, 0x38,
+										 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x80,
+										 0x88, 0x90, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0};
 
-//				output           R   G   B
+//								output           R   G   B
 static const unsigned char influence[3 * 3] = { 16,  4,  4, // red
-						 8, 16,  8, // green
-						 0,  8, 16};// blue
+												 8, 16,  8, // green
+												 0,  8, 16};// blue
 
 inline void swap(short & a, short & b)
 {
@@ -183,46 +181,47 @@ void gbafilter_pad(u8 * buf, int count)
 
 	switch (systemColorDepth)
 	{
-		case 24:
-			while (count--)
-			{
-				*buf++ &= mask.part.r;
-				*buf++ &= mask.part.g;
-				*buf++ &= mask.part.b;
-			}
-			break;
-		case 32:
-			while (count--)
-			{
-				*((u32*)buf) &= mask.whole;
-				buf += 4;
-			}
+	case 24:
+		while (count--)
+		{
+			*buf++ &= mask.part.r;
+			*buf++ &= mask.part.g;
+			*buf++ &= mask.part.b;
+		}
+		break;
+	case 32:
+		while (count--)
+		{
+			*((u32*)buf) &= mask.whole;
+			buf += 4;
+		}
 	}
 }
 
 void UpdateSystemColorMaps(int lcd)
 {
-	switch(systemColorDepth)
-	{
-		case 16:
-			{
-				for(int i = 0; i < 0x10000; i++)
-					systemColorMap16[i] = ((i & 0x1f) << systemRedShift) | (((i & 0x3e0) >> 5) << systemGreenShift) | (((i & 0x7c00) >> 10) << systemBlueShift);
-
-				if (lcd == 1)
-					gbafilter_pal(systemColorMap16, 0x10000);
-			}
-			break;
-		case 24:
-		case 32:
-			{
-				for(int i = 0; i < 0x10000; i++)
-					systemColorMap32[i] = ((i & 0x1f) << systemRedShift) | (((i & 0x3e0) >> 5) << systemGreenShift) | (((i & 0x7c00) >> 10) << systemBlueShift);
-
-				if (lcd == 1)
-					gbafilter_pal32(systemColorMap32, 0x10000);
-			}
-			break;
-	}
+  switch(systemColorDepth) {
+  case 16:
+    {
+      for(int i = 0; i < 0x10000; i++) {
+        systemColorMap16[i] = ((i & 0x1f) << systemRedShift) |
+          (((i & 0x3e0) >> 5) << systemGreenShift) |
+          (((i & 0x7c00) >> 10) << systemBlueShift);
+      }
+	  if (lcd == 1) gbafilter_pal(systemColorMap16, 0x10000);
+    }
+    break;
+  case 24:
+  case 32:
+    {
+      for(int i = 0; i < 0x10000; i++) {
+        systemColorMap32[i] = ((i & 0x1f) << systemRedShift) |
+          (((i & 0x3e0) >> 5) << systemGreenShift) |
+          (((i & 0x7c00) >> 10) << systemBlueShift);
+      }
+	  if (lcd == 1) gbafilter_pal32(systemColorMap32, 0x10000);
+    }
+    break;
+  }
 }
 #endif

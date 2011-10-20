@@ -1,12 +1,12 @@
 #ifndef RTC_H
 #define RTC_H
 
-uint16_t rtcRead(uint32_t address);
-
-bool rtcWrite(uint32_t address, uint16_t value);
+u16 rtcRead(u32 address);
+bool rtcWrite(u32 address, u16 value);
 void rtcEnable(bool);
-bool rtcIsEnabled(void);
-void rtcReset(void);
+bool rtcIsEnabled();
+void rtcReset();
+
 void rtcReadGame(gzFile gzFile);
 void rtcSaveGame(gzFile gzFile);
 

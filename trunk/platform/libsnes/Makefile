@@ -37,10 +37,10 @@ VBA_COBJ := $(VBA_CSRCS:.c=.o)
 
 OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) libsnes.o
 
-VBA_DEFINES := -D__LIBGBA__
+VBA_DEFINES := -D__LIBGBA__ -DFINAL_VERSION -DC_CORE
 
-CFLAGS += -O0 -g -std=gnu99 -fPIC $(VBA_DEFINES)
-CXXFLAGS += -O0 -g -fPIC $(VBA_DEFINES)
+CFLAGS += -O3 -g -std=gnu99 -fPIC $(VBA_DEFINES)
+CXXFLAGS += -O3 -g -fPIC $(VBA_DEFINES)
 LDFLAGS += -Wl,-no-undefined
 
 INCDIRS := -I$(VBA_DIR)
@@ -60,3 +60,4 @@ clean:
 	rm -f $(TARGET)
 
 .PHONY: clean
+

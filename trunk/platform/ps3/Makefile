@@ -5,8 +5,6 @@ VBA_PS3_EXPERIMENTAL_ISEL	= 0
 ORIGINAL_BRANCHES		= 0
 MULTIMAN_SUPPORT		= 0
 SDK_340				= 1
-#NOTE: This optimization comes at the cost of breaking GB/GBC/SGB
-USE_GBA_ONLY			= 0
 
 # specify build tools
 CELL_BUILD_TOOLS	= GCC
@@ -65,9 +63,12 @@ VBA_CPPSRCS		+= $(SRC_DIR)/ps3video.cpp \
 		$(VBA_API_DIR)/gb/gbSGB.cpp \
 		$(VBA_API_DIR)/gb/gbSound.cpp \
 		$(VBA_API_DIR)/gba/GBA.cpp \
+		$(VBA_API_DIR)/gba/Sound.cpp \
 		$(VBA_API_DIR)/gba/EEprom.cpp \
 		$(VBA_API_DIR)/gba/Flash.cpp \
 		$(VBA_API_DIR)/gba/RTC.cpp \
+		$(VBA_API_DIR)/gba/Sram.cpp \
+		$(VBA_API_DIR)/gba/bios.cpp \
 		$(CELL_FRAMEWORK_DIR)/fileio/FileBrowser.cpp \
 		$(SRC_DIR)/menu.cpp
 
@@ -118,8 +119,8 @@ PPU_CFLAGS		= -W -Wall -Wuninitialized -Wcomment -Wchar-subscripts \
 			-Wredundant-decls -Wreturn-type -Wshadow -Wsign-compare -Wswitch \
 			-Wunknown-pragmas -Wunused -Wwrite-strings					
 
-PPU_CXXFLAGS	+= -DBLARGG_BIG_ENDIAN=1 -DNDEBUG=1 -D__CELLOS_LV2__ -DBRANCHLESS_GBA_GFX -DBLIP_BUFFER_FAST=1 -DFASTER_SOUND_HACK_NON_SILENCE=1 -DGEKKO -DPSGL -DPATH_MAX=1024 -D__ppc__ -DSPEEDHAX -D__POWERPC__ -DWORDS_BIGENDIAN -DUSE_CACHE_PREFETCH=1
-PPU_CFLAGS		+= -DBLARGG_BIG_ENDIAN=1 -DNDEBUG=1 -D__CELLOS_LV2__ -DBRANCHLESS_GBA_GFX -DBLIP_BUFFER_FAST=1 -DFASTER_SOUND_HACK_NON_SILENCE=1 -DGEKKO -DPSGL -DPATH_MAX=1024 -D__ppc__ -DSPEEDHAX -D__POWERPC__ -DWORDS_BIGENDIAN -DUSE_CACHE_PREFETCH=1
+PPU_CXXFLAGS	+= -DBLARGG_BIG_ENDIAN=1 -DNDEBUG=1 -D__CELLOS_LV2__ -DBRANCHLESS_GBA_GFX -DBLIP_BUFFER_FAST=1 -DFASTER_SOUND_HACK_NON_SILENCE=1 -DGEKKO -DPSGL -DPATH_MAX=1024 -DFINAL_VERSION -D__ppc__ -DSPEEDHAX -D__POWERPC__ -DC_CORE -DWORDS_BIGENDIAN -DUSE_CACHE_PREFETCH=1
+PPU_CFLAGS		+= -DBLARGG_BIG_ENDIAN=1 -DNDEBUG=1 -D__CELLOS_LV2__ -DBRANCHLESS_GBA_GFX -DBLIP_BUFFER_FAST=1 -DFASTER_SOUND_HACK_NON_SILENCE=1 -DGEKKO -DPSGL -DPATH_MAX=1024 -DFINAL_VERSION -D__ppc__ -DSPEEDHAX -D__POWERPC__ -DC_CORE -DWORDS_BIGENDIAN -DUSE_CACHE_PREFETCH=1
 
 # include flags
 PPU_CXXFLAGS		+= -I. -I$(VBA_API_DIR) -I.../common/utils/zlib
@@ -174,11 +175,6 @@ endif
 ifeq ($(VBA_PS3_EXPERIMENTAL_ISEL),1)
 PPU_CFLAGS     += -DVBA_PS3_EXPERIMENTAL_ISEL=1
 PPU_CXXFLAGS   += -DVBA_PS3_EXPERIMENTAL_ISEL=1
-endif
-
-ifeq ($(USE_GBA_ONLY),1)
-PPU_CFLAGS     += -DUSE_GBA_ONLY=1
-PPU_CXXFLAGS   += -DUSE_GBA_ONLY=1
 endif
 
 ifeq ($(MULTIMAN_SUPPORT),1)
@@ -296,7 +292,6 @@ clean_vba:
 	@rm $(VBA_COBJS:%.o=$(BUILD_DIR)/%.d) -f
 	
 clean: clean_vba
-	@rm -rf objs common ../src
 	@rm $(PPU_TARGET) $(PPU_TARGET:%.elf=%.self) -f
 
 #massively reduced filesize using MKSELF_GEOHOT - use this for normal jailbreak builds

@@ -3,8 +3,30 @@
 
 #include "Types.h"
 
-#define isel(a, x, y) \
-	(x & (~(a >> 31))) + (y & (a >> 31));
+// swaps a 16-bit value
+#if 0
+static inline u16 swap16(u16 v)
+{
+  return (v<<8)|(v>>8);
+}
+#endif
+
+// swaps a 32-bit value
+#if 0
+static inline u32 swap32(u32 v)
+{
+  return (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
+}
+#endif
+
+// if a >= 0 return x else y
+static __inline int isel( int a, int x, int y )
+{
+	int mask = (a >> 31); // arithmetic shift right, splat out the sign bit
+	// mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.
+	return (x & (~mask)) + (y & mask);
+}
+
 
 #ifdef WORDS_BIGENDIAN
 #if defined(__GNUC__) && defined(__ppc__)
@@ -27,23 +49,23 @@
 
 #else
 #define READ16LE(x) \
-  (*((uint16_t *)(x))<<8)|(*((uint16_t *)(x))>>8);
+  (*((u16 *)(x))<<8)|(*((u16 *)(x))>>8);
 #define READ32LE(x) \
-  (*((uint32_t *)(x))<<24)|((*((uint32_t *)(x))<<8)&0xff0000)|((((*((uint32_t *)(x))x>>8)&0xff00)|(*((uint32_t *)(x))>>24);
+  (*((u32 *)(x))<<24)|((*((u32 *)(x))<<8)&0xff0000)|((((*((u32 *)(x))x>>8)&0xff00)|(*((u32 *)(x))>>24);
 #define WRITE16LE(x,v) \
-  *((uint16_t *)x) = (*((uint16_t *)(v))<<8)|(*((uint16_t *)(v))>>8);
+  *((u16 *)x) = (*((u16 *)(v))<<8)|(*((u16 *)(v))>>8);
 #define WRITE32LE(x,v) \
-  *((uint32_t *)x) = (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
+  *((u32 *)x) = (v<<24)|((v<<8)&0xff0000)|((v>>8)&0xff00)|(v>>24);
 #endif
 #else
 #define READ16LE(x) \
-  *((uint16_t *)x)
+  *((u16 *)x)
 #define READ32LE(x) \
-  *((uint32_t *)x)
+  *((u32 *)x)
 #define WRITE16LE(x,v) \
-  *((uint16_t *)x) = (v)
+  *((u16 *)x) = (v)
 #define WRITE32LE(x,v) \
-  *((uint32_t *)x) = (v)
+  *((u32 *)x) = (v)
 #endif
 
 #endif // PORT_H
