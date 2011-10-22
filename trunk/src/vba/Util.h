@@ -48,7 +48,7 @@ void utilGBAFindSave(const uint8_t *, const int);
 void utilUpdateSystemColorMaps(bool lcd = false);
 bool utilFileExists( const char *filename );
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void utilWriteIntMem(uint8_t *& data, int);
 void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
 void utilWriteDataMem(uint8_t *& data, variable_desc *);

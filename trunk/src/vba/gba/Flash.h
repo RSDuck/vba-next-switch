@@ -5,7 +5,7 @@
 
 extern void flashSaveGame(gzFile _gzFile);
 extern void flashReadGame(gzFile _gzFile, int version);
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 extern void flashSaveGameMem(uint8_t *& data);
 extern void flashReadGameMem(const uint8_t *& data, int version);
 #endif

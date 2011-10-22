@@ -933,7 +933,7 @@ void soundSaveGame( gzFile out )
 	utilWriteData( out, gba_state );
 }
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void soundSaveGameMem(uint8_t *& data)
 {
    gb_apu->save_state(&state.apu);
@@ -1072,7 +1072,7 @@ void soundReadGame( gzFile in, int version )
 	//apply_muting();
 }
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void soundReadGameMem(const uint8_t *& in_data, int)
 {
 	// Prepare APU and default state

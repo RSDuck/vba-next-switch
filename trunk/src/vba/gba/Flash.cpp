@@ -78,7 +78,7 @@ void flashReadGame(gzFile gzFile, int version)
   }
 }
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void flashSaveGameMem(uint8_t *& data)
 {
    utilWriteDataMem(data, flashSaveData3);

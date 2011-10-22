@@ -9,12 +9,12 @@
 #include "gbSound.h"
 #include "../Util.h"
 
-#if defined(__ANDROID__) || defined(__LIBGBA__)
+#if defined(__ANDROID__) || defined(__LIBSNES__)
 #include <string.h>
 #include <stdio.h>
 #endif
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 #include <stdlib.h>
 #endif
 

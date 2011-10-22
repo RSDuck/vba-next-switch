@@ -82,7 +82,7 @@ extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() w
 void soundSaveGame( gzFile );
 void soundReadGame( gzFile, int version );
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void soundSaveGameMem(uint8_t *& data);
 void soundReadGameMem(const uint8_t *& data, int version);
 #endif

@@ -85,11 +85,11 @@ extern void CPUUpdateRender();
 //extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 extern bool CPUReadState_libgba(const uint8_t*, unsigned);
 #endif
 extern bool CPUWriteMemState(char *, int);
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 extern unsigned CPUWriteState_libgba(uint8_t*, unsigned);
 #endif
 extern bool CPUWriteState(const char *);

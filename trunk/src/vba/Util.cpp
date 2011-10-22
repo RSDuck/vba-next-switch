@@ -756,7 +756,7 @@ bool utilFileExists( const char *filename )
 }
 
 // Not endian safe, but VBA itself doesn't seem to care, so hey <_<
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 void utilWriteIntMem(uint8_t *& data, int val)
 {
    memcpy(data, &val, sizeof(int));

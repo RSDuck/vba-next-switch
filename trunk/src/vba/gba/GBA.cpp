@@ -16,7 +16,7 @@ char special_action_msg[256];
 
 #include <stdlib.h>
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 #include <stddef.h>
 #endif
 
@@ -776,7 +776,7 @@ static bool CPUWriteState(gzFile gzFile)
 	return true;
 }
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 unsigned CPUWriteState_libgba(uint8_t* data, unsigned size)
 {
 	uint8_t *orig = data;
@@ -3668,7 +3668,7 @@ void (*renderLine)() = mode0RenderLine;
     break; \
   }
 
-#ifdef __LIBGBA__
+#ifdef __LIBSNES__
 bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 {
 	// Don't really care about version.
