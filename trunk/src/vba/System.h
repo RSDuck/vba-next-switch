@@ -19,9 +19,7 @@ extern char special_action_msg[256];
 extern bool systemPauseOnFrame();
 extern void systemGbPrint(uint8_t *,int,int,int,int);
 extern void systemScreenCapture(int);
-#ifndef __CELLOS_LV2__
 extern void systemDrawScreen();
-#endif
 // updates the joystick data
 extern bool systemReadJoypads();
 // return information about the given joystick, -1 for default joystick

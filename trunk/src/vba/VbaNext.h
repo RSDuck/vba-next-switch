@@ -33,17 +33,3 @@
 #define SYSTEMCOLORMAP24_LINE_SGB(p, v) { *((u32*) p) = systemColorMap32[v]; }
 
 #define SYSTEMCOLORMAP32_LINE_SGB(p, v) { *p = systemColorMap32[v]; }
-
-#ifdef __CELLOS_LV2__
-#define systemDrawScreen() \
-	Graphics->Draw(pix); \
-	if(Graphics->frame_count < special_action_msg_expired) \
-	{ \
-		cellDbgFontPrintf (0.09f, 0.90f, 1.51f, BLUE,	special_action_msg); \
-		cellDbgFontPrintf (0.09f, 0.90f, 1.50f, WHITE,	special_action_msg); \
-		cellDbgFontDraw(); \
-	} \
-	else \
-		special_action_msg_expired = 0; \
-	psglSwap();
-#endif

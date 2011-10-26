@@ -63,6 +63,9 @@ const struct cell_audio_driver *audio_driver = &cell_audio_audioport;
 oskutil_params oskutil_handle;
 PS3InputList PS3Input;
 
+uint32_t special_action_msg_expired;	// time at which the message no longer needs to be overlaid onscreen
+char special_action_msg[256];
+
 struct SSettings Settings;
 
 int mode_switch = MODE_MENU;
@@ -543,6 +546,19 @@ bool systemPauseOnFrame()
 
 #endif
 
+void systemDrawScreen()
+{
+	Graphics->Draw(pix);
+	if(Graphics->frame_count < special_action_msg_expired)
+	{
+		cellDbgFontPrintf (0.09f, 0.90f, 1.51f, BLUE,	special_action_msg);
+		cellDbgFontPrintf (0.09f, 0.90f, 1.50f, WHITE,	special_action_msg);
+		cellDbgFontDraw();
+	}
+	else
+		special_action_msg_expired = 0;
+	psglSwap();
+}
 
 void systemMessage(int id, const char * fmt, ...)
 {
