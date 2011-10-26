@@ -2,7 +2,13 @@
 #define EEPROM_H
 
 extern void eepromSaveGame(gzFile _gzFile);
+extern void eepromSaveGameMem(uint8_t *&data);
+
+#ifdef __LIBSNES__
 extern void eepromReadGame(gzFile _gzFile, int version);
+extern void eepromReadGameMem(const uint8_t *&data, int version);
+#endif
+
 extern void eepromReadGameSkip(gzFile _gzFile, int version);
 extern int eepromRead(u32 address);
 extern void eepromWrite(u32 address, u8 value);

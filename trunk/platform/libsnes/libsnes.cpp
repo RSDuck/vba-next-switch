@@ -57,23 +57,8 @@ void snes_set_input_state(snes_input_state_t cb)
 void snes_set_controller_port_device(bool, unsigned)
 {}
 
-#include <string>
-static std::string g_basename;
-
 void snes_set_cartridge_basename(const char*)
-{
-#if 0
-   char path[1024];
-   strncpy(path, path_, sizeof(path));
-   
-   const char *split = strrchr(path_, '/');
-   if (!split) split = strrchr(path_, '\\');
-   if (split)
-      g_basename = split + 1;
-   else
-      g_basename = path_;
-#endif
-}
+{}
 
 void snes_init(void) {}
 
@@ -89,7 +74,7 @@ typedef struct  {
 	int useBios;
 } ini_t;
 
-static ini_t gbaover[256] = {
+static const ini_t gbaover[256] = {
 			//romtitle,							    	romid	flash	save	rtc	mirror	bios
 			{"2 Games in 1 - Dragon Ball Z - The Legacy of Goku I & II (USA)",	"BLFE",	0,	1,	0,	0,	0},
 			{"2 Games in 1 - Dragon Ball Z - Buu's Fury + Dragon Ball GT - Transformation (USA)", "BUFE", 0, 1, 0, 0, 0},
@@ -192,7 +177,6 @@ static ini_t gbaover[256] = {
 			{"Yu-Gi-Oh! GX - Duel Academy (USA)",					"BYGE",	0,	2,	0,	0,	1},
 			{"Yu-Gi-Oh! - Ultimate Masters - 2006 (Europe)(En,Jp,Fr,De,Es,It)",	"BY6P",	0,	2,	0,	0,	0},
 			{"Zoku Bokura no Taiyou - Taiyou Shounen Django (Japan)",		"U32J",	0,	0,	1,	0,	0}
-
 };
 
 void LoadImagePreferences()
@@ -259,7 +243,7 @@ static void gba_init(void)
 	doMirroring(mirroringEnable);
 
 	soundInit();
-	soundSetSampleRate(31900);
+	soundSetSampleRate(31890);
 
 	CPUInit(0, false);
 	CPUReset();
@@ -268,7 +252,6 @@ static void gba_init(void)
 	soundResume();
 
 	uint8_t *state_buf = new uint8_t[2000000];
-
 	serialize_size = CPUWriteState_libgba(state_buf, 2000000);
 	delete[] state_buf;
 }

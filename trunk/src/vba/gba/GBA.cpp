@@ -799,10 +799,10 @@ unsigned CPUWriteState_libgba(uint8_t* data, unsigned size)
 	utilWriteMem(data, pix, 4 * 241 * 162);
 	utilWriteMem(data, ioMem, 0x400);
 
-	//eepromSaveGameMem(data);
+	eepromSaveGameMem(data);
 	flashSaveGameMem(data);
 	soundSaveGameMem(data);
-	//rtcSaveGameMem(data);
+	rtcSaveGameMem(data);
 
 	return (ptrdiff_t)data - (ptrdiff_t)orig;
 }
@@ -3707,10 +3707,10 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 	utilReadMem(pix, data, 4*241*162);
 	utilReadMem(ioMem, data, 0x400);
 
-	//eepromReadGameMem(data, version);
+	eepromReadGameMem(data, version);
 	flashReadGameMem(data, version);
 	soundReadGameMem(data, version);
-	//rtcReadGameMem(data);
+	rtcReadGameMem(data);
 
 	//// Copypasta stuff ...
 	// set pointers!
