@@ -34,8 +34,10 @@ VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 VBA_CSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c))
 VBA_COBJ := $(VBA_CSRCS:.c=.o)
+UTIL_SOURCES := $(wildcard ../common/utils/zlib/*.c)
+UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
 
-OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) libsnes.o
+OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS) libsnes.o
 
 VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE
 
@@ -44,7 +46,7 @@ CXXFLAGS += -O3 -g -fPIC $(VBA_DEFINES)
 LDFLAGS += -Wl,-no-undefined
 
 INCDIRS := -I$(VBA_DIR)
-LIBS := -lz
+LIBS :=
 
 $(TARGET): $(OBJS)
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
