@@ -260,10 +260,14 @@ static void gba_init(void)
 void snes_term(void) {}
 
 void snes_power(void)
-{}
+{
+   CPUReset();
+}
 
 void snes_reset(void)
-{}
+{
+   CPUReset();
+}
 
 void systemReadJoypadGB(int n)
 {
