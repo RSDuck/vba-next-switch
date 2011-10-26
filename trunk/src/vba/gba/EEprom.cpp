@@ -9,7 +9,15 @@ int eepromMode = EEPROM_IDLE;
 int eepromByte = 0;
 int eepromBits = 0;
 int eepromAddress = 0;
+
+#ifdef __LIBSNES__
+// Workaround for broken-by-design GBA save semantics.
+extern u8 libsnes_save_buf[0x20000 + 0x2000];
+u8 *eepromData = libsnes_save_buf + 0x20000;
+#else
 u8 eepromData[0x2000];
+#endif
+
 u8 eepromBuffer[16];
 bool eepromInUse = false;
 int eepromSize = 512;
@@ -27,7 +35,11 @@ variable_desc eepromSaveData[] = {
 
 void eepromInit()
 {
+#ifdef __LIBSNES__
+  __builtin_memset(eepromData, 255, 0x2000);
+#else
   __builtin_memset(eepromData, 255, sizeof(eepromData));
+#endif
 }
 
 void eepromReset()

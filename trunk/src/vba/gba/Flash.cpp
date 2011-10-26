@@ -16,7 +16,13 @@
 #define FLASH_PROGRAM            8
 #define FLASH_SETBANK            9
 
+#ifdef __LIBSNES__
+extern uint8_t libsnes_save_buf[0x20000 + 0x2000];
+uint8_t *flashSaveMemory = libsnes_save_buf;
+#else
 uint8_t flashSaveMemory[FLASH_128K_SZ];
+#endif
+
 int flashState = FLASH_READ_ARRAY;
 int flashReadState = FLASH_READ_ARRAY;
 int flashSize = 0x10000;
@@ -50,7 +56,11 @@ static variable_desc flashSaveData3[] = {
 
 void flashInit()
 {
+#ifdef __LIBSNES__
+  __builtin_memset(flashSaveMemory, 0xff, 0x20000);
+#else
   __builtin_memset(flashSaveMemory, 0xff, sizeof(flashSaveMemory));
+#endif
 }
 
 void flashReset()

@@ -12,10 +12,10 @@
 
 #include <stdio.h>
 
-static snes_video_refresh_t video_cb = NULL;
-static snes_audio_sample_t audio_cb = NULL;
-static snes_input_poll_t poll_cb = NULL;
-static snes_input_state_t input_cb = NULL;
+static snes_video_refresh_t video_cb;
+static snes_audio_sample_t audio_cb;
+static snes_input_poll_t poll_cb;
+static snes_input_state_t input_cb;
 extern uint64_t joy;
 extern int gbJoymask[4];
 
@@ -198,6 +198,7 @@ void LoadImagePreferences()
 		{
 			found = true;
 			found_no = i;
+         break;
 		}
 	}
 
@@ -395,15 +396,14 @@ bool snes_get_region(void)
    return SNES_REGION_NTSC;
 }
 
+// Workaround for broken-by-design GBA save semantics.
+uint8_t libsnes_save_buf[0x20000 + 0x2000];
 uint8_t *snes_get_memory_data(unsigned id)
 {
    if (id != SNES_MEMORY_CARTRIDGE_RAM)
       return 0;
 
-   if (eepromInUse)
-      return eepromData;
-
-   return flashSaveMemory;
+   return libsnes_save_buf;
 }
 
 unsigned snes_get_memory_size(unsigned id)
@@ -411,10 +411,7 @@ unsigned snes_get_memory_size(unsigned id)
    if (id != SNES_MEMORY_CARTRIDGE_RAM)
       return 0;
 
-   if (eepromInUse)
-      return eepromSize;
-
-   return flashSize;
+   return sizeof(libsnes_save_buf);
 }
 
 
