@@ -1329,9 +1329,7 @@ static void vba_init()
 		// Load per image compatibility prefs from vba-over.ini
 		LoadImagePreferences();
 
-		if(flashSize == 0x10000 || flashSize == 0x20000)
-			flashSetSize(flashSize);
-
+		flashSetSize(flashSize);
 		rtcEnable(enableRtc);		
 		doMirroring(mirroringEnable);
 
