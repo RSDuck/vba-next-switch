@@ -2,14 +2,6 @@
 
 #include "GBA-thumb_.h"
 
-#ifdef __CELLOS_LV2__
-#include "../../platform/ps3/src/ps3video.hpp"
-
-extern PS3Graphics* Graphics;
-uint32_t special_action_msg_expired;	// time at which the message no longer needs to be overlaid onscreen
-char special_action_msg[256];
-#endif
-
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"

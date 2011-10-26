@@ -8,6 +8,7 @@ extern void eepromReadGame(gzFile _gzFile, int version);
 extern void eepromReadGameMem(const uint8_t *&data, int version);
 extern void eepromSaveGameMem(uint8_t *&data);
 #endif
+extern void eepromReadGame(gzFile _gzFile, int version);
 
 extern void eepromReadGameSkip(gzFile _gzFile, int version);
 extern int eepromRead(u32 address);
