@@ -21,8 +21,7 @@ static std::string g_basename;
 
 uint32_t srcWidth;
 uint32_t srcHeight;
-
-extern uint64_t joy;
+extern int gbJoymask[4];
 
 unsigned snes_library_revision_major(void)
 {
@@ -88,19 +87,19 @@ void snes_term(void) {}
 
 void snes_power(void)
 {
-   CPUReset();
+	gbReset();
 }
 
 void snes_reset(void)
 {
-   CPUReset();
+	gbReset();
 }
 
 void systemReadJoypadGB(int n)
 {
    poll_cb();
 
-   u32 J = 0;
+   uint32_t J = 0;
 
    static const unsigned binds[] = {
       SNES_DEVICE_ID_JOYPAD_A,
@@ -124,7 +123,6 @@ void systemReadJoypadGB(int n)
 void snes_run(void)
 {
 	gbEmulate();
-	systemReadJoypadGB();
 }
 
 
@@ -149,13 +147,43 @@ void snes_cheat_reset(void)
 void snes_cheat_set(unsigned, bool, const char*)
 {}
 
-static void gb_init(void)
+static void gb_settings()
 {
 	srcWidth = 160;
 	srcHeight = 144;
 	gbBorderLineSkip = 160;
 	gbBorderColumnSkip = 0;
 	gbBorderRowSkip = 0;
+	gbBorderOn = 0;
+}
+
+static void sgb_settings()
+{
+	srcWidth = 256;
+	srcHeight = 224;
+	gbBorderLineSkip = 256;
+	gbBorderColumnSkip = 48;
+	gbBorderRowSkip = 40;
+	gbBorderOn = 1;
+}
+
+static void gb_system_init(void)
+{
+	for(int i = 0; i < 24; )
+	{
+		systemGbPalette[i++] = (0x1f) | (0x1f << 5) | (0x1f << 10);
+		systemGbPalette[i++] = (0x15) | (0x15 << 5) | (0x15 << 10);
+		systemGbPalette[i++] = (0x0c) | (0x0c << 5) | (0x0c << 10);
+		systemGbPalette[i++] = 0;
+	}
+
+	utilUpdateSystemColorMaps(gbColorOption == 1);
+}
+
+static void gb_init(void)
+{
+	gb_settings();
+	gb_system_init();
 
 	soundInit();
 	gbGetHardwareType();
@@ -165,7 +193,9 @@ static void gb_init(void)
 	gbReset();
 
 	uint8_t *state_buf = new uint8_t[2000000];
+	#if 0
 	serialize_size = CPUWriteState_libgba(state_buf, 2000000);
+	#endif
 	delete[] state_buf;
 }
 
@@ -247,7 +277,7 @@ void systemOnSoundShutdown()
 void systemSoundNonblock(bool)
 {}
 
-void systemSoundSetThrottle(u16)
+void systemSoundSetThrottle(uint16_t)
 {}
 
 bool systemSoundInitDriver(long)
@@ -271,14 +301,15 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 }
 
 static uint16_t pix_buf[160 * 1024];
+extern uint8_t * pix;
 
 void systemDrawScreen()
 {
-   for (unsigned y = 0; y < 160; y++)
+   for (unsigned y = 0; y < srcHeight; y++)
    {
       uint16_t *dst = pix_buf + y * 1024;
-      const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1); // Don't ask why ... :(
-      for (unsigned x = 0; x < 240; x++)
+      const uint32_t *src = (const uint32_t*)pix + (gbBorderLineSkip+1) * (register_LY + gbBorderRowSkip+1) + gbBorderColumnSkip;
+      for (unsigned x = 0; x < srcWidth; x++)
          dst[x] = (uint16_t)(src[x] & 0x7fff);
    }
 
@@ -286,9 +317,9 @@ void systemDrawScreen()
 }
 
 // Stubs
-u16 systemColorMap16[0x10000];
-u32 systemColorMap32[0x10000];
-u16 systemGbPalette[24];
+uint16_t systemColorMap16[0x10000];
+uint32_t systemColorMap32[0x10000];
+uint16_t systemGbPalette[24];
 int systemColorDepth = 32;
 int systemDebug = 0;
 int systemVerbose = 0;

@@ -78,6 +78,7 @@ static const int table [0x40] =
 
 //void interp_rate() { /* empty for now */ }
 
+#ifndef USE_GB_ONLY
 class Gba_Pcm {
 public:
 	void init();
@@ -114,11 +115,17 @@ private:
 };
 
 static Gba_Pcm_Fifo     pcm [2];
+#endif
+
 static Gb_Apu*          gb_apu;
+
+#ifndef USE_GB_ONLY
 static Stereo_Buffer*   stereo_buffer;
+#endif
 
 static Blip_Synth<blip_good_quality,1> pcm_synth; // 32 kHz, 16 kHz, 8 kHz
 
+#ifndef USE_GB_ONLY
 void Gba_Pcm::init()
 {
 	output    = 0;
@@ -306,6 +313,7 @@ void Gba_Pcm_Fifo::write_fifo( int data )
 	count += 2;
 	writeIndex = (writeIndex + 2) & 31;
 }
+#endif
 
 #if 0
 static void apply_control()
@@ -336,6 +344,7 @@ void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
 		*addr2 = 0;
 }
 
+#ifndef USE_GB_ONLY
 void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 {
 	for(uint32_t i = 0; i < 2; i++)
@@ -364,6 +373,7 @@ void soundEvent_u8(int gb_addr, uint32_t address, uint8_t data)
 	}
 	// TODO: what about byte writes to SGCNT0_H etc.?
 }
+#endif
 
 #if 0
 static void apply_volume( bool apu_only = false )
@@ -400,7 +410,7 @@ static void write_SGCNT0_H( int data )
 }
 #endif
 
-
+#ifndef USE_GB_ONLY
 void soundEvent_u16(uint32_t address, uint16_t data)
 {
 	switch ( address )
@@ -451,6 +461,7 @@ void soundTimerOverflow(int timer)
 	pcm [0].timer_overflowed( timer );
 	pcm [1].timer_overflowed( timer );
 }
+#endif
 
 #if 0
 static void end_frame( blip_time_t time )
@@ -491,6 +502,7 @@ static void apply_filtering()
 }
 #endif
 
+#ifndef USE_GB_ONLY
 void psoundTickfn()
 {
 #if 0
@@ -570,6 +582,7 @@ static void apply_muting()
 	gb_apu->set_output( 0, 0, 0, 3 );
    #endif
 }
+#endif
 
 #if 0
 static void reset_apu()
@@ -583,6 +596,7 @@ static void reset_apu()
 }
 #endif
 
+#ifndef USE_GB_ONLY
 static void remake_stereo_buffer()
 {
 	if ( !ioMem )
@@ -636,6 +650,7 @@ static void remake_stereo_buffer()
 	//pcm_synth [2].volume( 0.66 / 256 * soundVolume_ );
 	//End of Apply Volume - False
 }
+#endif
 
 void soundShutdown()
 {
@@ -679,6 +694,7 @@ int soundGetEnable()
 	return (soundEnableFlag & 0x30f);
 }
 
+#ifndef USE_GB_ONLY
 void soundReset()
 {
 	systemSoundReset();
@@ -711,6 +727,7 @@ void soundReset()
 	// TODO: what about byte writes to SGCNT0_H etc.?
 	// End of Sound Event (NR52)
 }
+#endif
 
 bool soundInit()
 {
@@ -741,6 +758,7 @@ long soundGetSampleRate()
 }
 #endif
 
+#ifndef USE_GB_ONLY
 void soundSetSampleRate(long sampleRate)
 {
 	if ( soundSampleRate != sampleRate )
@@ -759,6 +777,7 @@ void soundSetSampleRate(long sampleRate)
 		remake_stereo_buffer();
 	}
 }
+#endif
 
 static int dummy_state [16];
 
@@ -775,6 +794,7 @@ static struct {
 } state;
 
 // Old GBA sound state format
+#ifndef USE_GB_ONLY
 static variable_desc old_gba_state [] =
 {
 	SKIP( int, soundPaused ),
@@ -912,6 +932,7 @@ static variable_desc gba_state [] =
 
 	{ NULL, 0 }
 };
+#endif
 
 // Reads and discards count bytes from in
 static void skip_read( gzFile in, int count )
@@ -929,6 +950,7 @@ static void skip_read( gzFile in, int count )
 	}while ( count );
 }
 
+#ifndef USE_GB_ONLY
 void soundSaveGame( gzFile out )
 {
 	gb_apu->save_state( &state.apu );
@@ -1110,4 +1132,5 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 
 	//apply_muting();
 }
+#endif
 #endif
