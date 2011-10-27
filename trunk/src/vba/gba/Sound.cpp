@@ -2,14 +2,18 @@
 
 #include "Sound.h"
 
+#ifndef USE_GB_ONLY
 #include "GBA.h"
 #include "Globals.h"
+#endif
+
 #include "../Util.h"
 #include "../common/Port.h"
 #include "../System.h"
 
 #include "../apu/Gb_Apu.h"
 #include "../apu/Sound_Buffer.h"
+
 #ifdef __CELLOS_LV2__
 #include "../../../platform/ps3/src/emu-ps3.hpp"
 #endif
@@ -459,6 +463,7 @@ static void end_frame( blip_time_t time )
 }
 #endif
 
+#ifndef USE_GBA_ONLY
 void flush_samples(Simple_Effects_Buffer * buffer)
 {
 	// dump all the samples available
@@ -466,6 +471,7 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 	int numSamples = buffer->read_samples( (int16_t*) soundFinalWave, buffer->samples_avail() );
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
+#endif
 
 #ifdef USE_SOUND_FILTERING
 static void apply_filtering()

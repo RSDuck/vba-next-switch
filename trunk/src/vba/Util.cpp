@@ -11,10 +11,13 @@ extern "C" {
 #include "System.h"
 #include "NLS.h"
 #include "Util.h"
+
+#ifndef USE_GB_ONLY
 #include "gba/Flash.h"
 #include "gba/GBA.h"
 #include "gba/Globals.h"
 #include "gba/RTC.h"
+#endif
 #include "common/Port.h"
 
 #ifdef USE_FEX
@@ -22,8 +25,13 @@ extern "C" {
 #endif
 
 
+#ifndef USE_GBA_FILTERS
 #include "gba/gbafilter.h"
+#endif
+
+#ifndef USE_GBA_ONLY
 #include "gb/gbGlobals.h"
+#endif
 
 #ifndef _MSC_VER
 #define _stricmp strcasecmp
@@ -656,7 +664,7 @@ long utilGzMemTell(gzFile file)
   return memtell(file);
 }
 
-
+#ifndef USE_GB_ONLY
 void utilGBAFindSave(const uint8_t *data, const int size)
 {
   uint32_t *p = (uint32_t *)data;
@@ -705,6 +713,7 @@ void utilGBAFindSave(const uint8_t *data, const int size)
   cpuSaveType = saveType;
   flashSetSize(flashSize);
 }
+#endif
 
 void utilUpdateSystemColorMaps(bool lcd)
 {

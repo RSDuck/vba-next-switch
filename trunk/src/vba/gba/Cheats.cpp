@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_CHEATS
 #include <string.h>
 #include <stdio.h>
@@ -2910,4 +2911,5 @@ void cheatsWriteByte(u32, u8)
 #endif
 #endif
 }
+#endif
 #endif

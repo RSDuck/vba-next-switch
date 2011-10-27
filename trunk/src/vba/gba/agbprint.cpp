@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_AGBPRINT
 #include "GBA.h"
 #include "Globals.h"
@@ -76,4 +77,5 @@ void agbPrintFlush()
   }
   debuggerWriteHalfWord(0x9fe20fc, get);
 }
+#endif
 #endif

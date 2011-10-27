@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include <string.h>
 #include "GBA.h"
 #include "EEprom.h"
@@ -218,3 +219,4 @@ void eepromWrite(u32 /* address */, u8 value)
     break;
   }
 }
+#endif

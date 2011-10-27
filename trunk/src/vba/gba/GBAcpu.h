@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef GBACPU_H
 #define GBACPU_H
 
@@ -276,9 +277,6 @@ static void __attribute__((always_inline)) cpuMasterCodeCheck()
 {
   if((mastercode) && (mastercode == armNextPC))
   {
-    u32 joy = 0;
-    //if(systemReadJoypads())
-      joy = systemReadJoypad(-1);
     u32 ext = (joy >> 10);
     cpuTotalTicks += cheatsCheckKeys(P1^0x3FF, ext);
   }
@@ -286,3 +284,4 @@ static void __attribute__((always_inline)) cpuMasterCodeCheck()
 #endif
 
 #endif // GBACPU_H
+#endif

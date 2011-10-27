@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include "GBA-arm_.h"
 
 #include "GBA-thumb_.h"
@@ -6351,3 +6352,4 @@ updateLoop:
 		}
 	}while(1);
 }
+#endif

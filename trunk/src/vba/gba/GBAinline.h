@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef GBAINLINE_H
 #define GBAINLINE_H
 
@@ -559,3 +560,4 @@ unwritable:
 }
 
 #endif // GBAINLINE_H
+#endif

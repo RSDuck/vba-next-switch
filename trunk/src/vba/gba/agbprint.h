@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_AGBPRINT
 #ifndef AGBPRINT_H
 #define AGBPRINT_H
@@ -9,4 +10,5 @@ bool agbPrintWrite(u32 address, u16 value);
 void agbPrintFlush();
 
 #endif // AGBPRINT_H
+#endif
 #endif

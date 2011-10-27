@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -144,3 +145,4 @@ extern u16 IF;
 extern u16 IME;
 
 #endif // GLOBALS_H
+#endif

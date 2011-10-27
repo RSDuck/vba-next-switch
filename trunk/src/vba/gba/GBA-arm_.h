@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include <stdarg.h>
 #include <string.h>
 #include "GBA.h"
@@ -2998,3 +2999,4 @@ int armExecute()
 
     return 1;
 }
+#endif

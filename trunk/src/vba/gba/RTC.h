@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef RTC_H
 #define RTC_H
 
@@ -16,3 +17,4 @@ void rtcSaveGameMem(uint8_t *& data);
 #endif
 
 #endif // RTC_H
+#endif

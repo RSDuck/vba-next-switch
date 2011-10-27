@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include "../System.h"
 #include "GBA.h"
 #include "Globals.h"
@@ -218,3 +219,4 @@ void rtcReadGameMem(const uint8_t *& data)
 }
 #endif
 
+#endif

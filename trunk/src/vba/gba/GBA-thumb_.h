@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
@@ -2338,3 +2339,4 @@ int thumbExecute()
 #endif
   return 1;
 }
+#endif

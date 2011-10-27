@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef FLASH_H
 #define FLASH_H
 
@@ -29,3 +30,4 @@ extern uint8_t flashSaveMemory[FLASH_128K_SZ];
 #endif
 
 #endif // FLASH_H
+#endif

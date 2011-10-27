@@ -28,7 +28,7 @@ endif
 
 VBA_DIR := ../../src/vba
 
-VBA_SRC_DIRS := $(VBA_DIR) $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/gb $(VBA_DIR)/common
+VBA_SRC_DIRS := $(VBA_DIR) $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
 
 VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
@@ -39,7 +39,7 @@ UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
 
 OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS) libsnes.o
 
-VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE
+VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE -DUSE_GBA_ONLY
 
 CFLAGS += -O3 -g -std=gnu99 -fPIC $(VBA_DEFINES)
 CXXFLAGS += -O3 -g -fPIC $(VBA_DEFINES)

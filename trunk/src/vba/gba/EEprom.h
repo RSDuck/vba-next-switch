@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef EEPROM_H
 #define EEPROM_H
 
@@ -32,3 +33,4 @@ extern int eepromSize;
 #define EEPROM_WRITEDATA      4
 
 #endif // EEPROM_H
+#endif

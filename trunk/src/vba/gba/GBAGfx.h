@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef GFX_H
 #define GFX_H
 
@@ -1498,3 +1499,4 @@ static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 }
 
 #endif // GFX_H
+#endif

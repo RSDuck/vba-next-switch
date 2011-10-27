@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include <string.h>
 #include "GBA.h"
 #include "Globals.h"
@@ -276,3 +277,4 @@ void flashWrite(uint32_t address, uint8_t byte)
     break;
   }
 }
+#endif

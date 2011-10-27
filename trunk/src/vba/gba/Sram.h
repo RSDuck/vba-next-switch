@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef SRAM_H
 #define SRAM_H
 
@@ -6,3 +7,4 @@ void sramWrite(u32 address, u8 byte);
 void sramDelayedWrite(u32 address, u8 byte);
 
 #endif // SRAM_H
+#endif

@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_CHEATS
 #ifndef CHEATS_H
 #define CHEATS_H
@@ -38,4 +39,5 @@ extern int cheatsNumber;
 extern CheatsData cheatsList[100];
 
 #endif // CHEATS_H
+#endif
 #endif

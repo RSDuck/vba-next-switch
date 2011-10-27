@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef BIOS_H
 #define BIOS_H
 
@@ -27,3 +28,4 @@ extern void BIOS_MidiKey2Freq();
 extern void BIOS_SndDriverJmpTableCopy();
 
 #endif // BIOS_H
+#endif

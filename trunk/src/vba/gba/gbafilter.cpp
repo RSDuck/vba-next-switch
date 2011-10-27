@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_GBA_FILTERS
 #include "gbafilter.h"
 
@@ -224,4 +225,5 @@ void UpdateSystemColorMaps(int lcd)
     break;
   }
 }
+#endif
 #endif

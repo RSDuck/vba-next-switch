@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #include <math.h>
 #include <stdlib.h>
 
@@ -932,3 +933,4 @@ void BIOS_SndDriverJmpTableCopy()
     reg[0].I += 4;
   }
 }
+#endif

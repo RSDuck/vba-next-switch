@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifdef USE_CHEATS
 #ifndef CHEATSEARCH_H
 #define CHEATSEARCH_H
@@ -53,4 +54,5 @@ s32 cheatSearchSignedRead(u8 *data, int off, int size);
 u32 cheatSearchRead(u8 *data, int off, int size);
 
 #endif // CHEATSEARCH_H
+#endif
 #endif

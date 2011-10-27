@@ -1,3 +1,4 @@
+#ifndef USE_GB_ONLY
 #ifndef GBA_H
 #define GBA_H
 
@@ -144,3 +145,4 @@ extern void cpuEnableProfiling(int hz);
 #include "Flash.h"
 
 #endif // GBA_H
+#endif

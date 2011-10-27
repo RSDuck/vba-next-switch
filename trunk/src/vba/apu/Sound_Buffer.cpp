@@ -275,9 +275,6 @@ void Stereo_Buffer::bass_freq( int bass )
                 bufs_buffer [i].bass_freq( bass );
 }
 
-void Effects_Buffer::clear()
-{
-}
 
 void Stereo_Buffer::clear()
 {
@@ -328,100 +325,6 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 // mixers use a single index value to improve performance on register-challenged processors
 // offset goes from negative to zero
 
-void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
-{
-	// TODO: if caller never marks buffers as modified, uses mono
-	// except that buffer isn't cleared, so caller can encounter
-	// subtle problems and not realize the cause.
-	mixer_samples_read += count;
-#ifndef FASTER_SOUND_HACK_NON_SILENCE
-	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
-	{
-#endif
-		int16_t * BLIP_RESTRICT outtemp = out + count * stereo;
-
-		// do left + center and right + center separately to reduce register load
-		Blip_Buffer* const* buf = &mixer_bufs [2];
-		{
-			--buf;
-			--outtemp;
-
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
-			BLIP_READER_BEGIN( side,   **buf );
-			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-			BLIP_READER_ADJ_( side,   mixer_samples_read );
-			BLIP_READER_ADJ_( center, mixer_samples_read );
-
-			int offset = -count;
-			do
-			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
-				BLIP_CLAMP( s, s );
-
-				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
-			}while ( offset );
-
-			BLIP_READER_END( side,   **buf );
-		}
-		{
-			--buf;
-			--outtemp;
-
-			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
-			BLIP_READER_BEGIN( side,   **buf );
-			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-
-			BLIP_READER_ADJ_( side,   mixer_samples_read );
-			BLIP_READER_ADJ_( center, mixer_samples_read );
-
-			int offset = -count;
-			do
-			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   bass, offset );
-				BLIP_READER_NEXT_IDX_( center, bass, offset );
-				BLIP_CLAMP( s, s );
-
-				++offset; // before write since out is decremented to slightly before end
-				outtemp [offset * stereo] = (int16_t) s;
-			}while ( offset );
-
-			BLIP_READER_END( side,   **buf );
-
-			// only end center once
-			BLIP_READER_END( center, *mixer_bufs [2] );
-		}
-#ifndef FASTER_SOUND_HACK_NON_SILENCE
-	}
-	else
-	{
-		int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
-		BLIP_READER_ADJ_( center, mixer_samples_read );
-
-		typedef int16_t stereo_blip_sample_t [stereo];
-		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
-		int offset = -count;
-		do
-		{
-			blargg_long s = BLIP_READER_READ( center );
-			BLIP_READER_NEXT_IDX_( center, bass, offset );
-			BLIP_CLAMP( s, s );
-
-			outtemp [offset] [0] = (int16_t) s;
-			outtemp [offset] [1] = (int16_t) s;
-		}
-		while ( ++offset );
-		BLIP_READER_END( center, *mixer_bufs [2] );
-	}
-#endif
-}
 
 void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 {
@@ -523,6 +426,106 @@ int const fixed_shift = 12;
 #define FROM_FIXED( f ) ((f) >> fixed_shift)
 
 int const max_read = 2560; // determines minimum delay
+
+#ifndef USE_GBA_ONLY
+void Effects_Buffer::clear()
+{
+}
+
+void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
+{
+	// TODO: if caller never marks buffers as modified, uses mono
+	// except that buffer isn't cleared, so caller can encounter
+	// subtle problems and not realize the cause.
+	mixer_samples_read += count;
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
+	{
+#endif
+		int16_t * BLIP_RESTRICT outtemp = out + count * stereo;
+
+		// do left + center and right + center separately to reduce register load
+		Blip_Buffer* const* buf = &mixer_bufs [2];
+		{
+			--buf;
+			--outtemp;
+
+			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= blip_sample_bits - 16;
+				BLIP_READER_NEXT_IDX_( side,   bass, offset );
+				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * stereo] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+		}
+		{
+			--buf;
+			--outtemp;
+
+			int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
+			BLIP_READER_BEGIN( side,   **buf );
+			BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+
+			BLIP_READER_ADJ_( side,   mixer_samples_read );
+			BLIP_READER_ADJ_( center, mixer_samples_read );
+
+			int offset = -count;
+			do
+			{
+				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
+				s >>= blip_sample_bits - 16;
+				BLIP_READER_NEXT_IDX_( side,   bass, offset );
+				BLIP_READER_NEXT_IDX_( center, bass, offset );
+				BLIP_CLAMP( s, s );
+
+				++offset; // before write since out is decremented to slightly before end
+				outtemp [offset * stereo] = (int16_t) s;
+			}while ( offset );
+
+			BLIP_READER_END( side,   **buf );
+
+			// only end center once
+			BLIP_READER_END( center, *mixer_bufs [2] );
+		}
+#ifndef FASTER_SOUND_HACK_NON_SILENCE
+	}
+	else
+	{
+		int const bass = BLIP_READER_BASS( *mixer_bufs [2] );
+		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+		BLIP_READER_ADJ_( center, mixer_samples_read );
+
+		typedef int16_t stereo_blip_sample_t [stereo];
+		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
+		int offset = -count;
+		do
+		{
+			blargg_long s = BLIP_READER_READ( center );
+			BLIP_READER_NEXT_IDX_( center, bass, offset );
+			BLIP_CLAMP( s, s );
+
+			outtemp [offset] [0] = (int16_t) s;
+			outtemp [offset] [1] = (int16_t) s;
+		}
+		while ( ++offset );
+		BLIP_READER_END( center, *mixer_bufs [2] );
+	}
+#endif
+}
 
 Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 {
@@ -1143,3 +1146,4 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                 while ( remain );
         }
 }
+#endif

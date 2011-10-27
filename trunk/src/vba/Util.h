@@ -44,7 +44,11 @@ int utilGzRead(gzFile file, voidp buffer, unsigned int len);
 int utilGzClose(gzFile file);
 z_off_t utilGzSeek(gzFile file, z_off_t offset, int whence);
 long utilGzMemTell(gzFile file);
+
+#ifndef USE_GB_ONLY
 void utilGBAFindSave(const uint8_t *, const int);
+#endif
+
 void utilUpdateSystemColorMaps(bool lcd = false);
 bool utilFileExists( const char *filename );
 
