@@ -88,8 +88,10 @@ void Gb_Apu::reduce_clicks( bool reduce )
 
 	// Click reduction makes DAC off generate same output as volume 0
 	int dac_off_amp = 0;
+	#ifndef USE_GBA_ONLY
 	if ( reduce && wave.mode != mode_agb ) // AGB already eliminates clicks
 		dac_off_amp = -dac_bias;
+	#endif
 
 	oscs [0]->dac_off_amp = dac_off_amp;
 	oscs [1]->dac_off_amp = dac_off_amp;
@@ -97,20 +99,26 @@ void Gb_Apu::reduce_clicks( bool reduce )
 	oscs [3]->dac_off_amp = dac_off_amp;
 
 	// AGB always eliminates clicks on wave channel using same method
+	#ifndef USE_GBA_ONLY
 	if ( wave.mode == mode_agb )
+	#endif
 		wave.dac_off_amp = -dac_bias;
 }
 
 void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 {
 	// Hardware mode
+	#ifndef USE_GBA_ONLY
 	if ( agb_wave )
 		mode = mode_agb; // using AGB wave features implies AGB hardware
+	#endif
 	wave.agb_mask = agb_wave ? 0xFF : 0;
+	#ifndef USE_GBA_ONLY
 	oscs [0]->mode = mode;
 	oscs [1]->mode = mode;
 	oscs [2]->mode = mode;
 	oscs [3]->mode = mode;
+	#endif
 	reduce_clicks( reduce_clicks_ );
 
 	// Reset state
@@ -144,7 +152,11 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 		// TODO: verify that this works
 		write_register( 0, 0xFF1A, b * 0x40 );
 		for ( unsigned i = 0; i < sizeof initial_wave [0]; i++ )
+#ifdef USE_GBA_ONLY
+			write_register( 0, i + wave_ram, initial_wave [1] [i] );
+#else
 			write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
+#endif
 	}
 }
 
@@ -265,7 +277,11 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 		// Power is off
 
 		// length counters can only be written in DMG mode
+		#ifdef USE_GBA_ONLY
+		if ( (reg != 1 && reg != 5+1 && reg != 10+1 && reg != 15+1) )
+		#else
 		if ( wave.mode != mode_dmg || (reg != 1 && reg != 5+1 && reg != 10+1 && reg != 15+1) )
+		#endif
 			return;
 
 		if ( reg < 10 )
@@ -327,6 +343,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 
 			apply_volume();
 
+			#ifndef USE_GBA_ONLY
 			if ( wave.mode != mode_dmg )
 			{
 				square1.length_ctr = 64;
@@ -334,6 +351,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 				wave   .length_ctr = 256;
 				noise  .length_ctr = 64;
 			}
+			#endif
 
 			regs [status_reg - start_addr] = data;
 		}
