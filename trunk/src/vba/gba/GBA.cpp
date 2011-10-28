@@ -1563,7 +1563,7 @@ void mode0RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
@@ -1703,7 +1703,7 @@ void mode0RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
@@ -1876,7 +1876,7 @@ void mode0RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
@@ -1979,7 +1979,7 @@ void mode1RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2128,7 +2128,7 @@ void mode1RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2303,7 +2303,7 @@ void mode1RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2399,7 +2399,7 @@ void mode2RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -2528,7 +2528,7 @@ void mode2RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -2695,7 +2695,7 @@ void mode2RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -2760,7 +2760,7 @@ void mode3RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2853,7 +2853,7 @@ void mode3RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2994,7 +2994,7 @@ void mode3RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3059,7 +3059,7 @@ void mode4RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3153,7 +3153,7 @@ void mode4RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3296,7 +3296,7 @@ void mode4RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3362,7 +3362,7 @@ void mode5RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3456,7 +3456,7 @@ void mode5RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3600,7 +3600,7 @@ void mode5RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = color;
+		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -5760,7 +5760,7 @@ void CPUReset()
 				line[lineMix][x+4] =
 				line[lineMix][x+5] =
 				line[lineMix][x+6] =
-				line[lineMix][x+7] = 0x7fff;
+				line[lineMix][x+7] = systemColorMap32[0x7fff];
 			x-=8;
 		}while(x>=0);
 	}
@@ -6037,10 +6037,7 @@ updateLoop:
 #endif
 							//we only use 32bit color depth
 							uint32_t *dest = (uint32_t *)pix + 241 * (VCOUNT+1);
-							for(uint32_t x = 0; x < 240u; )
-							{
-								REPEAT16(SYSTEMCOLORMAP32_LINE());
-							}
+							memcpy(dest, line[lineMix], 240 * sizeof(uint32_t));
 #ifdef USE_FRAMESKIP
 						}
 #endif
