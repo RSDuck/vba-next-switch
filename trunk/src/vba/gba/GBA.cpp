@@ -5748,23 +5748,6 @@ void CPUReset()
 #ifdef USE_SWITICKS
 	SWITicks = 0;
 #endif
-#if 0
-	if(DISPCNT & 0x80)
-	{
-		int x = 232; //240 - 8
-		do{
-			line[lineMix][x  ] =
-				line[lineMix][x+1] =
-				line[lineMix][x+2] =
-				line[lineMix][x+3] =
-				line[lineMix][x+4] =
-				line[lineMix][x+5] =
-				line[lineMix][x+6] =
-				line[lineMix][x+7] = systemColorMap32[0x7fff];
-			x-=8;
-		}while(x>=0);
-	}
-#endif
 }
 
 void CPUInterrupt()
@@ -6005,38 +5988,8 @@ updateLoop:
 						if(frameCount >= framesToSkip)
 						{
 #endif
-							(*renderLine)((uint32_t *)pix + 241 * (VCOUNT+1));
-#if 0
-							switch(systemColorDepth) {
-								case 16:
-									{
-										uint16_t *dest = (uint16_t *)pix + 242 * (VCOUNT+1);
-										for(int x = 0; x < 240;) {
-											REPEAT16(SYSTEMCOLORMAP16_LINE());
-										}
-										// for filters that read past the screen
-										*dest++ = 0;
-									}
-									break;
-								case 24:
-									{
-										uint8_t *dest = (uint8_t *)pix + 240 * VCOUNT * 3;
-										for(int x = 0; x < 240;) {
-											REPEAT16(SYSTEMCOLORMAP24_LINE());
-										}
-									}
-									break;
-								case 32:
-									{
-										uint32_t *dest = (uint32_t *)pix + 241 * (VCOUNT+1);
-										for(int x = 0; x < 240; ) {
-											REPEAT16(SYSTEMCOLORMAP32_LINE());
-										}
-									}
-									break;
-							}
-#endif
 							//we only use 32bit color depth
+							(*renderLine)((uint32_t *)pix + 241 * (VCOUNT+1));
 #ifdef USE_FRAMESKIP
 						}
 #endif
