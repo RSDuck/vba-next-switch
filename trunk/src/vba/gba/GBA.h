@@ -58,13 +58,6 @@ extern memoryMap map[256];
 extern reg_pair reg[45];
 extern uint8_t biosProtected[4];
 
-extern bool N_FLAG;
-extern bool Z_FLAG;
-extern bool C_FLAG;
-extern bool V_FLAG;
-extern bool armIrqEnable;
-extern bool armState;
-extern int armMode;
 extern uint64_t joy;
 extern void (*cpuSaveGameFunc)(uint32_t,uint8_t);
 
