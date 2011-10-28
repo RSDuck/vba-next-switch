@@ -24,11 +24,6 @@ extern "C" {
 #include "fex/fex.h"
 #endif
 
-
-#ifndef USE_GBA_FILTERS
-#include "gba/gbafilter.h"
-#endif
-
 #ifndef USE_GBA_ONLY
 #include "gb/gbGlobals.h"
 #endif
@@ -39,16 +34,12 @@ extern "C" {
 
 #include "common/memgzio.h"
 
-#if 0
 extern int systemColorDepth;
-#endif
-#ifdef USE_GBA_FILTERS
 extern int systemRedShift;
 extern int systemGreenShift;
 extern int systemBlueShift;
-#endif
 
-//extern uint16_t systemColorMap16[0x10000];
+extern uint16_t systemColorMap16[0x10000];
 extern uint32_t systemColorMap32[0x10000];
 
 static int (ZEXPORT *utilGzWriteFunc)(gzFile, const voidp, unsigned int) = NULL;
@@ -715,7 +706,7 @@ void utilGBAFindSave(const uint8_t *data, const int size)
 }
 #endif
 
-void utilUpdateSystemColorMaps(bool lcd)
+void utilUpdateSystemColorMaps()
 {
  #if 0
   switch(systemColorDepth) {
@@ -726,7 +717,6 @@ void utilUpdateSystemColorMaps(bool lcd)
           (((i & 0x3e0) >> 5) << systemGreenShift) |
           (((i & 0x7c00) >> 10) << systemBlueShift);
       }
-      if (lcd) gbafilter_pal(systemColorMap16, 0x10000);
     }
     break;
   case 24:
@@ -737,7 +727,6 @@ void utilUpdateSystemColorMaps(bool lcd)
           (((i & 0x3e0) >> 5) << systemGreenShift) |
           (((i & 0x7c00) >> 10) << systemBlueShift);
       }
-      if (lcd) gbafilter_pal32(systemColorMap32, 0x10000);
     }
     break;
   }
@@ -747,9 +736,6 @@ void utilUpdateSystemColorMaps(bool lcd)
           (((i & 0x3e0) >> 5) << systemGreenShift) |
           (((i & 0x7c00) >> 10) << systemBlueShift);
       }
-      #ifdef USE_GBA_FILTERS
-      if (lcd) gbafilter_pal32(systemColorMap32, 0x10000);
-      #endif
 }
 
 // Check for existence of file.

@@ -177,7 +177,7 @@ static void gb_system_init(void)
 		systemGbPalette[i++] = 0;
 	}
 
-	utilUpdateSystemColorMaps(gbColorOption == 1);
+	utilUpdateSystemColorMaps();
 }
 
 static void gb_init(void)

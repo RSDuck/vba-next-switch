@@ -49,7 +49,7 @@ long utilGzMemTell(gzFile file);
 void utilGBAFindSave(const uint8_t *, const int);
 #endif
 
-void utilUpdateSystemColorMaps(bool lcd = false);
+void utilUpdateSystemColorMaps();
 bool utilFileExists( const char *filename );
 
 #ifdef __LIBSNES__

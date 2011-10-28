@@ -96,9 +96,7 @@ uint16_t systemGbPalette[24];
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
-#if defined(USE_GBA_FILTERS)
 int systemColorDepth = 32;
-#endif
 int systemDebug = 0;
 int systemVerbose = 0;
 int systemFrameSkip = 0;
@@ -194,12 +192,7 @@ void system_init()
 	systemGreenShift  = 11;
 	systemBlueShift   = 3;
 
-	// FIXME: add systemColorDepth = 16 shifts one day
-
-	// VBA - used by the cpu filters only, not needed really
-	//RGB_LOW_BITS_MASK = 0x00010101;
-
-	utilUpdateSystemColorMaps(Settings.EmulatedSystem == IMAGE_GBA && gbColorOption == 1);
+	utilUpdateSystemColorMaps();
 }
 
 void systemGbPrint(uint8_t *data,int pages,int feed,int palette, int contrast)

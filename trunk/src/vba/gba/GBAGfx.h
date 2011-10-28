@@ -13,10 +13,6 @@
   {\
 	u32 *array = (a);\
 	__builtin_memset(array, -1, sizeof(u32)*240);\
-    /*u32 *array = (a);\
-    for(int i = 0; i < 240; i++) {\
-      *array++ = 0x80000000;\
-    }\*/\
   }
 
 static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,

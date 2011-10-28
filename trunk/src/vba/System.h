@@ -72,12 +72,7 @@ extern int systemRedShift;
 extern int systemGreenShift;
 extern int systemBlueShift;
 
-#if defined(USE_GBA_FILTERS)
 extern int systemColorDepth;
-#endif
-#if 0
-extern int systemDebug;
-#endif
 #ifdef USE_AGBPRINT
 extern int systemVerbose;
 #endif

@@ -103,11 +103,6 @@ bool mirroringEnable = false;
 bool skipSaveGameBattery = false;
 bool skipSaveGameCheats = false;
 
-// this is an optional hack to change the backdrop/background color:
-// -1: disabled
-// 0x0000 to 0x7FFF: set custom 15 bit color
-//int customBackdropColor = -1;
-
 uint8_t *bios = 0;
 uint8_t *rom = 0;
 uint8_t *internalRAM = 0;
@@ -197,8 +192,6 @@ uint16_t IF       = 0x0000;
 uint16_t IME      = 0x0000;
 
 //END OF GLOBALS.CPP
-
-//extern int emulating;
 
 #ifdef USE_SWITICKS
 int SWITicks = 0;
