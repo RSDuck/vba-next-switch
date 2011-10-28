@@ -56,7 +56,19 @@ void snes_set_controller_port_device(bool, unsigned)
 void snes_set_cartridge_basename(const char*)
 {}
 
-void snes_init(void) {}
+// SSNES extension.
+static snes_environment_t environ_cb;
+void snes_set_environment(snes_environment_t cb) { environ_cb = cb; }
+
+void snes_init(void)
+{
+   if (environ_cb)
+   {
+      snes_geometry geom = { 240, 160, 240, 160 };
+      environ_cb(SNES_ENVIRONMENT_SET_GEOMETRY, &geom);
+   }
+}
+////
 
 static unsigned serialize_size = 0;
 
