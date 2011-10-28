@@ -15,9 +15,8 @@
 
 #define lineOBJ 4
 #define lineOBJWin 5
-#define lineMix 6
 
-uint32_t line[7][240];
+uint32_t line[6][240];
 bool gfxInWin[2][240];
 int lineOBJpixleft[128];
 uint64_t joy = 0;
@@ -1485,7 +1484,7 @@ void doMirroring (bool b)
          brightness_switch(); \
       }
 
-void mode0RenderLine()
+void mode0RenderLine(uint32_t * lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -1563,11 +1562,11 @@ void mode0RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
-void mode0RenderLineNoWindow()
+void mode0RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -1703,11 +1702,11 @@ void mode0RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
-void mode0RenderLineAll()
+void mode0RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -1876,7 +1875,7 @@ void mode0RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 }
 
@@ -1890,7 +1889,7 @@ Layer 2 is 256 colours and allows only 256 tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-void mode1RenderLine()
+void mode1RenderLine(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -1979,13 +1978,13 @@ void mode1RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode1RenderLineNoWindow()
+void mode1RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2128,13 +2127,13 @@ void mode1RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode1RenderLineAll()
+void mode1RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2303,7 +2302,7 @@ void mode1RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -2318,7 +2317,7 @@ It does not support flipping.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-void mode2RenderLine()
+void mode2RenderLine(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2399,14 +2398,14 @@ void mode2RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode2RenderLineNoWindow()
+void mode2RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2528,14 +2527,14 @@ void mode2RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode2RenderLineAll()
+void mode2RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2695,7 +2694,7 @@ void mode2RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -2710,7 +2709,7 @@ It doesn't support paging, scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-void mode3RenderLine()
+void mode3RenderLine(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2760,13 +2759,13 @@ void mode3RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode3RenderLineNoWindow()
+void mode3RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2853,13 +2852,13 @@ void mode3RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode3RenderLineAll()
+void mode3RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -2994,7 +2993,7 @@ void mode3RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3008,7 +3007,7 @@ It doesn't support scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-void mode4RenderLine()
+void mode4RenderLine(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3059,13 +3058,13 @@ void mode4RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode4RenderLineNoWindow()
+void mode4RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3153,13 +3152,13 @@ void mode4RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode4RenderLineAll()
+void mode4RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3296,7 +3295,7 @@ void mode4RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -3311,7 +3310,7 @@ It doesn't support scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-void mode5RenderLine()
+void mode5RenderLine(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3362,13 +3361,13 @@ void mode5RenderLine()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode5RenderLineNoWindow()
+void mode5RenderLineNoWindow(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3456,13 +3455,13 @@ void mode5RenderLineNoWindow()
 			alpha_blend_brightness_switch();
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void mode5RenderLineAll()
+void mode5RenderLineAll(uint32_t *lineMix)
 {
 	uint16_t *palette = (uint16_t *)paletteRAM;
 
@@ -3600,13 +3599,13 @@ void mode5RenderLineAll()
 			}
 		}
 
-		line[lineMix][x] = systemColorMap32[color & 0xFFFF];
+		lineMix[x] = systemColorMap32[color & 0xFFFF];
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void (*renderLine)() = mode0RenderLine;
+void (*renderLine)(uint32_t*) = mode0RenderLine;
 
 #define CPUUpdateRender() \
   switch(DISPCNT & 7) { \
@@ -5749,6 +5748,7 @@ void CPUReset()
 #ifdef USE_SWITICKS
 	SWITicks = 0;
 #endif
+#if 0
 	if(DISPCNT & 0x80)
 	{
 		int x = 232; //240 - 8
@@ -5764,6 +5764,7 @@ void CPUReset()
 			x-=8;
 		}while(x>=0);
 	}
+#endif
 }
 
 void CPUInterrupt()
@@ -6004,7 +6005,7 @@ updateLoop:
 						if(frameCount >= framesToSkip)
 						{
 #endif
-							(*renderLine)();
+							(*renderLine)((uint32_t *)pix + 241 * (VCOUNT+1));
 #if 0
 							switch(systemColorDepth) {
 								case 16:
@@ -6036,8 +6037,6 @@ updateLoop:
 							}
 #endif
 							//we only use 32bit color depth
-							uint32_t *dest = (uint32_t *)pix + 241 * (VCOUNT+1);
-							memcpy(dest, line[lineMix], 240 * sizeof(uint32_t));
 #ifdef USE_FRAMESKIP
 						}
 #endif
