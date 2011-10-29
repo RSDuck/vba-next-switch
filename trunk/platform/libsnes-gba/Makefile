@@ -41,8 +41,8 @@ OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS) libsnes.o
 
 VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE -DUSE_GBA_ONLY
 
-CFLAGS += -O3 -std=gnu99 $(fpic) $(VBA_DEFINES)
-CXXFLAGS += -O3 $(fpic) $(VBA_DEFINES)
+CFLAGS += -O3 -std=gnu99 $(fpic) $(VBA_DEFINES) -I../common/utils/zlib
+CXXFLAGS += -O3 $(fpic) $(VBA_DEFINES) -I../common/utils/zlib
 LDFLAGS += -Wl,-no-undefined -Wl,--version-script=link.T
 
 INCDIRS := -I$(VBA_DIR)
