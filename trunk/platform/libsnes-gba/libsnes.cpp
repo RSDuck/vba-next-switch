@@ -332,9 +332,7 @@ void snes_cheat_set(unsigned, bool, const char*)
 
 bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned rom_size)
 {
-   const char *tmppath = tmpnam(NULL);
-   if (!tmppath)
-      return false;
+   const char *tmppath = "VBA-tmp.gba";
 
    FILE *file = fopen(tmppath, "wb");
    if (!file)
@@ -343,7 +341,7 @@ bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned r
    fwrite(rom_data, 1, rom_size, file);
    fclose(file);
    unsigned ret = CPULoadRom(tmppath);
-   unlink(tmppath);
+   remove(tmppath);
 
    gba_init();
 
