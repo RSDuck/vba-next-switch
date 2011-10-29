@@ -32,7 +32,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 Blip_Buffer::Blip_Buffer()
 {
-        factor_       = LONG_MAX;
+        factor_       = INT_MAX;
         buffer_       = 0;
         buffer_size_  = 0;
         sample_rate_  = 0;

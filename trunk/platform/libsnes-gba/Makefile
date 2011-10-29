@@ -23,7 +23,7 @@ else
    TARGET := snes.dll
    CC = gcc
    CXX = g++
-   SHARED := -shared
+   SHARED := -shared -static-libgcc -static-libstdc++
 endif
 
 VBA_DIR := ../../src/vba
@@ -43,7 +43,7 @@ VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE -DUSE_GBA_ONLY
 
 CFLAGS += -O3 -g -std=gnu99 -fPIC $(VBA_DEFINES)
 CXXFLAGS += -O3 -g -fPIC $(VBA_DEFINES)
-LDFLAGS += -Wl,-no-undefined
+LDFLAGS += -Wl,-no-undefined -Wl,--version-script=link.T
 
 INCDIRS := -I$(VBA_DIR)
 LIBS :=
