@@ -15,6 +15,71 @@ static snes_input_poll_t poll_cb;
 static snes_input_state_t input_cb;
 extern uint64_t joy;
 
+// Workaround for broken-by-design GBA save semantics.
+uint8_t libsnes_save_buf[0x20000 + 0x2000];
+static unsigned libsnes_save_size = sizeof(libsnes_save_buf);
+uint8_t *snes_get_memory_data(unsigned id)
+{
+   if (id != SNES_MEMORY_CARTRIDGE_RAM)
+      return 0;
+
+   return libsnes_save_buf;
+}
+
+unsigned snes_get_memory_size(unsigned id)
+{
+   if (id != SNES_MEMORY_CARTRIDGE_RAM)
+      return 0;
+
+   return libsnes_save_size;
+}
+
+static bool scan_area(const uint8_t *data, unsigned size)
+{
+   for (unsigned i = 0; i < size; i++)
+      if (data[i] != 0xff)
+         return true;
+
+   return false;
+}
+
+static void adjust_save_ram()
+{
+   if (scan_area(libsnes_save_buf, 512) &&
+         !scan_area(libsnes_save_buf + 512, sizeof(libsnes_save_buf) - 512))
+   {
+      libsnes_save_size = 512;
+      fprintf(stderr, "Detecting EEprom 8kbit\n");
+   }
+   else if (scan_area(libsnes_save_buf, 0x2000) && 
+         !scan_area(libsnes_save_buf + 0x2000, sizeof(libsnes_save_buf) - 0x2000))
+   {
+      libsnes_save_size = 0x2000;
+      fprintf(stderr, "Detecting EEprom 64kbit\n");
+   }
+
+   else if (scan_area(libsnes_save_buf, 0x10000) && 
+         !scan_area(libsnes_save_buf + 0x10000, sizeof(libsnes_save_buf) - 0x10000))
+   {
+      libsnes_save_size = 0x10000;
+      fprintf(stderr, "Detecting Flash 512kbit\n");
+   }
+   else if (scan_area(libsnes_save_buf, 0x20000) && 
+         !scan_area(libsnes_save_buf + 0x20000, sizeof(libsnes_save_buf) - 0x20000))
+   {
+      libsnes_save_size = 0x20000;
+      fprintf(stderr, "Detecting Flash 1Mbit\n");
+   }
+   else
+      fprintf(stderr, "Did not detect any particular SRAM type.\n");
+
+   if (libsnes_save_size == 512 || libsnes_save_size == 0x2000)
+      eepromData = libsnes_save_buf;
+   else if (libsnes_save_size == 0x10000 || libsnes_save_size == 0x20000)
+      flashSaveMemory = libsnes_save_buf;
+}
+
+
 unsigned snes_library_revision_major(void)
 {
    return 1;
@@ -63,6 +128,8 @@ static const char *full_path;
 
 void snes_init(void)
 {
+   memset(libsnes_save_buf, 0xff, sizeof(libsnes_save_buf));
+
    if (environ_cb)
    {
       snes_geometry geom = { 240, 160, 240, 160 };
@@ -306,6 +373,13 @@ static void systemReadJoypadGBA(void)
 
 void snes_run(void)
 {
+   static bool first = true;
+   if (first)
+   {
+      adjust_save_ram();
+      first = false;
+   }
+
    CPULoop();
    systemReadJoypadGBA();
 }
@@ -387,24 +461,6 @@ void snes_unload_cartridge(void)
 bool snes_get_region(void)
 {
    return SNES_REGION_NTSC;
-}
-
-// Workaround for broken-by-design GBA save semantics.
-uint8_t libsnes_save_buf[0x20000 + 0x2000];
-uint8_t *snes_get_memory_data(unsigned id)
-{
-   if (id != SNES_MEMORY_CARTRIDGE_RAM)
-      return 0;
-
-   return libsnes_save_buf;
-}
-
-unsigned snes_get_memory_size(unsigned id)
-{
-   if (id != SNES_MEMORY_CARTRIDGE_RAM)
-      return 0;
-
-   return sizeof(libsnes_save_buf);
 }
 
 
