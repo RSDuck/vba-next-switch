@@ -59,6 +59,7 @@ void snes_set_cartridge_basename(const char*)
 // SSNES extension.
 static snes_environment_t environ_cb;
 void snes_set_environment(snes_environment_t cb) { environ_cb = cb; }
+static const char *full_path;
 
 void snes_init(void)
 {
@@ -66,6 +67,7 @@ void snes_init(void)
    {
       snes_geometry geom = { 240, 160, 240, 160 };
       environ_cb(SNES_ENVIRONMENT_SET_GEOMETRY, &geom);
+      environ_cb(SNES_ENVIRONMENT_GET_FULLPATH, &full_path);
    }
 }
 ////
@@ -333,15 +335,21 @@ void snes_cheat_set(unsigned, bool, const char*)
 bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned rom_size)
 {
    const char *tmppath = "VBA-tmp.gba";
+   unsigned ret;
 
-   FILE *file = fopen(tmppath, "wb");
-   if (!file)
-      return false;
+   if (full_path)
+      ret = CPULoadRom(full_path);
+   else
+   {
+      FILE *file = fopen(tmppath, "wb");
+      if (!file)
+         return false;
 
-   fwrite(rom_data, 1, rom_size, file);
-   fclose(file);
-   unsigned ret = CPULoadRom(tmppath);
-   remove(tmppath);
+      fwrite(rom_data, 1, rom_size, file);
+      fclose(file);
+      ret = CPULoadRom(tmppath);
+      remove(tmppath);
+   }
 
    gba_init();
 
