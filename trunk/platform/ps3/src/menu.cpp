@@ -317,9 +317,6 @@ static void do_controls_settings(void)
 				switch(Settings.ControlScheme)
 				{
 					case CONTROL_SCHEME_DEFAULT:
-						Settings.ControlScheme = CONTROL_SCHEME_NEW;
-						break;
-					case CONTROL_SCHEME_NEW:
 						Settings.ControlScheme = CONTROL_SCHEME_CUSTOM;
 						break;
 					case CONTROL_SCHEME_CUSTOM:
@@ -334,9 +331,6 @@ static void do_controls_settings(void)
 				switch(Settings.ControlScheme)
 				{
 					case CONTROL_SCHEME_CUSTOM:
-						Settings.ControlScheme = CONTROL_SCHEME_NEW;
-						break;
-					case CONTROL_SCHEME_NEW:
 						Settings.ControlScheme = CONTROL_SCHEME_DEFAULT;
 						break;
 					case CONTROL_SCHEME_DEFAULT:
@@ -500,7 +494,7 @@ static void do_controls_settings(void)
 	if(menu_controlssettings.page == 0)
 	{
 		cellDbgFontPuts(0.09f,	menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == SETTING_CONTROLS_SCHEME ? YELLOW : WHITE,	menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text);
-		cellDbgFontPrintf(0.5f,   menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text_ypos,   Emulator_GetFontSize(), Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? GREEN : ORANGE, Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? "Default" : Settings.ControlScheme == CONTROL_SCHEME_NEW ? "New" : "Custom");
+		cellDbgFontPrintf(0.5f,   menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text_ypos,   Emulator_GetFontSize(), Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? GREEN : ORANGE, Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? "Default" : "Custom");
 
 		cellDbgFontPuts(0.09f,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == SETTING_CONTROLS_NUMBER ? YELLOW : WHITE,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text);
 		cellDbgFontPrintf(0.5f,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text_ypos,	Emulator_GetFontSize(),	currently_selected_controller_menu == 0 ? GREEN : ORANGE, "%d", currently_selected_controller_menu+1);

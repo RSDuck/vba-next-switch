@@ -885,12 +885,6 @@ void emulator_implementation_button_mapping_settings(int map_button_option_enum)
 			break;
 		case MAP_BUTTONS_OPTION_DEFAULT:
 			{
-				uint32_t array_btn[] = {BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_A, BTN_B, BTN_NONE, BTN_NONE, BTN_SELECT, BTN_START, BTN_L, BTN_NONE, BTN_NONE, BTN_NONE, BTN_INGAME_MENU, BTN_R, BTN_NONE, BTN_NONE, BTN_QUICKLOAD, BTN_QUICKSAVE, BTN_NONE, BTN_NONE, BTN_DECREMENTSAVE, BTN_INCREMENTSAVE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_EXITTOMENU, 0, 0, 0, 0};
-				map_ps3_button_array(array_btn);
-			}
-			break;
-		case MAP_BUTTONS_OPTION_NEW:
-			{
 				uint32_t array_btn[] = {BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_A, BTN_B, BTN_NONE, BTN_NONE, BTN_SELECT, BTN_START, BTN_L, BTN_NONE, BTN_NONE, BTN_NONE, BTN_INGAME_MENU, BTN_R, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_NONE, BTN_INCREMENTSAVE, BTN_DECREMENTSAVE, BTN_QUICKLOAD, BTN_QUICKSAVE, BTN_NONE, BTN_EXITTOMENU, 0, 0, 0, 0};
 				map_ps3_button_array(array_btn);
 			}
@@ -1019,9 +1013,6 @@ void emulator_implementation_switch_control_scheme(void)
 	{
 		case CONTROL_SCHEME_DEFAULT:
 			emulator_implementation_button_mapping_settings(MAP_BUTTONS_OPTION_DEFAULT);
-			break;
-		case CONTROL_SCHEME_NEW:
-			emulator_implementation_button_mapping_settings(MAP_BUTTONS_OPTION_NEW);
 			break;
 		case CONTROL_SCHEME_CUSTOM:
 			emulator_implementation_button_mapping_settings(MAP_BUTTONS_OPTION_GETTER);
@@ -2185,5 +2176,6 @@ void systemSoundResume()
 
 void systemOnWriteDataToSoundBuffer(int16_t * finalWave, int length)
 {
-	audio_driver->write(audio_handle,finalWave, length);
+	if(Settings.Throttled)
+		audio_driver->write(audio_handle,finalWave, length);
 }

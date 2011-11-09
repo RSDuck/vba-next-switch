@@ -456,9 +456,6 @@ static void producesettingentry(uint64_t switchvalue)
 				switch(Settings.ControlScheme)
 				{
 					case CONTROL_SCHEME_DEFAULT:
-						Settings.ControlScheme = CONTROL_SCHEME_NEW;
-						break;
-					case CONTROL_SCHEME_NEW:
 						Settings.ControlScheme = CONTROL_SCHEME_CUSTOM;
 						break;
 					case CONTROL_SCHEME_CUSTOM:
@@ -473,9 +470,6 @@ static void producesettingentry(uint64_t switchvalue)
 				switch(Settings.ControlScheme)
 				{
 					case CONTROL_SCHEME_CUSTOM:
-						Settings.ControlScheme = CONTROL_SCHEME_NEW;
-						break;
-					case CONTROL_SCHEME_NEW:
 						Settings.ControlScheme = CONTROL_SCHEME_DEFAULT;
 						break;
 					case CONTROL_SCHEME_DEFAULT:
