@@ -41,6 +41,8 @@ const char * Input_PrintMappedButton(uint32_t mappedbutton)
 			return "Exit to menu";
 		case BTN_NONE:
 			return "None";
+		case BTN_INGAME_MENU:
+			return "Ingame Menu";
 		default:
 			return "Unknown";
 	}
