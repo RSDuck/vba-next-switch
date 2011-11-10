@@ -30,15 +30,7 @@
 
 #include <algorithm>
 
-#define delete_current_entry_set() \
-	std::vector<DirectoryEntry*>::const_iterator iter; \
-	for(iter = _cur.begin(); iter != _cur.end(); ++iter) \
-		delete (*iter); \
-	\
-	_cur.clear();
-
-// yeah sucks, not using const
-static bool less_than_key(DirectoryEntry* a, DirectoryEntry* b)
+static bool less_than_key(CellFsDirent* a, CellFsDirent* b)
 {
 	// dir compare to file, let us always make the dir less than
 	if ((a->d_type == CELL_FS_TYPE_DIRECTORY && b->d_type == CELL_FS_TYPE_REGULAR))
@@ -74,73 +66,21 @@ static bool less_than_key(DirectoryEntry* a, DirectoryEntry* b)
 		return retVal < 0;
 	}
 
-	// both dirs at this points btw
 	return strcasecmp(a->d_name, b->d_name) < 0;
 }
 
-FileBrowser::FileBrowser(const char * startDir, std::string extensions)
+static std::string filebrowser_get_extension(std::string filename)
 {
-	_currentSelected = 0;
-	_dirStackSize = 0;
-	_dir[_dirStackSize].numEntries = 0;
-	m_wrap = true;
-
-	ParseDirectory(startDir, CELL_FS_TYPE_DIRECTORY | CELL_FS_TYPE_REGULAR, extensions);
+	uint32_t index = filename.find_last_of(".");
+	if (index != std::string::npos)
+		return filename.substr(index+1);
+	else
+		return "";
 }
 
-FileBrowser::~FileBrowser()
+static bool filebrowser_parse_directory(filebrowser_t * filebrowser, const char * path, uint32_t types, std::string extensions)
 {
-	delete_current_entry_set();
-}
-
-void FileBrowser::ResetStartDirectory(const char * startDir, std::string extensions)
-{
-	delete_current_entry_set();
-   
-	_currentSelected = 0;
-	_dirStackSize = 0;
-	_dir[_dirStackSize].numEntries = 0;
-
-	ParseDirectory(startDir, CELL_FS_TYPE_DIRECTORY | CELL_FS_TYPE_REGULAR, extensions);
-}
-
-const char * FileBrowser::get_current_directory_name()
-{
-	return _dir[_dirStackSize].dir;
-}
-
-uint32_t FileBrowser::get_current_directory_file_count()
-{
-	return _dir[_dirStackSize].numEntries;
-}
-
-
-//FIXME: so error prone. reason: app dependent, we return NULL for cur entry in this case
-void FileBrowser::GotoEntry(uint32_t i)
-{
-	_currentSelected = i;
-}
-
-void FileBrowser::PushDirectory(const char * path, int types, std::string extensions)
-{
-	_dirStackSize++;
-	ParseDirectory(path, types, extensions);
-}
-
-
-void FileBrowser::PopDirectory()
-{
-	if (_dirStackSize > 0)
-		_dirStackSize--;
-
-	ParseDirectory(_dir[_dirStackSize].dir, _dir[_dirStackSize].types, _dir[_dirStackSize].extensions);
-}
-
-
-bool FileBrowser::ParseDirectory(const char * path, int types, std::string extensions)
-{
-	// current file descriptor, used for reading entries
-	int _fd;
+	int fd;
 	// for extension parsing
 	uint32_t index = 0;
 	uint32_t lastIndex = 0;
@@ -150,30 +90,33 @@ bool FileBrowser::ParseDirectory(const char * path, int types, std::string exten
 		return false;
 
 	// delete old path
-	if (!_cur.empty())
+	if (!filebrowser->cur.empty())
 	{
-		delete_current_entry_set();
+		std::vector<CellFsDirent*>::const_iterator iter;
+		for(iter = filebrowser->cur.begin(); iter != filebrowser->cur.end(); ++iter)
+			delete (*iter);
+		filebrowser->cur.clear();
 	}
 
 	// FIXME: add FsStat calls or use cellFsDirectoryEntry
-	if (cellFsOpendir(path, &_fd) == CELL_FS_SUCCEEDED)
+	if (cellFsOpendir(path, &fd) == CELL_FS_SUCCEEDED)
 	{
 		uint64_t nread = 0;
 
 		// set new dir
-		strcpy(_dir[_dirStackSize].dir, path);
-		_dir[_dirStackSize].extensions = extensions;
-		_dir[_dirStackSize].types = types;
+		strcpy(filebrowser->dir[filebrowser->directory_stack_size].dir, path);
+		filebrowser->dir[filebrowser->directory_stack_size].extensions = extensions;
+		filebrowser->dir[filebrowser->directory_stack_size].types = types;
 
 		// reset num entries
-		_dir[_dirStackSize].numEntries = 0;
+		filebrowser->dir[filebrowser->directory_stack_size].file_count = 0;
 
-		// reset cur selected for safety FIXME: side effect?
-		_currentSelected = 0;
+		// reset currently selected variable for safety
+		filebrowser->currently_selected = 0;
 
 		// read the directory
-		DirectoryEntry dirent;
-		while (cellFsReaddir(_fd, &dirent, &nread) == CELL_FS_SUCCEEDED)
+		CellFsDirent dirent;
+		while (cellFsReaddir(fd, &dirent, &nread) == CELL_FS_SUCCEEDED)
 		{
 			// no data read, something is wrong... FIXME: bad way to handle this
 			if (nread == 0)
@@ -195,7 +138,7 @@ bool FileBrowser::ParseDirectory(const char * path, int types, std::string exten
 				lastIndex = 0;
 
 				// get this file extension
-				std::string ext = FileBrowser::GetExtension(dirent.d_name);
+				std::string ext = filebrowser_get_extension(dirent.d_name);
 
 				// assume to skip it, prove otherwise
 				bool bSkip = true;
@@ -246,86 +189,62 @@ bool FileBrowser::ParseDirectory(const char * path, int types, std::string exten
 
 			// AT THIS POINT WE HAVE A VALID ENTRY
 
-			// alloc an entry
-			DirectoryEntry *entry = new DirectoryEntry();
-			memcpy(entry, &dirent, sizeof(DirectoryEntry));
+			// allocate an entry
+			CellFsDirent *entry = new CellFsDirent();
+			memcpy(entry, &dirent, sizeof(CellFsDirent));
 
-			_cur.push_back(entry);
+			filebrowser->cur.push_back(entry);
 
 			// next file
-			++_dir[_dirStackSize].numEntries;
-
-			// FIXME: hack, implement proper caching + paging
+			++filebrowser->dir[filebrowser->directory_stack_size].file_count;
 		}
 
-		cellFsClosedir(_fd);
+		cellFsClosedir(fd);
 	}
 	else
 		return false;
 
 	// FIXME: hack, forces '..' to stay on top by ignoring the first entry
 	// this is always '..' in dirs
-	std::sort(++_cur.begin(), _cur.end(), less_than_key);
+	std::sort(++filebrowser->cur.begin(), filebrowser->cur.end(), less_than_key);
 
 	return true;
 }
 
-void FileBrowser::SetEntryWrap(bool wrapvalue)
+void filebrowser_new(filebrowser_t * filebrowser, const char * start_dir, std::string extensions)
 {
-	m_wrap = wrapvalue;
+	filebrowser->currently_selected = 0;
+	filebrowser->directory_stack_size = 0;
+	filebrowser->dir[filebrowser->directory_stack_size].file_count = 0;
+
+	filebrowser_parse_directory(filebrowser, start_dir, CELL_FS_TYPE_DIRECTORY | CELL_FS_TYPE_REGULAR, extensions);
 }
 
-void FileBrowser::IncrementEntry()
+void filebrowser_reset_start_directory(filebrowser_t * filebrowser, const char * start_dir, std::string extensions)
 {
-	_currentSelected++;
-	if (_currentSelected >= _cur.size() && m_wrap)
-		_currentSelected = 0;
+	std::vector<CellFsDirent*>::const_iterator iter;
+	for(iter = filebrowser->cur.begin(); iter != filebrowser->cur.end(); ++iter)
+		delete (*iter);
+	filebrowser->cur.clear();
+   
+	filebrowser->currently_selected = 0;
+	filebrowser->directory_stack_size = 0;
+	filebrowser->dir[filebrowser->directory_stack_size].file_count = 0;
+
+	filebrowser_parse_directory(filebrowser, start_dir, CELL_FS_TYPE_DIRECTORY | CELL_FS_TYPE_REGULAR, extensions);
 }
 
-
-void FileBrowser::DecrementEntry()
+void filebrowser_push_directory(filebrowser_t * filebrowser, const char * path, uint32_t types, std::string extensions)
 {
-	_currentSelected--;
-	if (_currentSelected >= _cur.size() && m_wrap)
-		_currentSelected = _cur.size() - 1;
-}
-
-
-const char * FileBrowser::get_current_filename()
-{
-	if (_currentSelected >= _cur.size())
-		return NULL;
-
-	return _cur[_currentSelected]->d_name;
-}
-
-
-uint32_t FileBrowser::GetCurrentEntryIndex()
-{
-	return _currentSelected;
-}
-
-std::string FileBrowser::GetExtension(std::string filename)
-{
-	uint32_t index = filename.find_last_of(".");
-	if (index != std::string::npos)
-		return filename.substr(index+1);
-	return "";
-}
-
-bool FileBrowser::IsCurrentAFile()
-{
-	if (_currentSelected >= _cur.size())
-		return false;
-
-	return _cur[_currentSelected]->d_type == CELL_FS_TYPE_REGULAR;
+	filebrowser->directory_stack_size++;
+	filebrowser_parse_directory(filebrowser, path, types, extensions);
 }
 
 
-bool FileBrowser::IsCurrentADirectory()
+void filebrowser_pop_directory (filebrowser_t * filebrowser)
 {
-	if (_currentSelected >= _cur.size())
-		return false;
+	if (filebrowser->directory_stack_size > 0)
+		filebrowser->directory_stack_size--;
 
-	return _cur[_currentSelected]->d_type == CELL_FS_TYPE_DIRECTORY;
+	filebrowser_parse_directory(filebrowser, filebrowser->dir[filebrowser->directory_stack_size].dir, filebrowser->dir[filebrowser->directory_stack_size].types, filebrowser->dir[filebrowser->directory_stack_size].extensions);
 }

@@ -2,7 +2,7 @@
  *  -- Cellframework -  Open framework to abstract the common tasks related to
  *                      PS3 application development.
  *
- *  Copyright (C) 2010-2011
+ *  Copyright (C) 2010
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -35,50 +35,64 @@
 
 #include "../../emu-ps3-constants.h"
 
-
-//FIXME: shouldnt need this, ps3 has its own CellFsDirEnt and CellFsDirectoryEntry
-//		-- the latter should be switched to eventually
 struct DirectoryInfo
 {
-        int types;
-        int size;
-        uint32_t numEntries;
-	char dir[MAX_PATH_LENGTH];
+        uint32_t types;
+        uint32_t size;
+        uint32_t file_count;
+	char dir[CELL_FS_MAX_FS_PATH_LENGTH];
 	std::string extensions;
 };
 
-typedef CellFsDirent DirectoryEntry;
 
-class FileBrowser
+typedef struct
 {
-	public:
-	FileBrowser(const char * startDir, std::string extensions);
-	~FileBrowser();
+	uint32_t currently_selected;	// currently select browser entry
+	uint32_t directory_stack_size;
+	DirectoryInfo dir[128];		// info of the current directory
+	std::vector<CellFsDirent*> cur;	// current file listing
+} filebrowser_t;
 
-	std::vector<DirectoryEntry*> _cur;		// current file listing
+void filebrowser_new(filebrowser_t * filebrowser, const char * start_dir, std::string extensions);
+void filebrowser_reset_start_directory(filebrowser_t * filebrowser, const char * start_dir, std::string extensions);
+void filebrowser_push_directory(filebrowser_t * filebrowser, const char * path, uint32_t types, std::string extensions);
+void filebrowser_pop_directory (filebrowser_t * filebrowser);
 
-	bool IsCurrentAFile();
-	bool IsCurrentADirectory();
-	const char * get_current_filename();
-	const char * get_current_directory_name();
-	uint32_t get_current_directory_file_count();
-	uint32_t GetCurrentEntryIndex();
-	static std::string GetExtension(std::string filename);
-	void DecrementEntry();
-	void GotoEntry(uint32_t i);
-	void IncrementEntry();
-	void ResetStartDirectory(const char * startDir, std::string extensions);
-	void SetEntryWrap(bool wrapvalue);		// Set wrapping on or off
-	void PushDirectory(const char * path, int types, std::string extensions);
-	void PopDirectory();
-	private:
-	uint32_t _currentSelected;			// currently select browser entry
-	bool m_wrap;					// wrap boolean variable
-	DirectoryInfo _dir[128];			// info of the current directory
-	int _dirStackSize;
+#define filebrowser_get_current_directory_name(filebrowser) (filebrowser.dir[filebrowser.directory_stack_size].dir)
+#define filebrowser_get_current_directory_file_count(filebrowser) (filebrowser.dir[filebrowser.directory_stack_size].file_count)
+#define filebrowser_goto_entry(filebrowser, i)	filebrowser.currently_selected = i;
 
-	bool ParseDirectory(const char * path, int types, std::string extensions);
-};
+#define filebrowser_increment_entry(filebrowser) \
+{ \
+	filebrowser.currently_selected++; \
+	if (filebrowser.currently_selected >= filebrowser.cur.size()) \
+		filebrowser.currently_selected = 0; \
+}
 
+#define filebrowser_increment_entry_pointer(filebrowser) \
+{ \
+	filebrowser->currently_selected++; \
+	if (filebrowser->currently_selected >= filebrowser->cur.size()) \
+		filebrowser->currently_selected = 0; \
+}
+
+#define filebrowser_decrement_entry(filebrowser) \
+{ \
+	filebrowser.currently_selected--; \
+	if (filebrowser.currently_selected >= filebrowser.cur.size()) \
+		filebrowser.currently_selected = filebrowser.cur.size() - 1; \
+}
+
+#define filebrowser_decrement_entry_pointer(filebrowser) \
+{ \
+	filebrowser->currently_selected--; \
+	if (filebrowser->currently_selected >= filebrowser->cur.size()) \
+		filebrowser->currently_selected = filebrowser->cur.size() - 1; \
+}
+
+#define filebrowser_get_current_filename(filebrowser) (filebrowser.cur[filebrowser.currently_selected]->d_name)
+#define filebrowser_get_current_entry_index(filebrowser) (filebrowser.currently_selected)
+#define filebrowser_is_current_a_file(filebrowser)	(filebrowser.cur[filebrowser.currently_selected]->d_type == CELL_FS_TYPE_REGULAR)
+#define filebrowser_is_current_a_directory(filebrowser)	(filebrowser.cur[filebrowser.currently_selected]->d_type == CELL_FS_TYPE_DIRECTORY)
 
 #endif /* FILEBROWSER_H_ */

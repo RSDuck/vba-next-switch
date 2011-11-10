@@ -2020,6 +2020,8 @@ int main(int argc, char **argv)
 
 	emulator_implementation_set_texture(Settings.PS3CurrentBorder);
 
+	MenuInit();
+
 	do
 	{
 		switch(mode_switch)

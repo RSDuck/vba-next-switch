@@ -21,108 +21,89 @@
 #define NUM_ENTRY_PER_PAGE 19
 #define NUM_ENTRY_PER_SETTINGS_PAGE 18
 
+static menu menuStack[25];
+int menu_is_running = 0;			// is the menu running
+static int menuStackindex = 0;
+static bool update_item_colors = true;
+static bool set_initial_dir_tmpbrowser;
+filebrowser_t browser;				// main file browser->for rom browser
+filebrowser_t tmpBrowser;			// tmp file browser->for everything else
+
+#include "menu/menu-logic.h"
+
 #define FILEBROWSER_DELAY	100000
 #define FILEBROWSER_DELAY_DIVIDED_BY_3 33333
 #define SETTINGS_DELAY		150000	
 
 #define ROM_EXTENSIONS "gb|gbc|gba|GBA|GB|GBC|zip|ZIP"
 
-int menu_is_running = 0;		// is the menu running
-static menu menuStack[25];
-static int menuStackindex = 0;
-static bool update_item_colors = true;
-FileBrowser* browser = NULL;		// main file browser for rom browser
-FileBrowser* tmpBrowser = NULL;		// tmp file browser for everything else
-
-#include "menu/menu-logic.h"
-
-static void UpdateBrowser(FileBrowser* b)
+static void UpdateBrowser(filebrowser_t * b)
 {
 	static uint64_t old_state = 0;
 	uint64_t state = cell_pad_input_poll_device(0);
 	uint64_t diff_state = old_state ^ state;
 	uint64_t button_was_pressed = old_state & diff_state;
 
-	if (CTRL_DOWN(state))
+	if (CTRL_DOWN(state) || CTRL_LSTICK_DOWN(state))
 	{
-		if(b->GetCurrentEntryIndex() < b->get_current_directory_file_count()-1)
+		if(b->currently_selected < b->dir[b->directory_stack_size].file_count-1)
 		{
-			b->IncrementEntry();
+			filebrowser_increment_entry_pointer(b);
+
+			if(CTRL_DOWN(state))
+				sys_timer_usleep(FILEBROWSER_DELAY);
+			else
+				sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
+		}
+	}
+
+	if (CTRL_UP(state) || CTRL_LSTICK_UP(state))
+	{
+		if(b->currently_selected > 0)
+		{
+			filebrowser_decrement_entry_pointer(b);
+
+			if(CTRL_UP(state))
+				sys_timer_usleep(FILEBROWSER_DELAY);
+			else
+				sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
+		}
+	}
+
+	if (CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state))
+	{
+		b->currently_selected = (MIN(b->currently_selected + 5, b->dir[b->directory_stack_size].file_count-1));
+		if(CTRL_RIGHT(state))
 			sys_timer_usleep(FILEBROWSER_DELAY);
-		}
-	}
-
-	if (CTRL_LSTICK_DOWN(state))
-	{
-		if(b->GetCurrentEntryIndex() < b->get_current_directory_file_count()-1)
-		{
-			b->IncrementEntry();
+		else
 			sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
-		}
 	}
 
-	if (CTRL_UP(state))
+	if (CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state))
 	{
-		if(b->GetCurrentEntryIndex() > 0)
-		{
-			b->DecrementEntry();
+		if (b->currently_selected <= 5)
+			b->currently_selected = 0;
+		else
+			b->currently_selected -= 5;
+
+		if(CTRL_LEFT(state))
 			sys_timer_usleep(FILEBROWSER_DELAY);
-		}
-	}
-
-	if (CTRL_LSTICK_UP(state))
-	{
-		if(b->GetCurrentEntryIndex() > 0)
-		{
-			b->DecrementEntry();
+		else
 			sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
-		}
-	}
-
-	if (CTRL_RIGHT(state))
-	{
-		b->GotoEntry(MIN(b->GetCurrentEntryIndex()+5, b->get_current_directory_file_count()-1));
-		sys_timer_usleep(FILEBROWSER_DELAY);
-	}
-
-	if (CTRL_LSTICK_RIGHT(state))
-	{
-		b->GotoEntry(MIN(b->GetCurrentEntryIndex()+5, b->get_current_directory_file_count()-1));
-		sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
-	}
-
-	if (CTRL_LEFT(state))
-	{
-		if (b->GetCurrentEntryIndex() <= 5)
-			b->GotoEntry(0);
-		else
-			b->GotoEntry(b->GetCurrentEntryIndex()-5);
-
-		sys_timer_usleep(FILEBROWSER_DELAY);
-	}
-
-	if (CTRL_LSTICK_LEFT(state))
-	{
-		if (b->GetCurrentEntryIndex() <= 5)
-			b->GotoEntry(0);
-		else
-			b->GotoEntry(b->GetCurrentEntryIndex()-5);
-
-		sys_timer_usleep(FILEBROWSER_DELAY_DIVIDED_BY_3);
 	}
 
 	if (CTRL_R1(state))
 	{
-		b->GotoEntry(MIN(b->GetCurrentEntryIndex()+NUM_ENTRY_PER_PAGE, b->get_current_directory_file_count()-1));
+		b->currently_selected = (MIN(b->currently_selected + NUM_ENTRY_PER_PAGE, b->dir[b->directory_stack_size].file_count-1));
 		sys_timer_usleep(FILEBROWSER_DELAY);
 	}
 
 	if (CTRL_L1(state))
 	{
-		if (b->GetCurrentEntryIndex() <= NUM_ENTRY_PER_PAGE)
-			b->GotoEntry(0);
+		if (b->currently_selected <= NUM_ENTRY_PER_PAGE)
+			b->currently_selected= 0;
 		else
-			b->GotoEntry(b->GetCurrentEntryIndex()-NUM_ENTRY_PER_PAGE);
+			b->currently_selected -= NUM_ENTRY_PER_PAGE;
 
 		sys_timer_usleep(FILEBROWSER_DELAY);
 	}
@@ -130,16 +111,16 @@ static void UpdateBrowser(FileBrowser* b)
 	if (CTRL_CIRCLE(button_was_pressed))
 	{
 		old_state = state;
-		b->PopDirectory();
+		filebrowser_pop_directory(b);
 	}
 
 	old_state = state;
 }
 
-static void RenderBrowser(FileBrowser* b)
+static void RenderBrowser(filebrowser_t * b)
 {
-	uint32_t file_count = b->get_current_directory_file_count();
-	int current_index = b->GetCurrentEntryIndex();
+	uint32_t file_count = b->dir[b->directory_stack_size].file_count;
+	int current_index = b->currently_selected;
 
 	int page_number = current_index / NUM_ENTRY_PER_PAGE;
 	int page_base = page_number * NUM_ENTRY_PER_PAGE;
@@ -150,7 +131,7 @@ static void RenderBrowser(FileBrowser* b)
 	for (int i = page_base; i < file_count && i < page_base + NUM_ENTRY_PER_PAGE; ++i)
 	{
 		currentY = currentY + ySpacing;
-		cellDbgFontPuts(currentX, currentY, Emulator_GetFontSize(), i == current_index ? RED : b->_cur[i]->d_type == CELL_FS_TYPE_DIRECTORY ? GREEN : WHITE, b->_cur[i]->d_name);
+		cellDbgFontPuts(currentX, currentY, Emulator_GetFontSize(), i == current_index ? RED : b->cur[i]->d_type == CELL_FS_TYPE_DIRECTORY ? GREEN : WHITE, b->cur[i]->d_name);
 		cellDbgFontDraw();
 	}
 	cellDbgFontDraw();
@@ -767,12 +748,15 @@ static void do_settings(menu * menu_obj)
 
 static void do_ROMMenu(void)
 {
-	char rom_path[1024];
+	char rom_path[MAX_PATH_LENGTH];
 	char newpath[1024];
 
-	input_code_state_begin();
+	uint64_t state = cell_pad_input_poll_device(0);
+	static uint64_t old_state = 0;
+	uint64_t diff_state = old_state ^ state;
+	uint64_t button_was_pressed = old_state & diff_state;
 
-	UpdateBrowser(browser);
+	UpdateBrowser(&browser);
 
 	if (CTRL_SELECT(button_was_pressed))
 	{
@@ -781,35 +765,36 @@ static void do_ROMMenu(void)
 	}
 
 	if (CTRL_START(button_was_pressed))
-		browser->ResetStartDirectory("/", ROM_EXTENSIONS);
+		filebrowser_reset_start_directory(&browser, "/", ROM_EXTENSIONS);
 
 	if (CTRL_CROSS(button_was_pressed))
 	{
-		if(browser->IsCurrentADirectory())
+		if(filebrowser_is_current_a_directory(browser))
 		{
 			//if 'filename' is in fact '..' - then pop back directory instead of adding '..' to filename path
-			if(browser->GetCurrentEntryIndex() == 0)
+			if(browser.currently_selected == 0)
 			{
-      				old_state = state;
-      				browser->PopDirectory();
+				old_state = state;
+				filebrowser_pop_directory(&browser);
 			}
 			else
 			{
-			const char * separatorslash = (strcmp(browser->get_current_directory_name(),"/") == 0) ? "" : "/";
-				snprintf(newpath, sizeof(newpath), "%s%s%s", browser->get_current_directory_name(), separatorslash, browser->get_current_filename());
-				browser->PushDirectory(newpath, CELL_FS_TYPE_REGULAR | CELL_FS_TYPE_DIRECTORY, ROM_EXTENSIONS);
+				const char * separatorslash = (strcmp(filebrowser_get_current_directory_name(browser),"/") == 0) ? "" : "/";
+				snprintf(newpath, sizeof(newpath), "%s%s%s", filebrowser_get_current_directory_name(browser), separatorslash, filebrowser_get_current_filename(browser));
+				filebrowser_push_directory(&browser, newpath, CELL_FS_TYPE_REGULAR | CELL_FS_TYPE_DIRECTORY, ROM_EXTENSIONS);
 			}
 		}
-		else if (browser->IsCurrentAFile())
+		else if (filebrowser_is_current_a_file(browser))
 		{
-			snprintf(rom_path, sizeof(rom_path), "%s/%s", browser->get_current_directory_name(), browser->get_current_filename());
+			snprintf(rom_path, sizeof(rom_path), "%s/%s", filebrowser_get_current_directory_name(browser), filebrowser_get_current_filename(browser));
 
-			menu_is_running = false;
+			menu_is_running = 0;
 
 			// switch emulator to emulate mode
 			Emulator_StartROMRunning();
 
 			Emulator_RequestLoadROM(rom_path);
+
 			old_state = state;
 			return;
 		}
@@ -817,36 +802,37 @@ static void do_ROMMenu(void)
 
 	if (CTRL_L2(state) && CTRL_R2(state))
 	{
-		/* if a rom is loaded then resume it */
+		// if a rom is loaded then resume it
 		if (Emulator_IsROMLoaded())
 		{
-			menu_is_running = false;
+			menu_is_running = 0;
 			Emulator_StartROMRunning();
 		}
+		old_state = state;
 		return;
 	}
 
-	if(browser->IsCurrentADirectory())
+	if (filebrowser_is_current_a_directory(browser))
 	{
-		if(!strcmp(browser->get_current_filename(),"app_home") || !strcmp(browser->get_current_filename(),"host_root"))
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, RED, "%s","WARNING - Do not open this directory, or you might have to restart!");
-		else if(!strcmp(browser->get_current_filename(),".."))
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "%s","INFO - Press X to go back to the previous directory.");
+		if(!strcmp(filebrowser_get_current_filename(browser),"app_home") || !strcmp(filebrowser_get_current_filename(browser),"host_root"))
+			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, RED, "WARNING - This path only works on DEX PS3 systems. Do not attempt to open\n this directory on CEX PS3 systems, or you might have to restart!");
+		else if(!strcmp(filebrowser_get_current_filename(browser),".."))
+			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - Press X to go back to the previous directory.");
 		else
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "%s","INFO - Press X to enter the directory.");
+			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - Press X to enter the directory.");
 	}
 
-	if(browser->IsCurrentAFile())
+	if (filebrowser_is_current_a_file(browser))
 		cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - Press X to load the game. ");
 
 	cellDbgFontPuts	(0.09f,	0.05f,	Emulator_GetFontSize(),	RED,	"FILE BROWSER");
-	cellDbgFontPrintf (0.7f, 0.05f, 0.82f, WHITE, "VBANext PS3 v%s", EMULATOR_VERSION);
-	cellDbgFontPrintf (0.09f, 0.09f, Emulator_GetFontSize(), YELLOW, "PATH: %s", browser->get_current_directory_name());
+	cellDbgFontPrintf (0.7f, 0.05f, 0.82f, WHITE, "%s v%s", EMULATOR_NAME, EMULATOR_VERSION);
+	cellDbgFontPrintf (0.09f, 0.09f, Emulator_GetFontSize(), YELLOW, "PATH: %s", filebrowser_get_current_directory_name(browser));
 	cellDbgFontPuts   (0.09f, 0.93f, Emulator_GetFontSize(), YELLOW,
-			"L2 + R2 - resume game           SELECT - Settings screen");
+	"L2 + R2 - resume game           SELECT - Settings screen");
 	cellDbgFontDraw();
 
-	RenderBrowser(browser);
+	RenderBrowser(&browser);
 	old_state = state;
 }
 
@@ -873,38 +859,37 @@ static void do_ROMMenu(void)
 		case PATH_BIOSCHOICE: \
 			do_select_file(menuStack[menuStackindex].enum_id); \
 			break; \
-		case PATH_CHOICE: \
-			do_pathChoice(); \
+		case PATH_SAVESTATES_DIR_CHOICE: \
+		case PATH_DEFAULT_ROM_DIR_CHOICE: \
+		case PATH_SRAM_DIR_CHOICE: \
+			do_pathChoice(menuStack[menuStackindex].enum_id); \
 			break; \
 	}
 
-void MenuMainLoop()
+void MenuInit(void)
 {
-	if (browser == NULL)
-	{
-		browser = new FileBrowser(Settings.PS3PathROMDirectory, ROM_EXTENSIONS);
-		browser->SetEntryWrap(false);
-	}
+	filebrowser_new(&browser, Settings.PS3PathROMDirectory, ROM_EXTENSIONS);
+}
 
+void MenuMainLoop(void)
+{
 	menuStack[0] = menu_filebrowser;
 	menuStack[0].enum_id = FILE_BROWSER_MENU;
 
 	// menu loop
 	menu_is_running = true;
+
 	do
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
-
 		ps3graphics_draw_menu(1920, 1080);
 
 		MenuGoTo();
 
 		psglSwap();
-
 		cellSysutilCheckCallback();
-
-#ifdef CELL_DEBUG_CONSOLE
+	#ifdef CELL_DEBUG_CONSOLE
 		cellConsolePoll();
-#endif
+	#endif
 	}while (menu_is_running);
 }
