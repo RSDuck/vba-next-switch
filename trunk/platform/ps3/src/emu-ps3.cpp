@@ -150,14 +150,16 @@ static const char * MakeFName(int type)
 		if(ret) \
 			snprintf(special_action_msg, sizeof(special_action_msg), "Loaded save state slot #%d", Settings.CurrentSaveStateSlot); \
 		else \
-			snprintf(special_action_msg, sizeof(special_action_msg), "Can't load from save state slot #%d", Settings.CurrentSaveStateSlot);
+			snprintf(special_action_msg, sizeof(special_action_msg), "Can't load from save state slot #%d", Settings.CurrentSaveStateSlot); \
+	special_action_msg_expired = ps3graphics_set_text_message_speed();
 
 #define emulator_save_current_save_state_slot(savefunction) \
 	int ret  = savefunction(MakeFName(FILETYPE_STATE)); \
 		if(ret) \
 			snprintf(special_action_msg, sizeof(special_action_msg), "Saved to save state slot #%d", Settings.CurrentSaveStateSlot); \
 		else \
-			snprintf(special_action_msg, sizeof(special_action_msg), "Can't save to save state slot #%d", Settings.CurrentSaveStateSlot);
+			snprintf(special_action_msg, sizeof(special_action_msg), "Can't save to save state slot #%d", Settings.CurrentSaveStateSlot); \
+	special_action_msg_expired = ps3graphics_set_text_message_speed();
 
 
 extern void log(const char * fmt,...)
