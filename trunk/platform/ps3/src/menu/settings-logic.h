@@ -12,7 +12,7 @@
 void apply_scaling(void)
 {
 	ps3graphics_set_fbo_scale(Settings.ScaleEnabled, Settings.ScaleFactor);
-	ps3graphics_set_smooth(Settings.PS3Smooth);
+	ps3graphics_set_smooth(Settings.PS3Smooth, 0);
 	ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
 }
 
@@ -125,13 +125,13 @@ static void producesettingentry(uint64_t switchvalue)
 			if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(state))
 			{
 				Settings.PS3Smooth = !Settings.PS3Smooth;
-				ps3graphics_set_smooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth, 0);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.PS3Smooth = 1;
-				ps3graphics_set_smooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth, 0);
 			}
 			break;
 		case SETTING_HW_TEXTURE_FILTER_2:
@@ -157,14 +157,14 @@ static void producesettingentry(uint64_t switchvalue)
 				{
 					ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE, 1);
 					Settings.ScaleFactor = 1;
-					ps3graphics_set_fbo_scale(0);
+					ps3graphics_set_fbo_scale(0, 2);
 				}
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.ScaleEnabled = 1;
-				ps3graphics_set_fbo_scale(0);
+				ps3graphics_set_fbo_scale(0, 2);
 			}
 			break;
 		case SETTING_SCALE_FACTOR:
@@ -197,13 +197,13 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount--;
 				Settings.PS3OverscanEnabled = 1;
-				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 
 				if(Settings.PS3OverscanAmount == 0)
 				{
 					Settings.PS3OverscanEnabled = 0;
-					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 					sys_timer_usleep(FILEBROWSER_DELAY);
 				}
 			}
@@ -211,13 +211,13 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount++;
 				Settings.PS3OverscanEnabled = 1;
-				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 
 				if(Settings.PS3OverscanAmount == 0)
 				{
 					Settings.PS3OverscanEnabled = 0;
-					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 					sys_timer_usleep(FILEBROWSER_DELAY);
 				}
 			}
@@ -225,7 +225,7 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount = 0;
 				Settings.PS3OverscanEnabled = 0;
-				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 			}
 			break;
 		case SETTING_SOUND_MODE:
@@ -376,7 +376,7 @@ static void producesettingentry(uint64_t switchvalue)
 			}
 			if(CTRL_START(state))
 			{
-				ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE);
+				ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE, 0);
 			}
 			break;
 		case SETTING_SHADER_2:
@@ -427,9 +427,9 @@ static void producesettingentry(uint64_t switchvalue)
 				Settings.SoundMode = SOUND_MODE_NORMAL;
 				strcpy(Settings.RSoundServerIPAddress, "0.0.0.0");
 				ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
-				ps3graphics_set_smooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth, 0);
 				ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
-				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 				Settings.ControlStyle = CONTROL_STYLE_ORIGINAL;
 				Settings.PS3PALTemporalMode60Hz = 0;
 				/*

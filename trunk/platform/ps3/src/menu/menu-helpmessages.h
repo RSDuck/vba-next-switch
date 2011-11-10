@@ -102,7 +102,7 @@ static void producelabelvalue(uint64_t switchvalue)
 			break;
 		case SETTING_SHADER:
 			{
-				extract_filename_only(ps3graphics_get_fragment_shader_path());
+				extract_filename_only(ps3graphics_get_fragment_shader_path(0));
 				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), GREEN, "%s", fname_without_path_extension);
 			}
 			break;

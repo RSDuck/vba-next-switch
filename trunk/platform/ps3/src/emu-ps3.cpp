@@ -138,12 +138,12 @@ static const char * MakeFName(int type)
 		Settings.CurrentSaveStateSlot -= 1; \
 	} \
 	snprintf(special_action_msg, sizeof(special_action_msg), "Save state slot changed to: #%d", Settings.CurrentSaveStateSlot); \
-	special_action_msg_expired = ps3graphics_set_text_message_speed();
+	special_action_msg_expired = ps3graphics_set_text_message_speed(60);
 
 #define emulator_increment_current_save_state_slot() \
 	Settings.CurrentSaveStateSlot++; \
 	snprintf(special_action_msg, sizeof(special_action_msg), "Save state slot changed to: #%d", Settings.CurrentSaveStateSlot); \
-	special_action_msg_expired = ps3graphics_set_text_message_speed();
+	special_action_msg_expired = ps3graphics_set_text_message_speed(60);
 
 #define emulator_load_current_save_state_slot(loadfunction) \
 	int ret  = loadfunction(MakeFName(FILETYPE_STATE)); \
@@ -151,7 +151,7 @@ static const char * MakeFName(int type)
 			snprintf(special_action_msg, sizeof(special_action_msg), "Loaded save state slot #%d", Settings.CurrentSaveStateSlot); \
 		else \
 			snprintf(special_action_msg, sizeof(special_action_msg), "Can't load from save state slot #%d", Settings.CurrentSaveStateSlot); \
-	special_action_msg_expired = ps3graphics_set_text_message_speed();
+	special_action_msg_expired = ps3graphics_set_text_message_speed(60);
 
 #define emulator_save_current_save_state_slot(savefunction) \
 	int ret  = savefunction(MakeFName(FILETYPE_STATE)); \
@@ -159,7 +159,7 @@ static const char * MakeFName(int type)
 			snprintf(special_action_msg, sizeof(special_action_msg), "Saved to save state slot #%d", Settings.CurrentSaveStateSlot); \
 		else \
 			snprintf(special_action_msg, sizeof(special_action_msg), "Can't save to save state slot #%d", Settings.CurrentSaveStateSlot); \
-	special_action_msg_expired = ps3graphics_set_text_message_speed();
+	special_action_msg_expired = ps3graphics_set_text_message_speed(60);
 
 
 extern void log(const char * fmt,...)
@@ -991,12 +991,12 @@ void emulator_implementation_set_shader_preset(const char * fname)
 	init_setting_uint("ViewportY", Settings.ViewportY, Settings.ViewportY);
 	init_setting_uint("ViewportWidth", Settings.ViewportWidth, Settings.ViewportWidth);
 	init_setting_uint("ViewportHeight", Settings.ViewportHeight, Settings.ViewportHeight);
-	ps3graphics_load_fragment_shader(Settings.PS3CurrentShader);
+	ps3graphics_load_fragment_shader(Settings.PS3CurrentShader, 0);
 	ps3graphics_load_fragment_shader(Settings.PS3CurrentShader2, 1);
 	ps3graphics_set_fbo_scale(Settings.ScaleEnabled,Settings.ScaleFactor);
 	ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
-	ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
-	ps3graphics_set_smooth(Settings.PS3Smooth);
+	ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
+	ps3graphics_set_smooth(Settings.PS3Smooth, 0);
 	ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
 }
 
@@ -1092,7 +1092,7 @@ void emulator_save_settings(uint64_t filetosave)
 			config_set_uint(currentconfig, "PS3General::PS3CurrentResolution",ps3graphics_get_current_resolution());
 			config_set_string(currentconfig, "PS3General::ShaderPresetPath", Settings.ShaderPresetPath);
 			config_set_string(currentconfig, "PS3General::ShaderPresetTitle", Settings.ShaderPresetTitle);
-			config_set_string(currentconfig, "PS3General::PS3CurrentShader",ps3graphics_get_fragment_shader_path());
+			config_set_string(currentconfig, "PS3General::PS3CurrentShader",ps3graphics_get_fragment_shader_path(0));
 			config_set_string(currentconfig, "PS3General::PS3CurrentShader2", ps3graphics_get_fragment_shader_path(1));
 			config_set_string(currentconfig, "PS3General::Border", Settings.PS3CurrentBorder);
 			config_set_string(currentconfig, "PS3General::GameAwareShaderPath", Settings.GameAwareShaderPath);
@@ -1114,7 +1114,7 @@ void emulator_save_settings(uint64_t filetosave)
 			snprintf(filepath, sizeof(filepath), "%s/test.conf", usrDirPath);
 			currentconfig = config_file_new(filepath);
 
-			config_set_string(currentconfig, "PS3General::PS3CurrentShader", ps3graphics_get_fragment_shader_path());
+			config_set_string(currentconfig, "PS3General::PS3CurrentShader", ps3graphics_get_fragment_shader_path(0));
 			config_set_string(currentconfig, "PS3General::PS3CurrentShader2", ps3graphics_get_fragment_shader_path(1));
 			config_set_string(currentconfig, "PS3General::Border", Settings.PS3CurrentBorder);
 			config_set_uint(currentconfig, "PS3General::Smooth", Settings.PS3Smooth);
@@ -1603,12 +1603,12 @@ static void ingame_menu(void)
 				{
 					Settings.PS3OverscanAmount--;
 					Settings.PS3OverscanEnabled = 1;
-					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 
 					if(Settings.PS3OverscanAmount == 0)
 					{
 						Settings.PS3OverscanEnabled = 0;
-						ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+						ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 					}
 				}
 
@@ -1617,12 +1617,12 @@ static void ingame_menu(void)
 				{
 					Settings.PS3OverscanAmount++;
 					Settings.PS3OverscanEnabled = 1;
-					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 
 					if(Settings.PS3OverscanAmount == 0)
 					{
 						Settings.PS3OverscanEnabled = 0;
-						ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+						ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 					}
 				}
 
@@ -1630,7 +1630,7 @@ static void ingame_menu(void)
 				{
 					Settings.PS3OverscanAmount = 0;
 					Settings.PS3OverscanEnabled = 0;
-					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100, 1);
 				}
 				ingame_menu_reset_entry_colors (ingame_menu_item);
 				strcpy(comment, "Press LEFT or RIGHT to change the [Overscan] settings.\nPress START to reset back to default values.");

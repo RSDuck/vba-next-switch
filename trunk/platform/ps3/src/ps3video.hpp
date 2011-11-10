@@ -79,7 +79,7 @@ void ps3graphics_new(uint32_t resolution, uint32_t aspect, uint32_t smooth, uint
 
 /* cg */
 
-int32_t ps3graphics_load_fragment_shader(const char * shaderPath, unsigned index = 0);
+int32_t ps3graphics_load_fragment_shader(const char * shaderPath, unsigned index);
 void ps3graphics_resize_aspect_mode_input_loop(uint64_t state);
 
 /* draw functions */
@@ -114,7 +114,7 @@ uint32_t ps3graphics_get_viewport_y(void);
 uint32_t ps3graphics_get_viewport_width(void);
 uint32_t ps3graphics_get_viewport_height(void);
 CellVideoOutState ps3graphics_get_video_out_state();
-const char * ps3graphics_get_fragment_shader_path(unsigned index = 0);
+const char * ps3graphics_get_fragment_shader_path(unsigned index);
 
 /* game-aware shaders */
 void ps3graphics_init_state_uniforms(const char * path);
@@ -122,13 +122,13 @@ void ps3graphics_init_state_uniforms(const char * path);
 /* set functions */
 
 void ps3graphics_set_aspect_ratio(uint32_t keep_aspect, uint32_t width, uint32_t height, uint32_t setviewport);
-void ps3graphics_set_fbo_scale(uint32_t enable, unsigned scale = 2.0);
+void ps3graphics_set_fbo_scale(uint32_t enable, unsigned scale);
 void ps3graphics_set_pal60hz(uint32_t pal60Hz);
-void ps3graphics_set_overscan(uint32_t will_overscan, float amount = 0.0, uint32_t setviewport = 1);
-void ps3graphics_set_smooth(uint32_t smooth, unsigned index = 0);
+void ps3graphics_set_overscan(uint32_t will_overscan, float amount, uint32_t setviewport);
+void ps3graphics_set_smooth(uint32_t smooth, unsigned index);
 void ps3graphics_set_triple_buffering(uint32_t triple_buffering);
 void ps3graphics_set_vsync(uint32_t vsync);
-uint32_t ps3graphics_set_text_message_speed(uint32_t value = 60);
+uint32_t ps3graphics_set_text_message_speed(uint32_t value);
 
 /* libdbgfont */
 void ps3graphics_init_dbgfont();
