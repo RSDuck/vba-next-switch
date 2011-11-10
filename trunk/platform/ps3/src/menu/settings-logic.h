@@ -11,9 +11,9 @@
 
 void apply_scaling(void)
 {
-	Graphics->SetFBOScale(Settings.ScaleEnabled, Settings.ScaleFactor);
-	Graphics->SetSmooth(Settings.PS3Smooth);
-	Graphics->SetSmooth(Settings.PS3Smooth2, 1);
+	ps3graphics_set_fbo_scale(Settings.ScaleEnabled, Settings.ScaleFactor);
+	ps3graphics_set_smooth(Settings.PS3Smooth);
+	ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
 }
 
 static void producesettingentry(uint64_t switchvalue)
@@ -46,31 +46,31 @@ static void producesettingentry(uint64_t switchvalue)
 		case SETTING_CHANGE_RESOLUTION:
 			if(CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state) )
 			{
-				Graphics->NextResolution();
+				ps3graphics_next_resolution();
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) )
 			{
-				Graphics->PreviousResolution();
+				ps3graphics_previous_resolution();
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_CROSS(state))
 			{
-				if (Graphics->GetCurrentResolution() == CELL_VIDEO_OUT_RESOLUTION_576)
+				if (ps3graphics_get_current_resolution() == CELL_VIDEO_OUT_RESOLUTION_576)
 				{
-					if(Graphics->CheckResolution(CELL_VIDEO_OUT_RESOLUTION_576))
+					if(ps3graphics_check_resolution(CELL_VIDEO_OUT_RESOLUTION_576))
 					{
-						Graphics->SetPAL60Hz(Settings.PS3PALTemporalMode60Hz);
-						Graphics->SwitchResolution(Graphics->GetCurrentResolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
-						Graphics->set_vsync(Settings.Throttled);
+						ps3graphics_set_pal60hz(Settings.PS3PALTemporalMode60Hz);
+						ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
+						ps3graphics_set_vsync(Settings.Throttled);
 						apply_scaling();
 					}
 				}
 				else
 				{
-					Graphics->SetPAL60Hz(0);
-					Graphics->SwitchResolution(Graphics->GetCurrentResolution(), 0, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
-					Graphics->set_vsync(Settings.Throttled);
+					ps3graphics_set_pal60hz(0);
+					ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), 0, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
+					ps3graphics_set_vsync(Settings.Throttled);
 					apply_scaling();
 					emulator_implementation_set_texture(Settings.PS3CurrentBorder);
 				}
@@ -101,7 +101,7 @@ static void producesettingentry(uint64_t switchvalue)
 				if(Settings.PS3KeepAspect > 0)
 				{
 					Settings.PS3KeepAspect--;
-					Graphics->set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
+					ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
 					sys_timer_usleep(SETTINGS_DELAY);
 				}
 			}
@@ -110,14 +110,14 @@ static void producesettingentry(uint64_t switchvalue)
 				if(Settings.PS3KeepAspect < LAST_ASPECT_RATIO)
 				{
 					Settings.PS3KeepAspect++;
-					Graphics->set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
+					ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
 					sys_timer_usleep(SETTINGS_DELAY);
 				}
 			}
 			if(CTRL_START(state))
 			{
 				Settings.PS3KeepAspect = ASPECT_RATIO_4_3;
-				Graphics->set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
+				ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
 				sys_timer_usleep(SETTINGS_DELAY);
 			}
 			break;
@@ -125,26 +125,26 @@ static void producesettingentry(uint64_t switchvalue)
 			if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(state))
 			{
 				Settings.PS3Smooth = !Settings.PS3Smooth;
-				Graphics->SetSmooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.PS3Smooth = 1;
-				Graphics->SetSmooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth);
 			}
 			break;
 		case SETTING_HW_TEXTURE_FILTER_2:
 			if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(state))
 			{
 				Settings.PS3Smooth2 = !Settings.PS3Smooth2;
-				Graphics->SetSmooth(Settings.PS3Smooth2, 1);
+				ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.PS3Smooth2 = 1;
-				Graphics->SetSmooth(Settings.PS3Smooth2, 1);
+				ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
 			}
 			break;
 		case SETTING_SCALE_ENABLED:
@@ -152,19 +152,19 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.ScaleEnabled = !Settings.ScaleEnabled;
 				if(Settings.ScaleEnabled)
-					Graphics->SetFBOScale(1, Settings.ScaleFactor);
+					ps3graphics_set_fbo_scale(1, Settings.ScaleFactor);
 				else
 				{
-					Graphics->LoadFragmentShader(DEFAULT_SHADER_FILE, 1);
+					ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE, 1);
 					Settings.ScaleFactor = 1;
-					Graphics->SetFBOScale(0);
+					ps3graphics_set_fbo_scale(0);
 				}
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.ScaleEnabled = 1;
-				Graphics->SetFBOScale(0);
+				ps3graphics_set_fbo_scale(0);
 			}
 			break;
 		case SETTING_SCALE_FACTOR:
@@ -197,13 +197,13 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount--;
 				Settings.PS3OverscanEnabled = 1;
-				Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 
 				if(Settings.PS3OverscanAmount == 0)
 				{
 					Settings.PS3OverscanEnabled = 0;
-					Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 					sys_timer_usleep(FILEBROWSER_DELAY);
 				}
 			}
@@ -211,13 +211,13 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount++;
 				Settings.PS3OverscanEnabled = 1;
-				Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 
 				if(Settings.PS3OverscanAmount == 0)
 				{
 					Settings.PS3OverscanEnabled = 0;
-					Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+					ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 					sys_timer_usleep(FILEBROWSER_DELAY);
 				}
 			}
@@ -225,7 +225,7 @@ static void producesettingentry(uint64_t switchvalue)
 			{
 				Settings.PS3OverscanAmount = 0;
 				Settings.PS3OverscanEnabled = 0;
-				Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 			}
 			break;
 		case SETTING_SOUND_MODE:
@@ -263,7 +263,7 @@ static void producesettingentry(uint64_t switchvalue)
 				while(OSK_IS_RUNNING(oskutil_handle))
 				{
 					glClear(GL_COLOR_BUFFER_BIT);
-					Graphics->DrawMenu(1920, 1080);
+					ps3graphics_draw_menu(1920, 1080);
 					psglSwap();
 					cellSysutilCheckCallback();
 				}
@@ -278,21 +278,21 @@ static void producesettingentry(uint64_t switchvalue)
 			if(CTRL_LEFT(state)  || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_CROSS(state) || CTRL_LSTICK_RIGHT(state))
 			{
 				Settings.Throttled = !Settings.Throttled;
-				Graphics->set_vsync(Settings.Throttled);
+				ps3graphics_set_vsync(Settings.Throttled);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
 			{
 				Settings.Throttled = 1;
-				Graphics->set_vsync(Settings.Throttled);
+				ps3graphics_set_vsync(Settings.Throttled);
 			}
 			break;
 		case SETTING_TRIPLE_BUFFERING:
 			if(CTRL_LEFT(state)  || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state))
 			{
 				Settings.TripleBuffering = !Settings.TripleBuffering;
-				Graphics->SetTripleBuffering(Settings.TripleBuffering);
-				Graphics->SwitchResolution(Graphics->GetCurrentResolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
+				ps3graphics_set_triple_buffering(Settings.TripleBuffering);
+				ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
 				sys_timer_usleep(FILEBROWSER_DELAY);
 			}
 			if(CTRL_START(state))
@@ -300,8 +300,8 @@ static void producesettingentry(uint64_t switchvalue)
 				if(Settings.TripleBuffering == false)
 				{
 					Settings.TripleBuffering = 1;
-					Graphics->SetTripleBuffering(Settings.TripleBuffering);
-					Graphics->SwitchResolution(Graphics->GetCurrentResolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
+					ps3graphics_set_triple_buffering(Settings.TripleBuffering);
+					ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, Settings.ScaleEnabled, Settings.ScaleFactor);
 				}
 			}
 			break;
@@ -376,7 +376,7 @@ static void producesettingentry(uint64_t switchvalue)
 			}
 			if(CTRL_START(state))
 			{
-				Graphics->LoadFragmentShader(DEFAULT_SHADER_FILE);
+				ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE);
 			}
 			break;
 		case SETTING_SHADER_2:
@@ -394,7 +394,7 @@ static void producesettingentry(uint64_t switchvalue)
 			if(CTRL_START(state))
 			{
 				if(Settings.ScaleEnabled)
-					Graphics->LoadFragmentShader(DEFAULT_SHADER_FILE, 1);
+					ps3graphics_load_fragment_shader(DEFAULT_SHADER_FILE, 1);
 			}
 			break;
 		case SETTING_FONT_SIZE:
@@ -426,10 +426,10 @@ static void producesettingentry(uint64_t switchvalue)
 				Settings.PS3OverscanEnabled = 0;
 				Settings.SoundMode = SOUND_MODE_NORMAL;
 				strcpy(Settings.RSoundServerIPAddress, "0.0.0.0");
-				Graphics->set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
-				Graphics->SetSmooth(Settings.PS3Smooth);
-				Graphics->SetSmooth(Settings.PS3Smooth2, 1);
-				Graphics->SetOverscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
+				ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
+				ps3graphics_set_smooth(Settings.PS3Smooth);
+				ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
+				ps3graphics_set_overscan(Settings.PS3OverscanEnabled, (float)Settings.PS3OverscanAmount/100);
 				Settings.ControlStyle = CONTROL_STYLE_ORIGINAL;
 				Settings.PS3PALTemporalMode60Hz = 0;
 				/*
@@ -439,7 +439,7 @@ static void producesettingentry(uint64_t switchvalue)
 				   Graphics->SwitchResolution();
 				   }
 				 */
-				Graphics->set_vsync(Settings.Throttled);
+				ps3graphics_set_vsync(Settings.Throttled);
 				Settings.ScreenshotsEnabled = false;
 				emulator_implementation_set_texture(DEFAULT_BORDER_FILE);
 #if(CELL_SDK_VERSION > 0x340000)

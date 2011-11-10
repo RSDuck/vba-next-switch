@@ -56,7 +56,7 @@ static void DisplayHelpMessage(int currentsetting)
 			   break;
 			 */
 		case SETTING_KEEP_ASPECT_RATIO:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - [Aspect ratio] is set to '%d:%d'.", Graphics->get_aspect_ratio_int(0), Graphics->get_aspect_ratio_int(1));
+			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - [Aspect ratio] is set to '%d:%d'.", ps3graphics_get_aspect_ratio_int(0), ps3graphics_get_aspect_ratio_int(1));
 			break;
 		case SETTING_RSOUND_SERVER_IP_ADDRESS:
 			print_help_message(menu_generalaudiosettings, currentsetting);
@@ -74,7 +74,7 @@ static void producelabelvalue(uint64_t switchvalue)
 	{
 		case SETTING_CHANGE_RESOLUTION:
 			{
-				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), Graphics->GetInitialResolution() == Graphics->GetCurrentResolution() ? GREEN : ORANGE, Graphics->GetResolutionLabel(Graphics->GetCurrentResolution()));
+				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), ps3graphics_get_initial_resolution() == ps3graphics_get_current_resolution() ? GREEN : ORANGE, ps3graphics_get_resolution_label(ps3graphics_get_current_resolution()));
 				cellDbgFontDraw();
 				break;
 			}
@@ -102,13 +102,13 @@ static void producelabelvalue(uint64_t switchvalue)
 			break;
 		case SETTING_SHADER:
 			{
-				extract_filename_only(Graphics->GetFragmentShaderPath());
+				extract_filename_only(ps3graphics_get_fragment_shader_path());
 				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), GREEN, "%s", fname_without_path_extension);
 			}
 			break;
 		case SETTING_SHADER_2:
 			{
-				extract_filename_only(Graphics->GetFragmentShaderPath(1));
+				extract_filename_only(ps3graphics_get_fragment_shader_path(1));
 				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), !(Settings.ScaleEnabled) ? SILVER : GREEN, "%s", fname_without_path_extension);
 			}
 			break;
@@ -123,7 +123,7 @@ static void producelabelvalue(uint64_t switchvalue)
 			cellDbgFontPuts(0.5f, menu_emu_settings.items[menu_emu_settings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), *(menu_emu_settings.items[switchvalue].setting_ptr) ? GREEN : ORANGE, *(menu_emu_settings.items[switchvalue].setting_ptr) ? "Original (X->B, O->A)" : "Better (X->A, []->B)");
 			break;
 		case SETTING_KEEP_ASPECT_RATIO:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, 0.91f, Graphics->get_aspect_ratio_float(Settings.PS3KeepAspect) == SCREEN_4_3_ASPECT_RATIO ? GREEN : ORANGE, "%s%d:%d", Graphics->calculate_aspect_ratio_before_game_load() ? "(Auto)" : "", (int)Graphics->get_aspect_ratio_int(0), (int)Graphics->get_aspect_ratio_int(1));
+			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, 0.91f, ps3graphics_get_aspect_ratio_float(Settings.PS3KeepAspect) == SCREEN_4_3_ASPECT_RATIO ? GREEN : ORANGE, "%s%d:%d", ps3graphics_calculate_aspect_ratio_before_game_load() ? "(Auto)" : "", (int)ps3graphics_get_aspect_ratio_int(0), (int)ps3graphics_get_aspect_ratio_int(1));
 			cellDbgFontDraw();
 			break;
 		case SETTING_HW_TEXTURE_FILTER:

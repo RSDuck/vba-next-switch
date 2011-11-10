@@ -93,7 +93,6 @@ void emulator_toggle_sound(uint64_t soundmode);
 void emulator_implementation_save_custom_controls(bool showdialog);
 void emulator_implementation_set_texture(const char * fname);
 
-extern PS3Graphics* 			Graphics;
 extern int				srcWidth, srcHeight;
 extern oskutil_params			oskutil_handle;
 

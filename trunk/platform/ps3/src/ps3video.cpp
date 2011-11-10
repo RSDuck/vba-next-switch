@@ -14,6 +14,68 @@
 
 #define MENU_SHADER_NO 2
 
+/* public  variables */
+static float aspectratios[LAST_ASPECT_RATIO];
+static uint32_t aspect_x, aspect_y;
+uint32_t frame_count;
+
+/* private variables */
+static uint32_t fbo_enable;
+static uint32_t m_tripleBuffering;
+static uint32_t m_overscan;
+static uint32_t m_pal60Hz;
+static uint32_t m_smooth, m_smooth2;
+static uint8_t *decode_buffer;
+static uint32_t m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height;
+static uint32_t m_viewport_x_temp, m_viewport_y_temp, m_viewport_width_temp, m_viewport_height_temp, m_delta_temp;
+static uint32_t m_vsync;
+static int m_calculate_aspect_ratio_before_game_load;
+static int m_currentResolutionPos;
+static int m_resolutionId;
+static uint32_t fbo_scale;
+static uint32_t fbo_width, fbo_height;
+static uint32_t fbo_vp_width, fbo_vp_height;
+static uint32_t m_currentResolutionId;
+static uint32_t m_initialResolution;
+static float m_overscan_amount;
+static float m_ratio;
+static GLuint _cgViewWidth;
+static GLuint _cgViewHeight;
+static GLuint fbo_tex;
+static GLuint fbo;
+static GLuint gl_width;
+static GLuint gl_height;
+static GLuint tex;
+static GLuint tex_menu;
+static GLuint tex_backdrop;
+static GLuint vbo[2];
+static unsigned m_width, m_height, m_pitch;
+
+static GLfloat m_left, m_right, m_bottom, m_top, m_zNear, m_zFar;
+static char curFragmentShaderPath[3][MAX_PATH_LENGTH];
+
+static std::vector<uint32_t> m_supportedResolutions;
+static CGcontext _cgContext;
+static CGprogram _vertexProgram[3];
+static CGprogram _fragmentProgram[3];
+
+/* cg uniform variables */
+static CGparameter _cgpModelViewProj[3];
+static CGparameter _cgpVideoSize[3];
+static CGparameter _cgpTextureSize[3];
+static CGparameter _cgpOutputSize[3];
+static CGparameter _cgp_vertex_VideoSize[3];
+static CGparameter _cgp_vertex_TextureSize[3];
+static CGparameter _cgp_vertex_OutputSize[3];
+static CGparameter _cgp_timer[3];
+static CGparameter _cgp_vertex_timer[3];
+
+static PSGLdevice* psgl_device;
+static PSGLcontext* psgl_context;
+static CellVideoOutState m_stored_video_state;
+//snes_tracker_t *tracker; // State tracker
+//static std::vector<lookup_texture> lut_textures; // Lookup textures in use.
+
 /******************************************************************************* 
 	Calculate macros
 ********************************************************************************/
@@ -117,7 +179,7 @@
 	Calculate functions
 ********************************************************************************/
 
-int PS3Graphics::calculate_aspect_ratio_before_game_load()
+int ps3graphics_calculate_aspect_ratio_before_game_load()
 {
    return m_calculate_aspect_ratio_before_game_load;
 }
@@ -125,65 +187,25 @@ int PS3Graphics::calculate_aspect_ratio_before_game_load()
 /******************************************************************************* 
 	PSGL
 ********************************************************************************/
-
-PS3Graphics::PS3Graphics(uint32_t resolution, uint32_t aspect, uint32_t smooth, uint32_t smooth2, const char * shader, const char * shader2, const char * menu_shader, uint32_t overscan, float overscan_amount, uint32_t pal60Hz, uint32_t vsync, uint32_t tripleBuffering, uint32_t viewport_x, uint32_t viewport_y, uint32_t viewport_width, uint32_t viewport_height)
+static void init_fbo_memb()
 {
-	//psglgraphics
-	psgl_device = NULL;
-	psgl_context = NULL;
-	gl_width = 0;
-	gl_height = 0;
+	fbo = 0;
+	fbo_tex = 0;
+	tex_menu = 0;
+	tex_backdrop = 0;
 
-	m_smooth = smooth;
-	m_smooth2 = smooth2;
-	CheckResolution(resolution) ? m_resolutionId = resolution : m_resolutionId = 0;
-	set_aspect_ratio(aspect, 0);
+	fbo_enable = false;
 
-	SetOverscan(overscan, overscan_amount, 0);
-	m_pal60Hz = pal60Hz;
-	m_vsync = vsync;
-	m_tripleBuffering =  tripleBuffering;
-
-	strcpy(_curFragmentShaderPath[0], shader); 
-	strcpy(_curFragmentShaderPath[1], shader2); 
-	strcpy(_curFragmentShaderPath[2], menu_shader); 
-
-	decode_buffer = (uint8_t*)memalign(128, 2048 * 2048 * 4);
-	memset(decode_buffer, 0, (2048 * 2048 * 4));
-
-	init_fbo_memb();
-
-	m_width = 240;
-	m_height = 160;
-
-	m_viewport_x = viewport_x;
-	m_viewport_y = viewport_y;
-	m_viewport_width = viewport_width;
-	m_viewport_height = viewport_height;
-	m_calculate_aspect_ratio_before_game_load = 1;
-
-	setup_aspect_ratio_array();
-}
-
-PS3Graphics::~PS3Graphics()
-{
-	Deinit();
-	free(decode_buffer);
-}
-
-void PS3Graphics::Init(uint32_t scaleEnabled, uint32_t scaleFactor)
-{
-	PSGLInitDevice(m_resolutionId, m_pal60Hz, m_tripleBuffering);
-	int32_t ret = PSGLInit(scaleEnabled, scaleFactor);
-
-	if (ret == CELL_OK)
+	for(int i = 0; i < 3; i++)
 	{
-		GetAllAvailableResolutions();
-		SetResolution();
+		_vertexProgram[i] = NULL;
+		_fragmentProgram[i] = NULL;
 	}
+
+	//tracker = NULL;
 }
 
-void PS3Graphics::PSGLInitDevice(uint32_t resolutionId, uint16_t pal60Hz, uint16_t tripleBuffering)
+static void ps3graphics_psgl_init_device(uint32_t resolutionId, uint16_t pal60Hz, uint16_t tripleBuffering)
 {
 	PSGLdeviceParameters params;
 	PSGLinitOptions options;
@@ -252,15 +274,44 @@ void PS3Graphics::PSGLInitDevice(uint32_t resolutionId, uint16_t pal60Hz, uint16
 	psglResetCurrentContext();
 }
 
-int32_t PS3Graphics::PSGLInit(uint32_t scaleEnable, uint32_t scaleFactor)
+int32_t ps3graphics_init_cg()
+{
+	cgRTCgcInit();
+
+	_cgContext = cgCreateContext();
+	if (_cgContext == NULL)
+	{
+		printf("Error creating Cg Context\n");
+		return 1;
+	}
+
+	for (unsigned i = 0; i < 3; i++)
+	{
+		if (strlen(curFragmentShaderPath[i]) > 0)
+		{
+			if( ps3graphics_load_fragment_shader(curFragmentShaderPath[i], i) != CELL_OK)
+				return 1;
+		}
+		else
+		{
+			strcpy(curFragmentShaderPath[i], DEFAULT_SHADER_FILE);
+			if (ps3graphics_load_fragment_shader(curFragmentShaderPath[i], i) != CELL_OK)
+				return 1;
+		}
+	}
+
+	return CELL_OK;
+}
+
+static int32_t ps3graphics_psgl_init(uint32_t scaleEnable, uint32_t scaleFactor)
 {
 	glDisable(GL_DEPTH_TEST);
-	set_vsync(m_vsync);
+	ps3graphics_set_vsync(m_vsync);
 
 	if(scaleEnable)
-		SetFBOScale(scaleEnable, scaleFactor);
+		ps3graphics_set_fbo_scale(scaleEnable, scaleFactor);
 
-	InitCg();
+	ps3graphics_init_cg();
 
 	SetViewports();
 
@@ -281,8 +332,8 @@ int32_t PS3Graphics::PSGLInit(uint32_t scaleEnable, uint32_t scaleFactor)
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	SetSmooth(m_smooth);
-	SetSmooth(m_smooth2, 1);
+	ps3graphics_set_smooth(m_smooth);
+	ps3graphics_set_smooth(m_smooth2, 1);
 
 	// PSGL doesn't clear the screen on startup, so let's do that here.
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -320,31 +371,101 @@ int32_t PS3Graphics::PSGLInit(uint32_t scaleEnable, uint32_t scaleFactor)
 	return CELL_OK;
 }
 
-void PS3Graphics::init_fbo_memb()
+static void ps3graphics_get_all_available_resolutions()
 {
-	fbo = 0;
-	fbo_tex = 0;
-	tex_menu = 0;
-	tex_backdrop = 0;
+	bool defaultresolution = true;
+	uint32_t videomode[] = {
+		CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_RESOLUTION_576,
+		CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_RESOLUTION_720,
+		CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_RESOLUTION_1440x1080,
+		CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_RESOLUTION_1080};
 
-	fbo_enable = false;
-
-	for(int i = 0; i < 3; i++)
-	{
-		_vertexProgram[i] = NULL;
-		_fragmentProgram[i] = NULL;
+	// Provide future expandability of the videomode array
+	uint16_t num_videomodes = sizeof(videomode)/sizeof(uint32_t);
+	for (int i=0; i < num_videomodes; i++) {
+		if (ps3graphics_check_resolution(videomode[i]))
+		{
+			m_supportedResolutions.push_back(videomode[i]);
+			m_initialResolution = videomode[i];
+			if (m_currentResolutionId == videomode[i])
+			{
+				defaultresolution = false;
+				m_currentResolutionPos = m_supportedResolutions.size()-1;
+			}
+		}
 	}
 
-	//tracker = NULL;
+	// In case we didn't specify a resolution - make the last resolution
+	// that was added to the list (the highest resolution) the default resolution
+	if (m_currentResolutionPos > num_videomodes | defaultresolution)
+		m_currentResolutionPos = m_supportedResolutions.size()-1;
 }
 
-void PS3Graphics::Deinit()
+static void ps3graphics_set_resolution()
 {
-	glDeleteTextures(1, &tex);
-	PSGLDeInitDevice();
+	cellVideoOutGetState(CELL_VIDEO_OUT_PRIMARY, 0, &m_stored_video_state);
 }
 
-void PS3Graphics::PSGLDeInitDevice()
+static void ps3graphics_init(uint32_t scaleEnabled, uint32_t scaleFactor)
+{
+	ps3graphics_psgl_init_device(m_resolutionId, m_pal60Hz, m_tripleBuffering);
+	int32_t ret = ps3graphics_psgl_init(scaleEnabled, scaleFactor);
+
+	if (ret == CELL_OK)
+	{
+		ps3graphics_get_all_available_resolutions();
+		ps3graphics_set_resolution();
+	}
+}
+
+
+void ps3graphics_new(uint32_t resolution, uint32_t aspect, uint32_t smooth, uint32_t smooth2, const char * shader, const char * shader2, const char * menu_shader, uint32_t overscan, float overscan_amount, uint32_t pal60Hz, uint32_t vsync, uint32_t tripleBuffering, uint32_t viewport_x, uint32_t viewport_y, uint32_t viewport_width, uint32_t viewport_height, uint32_t scale_enabled, uint32_t scale_factor)
+{
+	//psglgraphics
+	psgl_device = NULL;
+	psgl_context = NULL;
+	gl_width = 0;
+	gl_height = 0;
+
+	m_smooth = smooth;
+	m_smooth2 = smooth2;
+	ps3graphics_check_resolution(resolution) ? m_resolutionId = resolution : m_resolutionId = 0;
+
+	ps3graphics_set_overscan(overscan, overscan_amount, 0);
+	m_pal60Hz = pal60Hz;
+	m_vsync = vsync;
+	m_tripleBuffering =  tripleBuffering;
+
+	strcpy(curFragmentShaderPath[0], shader); 
+	strcpy(curFragmentShaderPath[1], shader2); 
+	strcpy(curFragmentShaderPath[2], menu_shader); 
+
+	decode_buffer = (uint8_t*)memalign(128, 2048 * 2048 * 4);
+	memset(decode_buffer, 0, (2048 * 2048 * 4));
+
+	init_fbo_memb();
+
+	m_width = 240;
+	m_height = 160;
+	ps3graphics_set_aspect_ratio(aspect, m_width, m_height, 0);
+
+	m_viewport_x = viewport_x;
+	m_viewport_y = viewport_y;
+	m_viewport_width = viewport_width;
+	m_viewport_height = viewport_height;
+	m_calculate_aspect_ratio_before_game_load = 1;
+
+	setup_aspect_ratio_array();
+	ps3graphics_init(scale_enabled, scale_factor);
+}
+
+const char * ps3graphics_get_fragment_shader_path(unsigned index)
+{
+	return curFragmentShaderPath[index];
+}
+
+
+static void ps3graphics_psgl_deinit_device()
 {
 	glFinish();
 	cellDbgFontExit();
@@ -361,6 +482,69 @@ void PS3Graphics::PSGLDeInitDevice()
 	psgl_context = NULL;
 	psgl_device = NULL;
 #endif
+}
+
+static void ps3graphics_deinit()
+{
+	glDeleteTextures(1, &tex);
+	ps3graphics_psgl_deinit_device();
+}
+
+static void ps3graphics_destroy()
+{
+	ps3graphics_deinit();
+	free(decode_buffer);
+
+	#if 0
+	if (tracker)
+	{
+		snes_tracker_free(tracker);
+
+		for (std::vector<lookup_texture>::iterator itr = lut_textures.begin();
+				itr != lut_textures.end(); ++itr)
+		{
+			glDeleteTextures(1, &itr->tex);
+		}
+	}
+	#endif
+}
+
+void ps3graphics_set_fbo_scale(uint32_t enable, unsigned scale)
+{
+	if (scale == 0)
+		scale = 1;
+
+	if (fbo && enable)
+	{
+		glBindFramebufferOES(GL_FRAMEBUFFER_OES, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDeleteTextures(1, &fbo_tex);
+		glDeleteFramebuffersOES(1, &fbo);
+		fbo = 0;
+		fbo_tex = 0;
+	}
+
+	fbo_enable = enable;
+	fbo_scale = scale;
+
+	if (enable)
+	{
+		fbo_width = fbo_height = 256 * scale;
+		glGenFramebuffersOES(1, &fbo);
+		glGenTextures(1, &fbo_tex);
+
+		glBindTexture(GL_TEXTURE_2D, fbo_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, SCREEN_RENDER_PIXEL_FORMAT, fbo_width, fbo_height, 0, SCREEN_RENDER_PIXEL_FORMAT, GL_UNSIGNED_INT_8_8_8_8, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+		glBindFramebufferOES(GL_FRAMEBUFFER_OES, fbo);
+		glFramebufferTexture2DOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, fbo_tex, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindFramebufferOES(GL_FRAMEBUFFER_OES, 0);
+	}
 }
 
 /******************************************************************************* 
@@ -393,7 +577,7 @@ void PS3Graphics::PSGLDeInitDevice()
 	libdbgfont
 ********************************************************************************/
 
-void PS3Graphics::InitDbgFont()
+void ps3graphics_init_dbgfont()
 {
 	CellDbgFontConfig cfg;
 	memset(&cfg, 0, sizeof(cfg));
@@ -403,7 +587,8 @@ void PS3Graphics::InitDbgFont()
 	cellDbgFontInit(&cfg);
 }
 
-void PS3Graphics::dprintf_noswap(float x, float y, float scale, const char* fmt, ...)
+#ifdef CELL_DEBUG_FPS
+static void dprintf_noswap(float x, float y, float scale, const char* fmt, ...)
 {
 	char buffer[512];
 
@@ -416,6 +601,7 @@ void PS3Graphics::dprintf_noswap(float x, float y, float scale, const char* fmt,
 
 	cellDbgFontDraw();
 }
+#endif
 
 /******************************************************************************* 
 	Draw macros
@@ -461,7 +647,33 @@ void PS3Graphics::dprintf_noswap(float x, float y, float scale, const char* fmt,
 	Draw functions
 ********************************************************************************/
 
-void PS3Graphics::Draw(uint8_t *XBuf)
+#if 0
+// Set SNES state uniforms.
+static void ps3graphics_update_state_uniforms(unsigned index)
+{
+	if (tracker)
+	{
+		struct snes_tracker_uniform info[64];
+		unsigned cnt = snes_get_uniform(tracker, info, 64, frame_count);
+		for (unsigned i = 0; i < cnt; i++)
+		{
+			CGparameter param_v = cgGetNamedParameter(_vertexProgram[index], info[i].id);
+			CGparameter param_f = cgGetNamedParameter(_fragmentProgram[index], info[i].id);
+			cgGLSetParameter1f(param_v, info[i].value);
+			cgGLSetParameter1f(param_f, info[i].value);
+		}
+
+		for (std::vector<lookup_texture>::const_iterator itr = lut_textures.begin(); itr != lut_textures.end(); ++itr)
+		{
+			CGparameter param = cgGetNamedParameter(_fragmentProgram[index], itr->id.c_str());
+			cgGLSetTextureParameter(param, itr->tex);
+			cgGLEnableTextureParameter(param);
+		}
+	}
+}
+#endif
+
+void ps3graphics_draw(uint8_t *XBuf)
 {
 	frame_count += 1;
 	if(fbo_enable)
@@ -536,7 +748,7 @@ void PS3Graphics::Draw(uint8_t *XBuf)
 	}
 }
 
-void PS3Graphics::DrawMenu(int width, int height)
+void ps3graphics_draw_menu(int width, int height)
 {
 	float device_aspect = psglGetDeviceAspectRatio(psgl_device);
 	GLuint temp_width = gl_width;
@@ -583,7 +795,7 @@ void PS3Graphics::DrawMenu(int width, int height)
 	cgGLBindProgram(_fragmentProgram[0]);
 }
 
-void PS3Graphics::resize_aspect_mode_input_loop(uint64_t state)
+void ps3graphics_resize_aspect_mode_input_loop(uint64_t state)
 {
 	if(CTRL_LSTICK_LEFT(state) || CTRL_LEFT(state))
 	{
@@ -696,23 +908,23 @@ void PS3Graphics::resize_aspect_mode_input_loop(uint64_t state)
 	Resolution functions
 ********************************************************************************/
 
-void PS3Graphics::ChangeResolution(uint32_t resId, uint16_t pal60Hz, uint16_t tripleBuffering, uint32_t scaleEnabled, uint32_t scaleFactor)
+void ps3graphics_change_resolution(uint32_t resId, uint16_t pal60Hz, uint16_t tripleBuffering, uint32_t scaleEnabled, uint32_t scaleFactor)
 {
 	cellDbgFontExit();
-	PSGLDeInitDevice();
+	ps3graphics_psgl_deinit_device();
 
-	PSGLInitDevice(resId, pal60Hz, tripleBuffering);
-	PSGLInit(scaleEnabled, scaleFactor);
-	InitDbgFont();
-	SetResolution();
+	ps3graphics_psgl_init_device(resId, pal60Hz, tripleBuffering);
+	ps3graphics_psgl_init(scaleEnabled, scaleFactor);
+	ps3graphics_init_dbgfont();
+	ps3graphics_set_resolution();
 }
 
-int PS3Graphics::CheckResolution(uint32_t resId)
+int ps3graphics_check_resolution(uint32_t resId)
 {
 	return cellVideoOutGetResolutionAvailability(CELL_VIDEO_OUT_PRIMARY, resId, CELL_VIDEO_OUT_ASPECT_AUTO,0);
 }
 
-void PS3Graphics::NextResolution()
+void ps3graphics_next_resolution()
 {
 	if(m_currentResolutionPos+1 < m_supportedResolutions.size())
 	{
@@ -721,7 +933,7 @@ void PS3Graphics::NextResolution()
 	}
 }
 
-void PS3Graphics::PreviousResolution()
+void ps3graphics_previous_resolution()
 {
 	if(m_currentResolutionPos > 0)
 	{
@@ -730,50 +942,22 @@ void PS3Graphics::PreviousResolution()
 	}
 }
 
-void PS3Graphics::SwitchResolution(uint32_t resId, uint16_t pal60Hz, uint16_t tripleBuffering, uint32_t scaleEnabled, uint32_t scaleFactor)
+void ps3graphics_switch_resolution(uint32_t resId, uint16_t pal60Hz, uint16_t tripleBuffering, uint32_t scaleEnabled, uint32_t scaleFactor)
 {
-	if(CheckResolution(resId))
+	if(ps3graphics_check_resolution(resId))
 	{
-		ChangeResolution(resId, pal60Hz, tripleBuffering, scaleEnabled, scaleFactor);
-		SetFBOScale(scaleEnabled, scaleFactor);
+		ps3graphics_change_resolution(resId, pal60Hz, tripleBuffering, scaleEnabled, scaleFactor);
+		ps3graphics_set_fbo_scale(scaleEnabled, scaleFactor);
 	}
-	LoadFragmentShader(DEFAULT_MENU_SHADER_FILE, 2);
+	ps3graphics_load_fragment_shader(DEFAULT_MENU_SHADER_FILE, 2);
 }
 
 /******************************************************************************* 
 	Cg
 ********************************************************************************/
 
-int32_t PS3Graphics::InitCg()
-{
-	cgRTCgcInit();
 
-	_cgContext = cgCreateContext();
-	if (_cgContext == NULL)
-	{
-		printf("Error creating Cg Context\n");
-		return 1;
-	}
-
-	for (unsigned i = 0; i < 3; i++)
-	{
-		if (strlen(_curFragmentShaderPath[i]) > 0)
-		{
-			if( LoadFragmentShader(_curFragmentShaderPath[i], i) != CELL_OK)
-				return 1;
-		}
-		else
-		{
-			strcpy(_curFragmentShaderPath[i], DEFAULT_SHADER_FILE);
-			if (LoadFragmentShader(_curFragmentShaderPath[i], i) != CELL_OK)
-				return 1;
-		}
-	}
-
-	return CELL_OK;
-}
-
-CGprogram LoadShaderFromSource(CGcontext cgtx, CGprofile target, const char* filename, const char* entry)
+static CGprogram load_shader_from_source(CGcontext cgtx, CGprofile target, const char* filename, const char* entry)
 {
 	const char* args[] = { "-fastmath", "-unroll=all", "-ifcvt=all", 0 };
 	CGprogram id = cgCreateProgramFromFile(cgtx, CG_SOURCE, filename, target, entry, args);
@@ -781,13 +965,13 @@ CGprogram LoadShaderFromSource(CGcontext cgtx, CGprofile target, const char* fil
 	return id;
 }
 
-int32_t PS3Graphics::LoadFragmentShader(const char * shaderPath, unsigned index)
+int32_t ps3graphics_load_fragment_shader(const char * shaderPath, unsigned index)
 {
 	// store the current path
-	strcpy(_curFragmentShaderPath[index], shaderPath);
+	strcpy(curFragmentShaderPath[index], shaderPath);
 
-	_vertexProgram[index] = LoadShaderFromSource(_cgContext, CG_PROFILE_SCE_VP_RSX, shaderPath, "main_vertex");
-	_fragmentProgram[index] = LoadShaderFromSource(_cgContext, CG_PROFILE_SCE_FP_RSX, shaderPath, "main_fragment");
+	_vertexProgram[index] = load_shader_from_source(_cgContext, CG_PROFILE_SCE_VP_RSX, shaderPath, "main_vertex");
+	_fragmentProgram[index] = load_shader_from_source(_cgContext, CG_PROFILE_SCE_FP_RSX, shaderPath, "main_fragment");
 
 	// bind and enable the vertex and fragment programs
 	cgGLEnableProfile(CG_PROFILE_SCE_VP_RSX);
@@ -816,81 +1000,46 @@ int32_t PS3Graphics::LoadFragmentShader(const char * shaderPath, unsigned index)
 	return CELL_OK;
 }
 
-void PS3Graphics::ResetFrameCounter()
-{
-	frame_count = 0;
-}
-
 /******************************************************************************* 
 	Get functions
 ********************************************************************************/
 
-uint32_t PS3Graphics::GetInitialResolution()
+uint32_t ps3graphics_get_initial_resolution (void)
 {
 	return m_initialResolution;
 }
 
-uint32_t PS3Graphics::GetPAL60Hz()
+uint32_t ps3graphics_get_pal60hz()
 {
 	return m_pal60Hz;
 }
 
-void PS3Graphics::GetAllAvailableResolutions()
-{
-	bool defaultresolution = true;
-	uint32_t videomode[] = {
-		CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_RESOLUTION_576,
-		CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_RESOLUTION_720,
-		CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_RESOLUTION_1440x1080,
-		CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_RESOLUTION_1080};
-
-	// Provide future expandability of the videomode array
-	uint16_t num_videomodes = sizeof(videomode)/sizeof(uint32_t);
-	for (int i=0; i < num_videomodes; i++) {
-		if (CheckResolution(videomode[i]))
-		{
-			m_supportedResolutions.push_back(videomode[i]);
-			m_initialResolution = videomode[i];
-			if (m_currentResolutionId == videomode[i])
-			{
-				defaultresolution = false;
-				m_currentResolutionPos = m_supportedResolutions.size()-1;
-			}
-		}
-	}
-
-	// In case we didn't specify a resolution - make the last resolution
-	// that was added to the list (the highest resolution) the default resolution
-	if (m_currentResolutionPos > num_videomodes | defaultresolution)
-		m_currentResolutionPos = m_supportedResolutions.size()-1;
-}
-
-uint32_t PS3Graphics::GetCurrentResolution()
+uint32_t ps3graphics_get_current_resolution()
 {
 	return m_supportedResolutions[m_currentResolutionPos];
 }
 
-uint32_t PS3Graphics::get_viewport_x(void)
+uint32_t ps3graphics_get_viewport_x(void)
 {
 	return m_viewport_x;
 }
 
-uint32_t PS3Graphics::get_viewport_y(void)
+uint32_t ps3graphics_get_viewport_y(void)
 {
 	return m_viewport_y;
 }
 
-uint32_t PS3Graphics::get_viewport_width(void)
+uint32_t ps3graphics_get_viewport_width(void)
 {
 	return m_viewport_width;
 }
 
-uint32_t PS3Graphics::get_viewport_height(void)
+uint32_t ps3graphics_get_viewport_height(void)
 {
 	return m_viewport_height;
 }
 
-int PS3Graphics::get_aspect_ratio_int(bool orientation)
+int ps3graphics_get_aspect_ratio_int(bool orientation)
 {
 	//orientation true is aspect_y, false is aspect_x
 	if(orientation)
@@ -899,12 +1048,12 @@ int PS3Graphics::get_aspect_ratio_int(bool orientation)
 		return aspect_x;
 }
 
-float PS3Graphics::get_aspect_ratio_float(int enum_)
+float ps3graphics_get_aspect_ratio_float(int enum_)
 {
 	return aspectratios[enum_];
 }
 
-const char * PS3Graphics::GetResolutionLabel(uint32_t resolution)
+const char * ps3graphics_get_resolution_label(uint32_t resolution)
 {
 	switch(resolution)
 	{
@@ -927,7 +1076,7 @@ const char * PS3Graphics::GetResolutionLabel(uint32_t resolution)
 	}
 }
 
-CellVideoOutState PS3Graphics::GetVideoOutState()
+CellVideoOutState ps3graphics_get_video_out_state()
 {
 	return m_stored_video_state;
 }
@@ -936,50 +1085,7 @@ CellVideoOutState PS3Graphics::GetVideoOutState()
 	Set functions
 ********************************************************************************/
 
-void PS3Graphics::SetFBOScale(uint32_t enable, unsigned scale)
-{
-	if (scale == 0)
-		scale = 1;
-
-	if (fbo && enable)
-	{
-		glBindFramebufferOES(GL_FRAMEBUFFER_OES, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glDeleteTextures(1, &fbo_tex);
-		glDeleteFramebuffersOES(1, &fbo);
-		fbo = 0;
-		fbo_tex = 0;
-	}
-
-	fbo_enable = enable;
-	fbo_scale = scale;
-
-	if (enable)
-	{
-		fbo_width = fbo_height = 256 * scale;
-		glGenFramebuffersOES(1, &fbo);
-		glGenTextures(1, &fbo_tex);
-
-		glBindTexture(GL_TEXTURE_2D, fbo_tex);
-		glTexImage2D(GL_TEXTURE_2D, 0, SCREEN_RENDER_PIXEL_FORMAT, fbo_width, fbo_height, 0, SCREEN_RENDER_PIXEL_FORMAT, GL_UNSIGNED_INT_8_8_8_8, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-		glBindFramebufferOES(GL_FRAMEBUFFER_OES, fbo);
-		glFramebufferTexture2DOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, fbo_tex, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindFramebufferOES(GL_FRAMEBUFFER_OES, 0);
-	}
-}
-
-void PS3Graphics::SetResolution()
-{
-	cellVideoOutGetState(CELL_VIDEO_OUT_PRIMARY, 0, &m_stored_video_state);
-}
-
-void PS3Graphics::SetOverscan(uint32_t will_overscan, float amount, uint32_t setviewport)
+void ps3graphics_set_overscan(uint32_t will_overscan, float amount, uint32_t setviewport)
 {
 	m_overscan_amount = amount;
 	m_overscan = will_overscan;
@@ -992,17 +1098,17 @@ void PS3Graphics::SetOverscan(uint32_t will_overscan, float amount, uint32_t set
 	}
 }
 
-void PS3Graphics::SetPAL60Hz(uint32_t pal60Hz)
+void ps3graphics_set_pal60hz(uint32_t pal60Hz)
 {
 	m_pal60Hz = pal60Hz;
 }
 
-void PS3Graphics::SetTripleBuffering(uint32_t triple_buffering)
+void ps3graphics_set_triple_buffering(uint32_t triple_buffering)
 {
 	m_tripleBuffering = triple_buffering;
 }
 
-void PS3Graphics::SetSmooth(uint32_t smooth, unsigned index)
+void ps3graphics_set_smooth(uint32_t smooth, unsigned index)
 {
 	if (index == 0)
 	{
@@ -1013,83 +1119,72 @@ void PS3Graphics::SetSmooth(uint32_t smooth, unsigned index)
 	}
 	else if (fbo_tex)
 	{
-		m_smooth2 = smooth;
 		glBindTexture(GL_TEXTURE_2D, fbo_tex);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_smooth2 ? GL_LINEAR : GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_smooth2 ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
 }
 
-void PS3Graphics::set_aspect_ratio(uint32_t aspect, uint32_t width, uint32_t height, uint32_t setviewport)
+void ps3graphics_set_aspect_ratio(uint32_t aspect, uint32_t width, uint32_t height, uint32_t setviewport)
 {
+	m_calculate_aspect_ratio_before_game_load = 0;
 	switch(aspect)
 	{
 		case ASPECT_RATIO_1_1:
 			m_ratio = SCREEN_1_1_ASPECT_RATIO;
 			aspect_x = 1;
 			aspect_y = 1;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_4_3:
 			m_ratio = SCREEN_4_3_ASPECT_RATIO;
 			aspect_x = 4;
 			aspect_y = 3;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_5_4:
 			m_ratio = SCREEN_5_4_ASPECT_RATIO;
 			aspect_x = 5;
 			aspect_y = 4;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_8_7:
 			m_ratio = SCREEN_8_7_ASPECT_RATIO;
 			aspect_x = 8;
 			aspect_y = 7;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_16_9:
 			m_ratio = SCREEN_16_9_ASPECT_RATIO;
 			aspect_x = 16;
 			aspect_y = 9;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_16_10:
 			m_ratio = SCREEN_16_10_ASPECT_RATIO;
 			aspect_x = 16;
 			aspect_y = 10;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_16_15:
 			m_ratio = SCREEN_16_15_ASPECT_RATIO;
 			aspect_x = 16;
 			aspect_y = 15;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_19_14:
 			m_ratio = SCREEN_19_14_ASPECT_RATIO;
 			aspect_x = 19;
 			aspect_y = 14;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_2_1:
 			m_ratio = SCREEN_2_1_ASPECT_RATIO;
 			aspect_x = 2;
 			aspect_y = 1;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_3_2:
 			m_ratio = SCREEN_3_2_ASPECT_RATIO;
 			aspect_x = 3;
 			aspect_y = 2;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_3_4:
 			m_ratio = SCREEN_3_4_ASPECT_RATIO;
 			aspect_x = 3;
 			aspect_y = 4;
-			m_calculate_aspect_ratio_before_game_load = 0;
 			break;
 		case ASPECT_RATIO_AUTO:
 			m_calculate_aspect_ratio_before_game_load = 1;
@@ -1110,7 +1205,6 @@ void PS3Graphics::set_aspect_ratio(uint32_t aspect, uint32_t width, uint32_t hei
 			}
 			break;
 		case ASPECT_RATIO_CUSTOM:
-			m_calculate_aspect_ratio_before_game_load = 0;
 			m_ratio = SCREEN_CUSTOM_ASPECT_RATIO;
 			aspect_x = 0;
 			aspect_y = 1;
@@ -1125,19 +1219,19 @@ void PS3Graphics::set_aspect_ratio(uint32_t aspect, uint32_t width, uint32_t hei
 	}
 }
 
-void PS3Graphics::SetDimensions(unsigned width, unsigned height, unsigned pitch)
+void ps3graphics_set_dimensions(unsigned width, unsigned height, unsigned pitch)
 {
 	SetScreenDimensions(width, height, pitch, 1);
 	fbo_vp_width = m_width * fbo_scale;
 	fbo_vp_height = m_height * fbo_scale;
 }
 
-void PS3Graphics::set_vsync(uint32_t vsync)
+void ps3graphics_set_vsync(uint32_t vsync)
 {
 	vsync ? glEnable(GL_VSYNC_SCE) : glDisable(GL_VSYNC_SCE);
 }
 
-uint32_t PS3Graphics::SetTextMessageSpeed(uint32_t value)
+uint32_t ps3graphics_set_text_message_speed(uint32_t value)
 {
 	return frame_count + value;
 }
@@ -1181,8 +1275,9 @@ static int img_free(void *ptr, void * a)
 	Image decompression - libJPEG
 ********************************************************************************/
 
-bool PS3Graphics::load_jpeg(const std::string& path, unsigned &width, unsigned &height, uint8_t *data)
+static bool ps3graphics_load_jpeg(const char * path, unsigned &width, unsigned &height, uint8_t *data)
 {
+	// More Holy shit
 	CtrlMallocArg              MallocArg;
 	CtrlFreeArg                FreeArg;
 	CellJpgDecMainHandle       mHandle = NULL;
@@ -1207,7 +1302,7 @@ bool PS3Graphics::load_jpeg(const std::string& path, unsigned &width, unsigned &
 	InParam.cbCtrlFreeFunc = img_free;
 	InParam.cbCtrlFreeArg = &FreeArg;
 
-	int ret_jpeg, ret_file, ret, ok = -1;
+	int ret_jpeg, ret = -1;
 	ret_jpeg = cellJpgDecCreate(&mHandle, &InParam, &OutParam);
 
 	if (ret_jpeg != CELL_OK)
@@ -1217,7 +1312,7 @@ bool PS3Graphics::load_jpeg(const std::string& path, unsigned &width, unsigned &
 
 	memset(&src, 0, sizeof(CellJpgDecSrc));
 	src.srcSelect        = CELL_JPGDEC_FILE;
-	src.fileName         = path.c_str();
+	src.fileName         = path;
 	src.fileOffset       = 0;
 	src.fileSize         = 0;
 	src.streamPtr        = NULL;
@@ -1225,7 +1320,7 @@ bool PS3Graphics::load_jpeg(const std::string& path, unsigned &width, unsigned &
 
 	src.spuThreadEnable  = CELL_JPGDEC_SPU_THREAD_ENABLE;
 
-	ret_file = ret = cellJpgDecOpen(mHandle, &sHandle, &src, &opnInfo);
+	ret = cellJpgDecOpen(mHandle, &sHandle, &src, &opnInfo);
 
 	if (ret != CELL_OK)
 	{
@@ -1245,7 +1340,6 @@ bool PS3Graphics::load_jpeg(const std::string& path, unsigned &width, unsigned &
 	inParam.outputColorSpace   = CELL_JPG_ARGB;
 	inParam.downScale          = 1;
 	inParam.outputColorAlpha = 0xfe;
-
 	ret = cellJpgDecSetParameter(mHandle, sHandle, &inParam, &outParam);
 
 	if (ret != CELL_OK)
@@ -1276,7 +1370,6 @@ error:
 		cellJpgDecClose(mHandle, sHandle);
 	if (mHandle)
 		cellJpgDecDestroy(mHandle);
-
 	return false;
 }
 
@@ -1284,7 +1377,7 @@ error:
 	Image decompression - libPNG
 ********************************************************************************/
 
-bool PS3Graphics::load_png(const std::string& path, unsigned &width, unsigned &height, uint8_t *data)
+static bool ps3graphics_load_png(const char * path, unsigned &width, unsigned &height, uint8_t *data)
 {
 	// Holy shit, Sony!
 	CtrlMallocArg              MallocArg;
@@ -1311,7 +1404,7 @@ bool PS3Graphics::load_png(const std::string& path, unsigned &width, unsigned &h
 	InParam.cbCtrlFreeFunc = img_free;
 	InParam.cbCtrlFreeArg = &FreeArg;
 
-	int ret_png, ret_file, ret, ok = -1;
+	int ret_png, ret = -1;
 	ret_png = cellPngDecCreate(&mHandle, &InParam, &OutParam);
 
 	if (ret_png != CELL_OK)
@@ -1319,7 +1412,7 @@ bool PS3Graphics::load_png(const std::string& path, unsigned &width, unsigned &h
 
 	memset(&src, 0, sizeof(CellPngDecSrc));
 	src.srcSelect        = CELL_PNGDEC_FILE;
-	src.fileName         = path.c_str();
+	src.fileName         = path;
 	src.fileOffset       = 0;
 	src.fileSize         = 0;
 	src.streamPtr        = 0;
@@ -1327,7 +1420,7 @@ bool PS3Graphics::load_png(const std::string& path, unsigned &width, unsigned &h
 
 	src.spuThreadEnable  = CELL_PNGDEC_SPU_THREAD_ENABLE;
 
-	ret_file = ret = cellPngDecOpen(mHandle, &sHandle, &src, &opnInfo);
+	ret = cellPngDecOpen(mHandle, &sHandle, &src, &opnInfo);
 
 	if (ret != CELL_OK)
 		goto error;
@@ -1348,8 +1441,7 @@ bool PS3Graphics::load_png(const std::string& path, unsigned &width, unsigned &h
 	if (ret != CELL_OK)
 		goto error;
 
-	// Is this pitch?
-	dCtrlParam.outputBytesPerLine = 1920 * 4;
+	dCtrlParam.outputBytesPerLine = outParam.outputWidth * 4;
 	ret = cellPngDecDecodeData(mHandle, sHandle, data, &dCtrlParam, &dOutInfo);
 
 	if (ret != CELL_OK || dOutInfo.status != CELL_PNGDEC_DEC_STATUS_FINISH)
@@ -1371,7 +1463,7 @@ error:
 	return false;
 }
 
-void PS3Graphics::setup_texture(GLuint tex, unsigned width, unsigned height)
+static void ps3graphics_setup_texture(GLuint tex, unsigned width, unsigned height)
 {
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -1391,7 +1483,7 @@ void PS3Graphics::setup_texture(GLuint tex, unsigned width, unsigned height)
 	glBindTexture(GL_TEXTURE_2D, tex);
 }
 
-bool PS3Graphics::LoadMenuTexture(enum menu_type type, const std::string &path)
+bool ps3graphics_load_menu_texture(enum menu_type type, const char * path)
 {
 	GLuint *texture = NULL;
 
@@ -1409,21 +1501,222 @@ bool PS3Graphics::LoadMenuTexture(enum menu_type type, const std::string &path)
 
 	unsigned width, height;
 
-	if(strstr(path.c_str(), ".PNG") != NULL || strstr(path.c_str(), ".png") != NULL)
+	if(strstr(path, ".PNG") != NULL || strstr(path, ".png") != NULL)
 	{
-		if (!load_png(path, width, height, decode_buffer))
+		if (!ps3graphics_load_png(path, width, height, decode_buffer))
 			return false;
 	}
 	else
 	{
-		if (!load_jpeg(path, width, height, decode_buffer))
+		if (!ps3graphics_load_jpeg(path, width, height, decode_buffer))
 			return false;
 	}
 
 	if (*texture == 0)
 		glGenTextures(1, texture);
 
-	setup_texture(*texture, width, height);
+	ps3graphics_setup_texture(*texture, width, height);
 
 	return true;
 }
+
+/******************************************************************************* 
+	Game Aware Shaders
+********************************************************************************/
+
+#if 0
+static void ps3graphics_load_textures(config_file_t *conf, char *attr)
+{
+	const char *id = strtok(attr, ";");
+	while (id)
+	{
+		char *path;
+		if (!config_get_string(conf, id, &path))
+			goto error;
+
+		unsigned width, height;
+
+		lookup_texture tex;
+		tex.id = id;
+
+		if(strstr(path, ".PNG") != NULL || strstr(path, ".png") != NULL)
+		{
+			if (!ps3graphics_load_png(path, width, height, decode_buffer))
+				goto error;
+		}
+		else
+		{
+			if (!ps3graphics_load_jpeg(path, width, height, decode_buffer))
+				goto error;
+		}
+
+		glGenTextures(1, &tex.tex);
+		ps3graphics_setup_texture(tex.tex, width, height);
+
+		lut_textures.push_back(tex);
+		free(path);
+		id = strtok(NULL, ";");
+	}
+
+	free(attr);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	return;
+
+error:
+	glBindTexture(GL_TEXTURE_2D, tex);
+	free(attr);
+}
+#endif
+
+#if 0
+static void ps3graphics_load_imports(config_file_t *conf, char *attr)
+{
+	std::vector<snes_tracker_uniform_info> info;
+	const char *id = strtok(attr, ";");
+	while (id)
+	{
+		snes_tracker_uniform_info uniform;
+
+		char base[MAX_PATH_LENGTH];
+		strcpy(base, id);
+		char semantic_base[MAX_PATH_LENGTH];
+		snprintf(semantic_base, sizeof(semantic_base), "%s_semantic", base);
+		char wram_base[MAX_PATH_LENGTH];
+		snprintf(wram_base, sizeof(wram_base), "%s_wram", base);
+		char input_base[MAX_PATH_LENGTH];
+		snprintf(input_base, sizeof(input_base), "%s_input_slot", base);
+		char mask_base[MAX_PATH_LENGTH];
+		snprintf(mask_base, sizeof(mask_base), "%s_mask", base);
+
+		char *semantic = NULL;
+		unsigned addr = 0;
+
+		if (!config_get_string(conf, semantic_base, &semantic))
+			goto error;
+
+		int slot = 0;
+		enum snes_ram_type ram_type = SSNES_STATE_WRAM;
+		if (config_get_int(conf, input_base, &slot))
+		{
+			switch (slot)
+			{
+				case 1:
+					ram_type = SSNES_STATE_INPUT_SLOT1;
+					break;
+				case 2:
+					ram_type = SSNES_STATE_INPUT_SLOT2;
+					break;
+
+				default:
+					free(semantic);
+					goto error;
+			}
+		}
+		else if (!config_get_hex(conf, wram_base, &addr))
+		{
+			free(semantic);
+			goto error;
+		}
+
+		enum snes_tracker_type tracker_type;
+
+		if (addr >= 128 * 1024)
+			goto error;
+
+		if (strcmp(semantic, "capture") == 0)
+			tracker_type = SSNES_STATE_CAPTURE;
+		else if (strcmp(semantic, "transition") == 0)
+			tracker_type = SSNES_STATE_TRANSITION;
+		else if (strcmp(semantic, "capture_previous") == 0)
+			tracker_type = SSNES_STATE_CAPTURE_PREV;
+		else if (strcmp(semantic, "transition_previous") == 0)
+			tracker_type = SSNES_STATE_TRANSITION_PREV;
+		else if (strcmp(semantic, "transition_count") == 0)
+			tracker_type = SSNES_STATE_TRANSITION_COUNT;
+		else
+			goto error;
+
+		unsigned mask = 0;
+		char *mask_val;
+		if (config_get_string(conf, mask_base, &mask_val))
+		{
+			mask = strtoul(mask_val, NULL, 16);
+			free(mask_val);
+		}
+
+		strncpy(uniform.id, id, sizeof(uniform.id));
+		uniform.addr = addr;
+		uniform.type = tracker_type;
+		uniform.mask = mask;
+		uniform.ram_type = ram_type;
+
+		info.push_back(uniform);
+		free(semantic);
+
+		id = strtok(NULL, ";");
+	}
+
+	snes_tracker_info tracker_info;
+	tracker_info.wram = (const uint8_t**)&Memory.RAM;
+	tracker_info.info = &info[0];
+	tracker_info.info_elem = info.size();
+
+	tracker = snes_tracker_init(&tracker_info);
+
+	free(attr);
+	return;
+
+error:
+	free(attr);
+}
+
+void ps3graphics_init_state_uniforms(const char * path)
+{
+	if (tracker)
+	{
+		snes_tracker_free(tracker);
+		tracker = NULL;
+
+		for (std::vector<lookup_texture>::iterator itr = lut_textures.begin();
+				itr != lut_textures.end(); ++itr)
+		{
+			glDeleteTextures(1, &itr->tex);
+		}
+
+		lut_textures.clear();
+	}
+
+	config_file_t *conf = config_file_new(path);
+	if (!conf)
+		return;
+
+	char *textures = NULL;
+	char *imports = NULL;
+	if (!config_get_string(conf, "textures", &textures))
+	{
+		return;
+	}
+
+	ps3graphics_load_textures(conf, textures);
+
+	if (!config_get_string(conf, "imports", &imports))
+	{
+		return;
+	}
+
+	char * tempshaders[2];
+
+	if (config_get_string(conf, "shader0", &tempshaders[0]))
+		ps3graphics_load_fragment_shader(tempshaders[0], 0);
+
+	if (config_get_string(conf, "shader1", &tempshaders[1]))
+		ps3graphics_load_fragment_shader(tempshaders[1], 1);
+
+	for(int i = 0; i < 2; i++)
+		free(tempshaders[i]);
+
+	ps3graphics_load_imports(conf, imports);
+
+	config_file_free(conf);
+}
+#endif

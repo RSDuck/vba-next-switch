@@ -20,8 +20,6 @@
 
 #ifdef __CELLOS_LV2__
 #include "../../../platform/ps3/src/ps3video.hpp"
-
-extern PS3Graphics* Graphics;
 #endif
 
 #ifdef __GNUC__

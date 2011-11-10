@@ -83,7 +83,7 @@ static void do_select_file(uint32_t menu_id)
 					strncpy(Settings.GameAwareShaderPath, path, sizeof(Settings.GameAwareShaderPath));
 					break;
 				case SHADER_CHOICE:
-					Graphics->LoadFragmentShader(path, set_shader);
+					ps3graphics_load_fragment_shader(path, set_shader);
 					break;
 				case PRESET_CHOICE:
 					emulator_implementation_set_shader_preset(path);

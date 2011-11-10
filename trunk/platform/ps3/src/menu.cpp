@@ -895,7 +895,7 @@ void MenuMainLoop()
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		Graphics->DrawMenu(1920, 1080);
+		ps3graphics_draw_menu(1920, 1080);
 
 		MenuGoTo();
 
