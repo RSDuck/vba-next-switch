@@ -464,38 +464,6 @@ static void producesettingentry(uint64_t switchvalue)
 				update_item_colors = 1;
 			}
 			break;
-		case SETTING_CONTROLS_SCHEME:
-			if(CTRL_RIGHT(state) | CTRL_LSTICK_RIGHT(state))
-			{
-				switch(Settings.ControlScheme)
-				{
-					case CONTROL_SCHEME_DEFAULT:
-						Settings.ControlScheme = CONTROL_SCHEME_CUSTOM;
-						break;
-					case CONTROL_SCHEME_CUSTOM:
-						break;
-				}
-				emulator_implementation_switch_control_scheme();
-				sys_timer_usleep(FILEBROWSER_DELAY);
-			}
-
-			if(CTRL_LEFT(state) | CTRL_LSTICK_LEFT(state))
-			{
-				switch(Settings.ControlScheme)
-				{
-					case CONTROL_SCHEME_CUSTOM:
-						Settings.ControlScheme = CONTROL_SCHEME_DEFAULT;
-						break;
-					case CONTROL_SCHEME_DEFAULT:
-						break;
-				}
-				emulator_implementation_switch_control_scheme();
-				sys_timer_usleep(FILEBROWSER_DELAY);
-			}
-
-			if(CTRL_START(state))
-				Settings.ControlScheme = CONTROL_SCHEME_DEFAULT;
-			break;
 		case SETTING_PATH_DEFAULT_ROM_DIRECTORY:
 			if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_RIGHT(state) || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(state))
 			{

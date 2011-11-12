@@ -906,23 +906,6 @@ static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 		BTN_NONE
 	},
 	{
-		SETTING_CONTROLS_BUTTON_L2_BUTTON_R2,
-		"Button combo: L2 & R2",
-		0.0f,
-		0.0f,
-		YELLOW,
-		WHITE,
-		{0},
-		LIGHTBLUE,
-		0.91f,
-		0.09f,
-		0.83f,
-		NULL, //setting ptr
-		{0},
-		{0},
-		BTN_NONE
-	},
-	{
 		SETTING_CONTROLS_BUTTON_L2_BUTTON_R3,
 		"Button combo: L2 & R3",
 		0.0f,
@@ -1109,23 +1092,6 @@ static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 		{0},
 		{0},
 		BTN_EXITTOMENU
-	},
-	{
-		SETTING_CONTROLS_BUTTON_L2_BUTTON_R2_ANALOG_R_DOWN,
-		"Button combo: R2 & L2 & RS Down",
-		0.0f,
-		0.0f,
-		YELLOW,
-		WHITE,
-		{0},
-		LIGHTBLUE,
-		0.91f,
-		0.09f,
-		0.83f,
-		NULL, //setting ptr
-		{0},
-		{0},
-		BTN_NONE
 	},
 	{
 		SETTING_CONTROLS_ANALOG_R_UP,

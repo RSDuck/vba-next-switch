@@ -163,6 +163,111 @@ static void producelabelvalue(uint64_t switchvalue)
 		case SETTING_PATH_SRAM_DIRECTORY:
 			cellDbgFontPuts		(0.5f,	menu_pathsettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	!(strcmp(Settings.PS3PathSRAM,"")) ? GREEN : ORANGE, !(strcmp(Settings.PS3PathSRAM,"")) ? "Same dir as ROM" : Settings.PS3PathSRAM);
 			break;
+		case SETTING_CONTROLS_SCHEME:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Input Control scheme preset [%s] is selected.\n", Settings.PS3CurrentInputPresetTitle);
+			break;
+		case SETTING_CONTROLS_DPAD_UP:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [D-Pad Up] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.DPad_Up[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_DPAD_DOWN:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [D-Pad Down] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.DPad_Down[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_DPAD_LEFT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [D-Pad Left] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.DPad_Left[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_DPAD_RIGHT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [D-Pad Right] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.DPad_Right[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_CIRCLE:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Circle button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonCircle[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_CROSS:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Cross button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonCross[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_TRIANGLE:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Triangle button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonTriangle[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_SQUARE:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Square button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonSquare[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_SELECT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Select button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonSelect[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_START:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Start button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonStart[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L1:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [L1 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonL1[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R1:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [R1 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonR1[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [L2 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonL2[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [R2 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonR2[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [L3 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonL3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [R3 button] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonR3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_BUTTON_L3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + L3] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonL2_ButtonL3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_BUTTON_R3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + R3] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonL2_ButtonR3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_RIGHT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + Right Analog Stick - Right] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonL2_AnalogR_Right[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_LEFT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + Right Analog Stick - Left] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonL2_AnalogR_Left[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_UP:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + Right Analog Stick - Up] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonL2_AnalogR_Up[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_DOWN:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [L2 + Right Analog Stick - Down] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonL2_AnalogR_Down[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_RIGHT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R2 + Right Analog Stick - Right] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonR2_AnalogR_Right[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_LEFT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R2 + Right Analog Stick - Left] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonR2_AnalogR_Left[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_UP:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R2 + Right Analog Stick - Up] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonR2_AnalogR_Up[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_DOWN:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R2 + Right Analog Stick - Down] on the PS3 controller\nis mapped to action: [%s].", Input_PrintMappedButton(PS3Input.ButtonR2_AnalogR_Down[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R2_BUTTON_R3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R2 + R3] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonR2_ButtonR3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_BUTTON_R3_BUTTON_L3:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Button combo [R3 + L3] on the PS3 controller is mapped to action:\n[%s].", Input_PrintMappedButton(PS3Input.ButtonR3_ButtonL3[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_ANALOG_R_UP:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Analog Stick Right - Up] on the PS3 controller is mapped to action:\n[%s] (NOTE: Press SELECT to change type).", Input_PrintMappedButton(PS3Input.AnalogR_Up[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_ANALOG_R_DOWN:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Analog Stick Right - Down] on the PS3 controller is mapped to action:\n[%s] (NOTE: Press SELECT to change type).", Input_PrintMappedButton(PS3Input.AnalogR_Down[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_ANALOG_R_LEFT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Analog Stick Right - Left] on the PS3 controller is mapped to action:\n[%s] (NOTE: Press SELECT to change type).", Input_PrintMappedButton(PS3Input.AnalogR_Left[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_ANALOG_R_RIGHT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [Analog Stick Right - Right] on the PS3 controller is mapped to action:\n[%s] (NOTE: Press SELECT to change type).", Input_PrintMappedButton(PS3Input.AnalogR_Right[currently_selected_controller_menu]));
+			break;
+		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
+			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Save the custom control settings.\nNOTE: This option will not do anything with Control Scheme [New] or [Default].");
+			break;
+		case SETTING_CONTROLS_DEFAULT_ALL:
+			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Set all 'Controls' settings back to their default values.");
+			break;
 		case SETTING_DEFAULT_VIDEO_ALL:
 		case SETTING_SAVE_SHADER_PRESET:
 		case SETTING_DEFAULT_AUDIO_ALL:

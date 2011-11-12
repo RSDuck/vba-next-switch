@@ -51,6 +51,7 @@ struct SSettings
 	char		ShaderPresetTitle[MAX_PATH_LENGTH];
 	char		PS3CurrentBorder[MAX_PATH_LENGTH];
 	char		GameAwareShaderPath[MAX_PATH_LENGTH];
+	char		PS3CurrentInputPresetTitle[MAX_PATH_LENGTH];
 };
 
 extern struct SSettings			Settings;

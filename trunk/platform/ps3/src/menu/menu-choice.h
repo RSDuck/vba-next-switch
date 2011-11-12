@@ -24,6 +24,14 @@ static void do_select_file(uint32_t menu_id)
 			strncpy(object, "Shader preset", sizeof(object));
                         strncpy(comment, "INFO - Select a shader preset from the menu by pressing the X button. ", sizeof(comment));
 			break;
+		case INPUT_PRESET_CHOICE:
+			strncpy(dir_path, INPUT_PRESETS_DIR_PATH, sizeof(dir_path));
+			strncpy(extensions, "conf|CONF", sizeof(extensions));
+			strncpy(title, "INPUT PRESETS SELECTION", sizeof(title));
+			strncpy(object, "Input", sizeof(object));
+			strncpy(object, "Input preset", sizeof(object));
+                        strncpy(comment, "INFO - Select an input preset from the menu by pressing the X button. ", sizeof(comment));
+			break;
 		case BORDER_CHOICE:
 			strncpy(dir_path, BORDERS_DIR_PATH, sizeof(dir_path));
 			strncpy(extensions, "png|PNG|jpg|JPG|JPEG|jpeg", sizeof(extensions));
@@ -94,6 +102,9 @@ static void do_select_file(uint32_t menu_id)
 					break;
 				case PRESET_CHOICE:
 					emulator_implementation_set_shader_preset(path);
+					break;
+				case INPUT_PRESET_CHOICE:
+					emulator_set_controls(path, READ_CONTROLS, "");
 					break;
 				case BORDER_CHOICE:
 					strncpy(Settings.PS3CurrentBorder, path, sizeof(Settings.PS3CurrentBorder));
