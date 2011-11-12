@@ -86,6 +86,10 @@ static void do_select_file(uint32_t menu_id)
 					strncpy(Settings.GameAwareShaderPath, path, sizeof(Settings.GameAwareShaderPath));
 					break;
 				case SHADER_CHOICE:
+					if(set_shader)
+						strncpy(Settings.PS3CurrentShader2, path, sizeof(Settings.PS3CurrentShader2));
+					else
+						strncpy(Settings.PS3CurrentShader, path, sizeof(Settings.PS3CurrentShader));
 					ps3graphics_load_fragment_shader(path, set_shader);
 					break;
 				case PRESET_CHOICE:
