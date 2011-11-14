@@ -891,6 +891,7 @@ static bool file_exists(const char * filename)
 
 static void emulator_init_settings()
 {
+	bool config_file_newly_created = false;
 	memset((&Settings), 0, (sizeof(Settings)));
 
 	if(!file_exists(SYS_CONFIG_FILE))
@@ -898,6 +899,7 @@ static void emulator_init_settings()
 		FILE * f;
 		f = fopen(SYS_CONFIG_FILE, "w");
 		fclose(f);
+		config_file_newly_created = true;
 	}
 
 	config_file_t * currentconfig = config_file_new(SYS_CONFIG_FILE);
@@ -941,7 +943,10 @@ static void emulator_init_settings()
 	init_setting_uint("VBA::SGBBorders", Settings.SGBBorders, 1);
 	init_setting_char("VBA::GBABIOS", Settings.GBABIOS, "");
 
-	emulator_set_controls(SYS_CONFIG_FILE, READ_CONTROLS, "Default");
+	if(config_file_newly_created)
+		emulator_set_controls(SYS_CONFIG_FILE, SET_ALL_CONTROLS_TO_DEFAULT, "Default");
+	else
+		emulator_set_controls(SYS_CONFIG_FILE, READ_CONTROLS, "Default");
 }
 
 void emulator_implementation_set_shader_preset(const char * fname)
