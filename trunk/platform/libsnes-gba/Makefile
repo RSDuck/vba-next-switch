@@ -39,7 +39,7 @@ UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
 
 OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS) libsnes.o
 
-VBA_DEFINES := -D__LIBSNES__ -DFINAL_VERSION -DC_CORE -DUSE_GBA_ONLY
+VBA_DEFINES := -D__LIBSNES__ -DUSE_GBA_ONLY
 
 CFLAGS += -O3 -std=gnu99 $(fpic) $(VBA_DEFINES) -I../common/utils/zlib
 CXXFLAGS += -O3 $(fpic) $(VBA_DEFINES) -I../common/utils/zlib

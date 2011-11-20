@@ -5775,18 +5775,10 @@ void CPULoop()
 #endif
 {
 	// emuCount
-#ifdef FINAL_VERSION
 #ifdef USE_FRAMESKIP
 	ticks = 250000;
 #else
 	int ticks = 250000;
-#endif
-#else
-#ifdef USE_FRAMESKIP
-	ticks = 5000;
-#else
-	int ticks = 5000;
-#endif
 #endif
 	int clockTicks;
 	int timerOverflow = 0;
