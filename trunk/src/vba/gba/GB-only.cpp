@@ -466,21 +466,6 @@ void cpuEnableProfiling(int hz)
 }
 #endif
 
-
-#ifdef USE_PNG
-bool CPUWritePNGFile(const char *fileName)
-{
-  return utilWritePNGFile(fileName, 240, 160, pix);
-}
-#endif
-
-#ifdef USE_BMP
-bool CPUWriteBMPFile(const char *fileName)
-{
-  return utilWriteBMPFile(fileName, 240, 160, pix);
-}
-#endif
-
 bool CPUIsGBABios(const char * file)
 {
 	if(strlen(file) > 4) {

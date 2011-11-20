@@ -8,27 +8,12 @@
 #include "gbSGB.h"
 #include "gbSound.h"
 #include "../Util.h"
-
-#if defined(__ANDROID__) || defined(__LIBSNES__)
 #include <string.h>
 #include <stdio.h>
-#endif
-
-#ifdef __LIBSNES__
 #include <stdlib.h>
-#endif
-
-#ifdef __CELLOS_LV2__
-#include "../../../platform/ps3/src/ps3video.hpp"
-#endif
 
 #ifdef __GNUC__
 #define _stricmp strcasecmp
-#endif
-
-#ifdef __CELLOS_LV2__
-extern uint32_t special_action_msg_expired;	// time at which the message no longer needs to be overlaid onscreen
-extern char special_action_msg[256];
 #endif
 
 extern uint8_t *pix;
@@ -2704,7 +2689,6 @@ void gbReset()
 	gbSystemMessage = false;
 
 	gbCheatWrite(true); // Emulates GS codes.
-
 }
 
 void gbWriteSaveMBC1(const char * name)
@@ -4003,24 +3987,6 @@ bool gbReadSaveState(const char *name)
   return res;
 }
 
-#ifdef USE_PNG
-bool gbWritePNGFile(const char *fileName)
-{
-  if(gbBorderOn)
-    return utilWritePNGFile(fileName, 256, 224, pix);
-  return utilWritePNGFile(fileName, 160, 144, pix);
-}
-#endif
-
-#ifdef USE_BMP
-bool gbWriteBMPFile(const char *fileName)
-{
-  if(gbBorderOn)
-    return utilWriteBMPFile(fileName, 256, 224, pix);
-  return utilWriteBMPFile(fileName, 160, 144, pix);
-}
-#endif
-
 void gbCleanUp()
 {
 	if(gbRam != NULL) {
@@ -4517,12 +4483,6 @@ void gbEmulate()
 			gbIntBreak = 1;
 		}
 
-
-#if 0
-		if(!emulating)
-			return;
-#endif
-
 		// For 'breakpoint' support (opcode 0xFC is considered as a breakpoint)
 		if ((clockTicks==0) && execute)
 		{
@@ -4932,8 +4892,8 @@ gbRedoLoop:
 											{
 												if (gbBorderOn)
 													gbSgbRenderBorder();
-												//if (gbScreenOn)
-												systemDrawScreen();
+												if (gbScreenOn)
+													systemDrawScreen();
 											}
 											gbFrameSkipCount = 0;
 										} else
@@ -5121,8 +5081,8 @@ gbRedoLoop:
 							{
 								if (gbBorderOn)
 									gbSgbRenderBorder();
-								//if (gbScreenOn)
-								systemDrawScreen();
+								if (gbScreenOn)
+									systemDrawScreen();
 							}
 						}
 						// read joystick

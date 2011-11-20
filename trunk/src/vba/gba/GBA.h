@@ -68,15 +68,6 @@ extern bool CPUWriteBatteryFile(const char *);
 extern bool CPUReadBatteryFile(const char *);
 extern bool CPUExportEepromFile(const char *);
 extern bool CPUImportEepromFile(const char *);
-#ifdef USE_PNG
-extern bool CPUWritePNGFile(const char *);
-#endif
-#ifdef USE_BMP
-extern bool CPUWriteBMPFile(const char *);
-#endif
-extern void CPUCleanUp();
-extern void CPUUpdateRender();
-//extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
 #ifdef __LIBSNES__

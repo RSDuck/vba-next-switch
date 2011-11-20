@@ -1176,20 +1176,6 @@ bool CPUReadBatteryFile(const char *fileName)
 	return true;
 }
 
-#ifdef USE_PNG
-bool CPUWritePNGFile(const char *fileName)
-{
-  return utilWritePNGFile(fileName, 240, 160, pix);
-}
-#endif
-
-#ifdef USE_BMP
-bool CPUWriteBMPFile(const char *fileName)
-{
-  return utilWriteBMPFile(fileName, 240, 160, pix);
-}
-#endif
-
 bool CPUIsGBABios(const char * file)
 {
 	if(strlen(file) > 4) {
@@ -1228,7 +1214,7 @@ bool CPUIsELF(const char *file)
 	return false;
 }
 
-void CPUCleanUp()
+static void CPUCleanUp()
 {
 #ifdef PROFILING
 	if(profilingTicksReload) {
@@ -5765,8 +5751,6 @@ void CPUInterrupt()
 	biosProtected[2] = 0x5e;
 	biosProtected[3] = 0xe5;
 }
-
-extern void winlog(const char *, ...);
 
 #ifdef USE_FRAMESKIP
 void CPULoop(int ticks)

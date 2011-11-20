@@ -18,12 +18,6 @@
 #define REPEAT2(x) { REPEAT1(x) REPEAT1(x) }
 #define REPEAT1(x) { x; }
 
-#define SYSTEMCOLORMAP16_LINE() { *dest++ = systemColorMap16[line[lineMix][x++]&0xFFFF];}
-
-#define SYSTEMCOLORMAP24_LINE() { *((u32 *)dest) = systemColorMap32[line[lineMix][x++] & 0xFFFF]; dest += 3; }
-
-#define SYSTEMCOLORMAP32_LINE() { *dest++ = systemColorMap32[line[lineMix][x++] & 0xFFFF]; }
-
 #define SYSTEMCOLORMAP16_LINE_GB() { *dest++ = systemColorMap16[gbLineMix[x++]]; }
 
 #define SYSTEMCOLORMAP24_LINE_GB() { *((u32 *)dest) = systemColorMap32[gbLineMix[x++]]; dest+= 3; }

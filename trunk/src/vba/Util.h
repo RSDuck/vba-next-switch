@@ -15,12 +15,6 @@ typedef struct {
 	int size;
 } variable_desc;
 
-#ifdef USE_PNG
-bool utilWritePNGFile(const char *, int, int, uint8_t *);
-#endif
-#ifdef USE_BMP
-bool utilWriteBMPFile(const char *, int, int, uint8_t *);
-#endif
 void utilApplyIPS(const char *ips, uint8_t **rom, int *size);
 bool utilIsGBAImage(const char *);
 bool utilIsGBImage(const char *);

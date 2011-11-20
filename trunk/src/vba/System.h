@@ -9,8 +9,6 @@
 #define USE_FRAMESKIP
 #endif
 
-extern void log(const char *,...);
-
 #ifdef __CELLOS_LV2__
 extern uint32_t special_action_msg_expired;
 extern char special_action_msg[256];
@@ -46,12 +44,6 @@ extern void Sm60FPS_Init();
 extern bool Sm60FPS_CanSkipFrame();
 extern void Sm60FPS_Sleep();
 #endif
-
-extern void DbgMsg(const char *msg, ...);
-extern void winlog(const char *,...);
-
-extern void (*dbgOutput)(const char *s, uint32_t addr);
-extern void (*dbgSignal)(int sig,int number);
 
 // sound functions
 extern bool systemSoundInit();
