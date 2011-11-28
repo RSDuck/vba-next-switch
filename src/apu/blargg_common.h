@@ -14,13 +14,6 @@
 #ifndef BLARGG_COMMON_H
 #define BLARGG_COMMON_H
 
-// BLARGG_RESTRICT: equivalent to restrict, where supported
-#if __GNUC__ >= 3 || _MSC_VER >= 1100
-	#define BLARGG_RESTRICT __restrict
-#else
-	#define BLARGG_RESTRICT
-#endif
-
 // STATIC_CAST(T,expr): Used in place of static_cast<T> (expr)
 // CONST_CAST( T,expr): Used in place of const_cast<T> (expr)
 #ifndef STATIC_CAST
@@ -77,28 +70,6 @@ public:
 	#define BLARGG_DISABLE_NOTHROW \
 		void* operator new ( size_t s ) BLARGG_THROWS(()) { return __builtin_malloc( s ); }\
 		void operator delete ( void* p ) { free( p ); }
-	#define BLARGG_NEW new
-#else
-	#include <new>
-	#define BLARGG_NEW new (std::nothrow)
-#endif
-
-// BLARGG_4CHAR('a','b','c','d') = 'abcd' (four character integer constant)
-#define BLARGG_4CHAR( a, b, c, d ) \
-	((a&0xFF)*0x1000000 + (b&0xFF)*0x10000 + (c&0xFF)*0x100 + (d&0xFF))
-
-// BOOST_STATIC_ASSERT( expr ): Generates compile error if expr is 0.
-#ifndef BOOST_STATIC_ASSERT
-	#ifdef _MSC_VER
-		// MSVC6 (_MSC_VER < 1300) fails for use of __LINE__ when /Zl is specified
-		#define BOOST_STATIC_ASSERT( expr ) \
-			void blargg_failed_( int (*arg) [2 / (int) !!(expr) - 1] )
-	#else
-		// Some other compilers fail when declaring same function multiple times in class,
-		// so differentiate them by line
-		#define BOOST_STATIC_ASSERT( expr ) \
-			void blargg_failed_( int (*arg) [2 / !!(expr) - 1] [__LINE__] )
-	#endif
 #endif
 
 // BLARGG_COMPILER_HAS_BOOL: If 0, provides bool support for old compiler. If 1,

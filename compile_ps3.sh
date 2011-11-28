@@ -78,8 +78,8 @@ function make_ps3_eboot()
 
 function debug_elf()
 {
-	if [ -f "`pwd`/genplusnext-ps3.elf" ] ; then
-		ppu-addr2line -e genplusnext-ps3.elf -f
+	if [ -f "`pwd`/vba.ppu.elf" ] ; then
+		ppu-addr2line -e vba.ppu.elf -f
 	else
 		echo "ERROR: ELF does not exist"
 	fi

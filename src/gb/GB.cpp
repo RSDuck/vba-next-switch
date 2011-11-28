@@ -19,7 +19,6 @@ bool gbUpdateSizes();
 bool inBios = false;
 
 // debugging
-bool memorydebug = false;
 char gbBuffer[2048];
 
 extern uint16_t gbLineMix[160];
@@ -189,9 +188,6 @@ int gbSynchronizeTicks = GBSYNCHRONIZE_CLOCK_TICKS;
 // emulator features
 int gbBattery = 0;
 bool gbBatteryError = false;
-int gbCaptureNumber = 0;
-bool gbCapture = false;
-bool gbCapturePrevious = false;
 int gbJoymask[4] = { 0, 0, 0, 0 };
 
 uint8_t gbRamFill = 0xff;
@@ -4866,8 +4862,6 @@ gbRedoLoop:
 #ifdef USE_FRAMESKIP
 										speedup = (newmask & 1) ? true : false;
 #endif
-										//gbCapture = (newmask & 2) ? true : false;
-
 										if(gbFrameSkipCount >= framesToSkip) {
 
 											if(!gbSgbMask)
