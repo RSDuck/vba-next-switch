@@ -42,8 +42,8 @@ typedef struct audioport
    uint32_t channels;
 
    sys_lwmutex_t lock;
-   pthread_mutex_t cond_lock;
-   pthread_cond_t cond;
+   sys_lwmutex_t cond_lock;
+   sys_lwcond_t cond;
    pthread_t thread;
 
    fifo_buffer_t *buffer;
@@ -94,7 +94,7 @@ static void* event_loop(void *data)
       sys_event_queue_receive(id, &event, SYS_NO_TIMEOUT);
       cellAudioAddData(port->audio_port, conv_buf, CELL_AUDIO_BLOCK_SAMPLES, 1.0);
 
-      pthread_cond_signal(&port->cond);
+      sys_lwcond_signal(&port->cond);
    }while(!port->quit_thread);
    free(conv_buf);
    //pull_event_loop - END
@@ -131,10 +131,17 @@ static cell_audio_handle_t audioport_init(const struct cell_audio_params *params
    handle->buffer = fifo_new(params->buffer_size ? params->buffer_size : 4096);
 
    sys_lwmutex_attribute_t attr;
+   sys_lwmutex_attribute_t attr2;
+   sys_lwcond_attribute_t cond_attr;
+
    sys_lwmutex_attribute_initialize(attr);
    sys_lwmutex_create(&handle->lock, &attr);
-   pthread_mutex_init(&handle->cond_lock, NULL);
-   pthread_cond_init(&handle->cond, NULL);
+
+   sys_lwmutex_attribute_initialize(attr2);
+   sys_lwmutex_create(&handle->cond_lock, &attr2);
+
+   sys_lwcond_attribute_initialize(cond_attr);
+   sys_lwcond_create(&handle->cond, &handle->cond_lock, &cond_attr);
 
    cellAudioPortOpen(&port_params, &handle->audio_port);
    cellAudioPortStart(handle->audio_port);
@@ -172,8 +179,8 @@ static void audioport_free(cell_audio_handle_t handle)
    pthread_join(port->thread, NULL);
 
    sys_lwmutex_destroy(&port->lock);
-   pthread_mutex_destroy(&port->cond_lock);
-   pthread_cond_destroy(&port->cond);
+   sys_lwmutex_destroy(&port->cond_lock);
+   sys_lwcond_destroy(&port->cond);
 
    if (port->buffer)
       fifo_free(port->buffer);
@@ -216,9 +223,9 @@ static int32_t audioport_write(cell_audio_handle_t handle, const int16_t *data, 
       }
       else
       {
-         pthread_mutex_lock(&port->cond_lock);
-         pthread_cond_wait(&port->cond, &port->cond_lock);
-         pthread_mutex_unlock(&port->cond_lock);
+         sys_lwmutex_lock(&port->cond_lock, SYS_NO_TIMEOUT);
+         sys_lwcond_wait(&port->cond, 0);
+         sys_lwmutex_unlock(&port->cond_lock);
       }
    }while (bytes > 0);
 
