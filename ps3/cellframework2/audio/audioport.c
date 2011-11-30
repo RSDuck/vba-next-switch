@@ -1,6 +1,7 @@
 #include "stream.h"
 #include <cell/audio.h>
 #include <cell/sysmodule.h>
+#include <sys/synchronization.h>
 #include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
@@ -40,7 +41,7 @@ typedef struct audioport
 
    uint32_t channels;
 
-   pthread_mutex_t lock;
+   sys_lwmutex_t lock;
    pthread_mutex_t cond_lock;
    pthread_cond_t cond;
    pthread_t thread;
@@ -72,13 +73,13 @@ static void* event_loop(void *data)
    do
    {
          uint32_t has_read = samples_times_two;
-         pthread_mutex_lock(&port->lock);
+         sys_lwmutex_lock(&port->lock, SYS_NO_TIMEOUT);
          uint32_t avail = fifo_read_avail(port->buffer);
          if (avail < samples_times_two * sizeof(int16_t))
             has_read = avail / sizeof(int16_t);
 
          fifo_read(port->buffer, in_buf, has_read * sizeof(int16_t));
-         pthread_mutex_unlock(&port->lock);
+         sys_lwmutex_unlock(&port->lock);
 
       uint32_t i = 0;
 
@@ -129,7 +130,9 @@ static cell_audio_handle_t audioport_init(const struct cell_audio_params *params
    handle->userdata = params->userdata;
    handle->buffer = fifo_new(params->buffer_size ? params->buffer_size : 4096);
 
-   pthread_mutex_init(&handle->lock, NULL);
+   sys_lwmutex_attribute_t attr;
+   sys_lwmutex_attribute_initialize(attr);
+   sys_lwmutex_create(&handle->lock, &attr);
    pthread_mutex_init(&handle->cond_lock, NULL);
    pthread_cond_init(&handle->cond, NULL);
 
@@ -168,7 +171,7 @@ static void audioport_free(cell_audio_handle_t handle)
    port->quit_thread = 1;
    pthread_join(port->thread, NULL);
 
-   pthread_mutex_destroy(&port->lock);
+   sys_lwmutex_destroy(&port->lock);
    pthread_mutex_destroy(&port->cond_lock);
    pthread_cond_destroy(&port->cond);
 
@@ -185,9 +188,9 @@ static uint32_t audioport_write_avail(cell_audio_handle_t handle)
 {
    audioport_t *port = handle;
 
-   pthread_mutex_lock(&port->lock);
+   sys_lwmutex_lock(&port->lock, SYS_NO_TIMEOUT);
    uint32_t ret = fifo_write_avail(port->buffer);
-   pthread_mutex_unlock(&port->lock);
+   sys_lwmutex_unlock(&port->lock);
    return ret / sizeof(int16_t);
 }
 
@@ -198,16 +201,16 @@ static int32_t audioport_write(cell_audio_handle_t handle, const int16_t *data, 
    audioport_t *port = handle;
    do
    {
-      pthread_mutex_lock(&port->lock);
+      sys_lwmutex_lock(&port->lock, SYS_NO_TIMEOUT);
       uint32_t avail = fifo_write_avail(port->buffer);
-      pthread_mutex_unlock(&port->lock);
+      sys_lwmutex_unlock(&port->lock);
 
       uint32_t to_write = avail < bytes ? avail : bytes;
       if (to_write > 0)
       {
-         pthread_mutex_lock(&port->lock);
+         sys_lwmutex_lock(&port->lock, SYS_NO_TIMEOUT);
          fifo_write(port->buffer, data, to_write);
-         pthread_mutex_unlock(&port->lock);
+         sys_lwmutex_unlock(&port->lock);
          bytes -= to_write;
          data += to_write >> 1;
       }
