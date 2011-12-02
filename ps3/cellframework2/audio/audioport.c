@@ -5,10 +5,11 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
+#include <altivec.h>
 
 #define port_channels 2
 #define port_channels_shift 1
-#define samples_times_two 512
+#define CELL_AUDIO_BLOCK_SAMPLES_X2 512
 
 /*
 ////////////////////////////////
@@ -54,6 +55,35 @@ typedef struct audioport
    uint32_t is_paused;
 } audioport_t;
 
+static void audio_convert_s16_to_float_C(float *out, const int16_t *in, size_t samples)
+{
+   for (size_t i = 0; i < samples; i++)
+      out[i] = (float)in[i] / 0x8000;
+}
+
+static void audio_convert_s16_to_float_altivec(float *out, const int16_t *in, size_t samples)
+{
+   // Unaligned loads/store is a bit expensive, so we optimize for the good path (very likely).
+   if (((uintptr_t)out & 15) + ((uintptr_t)in & 15) == 0)
+   {
+      size_t i;
+      for (i = 0; i + 8 <= samples; i += 8, in += 8, out += 8)
+      {
+         vector signed short input = vec_ld(0, in);
+         vector signed int hi = vec_unpackh(input);
+         vector signed int lo = vec_unpackl(input);
+         vector float out_hi = vec_ctf(hi, 15);
+         vector float out_lo = vec_ctf(lo, 15);
+
+         vec_st(out_hi, 0, out);
+         vec_st(out_lo, 16, out);
+      }
+
+      audio_convert_s16_to_float_C(out, in, samples - i);
+   }
+   else
+      audio_convert_s16_to_float_C(out, in, samples);
+}
 
 static void* event_loop(void *data)
 {
@@ -68,14 +98,14 @@ static void* event_loop(void *data)
    //pull_event_loop - BEGIN
    sys_event_t event;
 
-   int16_t *in_buf = memalign(128, samples_times_two * sizeof(int16_t));
-   float *conv_buf = memalign(128, samples_times_two * sizeof(float));
+   int16_t *in_buf = memalign(128, CELL_AUDIO_BLOCK_SAMPLES_X2 * sizeof(int16_t));
+   float *conv_buf = memalign(128, CELL_AUDIO_BLOCK_SAMPLES_X2 * sizeof(float));
    do
    {
-         uint32_t has_read = samples_times_two;
+         uint32_t has_read = CELL_AUDIO_BLOCK_SAMPLES_X2;
          sys_lwmutex_lock(&port->lock, SYS_NO_TIMEOUT);
          uint32_t avail = fifo_read_avail(port->buffer);
-         if (avail < samples_times_two * sizeof(int16_t))
+         if (avail < CELL_AUDIO_BLOCK_SAMPLES_X2 * sizeof(int16_t))
             has_read = avail / sizeof(int16_t);
 
          fifo_read(port->buffer, in_buf, has_read * sizeof(int16_t));
@@ -83,14 +113,10 @@ static void* event_loop(void *data)
 
       uint32_t i = 0;
 
-      if (has_read < samples_times_two)
-         memset(in_buf + has_read, 0, (samples_times_two - has_read) * sizeof(int16_t));
+      if (has_read < CELL_AUDIO_BLOCK_SAMPLES_X2)
+         memset(in_buf + has_read, 0, (CELL_AUDIO_BLOCK_SAMPLES_X2 - has_read) * sizeof(int16_t));
 
-      do{
-         conv_buf[i] = (float)in_buf[i]/0x8000;
-         i++;
-      }while(i < samples_times_two);
-
+      audio_convert_s16_to_float_altivec(conv_buf, in_buf, CELL_AUDIO_BLOCK_SAMPLES_X2);
       sys_event_queue_receive(id, &event, SYS_NO_TIMEOUT);
       cellAudioAddData(port->audio_port, conv_buf, CELL_AUDIO_BLOCK_SAMPLES, 1.0);
 
@@ -222,11 +248,7 @@ static int32_t audioport_write(cell_audio_handle_t handle, const int16_t *data, 
          data += to_write >> 1;
       }
       else
-      {
-         sys_lwmutex_lock(&port->cond_lock, SYS_NO_TIMEOUT);
          sys_lwcond_wait(&port->cond, 0);
-         sys_lwmutex_unlock(&port->cond_lock);
-      }
    }while (bytes > 0);
 
    return 256;
