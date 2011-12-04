@@ -518,35 +518,23 @@ void systemDrawScreen()
 {
    screen_drawn = true;
 
-   __m128i mask = _mm_set1_epi32(0x7fff);
    for (unsigned y = 0; y < 160; y++)
    {
       uint16_t *dst = pix_buf + y * 256;
       const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1);
 
-      for (unsigned x = 0; x < 240; x += 16)
+      for (unsigned x = 0; x < 240; x += 8)
       {
-         __m128i input[4] = {
-            _mm_loadu_si128((const __m128i*)(src + x +  0)),
-            _mm_loadu_si128((const __m128i*)(src + x +  4)),
-            _mm_loadu_si128((const __m128i*)(src + x +  8)),
-            _mm_loadu_si128((const __m128i*)(src + x + 12)),
+         __m128i input[2] = {
+            _mm_loadu_si128((const __m128i*)(src + 0)),
+            _mm_loadu_si128((const __m128i*)(src + 4)),
          };
+         src += 8;
 
-         __m128i res[4] = {
-            _mm_and_si128(input[0], mask),
-            _mm_and_si128(input[1], mask),
-            _mm_and_si128(input[2], mask),
-            _mm_and_si128(input[3], mask),
-         };
+         __m128i output = _mm_packs_epi32(input[0], input[1]);
 
-         __m128i output[2] = {
-            _mm_packs_epi32(res[0], res[1]),
-            _mm_packs_epi32(res[2], res[3]),
-         };
-
-         _mm_store_si128((__m128i*)(dst + x + 0), output[0]);
-         _mm_store_si128((__m128i*)(dst + x + 8), output[1]);
+         _mm_store_si128((__m128i*)dst, output);
+         dst += 8;
       }
    }
 
