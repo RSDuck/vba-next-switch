@@ -17,15 +17,26 @@ ifeq ($(platform), unix)
    TARGET := libsnes.so
    fpic := -fPIC
    SHARED := -shared
+   ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), osx)
    TARGET := libsnes.dylib
    fpic := -fPIC
    SHARED := -dynamiclib
+   ENDIANNESS_DEFINES = -DLSB_FIRST
+else ifeq ($(platform), ps3)
+   TARGET := libsnes.a
+   SHARED := -shared, -Wl, --version-script=libsnes/link.T
+   CC = ppu-lv2-gcc
+   CXX = ppu-lv2-g++
+   AR = ppu-lv2-ar
+   ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
+   PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__
 else
    TARGET := snes.dll
    CC = gcc
    CXX = g++
    SHARED := -shared -static-libgcc -static-libstdc++
+   ENDIANNESS_DEFINES = -DLSB_FIRST
 endif
 
 ifeq ($(DEBUG), 1)
@@ -42,7 +53,12 @@ UTILS_DIR := ./utils
 
 VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gb $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
 
+ifeq ($(platform), ps3)
+CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
+VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
+else
 VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
+endif
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 VBA_CSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c))
 VBA_COBJ := $(VBA_CSRCS:.c=.o)
@@ -51,7 +67,7 @@ UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
 
 OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS)
 
-VBA_DEFINES := -D__LIBSNES__ -DLSB_FIRST -DHAVE_STDINT_H -DHAVE_INTTYPES_H
+VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DFASTER_SOUND_HACK_NON_SILENCE=1 -DBLIP_BUFFER_FAST=1 -DSPEEDHAX
 
 CFLAGS += -std=gnu99 $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
 CXXFLAGS += $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
@@ -61,7 +77,11 @@ INCDIRS := -I$(VBA_DIR)
 LIBS :=
 
 $(TARGET): $(OBJS)
+ifeq ($(platform), ps3)
+	$(AR) rcs $@ $(OBJECTS)
+else
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
+endif
 
 %.o: %.cpp
 	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCDIRS)
