@@ -269,6 +269,11 @@ void Stereo_Buffer::clock_rate( long rate )
                 bufs_buffer [i].clock_rate( rate );
 }
 
+double Stereo_Buffer::real_ratio()
+{
+   return (double)bufs_buffer[0].clock_rate() * (double)bufs_buffer[0].clock_rate_factor(bufs_buffer[0].clock_rate()) / (1 << BLIP_BUFFER_ACCURACY);
+}
+
 void Stereo_Buffer::bass_freq( int bass )
 {
         for ( int i = bufs_size; --i >= 0; )

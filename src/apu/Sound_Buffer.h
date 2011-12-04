@@ -365,6 +365,9 @@ class Stereo_Buffer {
 		void bass_freq( int );
 		void clear();
 
+      // Custom.
+      double real_ratio();
+
 		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );

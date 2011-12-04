@@ -136,6 +136,14 @@ void snes_init(void)
       snes_geometry geom = { 240, 160, 240, 160 };
       environ_cb(SNES_ENVIRONMENT_SET_GEOMETRY, &geom);
       environ_cb(SNES_ENVIRONMENT_GET_FULLPATH, &full_path);
+      unsigned pitch = 512;
+      environ_cb(SNES_ENVIRONMENT_SET_PITCH, &pitch);
+
+      snes_system_timing timing;
+      timing.fps =  16777216.0 / 280896.0;
+      timing.sample_rate = 32000.0;
+
+      environ_cb(SNES_ENVIRONMENT_SET_TIMING, &timing);
    }
 }
 ////
@@ -322,7 +330,7 @@ static void gba_init(void)
 	doMirroring(mirroringEnable);
 
 	soundInit();
-	soundSetSampleRate(31890);
+	soundSetSampleRate(32000);
 
 	CPUInit(0, false);
 	CPUReset();
@@ -374,17 +382,24 @@ static void systemReadJoypadGBA(void)
    joy = J;
 }
 
+static bool can_dupe;
+static bool screen_drawn;
 void snes_run(void)
 {
    static bool first = true;
    if (first)
    {
       adjust_save_ram();
+      environ_cb(SNES_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
       first = false;
    }
 
-   CPULoop();
-   systemReadJoypadGBA();
+   screen_drawn = false;
+   while (!screen_drawn)
+   {
+      CPULoop();
+      systemReadJoypadGBA();
+   }
 }
 
 
@@ -430,15 +445,6 @@ bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned r
 
    gba_init();
 
-   if (environ_cb)
-   {
-   	snes_system_timing timing;
-	timing.fps =  16777216.0 / 280896.0;
-	timing.sample_rate = timing.fps * 35112;
-
-	environ_cb(SNES_ENVIRONMENT_SET_TIMING, &timing);
-   }
-
    return ret;
 }
 
@@ -475,7 +481,6 @@ bool snes_get_region(void)
    return SNES_REGION_NTSC;
 }
 
-
 void systemOnSoundShutdown()
 {}
 
@@ -505,13 +510,55 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
       audio_cb(finalWave[i + 0], finalWave[i + 1]);
 }
 
-static uint16_t pix_buf[160 * 1024];
+static uint16_t pix_buf[160 * 256] __attribute__((aligned(16)));
 
+#if __SSE2__
+#include <emmintrin.h>
 void systemDrawScreen()
 {
+   screen_drawn = true;
+
+   __m128i mask = _mm_set1_epi32(0x7fff);
    for (unsigned y = 0; y < 160; y++)
    {
-      uint16_t *dst = pix_buf + y * 1024;
+      uint16_t *dst = pix_buf + y * 256;
+      const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1);
+
+      for (unsigned x = 0; x < 240; x += 16)
+      {
+         __m128i input[4] = {
+            _mm_loadu_si128((const __m128i*)(src + x +  0)),
+            _mm_loadu_si128((const __m128i*)(src + x +  4)),
+            _mm_loadu_si128((const __m128i*)(src + x +  8)),
+            _mm_loadu_si128((const __m128i*)(src + x + 12)),
+         };
+
+         __m128i res[4] = {
+            _mm_and_si128(input[0], mask),
+            _mm_and_si128(input[1], mask),
+            _mm_and_si128(input[2], mask),
+            _mm_and_si128(input[3], mask),
+         };
+
+         __m128i output[2] = {
+            _mm_packs_epi32(res[0], res[1]),
+            _mm_packs_epi32(res[2], res[3]),
+         };
+
+         _mm_store_si128((__m128i*)(dst + x + 0), output[0]);
+         _mm_store_si128((__m128i*)(dst + x + 8), output[1]);
+      }
+   }
+
+   video_cb(pix_buf, 240, 160);
+}
+#else
+void systemDrawScreen()
+{
+   screen_drawn = true;
+   for (unsigned y = 0; y < 160; y++)
+   {
+      uint16_t *dst = pix_buf + y * 256;
       const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1); // Don't ask why ... :(
       for (unsigned x = 0; x < 240; x++)
          dst[x] = (uint16_t)(src[x] & 0x7fff);
@@ -519,6 +566,7 @@ void systemDrawScreen()
 
    video_cb(pix_buf, 240, 160);
 }
+#endif
 
 // Stubs
 u16 systemColorMap16[0x10000];
