@@ -52,6 +52,7 @@ VBA_DIR := ./src
 UTILS_DIR := ./utils
 
 VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gb $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
+IGNORE_SRC := $(LIBSNES_DIR)/gbaconv.c
 
 ifeq ($(platform), ps3)
 CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
@@ -60,7 +61,7 @@ else
 VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 endif
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
-VBA_CSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c))
+VBA_CSRCS := $(filter-out $(IGNORE_SRC),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c)))
 VBA_COBJ := $(VBA_CSRCS:.c=.o)
 UTIL_SOURCES := $(wildcard $(UTILS_DIR)/zlib/*.c)
 UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
