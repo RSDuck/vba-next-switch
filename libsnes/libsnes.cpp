@@ -430,6 +430,15 @@ bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned r
 
    gba_init();
 
+   if (environ_cb)
+   {
+   	snes_system_timing timing;
+	timing.fps =  16777216.0 / 280896.0;
+	timing.sample_rate = timing.fps * 35112;
+
+	environ_cb(SNES_ENVIRONMENT_SET_TIMING, &timing);
+   }
+
    return ret;
 }
 
