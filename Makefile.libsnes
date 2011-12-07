@@ -31,6 +31,14 @@ else ifeq ($(platform), ps3)
    AR = ppu-lv2-ar
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__
+else ifeq ($(platform), xenon)
+   TARGET := libsnes.a
+   SHARED := -shared, -Wl, --version-script=libsnes/link.T
+   CC = xenon-gcc
+   CXX = xenon-g++
+   AR = xenon-ar
+   ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
+   PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
 else
    TARGET := snes.dll
    CC = gcc
@@ -56,6 +64,9 @@ VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gb $(VBA_DIR)/gba $(VBA_DIR
 ifeq ($(platform), ps3)
 CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
 VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
+else ifeq($(platform), xenon)
+CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
+VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
 else
 VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 endif
@@ -78,6 +89,8 @@ LIBS :=
 
 $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
+	$(AR) rcs $@ $(OBJECTS)
+else ifeq($(platform), xenon)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
