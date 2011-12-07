@@ -67,12 +67,38 @@ extern "C" {
 #define SNES_MEMORY_CGRAM   104
 
 // SSNES extension. Not required to be implemented for a working implementation.
-#define SNES_ENVIRONMENT_GET_FULLPATH 0   // const char **
-#define SNES_ENVIRONMENT_SET_GEOMETRY 1   // const struct snes_geometry *
-#define SNES_ENVIRONMENT_SET_PITCH 2      // const unsigned *
-#define SNES_ENVIRONMENT_GET_OVERSCAN 3	  // bool * -- Boolean value whether or not the implementation should use overscan.
-#define SNES_ENVIRONMENT_SET_TIMING 4	  // const struct snes_system_timing * -- Set exact timings of the system.
-					  // Used primarily for video recording
+#define SNES_ENVIRONMENT_GET_FULLPATH 0         // const char ** --
+                                                // Full path of game loaded.
+                                                //
+#define SNES_ENVIRONMENT_SET_GEOMETRY 1         // const struct snes_geometry * --
+                                                // Window geometry information for the system/game.
+                                                //
+#define SNES_ENVIRONMENT_SET_PITCH 2            // const unsigned * --
+                                                // Pitch of game image.
+                                                //
+#define SNES_ENVIRONMENT_GET_OVERSCAN 3         // bool * --
+                                                // Boolean value whether or not the implementation should use overscan.
+                                                //
+#define SNES_ENVIRONMENT_SET_TIMING 4           // const struct snes_system_timing * --
+                                                // Set exact timings of the system. Used primarily for video recording.
+                                                //
+#define SNES_ENVIRONMENT_GET_CAN_DUPE 5         // bool * --
+                                                // Boolean value whether or not SSNES supports frame duping,
+                                                // passing NULL to video frame callback.
+                                                //
+                                                //
+#define SNES_ENVIRONMENT_SET_NEED_FULLPATH 6    // const bool * --
+                                                // Boolean value telling if implementation needs a valid fullpath to be able to run.
+                                                // If this is the case, SSNES will not open the rom directly,
+                                                // and pass NULL to rom data.
+                                                // Implementation must then use SNES_ENVIRONMENT_GET_FULLPATH.
+                                                // This is useful for implementations with very large roms,
+                                                // which are impractical to load fully into RAM.
+						                              //
+#define SNES_ENVIRONMENT_GET_CAN_REWIND 7       // bool * --
+                                                // Boolean value telling if SSNES is able to rewind.
+                                                // Some implementations might need to take extra precautions
+                                                // to allow this as smoothly as possible.
 
 struct snes_geometry
 {
@@ -84,8 +110,8 @@ struct snes_geometry
 
 struct snes_system_timing
 {
-	double fps;
-	double sample_rate;
+   double fps;
+   double sample_rate;
 };
 
 typedef bool (*snes_environment_t)(unsigned cmd, void *data);
@@ -94,7 +120,6 @@ typedef bool (*snes_environment_t)(unsigned cmd, void *data);
 void snes_set_environment(snes_environment_t);
 ////
 
-
 typedef void (*snes_video_refresh_t)(const uint16_t *data, unsigned width, unsigned height);
 typedef void (*snes_audio_sample_t)(uint16_t left, uint16_t right);
 typedef void (*snes_input_poll_t)(void);
@@ -102,6 +127,7 @@ typedef int16_t (*snes_input_state_t)(bool port, unsigned device, unsigned index
 
 unsigned snes_library_revision_major(void);
 unsigned snes_library_revision_minor(void);
+
 const char *snes_library_id(void);
 
 void snes_set_video_refresh(snes_video_refresh_t);
