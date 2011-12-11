@@ -39,6 +39,8 @@ const char * Input_PrintMappedButton(uint32_t mappedbutton)
 			return "Decrement state position";
 		case BTN_EXITTOMENU:
 			return "Exit to menu";
+		case BTN_FASTFORWARD:
+			return "Fast forward";
 		case BTN_NONE:
 			return "None";
 		case BTN_INGAME_MENU:
@@ -76,9 +78,11 @@ uint32_t Input_GetAdjacentButtonmap(uint32_t buttonmap, uint32_t next)
 		case BTN_QUICKSAVE:
 			return next ? BTN_QUICKLOAD : BTN_START;
 		case BTN_QUICKLOAD:
-			return next ? BTN_EXITTOMENU : BTN_QUICKSAVE;
+			return next ? BTN_FASTFORWARD : BTN_QUICKSAVE;
+		case BTN_FASTFORWARD:
+			return next ? BTN_EXITTOMENU : BTN_QUICKLOAD;
 		case BTN_EXITTOMENU:
-			return next ? BTN_DECREMENTSAVE : BTN_QUICKLOAD;
+			return next ? BTN_DECREMENTSAVE : BTN_FASTFORWARD;
 		case BTN_DECREMENTSAVE:
 			return next ? BTN_INCREMENTSAVE : BTN_EXITTOMENU;
 		case BTN_INCREMENTSAVE:

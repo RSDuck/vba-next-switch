@@ -529,20 +529,23 @@ static void producesettingentry(uint64_t switchvalue)
 				Settings.ControlStyle = (((Settings.ControlStyle) + 1) % 2);
 				if(Settings.ControlStyle == CONTROL_STYLE_ORIGINAL)
 				{
-					PS3Input.ButtonCircle[0] = BTN_A;
-					PS3Input.ButtonCross[0] = BTN_B;
+					control_binds[currently_selected_controller_menu][CTRL_CIRCLE_DEF] = BTN_A;
+					control_binds[currently_selected_controller_menu][CTRL_CROSS_DEF] = BTN_B;
+					control_binds[currently_selected_controller_menu][CTRL_SQUARE_DEF] = BTN_NONE;
 				}
 				else
 				{
-					PS3Input.ButtonSquare[0] = BTN_B;
-					PS3Input.ButtonCross[0] = BTN_A;
+					control_binds[currently_selected_controller_menu][CTRL_SQUARE_DEF] = BTN_B;
+					control_binds[currently_selected_controller_menu][CTRL_CROSS_DEF] = BTN_A;
+					control_binds[currently_selected_controller_menu][CTRL_CIRCLE_DEF] = BTN_NONE;
 				}
 			}
 			if(CTRL_START(state))
 			{
 				Settings.ControlStyle = CONTROL_STYLE_ORIGINAL;
-				PS3Input.ButtonCircle[0] = BTN_A;
-				PS3Input.ButtonCross[0] = BTN_B;
+				control_binds[currently_selected_controller_menu][CTRL_CIRCLE_DEF] = BTN_A;
+				control_binds[currently_selected_controller_menu][CTRL_CROSS_DEF] = BTN_B;
+				control_binds[currently_selected_controller_menu][CTRL_SQUARE_DEF] = BTN_NONE;
 			}
 			break;
 		case SETTING_VBA_SGB_BORDERS:
@@ -566,8 +569,8 @@ static void producesettingentry(uint64_t switchvalue)
 			if(CTRL_LEFT(button_was_pressed) || CTRL_LSTICK_LEFT(button_was_pressed) || CTRL_RIGHT(button_was_pressed) ||  CTRL_LSTICK_RIGHT(button_was_pressed) || CTRL_CROSS(button_was_pressed) || CTRL_START(state))
 			{
 				Settings.ControlStyle = CONTROL_STYLE_ORIGINAL;
-				PS3Input.ButtonCircle[0] = BTN_A;
-				PS3Input.ButtonCross[0] = BTN_B;
+				control_binds[0][CTRL_CIRCLE_DEF] = BTN_A;
+				control_binds[0][CTRL_CROSS_DEF] = BTN_B;
 				strcpy(Settings.GBABIOS, "\0");
 			}
 			break;

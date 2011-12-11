@@ -29,6 +29,7 @@ extern "C" {
 #define BTN_DECREMENTSAVE	16384
 #define BTN_NONE		32768
 #define BTN_INGAME_MENU		65536
+#define BTN_FASTFORWARD		131072
 
 #define BTN_LASTGAMEBUTTON BTN_L
 
@@ -37,56 +38,51 @@ extern "C" {
 
 #define MAX_PADS 7
 
+enum {
+	CTRL_UP_DEF,
+	CTRL_DOWN_DEF,
+	CTRL_LEFT_DEF,
+	CTRL_RIGHT_DEF,
+	CTRL_CIRCLE_DEF,
+	CTRL_CROSS_DEF,
+	CTRL_TRIANGLE_DEF,
+	CTRL_SQUARE_DEF,
+	CTRL_SELECT_DEF,
+	CTRL_START_DEF,
+	CTRL_L1_DEF,
+	CTRL_R1_DEF,
+	CTRL_L2_DEF,
+	CTRL_R2_DEF,
+	CTRL_L3_DEF,
+	CTRL_R3_DEF,
+	CTRL_L2_L3_DEF,
+	CTRL_L2_R3_DEF,
+	CTRL_L2_RSTICK_RIGHT_DEF,
+	CTRL_L2_RSTICK_LEFT_DEF,
+	CTRL_L2_RSTICK_UP_DEF,
+	CTRL_L2_RSTICK_DOWN_DEF,
+	CTRL_R2_RSTICK_RIGHT_DEF,
+	CTRL_R2_RSTICK_LEFT_DEF,
+	CTRL_R2_RSTICK_UP_DEF,
+	CTRL_R2_RSTICK_DOWN_DEF,
+	CTRL_R2_R3_DEF,
+	CTRL_R3_L3_DEF,
+	CTRL_RSTICK_UP_DEF,
+	CTRL_RSTICK_DOWN_DEF,
+	CTRL_RSTICK_LEFT_DEF,
+	CTRL_RSTICK_RIGHT_DEF
+};
+
+#define BTN_DEF_MAX CTRL_RSTICK_RIGHT_DEF+1
+
+extern uint32_t control_binds[MAX_PADS][BTN_DEF_MAX];
+extern uint32_t default_control_binds[BTN_DEF_MAX];
+
 #define Input_MapButton(buttonmap, next, defaultbutton) \
 	if(defaultbutton == NULL) \
 		buttonmap = Input_GetAdjacentButtonmap(buttonmap, next); \
 	else \
 		buttonmap = defaultbutton;
-
-typedef struct{
-	uint32_t		ButtonCircle[MAX_PADS];
-	uint32_t		ButtonCross[MAX_PADS];
-	uint32_t		ButtonTriangle[MAX_PADS];
-	uint32_t		ButtonSquare[MAX_PADS];
-	uint32_t		ButtonSelect[MAX_PADS];
-	uint32_t		ButtonStart[MAX_PADS];
-	uint32_t		ButtonL1[MAX_PADS];
-	uint32_t		ButtonR1[MAX_PADS];
-	uint32_t		ButtonL2[MAX_PADS];
-	uint32_t		ButtonR2[MAX_PADS];
-	uint32_t		DPad_Up[MAX_PADS];
-	uint32_t		DPad_Down[MAX_PADS];
-	uint32_t		DPad_Left[MAX_PADS];
-	uint32_t		DPad_Right[MAX_PADS];
-	uint32_t		ButtonR2_ButtonR3[MAX_PADS];
-	uint32_t		ButtonL2_ButtonR3[MAX_PADS];
-	uint32_t		AnalogR_Right[MAX_PADS];
-	uint32_t		AnalogR_Left[MAX_PADS];
-	uint32_t		AnalogR_Up[MAX_PADS];
-	uint32_t		AnalogR_Down[MAX_PADS];
-	uint32_t		ButtonL2_AnalogR_Right[MAX_PADS];
-	uint32_t		ButtonL2_AnalogR_Left[MAX_PADS];
-	uint32_t		ButtonL2_AnalogR_Up[MAX_PADS];
-	uint32_t		ButtonL2_AnalogR_Down[MAX_PADS];
-	uint32_t		ButtonR2_AnalogR_Right[MAX_PADS];
-	uint32_t		ButtonR2_AnalogR_Left[MAX_PADS];
-	uint32_t		ButtonR2_AnalogR_Up[MAX_PADS];
-	uint32_t		ButtonR2_AnalogR_Down[MAX_PADS];
-	uint32_t		ButtonL2_ButtonL3[MAX_PADS];
-	uint32_t		ButtonR3_ButtonL3[MAX_PADS];
-	uint32_t		ButtonL3[MAX_PADS];
-	uint32_t		ButtonR3[MAX_PADS];
-	uint32_t		AnalogR_Up_Type[MAX_PADS];
-	uint32_t		AnalogR_Down_Type[MAX_PADS];
-	uint32_t		AnalogR_Left_Type[MAX_PADS];
-	uint32_t		AnalogR_Right_Type[MAX_PADS];
-	uint32_t		AnalogL_Left[MAX_PADS];
-	uint32_t		AnalogL_Right[MAX_PADS];
-	uint32_t		AnalogL_Up[MAX_PADS];
-	uint32_t		AnalogL_Down[MAX_PADS];
-} PS3InputList;
-
-extern PS3InputList PS3Input;
 
 const char * Input_PrintMappedButton(uint32_t mappedbutton);
 uint32_t Input_GetAdjacentButtonmap(uint32_t buttonmap, uint32_t next);
