@@ -89,6 +89,7 @@ extern void emulator_implementation_set_shader_preset(const char * fname);
 void emulator_toggle_sound(uint64_t soundmode);
 void emulator_set_controls(const char * config_file, int mapping_enum, const char * title);
 void emulator_implementation_set_texture(const char * fname);
+void set_text_message(const char * message, uint32_t speed);
 
 extern int				srcWidth, srcHeight;
 extern oskutil_params			oskutil_handle;

@@ -75,12 +75,12 @@ VBA_CPPSRCS	+= $(SRC_DIR)/ps3video.cpp \
 		$(VBA_API_DIR)/gba/RTC.cpp \
 		$(VBA_API_DIR)/gba/Sram.cpp \
 		$(VBA_API_DIR)/gba/bios.cpp \
-		$(CELL_FRAMEWORK_DIR)/fileio/FileBrowser.cpp \
 		$(SRC_DIR)/menu.cpp
 
 VBA_CPPOBJS 	= $(VBA_CPPSRCS:.cpp=.ppu.o)
 
 VBA_CSRCS	+=  $(SRC_DIR)/ps3input.c \
+		$(CELL_FRAMEWORK2_DIR)/fileio/file_browser.c \
 		$(SRC_DIR)/conf/config_file.c \
 		$(VBA_API_DIR)/common/memgzio.c \
 		$(CELL_FRAMEWORK2_DIR)/audio/audioport.c \

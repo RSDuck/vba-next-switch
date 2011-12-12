@@ -675,7 +675,7 @@ static void ps3graphics_update_state_uniforms(unsigned index)
 
 void ps3graphics_draw(uint8_t *XBuf)
 {
-	frame_count += 1;
+	frame_count++;
 	if(fbo_enable)
 	{
 		glBindFramebufferOES(GL_FRAMEBUFFER_OES, fbo);
@@ -750,6 +750,7 @@ void ps3graphics_draw(uint8_t *XBuf)
 
 void ps3graphics_draw_menu(int width, int height)
 {
+	frame_count++;
 	float device_aspect = psglGetDeviceAspectRatio(psgl_device);
 	GLuint temp_width = gl_width;
 	GLuint temp_height = gl_height;
