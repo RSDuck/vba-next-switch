@@ -25,7 +25,6 @@ else ifeq ($(platform), osx)
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), ps3)
    TARGET := libsnes.a
-   SHARED := -shared, -Wl, --version-script=libsnes/link.T
    CC = ppu-lv2-gcc
    CXX = ppu-lv2-g++
    AR = ppu-lv2-ar
@@ -33,12 +32,18 @@ else ifeq ($(platform), ps3)
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), xenon)
    TARGET := libsnes.a
-   SHARED := -shared, -Wl, --version-script=libsnes/link.T
    CC = xenon-gcc
    CXX = xenon-g++
    AR = xenon-ar
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
+else ifeq ($(platform), wii)
+   TARGET := libsnes.a
+   CC = powerpc-eabi-gcc
+   CXX = powerpc-eabi-g++
+   AR = powerpc-eabi-ar
+   CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
+   CXXFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
 else
    TARGET := snes.dll
    CC = gcc
@@ -92,6 +97,8 @@ $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
 	$(AR) rcs $@ $(OBJECTS)
 else ifeq($(platform), xenon)
+	$(AR) rcs $@ $(OBJECTS)
+else ifeq($(platform), wii)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
