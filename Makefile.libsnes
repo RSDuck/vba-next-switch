@@ -42,8 +42,8 @@ else ifeq ($(platform), wii)
    CC = powerpc-eabi-gcc
    CXX = powerpc-eabi-g++
    AR = powerpc-eabi-ar
-   CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
-   CXXFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
+   ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
+   PLATFORM_DEFINES += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
    TARGET := snes.dll
    CC = gcc
