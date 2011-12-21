@@ -68,14 +68,15 @@ VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gb $(VBA_DIR)/gba $(VBA_DIR
 IGNORE_SRC := $(LIBSNES_DIR)/gbaconv.c
 
 ifeq ($(platform), ps3)
-CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
-VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
-else ifeq($(platform), xenon)
-CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
-VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
+   CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
+   VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
+else ifeq ($(platform), xenon)
+   CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
+   VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
 else
-VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
+   VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 endif
+
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 VBA_CSRCS := $(filter-out $(IGNORE_SRC),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c)))
 VBA_COBJ := $(VBA_CSRCS:.c=.o)
@@ -96,9 +97,9 @@ LIBS :=
 $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
 	$(AR) rcs $@ $(OBJECTS)
-else ifeq($(platform), xenon)
+else ifeq ($(platform), xenon)
 	$(AR) rcs $@ $(OBJECTS)
-else ifeq($(platform), wii)
+else ifeq ($(platform), wii)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
