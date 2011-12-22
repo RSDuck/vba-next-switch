@@ -390,7 +390,8 @@ void snes_run(void)
    if (first)
    {
       adjust_save_ram();
-      environ_cb(SNES_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
+      if (environ_cb)
+         environ_cb(SNES_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
       first = false;
    }
 
