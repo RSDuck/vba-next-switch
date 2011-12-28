@@ -1,0 +1,321 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\libsnes">
+      <UniqueIdentifier>{3ed03eb4-3d22-42ca-b2ab-1058e771db27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common">
+      <UniqueIdentifier>{48cba2ce-d18b-47ff-8060-b4e8156f5580}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gba">
+      <UniqueIdentifier>{b72b4e4d-41cc-47ac-ae75-05fc547fd36d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gb">
+      <UniqueIdentifier>{973c4a01-ec53-47d1-be33-922115dd2b11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\apu">
+      <UniqueIdentifier>{7ea82162-cf18-4454-bd8c-ecb7deb806c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libsnes">
+      <UniqueIdentifier>{01290b17-a062-4772-8a90-1fb347398419}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gba">
+      <UniqueIdentifier>{9553246f-4fb1-41ce-807d-bd3c3dc6f564}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gb">
+      <UniqueIdentifier>{09b92b35-c9fd-4d79-8383-29eb9e29c7cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\apu">
+      <UniqueIdentifier>{a7c2b719-93c9-466c-bf8f-952433da4125}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\common">
+      <UniqueIdentifier>{d5a23baf-0d6e-4d49-a81e-f1320c3186cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\zlib">
+      <UniqueIdentifier>{8bf15877-6198-4e94-a40f-2f2b85d6ef0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\zlib">
+      <UniqueIdentifier>{9f144f7c-a5e0-4697-8624-02402cb49a44}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\libsnes\libsnes.cpp">
+      <Filter>Source Files\libsnes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\Patch.cpp">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\memgzio.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\Sram.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\agbprint.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\bios.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\Cheats.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\EEprom.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\Flash.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\GBA.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\RTC.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gba\Sound.cpp">
+      <Filter>Source Files\gba</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbSound.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\GB.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbCheats.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbDis.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbGfx.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbGlobals.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbMemory.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbPrinter.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gb\gbSGB.cpp">
+      <Filter>Source Files\gb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\apu\Sound_Buffer.cpp">
+      <Filter>Source Files\apu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\zutil.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\adler32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\compress.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\crc32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\deflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\gzclose.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\gzlib.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\gzread.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\gzwrite.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\infback.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\inffast.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\inflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\inftrees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\trees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils\zlib\uncompr.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\VbaNext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\NLS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\System.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbSound.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gb.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbCheats.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbCodes.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbCodesCB.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbGlobals.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbMemory.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbPrinter.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gb\gbSGB.h">
+      <Filter>Header Files\gb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\Sram.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\agbprint.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\bios.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\Cheats.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\EEprom.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\Flash.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBA.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBA-arm_.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBAcpu.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBAGfx.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBAinline.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\GBA-thumb_.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\Globals.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\RTC.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gba\Sound.h">
+      <Filter>Header Files\gba</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libsnes\libsnes.hpp">
+      <Filter>Header Files\libsnes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\Sound_Buffer.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\blargg_common.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\blargg_config.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\blargg_source.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\Gb_Apu.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\apu\Gb_Oscs.h">
+      <Filter>Header Files\apu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\Types.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\memgzio.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\Patch.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\Port.h">
+      <Filter>Header Files\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\zutil.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\crc32.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\deflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\gzguts.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\inffast.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\inffixed.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\inflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\inftrees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\trees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\zconf.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utils\zlib\zlib.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
