@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../common/Port.h"
 #include "../System.h"
 #include "../NLS.h"
 #include "gb.h"
@@ -1097,7 +1098,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 				   }
 
 				   else
-					   __builtin_memset(gbSCYLine, value, sizeof(gbSCYLine));
+					   memset(gbSCYLine, value, sizeof(gbSCYLine));
 
 				   gbMemory[0xff42] = register_SCY = value;
 				   return;
@@ -1119,7 +1120,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 				   }
 
 				   else
-					   __builtin_memset(gbSCXLine, value, sizeof(gbSCXLine));
+					   memset(gbSCXLine, value, sizeof(gbSCXLine));
 
 				   gbMemory[0xff43] = register_SCX = value;
 				   return;
@@ -1172,7 +1173,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 							   gbBgpLine[i] = value;
 				   }
 				   else
-					   __builtin_memset(gbBgpLine,value,sizeof(gbBgpLine));
+					   memset(gbBgpLine,value,sizeof(gbBgpLine));
 
 				   gbBgp[0] = value & 0x03;
 				   gbBgp[1] = (value & 0x0c)>>2;
@@ -1198,7 +1199,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 							   gbObp0Line[i] = value;
 				   }
 				   else
-					   __builtin_memset(gbObp0Line,value,sizeof(gbObp0Line));
+					   memset(gbObp0Line,value,sizeof(gbObp0Line));
 
 				   gbObp0[0] = value & 0x03;
 				   gbObp0[1] = (value & 0x0c)>>2;
@@ -1224,7 +1225,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 							   gbObp1Line[i] = value;
 				   }
 				   else
-					   __builtin_memset(gbObp1Line,value,sizeof(gbObp1Line));
+					   memset(gbObp1Line,value,sizeof(gbObp1Line));
 
 				   gbObp1[0] = value & 0x03;
 				   gbObp1[1] = (value & 0x0c)>>2;
@@ -1281,7 +1282,7 @@ void  gbWriteMemory(register uint16_t address, register uint8_t value)
 				   if (useBios && inBios && !skipBios && (value & 1))
 				   {
 					   gbMemoryMap[0x00] = &gbRom[0x0000];
-					   __builtin_memcpy ((uint8_t *)(gbRom+0x100), (uint8_t *)(gbMemory + 0x100), 0xF00);
+					   memcpy ((uint8_t *)(gbRom+0x100), (uint8_t *)(gbMemory + 0x100), 0xF00);
 					   inBios = false;
 				   }
 			   }
@@ -2145,11 +2146,11 @@ void gbReset()
 
 	if(gbCgbMode == 1) {
 		if (gbVram == NULL)
-			gbVram = (uint8_t *)__builtin_malloc(0x4000);
+			gbVram = (uint8_t *)malloc(0x4000);
 		if (gbWram == NULL)
-			gbWram = (uint8_t *)__builtin_malloc(0x8000);
-		__builtin_memset(gbVram,0,0x4000);
-		__builtin_memset(gbPalette,0, 2*128);
+			gbWram = (uint8_t *)malloc(0x8000);
+		memset(gbVram,0,0x4000);
+		memset(gbPalette,0, 2*128);
 	}
 	else
 	{
@@ -2184,7 +2185,7 @@ void gbReset()
 	// Karamuchou ha Oosawagi!.
 	if (gbMemory != NULL)
 	{
-		__builtin_memset(gbMemory,0xff, 65536);
+		memset(gbMemory,0xff, 65536);
 		for (int temp = 0xC000; temp < 0xE000; temp++)
 			if ((temp & 0x8) ^((temp & 0x800)>>8))
 			{
@@ -2201,18 +2202,18 @@ void gbReset()
 	// GB bios set this memory area to 0
 	// Fixes Pitman (J) title screen
 	if (gbHardware & 0x1) {
-		__builtin_memset(&gbMemory[0x8000], 0x0, 0x2000);
+		memset(&gbMemory[0x8000], 0x0, 0x2000);
 	}
 
 	// clean LineBuffer
 	if (gbLineBuffer != NULL)
-		__builtin_memset(gbLineBuffer, 0, sizeof(gbLineBuffer));
+		memset(gbLineBuffer, 0, sizeof(gbLineBuffer));
 	// clean Pix
 	if (pix != NULL)
-		__builtin_memset(pix, 0, sizeof(pix));
+		memset(pix, 0, sizeof(pix));
 	// clean Vram
 	if (gbVram != NULL)
-		__builtin_memset(gbVram, 0, 0x4000);
+		memset(gbVram, 0, 0x4000);
 	// clean Wram 2
 	// This kinda emulates the startup state of Wram on GBC (not very accurate,
 	// but way closer to the reality than filling it with 00es or FFes).
@@ -2224,23 +2225,23 @@ void gbReset()
 	{
 		for (int i = 0; i<8; i++)
 			if (i != 2)
-				__builtin_memcpy ((uint16_t *)(gbWram+i*0x1000), (uint16_t *)(gbMemory+0xC000), 0x1000);
+				memcpy ((uint16_t *)(gbWram+i*0x1000), (uint16_t *)(gbMemory+0xC000), 0x1000);
 	}
 
-	__builtin_memset(gbSCYLine,0,sizeof(gbSCYLine));
-	__builtin_memset(gbSCXLine,0,sizeof(gbSCXLine));
-	__builtin_memset(gbBgpLine,0xfc,sizeof(gbBgpLine));
+	memset(gbSCYLine,0,sizeof(gbSCYLine));
+	memset(gbSCXLine,0,sizeof(gbSCXLine));
+	memset(gbBgpLine,0xfc,sizeof(gbBgpLine));
 	if (gbHardware & 5)
 	{
-		__builtin_memset(gbObp0Line,0xff,sizeof(gbObp0Line));
-		__builtin_memset(gbObp1Line,0xff,sizeof(gbObp1Line));
+		memset(gbObp0Line,0xff,sizeof(gbObp0Line));
+		memset(gbObp1Line,0xff,sizeof(gbObp1Line));
 	}
 	else
 	{
-		__builtin_memset(gbObp0Line,0x0,sizeof(gbObp0Line));
-		__builtin_memset(gbObp1Line,0x0,sizeof(gbObp1Line));
+		memset(gbObp0Line,0x0,sizeof(gbObp0Line));
+		memset(gbObp1Line,0x0,sizeof(gbObp1Line));
 	}
-	__builtin_memset(gbSpritesTicks,0x0,sizeof(gbSpritesTicks));
+	memset(gbSpritesTicks,0x0,sizeof(gbSpritesTicks));
 
 	SP.W = 0xfffe;
 	AF.W = 0x01b0;
@@ -2401,8 +2402,8 @@ void gbReset()
 		// used for the handling of the gb Boot Rom
 		if ((gbHardware & 5) && (bios != NULL) && useBios && !skipBios)
 		{
-			__builtin_memcpy ((uint8_t *)(gbMemory), (uint8_t *)(gbRom), 0x1000);
-			__builtin_memcpy ((uint8_t *)(gbMemory), (uint8_t *)(bios), 0x100);
+			memcpy ((uint8_t *)(gbMemory), (uint8_t *)(gbRom), 0x1000);
+			memcpy ((uint8_t *)(gbMemory), (uint8_t *)(bios), 0x100);
 			gbWhiteScreen = 0;
 
 			gbInternalTimer = 0x3e;
@@ -2600,28 +2601,28 @@ void gbReset()
 	for(i = 0; i < 4; i++)
 		gbBgp[i] = gbObp0[i] = gbObp1[i] = i;
 
-	__builtin_memset(&gbDataMBC1,0, sizeof(gbDataMBC1));
+	memset(&gbDataMBC1,0, sizeof(gbDataMBC1));
 	gbDataMBC1.mapperROMBank = 1;
 
 	gbDataMBC2.mapperRAMEnable = 0;
 	gbDataMBC2.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataMBC3,0, 6 * sizeof(int));
+	memset(&gbDataMBC3,0, 6 * sizeof(int));
 	gbDataMBC3.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataMBC5, 0, sizeof(gbDataMBC5));
+	memset(&gbDataMBC5, 0, sizeof(gbDataMBC5));
 	gbDataMBC5.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataHuC1, 0, sizeof(gbDataHuC1));
+	memset(&gbDataHuC1, 0, sizeof(gbDataHuC1));
 	gbDataHuC1.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataHuC3, 0, sizeof(gbDataHuC3));
+	memset(&gbDataHuC3, 0, sizeof(gbDataHuC3));
 	gbDataHuC3.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataTAMA5,0, 26*sizeof(int));
+	memset(&gbDataTAMA5,0, 26*sizeof(int));
 	gbDataTAMA5.mapperROMBank = 1;
 
-	__builtin_memset(&gbDataMMM01,0, sizeof(gbDataMMM01));
+	memset(&gbDataMMM01,0, sizeof(gbDataMMM01));
 	gbDataMMM01.mapperROMBank = 1;
 
 	if (useBios && !skipBios && (gbHardware & 5))
@@ -3201,11 +3202,11 @@ void gbInit()
 	gbGenFilter();
 	gbSgbInit();
 
-	gbMemory = (uint8_t *)__builtin_malloc(65536);
+	gbMemory = (uint8_t *)malloc(65536);
 
-	pix = (uint8_t *)__builtin_calloc(1,4*257*226);
+	pix = (uint8_t *)calloc(1,4*257*226);
 
-	gbLineBuffer = (uint16_t *)__builtin_malloc(160 * sizeof(uint16_t));
+	gbLineBuffer = (uint16_t *)malloc(160 * sizeof(uint16_t));
 }
 
 bool gbWriteBatteryFile(const char *file, bool extendedSave)
@@ -3364,7 +3365,7 @@ bool gbReadGSASnapshot(const char *fileName)
   char buffer2[16];
   fread(buffer, 1, 15, file);
   buffer[15] = 0;
-  __builtin_memcpy(buffer2, &gbRom[0x134], 15);
+  memcpy(buffer2, &gbRom[0x134], 15);
   buffer2[15] = 0;
   if(memcmp(buffer, buffer2, 15)) {
     systemMessage(MSG_CANNOT_IMPORT_SNAPSHOT_FOR,
@@ -3646,11 +3647,11 @@ static bool gbReadSaveState(gzFile gzFile)
 	else
 	{
 		if(gbVram == NULL)
-			gbVram = (uint8_t *)__builtin_malloc(0x4000);
+			gbVram = (uint8_t *)malloc(0x4000);
 		if(gbWram == NULL)
-			gbWram = (uint8_t *)__builtin_malloc(0x8000);
-		__builtin_memset(gbVram,0,0x4000);
-		__builtin_memset(gbPalette,0, 2*128);
+			gbWram = (uint8_t *)malloc(0x8000);
+		memset(gbVram,0,0x4000);
+		memset(gbPalette,0, 2*128);
 	}
 
 
@@ -3695,7 +3696,7 @@ static bool gbReadSaveState(gzFile gzFile)
 	if(version < GBSAVE_GAME_VERSION_5) {
 		utilGzRead(gzFile, pix, 256*224*sizeof(uint16_t));
 	}
-	__builtin_memset(pix, 0, 257*226*sizeof(uint32_t));
+	memset(pix, 0, 257*226*sizeof(uint32_t));
 
 	if(version < GBSAVE_GAME_VERSION_6) {
 		utilGzRead(gzFile, gbPalette, 64 * sizeof(uint16_t));
@@ -3734,21 +3735,21 @@ static bool gbReadSaveState(gzFile gzFile)
 			}
 	}
 
-	__builtin_memset(gbSCYLine, register_SCY, sizeof(gbSCYLine));
-	__builtin_memset(gbSCXLine, register_SCX, sizeof(gbSCXLine));
-	__builtin_memset(gbBgpLine, (gbBgp[0] | (gbBgp[1]<<2) | (gbBgp[2]<<4) |
+	memset(gbSCYLine, register_SCY, sizeof(gbSCYLine));
+	memset(gbSCXLine, register_SCX, sizeof(gbSCXLine));
+	memset(gbBgpLine, (gbBgp[0] | (gbBgp[1]<<2) | (gbBgp[2]<<4) |
 				(gbBgp[3]<<6)), sizeof(gbBgpLine));
-	__builtin_memset(gbObp0Line, (gbObp0[0] | (gbObp0[1]<<2) | (gbObp0[2]<<4) |
+	memset(gbObp0Line, (gbObp0[0] | (gbObp0[1]<<2) | (gbObp0[2]<<4) |
 				(gbObp0[3]<<6)), sizeof(gbObp0Line));
-	__builtin_memset(gbObp1Line, (gbObp1[0] | (gbObp1[1]<<2) | (gbObp1[2]<<4) |
+	memset(gbObp1Line, (gbObp1[0] | (gbObp1[1]<<2) | (gbObp1[2]<<4) |
 				(gbObp1[3]<<6)), sizeof(gbObp1Line));
-	__builtin_memset(gbSpritesTicks, 0x0, sizeof(gbSpritesTicks));
+	memset(gbSpritesTicks, 0x0, sizeof(gbSpritesTicks));
 
 	if (inBios)
 	{
 		gbMemoryMap[0x00] = &gbMemory[0x0000];
-		__builtin_memcpy ((uint8_t *)(gbMemory), (uint8_t *)(gbRom), 0x1000);
-		__builtin_memcpy ((uint8_t *)(gbMemory), (uint8_t *)(bios), 0x100);
+		memcpy ((uint8_t *)(gbMemory), (uint8_t *)(gbRom), 0x1000);
+		memcpy ((uint8_t *)(gbMemory), (uint8_t *)(bios), 0x100);
 	}
 	else
 		gbMemoryMap[0x00] = &gbRom[0x0000];
@@ -3921,7 +3922,7 @@ static bool gbReadSaveState(gzFile gzFile)
 		gbLcdTicksDelayed = gbLcdTicks--;
 		gbLcdLYIncrementTicksDelayed = gbLcdLYIncrementTicks--;
 		gbInterruptWait = 0;
-		__builtin_memset(gbSpritesTicks,0,sizeof(gbSpritesTicks));
+		memset(gbSpritesTicks,0,sizeof(gbSpritesTicks));
 	}
 	else
 	{
@@ -4050,7 +4051,7 @@ bool gbLoadRom(const char *szFile)
 		free(bios);
 		bios = NULL;
 	}
-	bios = (uint8_t *)__builtin_calloc(1,0x100);
+	bios = (uint8_t *)calloc(1,0x100);
 
 	return gbUpdateSizes();
 }
@@ -4241,8 +4242,8 @@ bool gbUpdateSizes()
 			gbTAMA5ramSize = 0x100;
 
 			if (gbTAMA5ram == NULL)
-				gbTAMA5ram = (uint8_t *)__builtin_malloc(gbTAMA5ramSize);
-			__builtin_memset(gbTAMA5ram, 0x0, gbTAMA5ramSize);
+				gbTAMA5ram = (uint8_t *)malloc(gbTAMA5ramSize);
+			memset(gbTAMA5ram, 0x0, gbTAMA5ramSize);
 
 			mapperRAM = mapperTAMA5RAM;
 			mapperReadRAM = mapperTAMA5ReadRAM;
@@ -4266,8 +4267,8 @@ bool gbUpdateSizes()
 	}
 
 	if(gbRamSize) {
-		gbRam = (uint8_t *)__builtin_malloc(gbRamSize);
-		__builtin_memset(gbRam, gbRamFill, gbRamSize);
+		gbRam = (uint8_t *)malloc(gbRamSize);
+		memset(gbRam, gbRamFill, gbRamSize);
 	}
 
 	switch(gbRomType) {
@@ -4780,12 +4781,12 @@ gbRedoLoop:
 							{
 								// H-Blank
 
-								__builtin_memset(gbSCYLine,gbSCYLine[299],sizeof(gbSCYLine));
-								__builtin_memset(gbSCXLine,gbSCXLine[299],sizeof(gbSCXLine));
-								__builtin_memset(gbBgpLine,gbBgpLine[299],sizeof(gbBgpLine));
-								__builtin_memset(gbObp0Line,gbObp0Line[299],sizeof(gbObp0Line));
-								__builtin_memset(gbObp1Line,gbObp1Line[299],sizeof(gbObp1Line));
-								__builtin_memset(gbSpritesTicks,gbSpritesTicks[299],sizeof(gbSpritesTicks));
+								memset(gbSCYLine,gbSCYLine[299],sizeof(gbSCYLine));
+								memset(gbSCXLine,gbSCXLine[299],sizeof(gbSCXLine));
+								memset(gbBgpLine,gbBgpLine[299],sizeof(gbBgpLine));
+								memset(gbObp0Line,gbObp0Line[299],sizeof(gbObp0Line));
+								memset(gbObp1Line,gbObp1Line[299],sizeof(gbObp1Line));
+								memset(gbSpritesTicks,gbSpritesTicks[299],sizeof(gbSpritesTicks));
 
 								if (gbWindowLine <0)
 									oldRegister_WY = register_WY;

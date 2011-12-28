@@ -11,6 +11,10 @@ static __inline int isel( int a, int x, int y )
 	return (x & (~mask)) + (y & mask);
 }
 
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#endif
+
 #ifndef LSB_FIRST
 #if defined(__GNUC__) && defined(__ppc__)
 #define READ16LE( base )        ({unsigned ppc_lhbrx_; asm( "lhbrx %0,0,%1" : "=r" (ppc_lhbrx_) : "r" (base), "0" (ppc_lhbrx_) ); ppc_lhbrx_;})

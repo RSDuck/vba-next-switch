@@ -68,7 +68,7 @@ public:
 		#define BLARGG_THROWS( spec )
 	#endif
 	#define BLARGG_DISABLE_NOTHROW \
-		void* operator new ( size_t s ) BLARGG_THROWS(()) { return __builtin_malloc( s ); }\
+		void* operator new ( size_t s ) BLARGG_THROWS(()) { return malloc( s ); }\
 		void operator delete ( void* p ) { free( p ); }
 #endif
 

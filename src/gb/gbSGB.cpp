@@ -66,12 +66,12 @@ void gbSgbReset()
   gbSgbNextController = 0x0f;
   gbSgbReadingController = 0;
 
-  __builtin_memset(gbSgbSCPPalette, 0, 512*4);
-  __builtin_memset(gbSgbATF, 0, 20*18);
-  __builtin_memset(gbSgbATFList, 0, 45 * 20 * 18);
-  __builtin_memset(gbSgbPacket, 0, 16 * 7);
-  __builtin_memset(gbSgbBorderChar, 0, 32*256);
-  __builtin_memset(gbSgbBorder, 0, 2048);
+  memset(gbSgbSCPPalette, 0, 512*4);
+  memset(gbSgbATF, 0, 20*18);
+  memset(gbSgbATFList, 0, 45 * 20 * 18);
+  memset(gbSgbPacket, 0, 16 * 7);
+  memset(gbSgbBorderChar, 0, 32*256);
+  memset(gbSgbBorder, 0, 2048);
 
   int i;
   for(i = 1; i < 2048; i+=2) {
@@ -88,8 +88,8 @@ void gbSgbReset()
 
 void gbSgbInit()
 {
-  gbSgbBorderChar = (uint8_t *)__builtin_malloc(32 * 256);
-  gbSgbBorder = (uint8_t *)__builtin_malloc(2048);
+  gbSgbBorderChar = (uint8_t *)malloc(32 * 256);
+  gbSgbBorder = (uint8_t *)malloc(2048);
 
   gbSgbReset();
 }
@@ -298,7 +298,7 @@ void gbSgbPicture()
 {
   gbSgbRenderScreenToBuffer();
 
-  __builtin_memcpy(gbSgbBorder, gbSgbScreenBuffer, 2048);
+  memcpy(gbSgbBorder, gbSgbScreenBuffer, 2048);
 
   uint16_t *paletteAddr = (uint16_t *)&gbSgbScreenBuffer[2048];
 
@@ -363,7 +363,7 @@ void gbSgbSetATF(int n)
     n = 0;
   if(n > 44)
     n = 44;
-  __builtin_memcpy(gbSgbATF,&gbSgbATFList[n * 20 * 18], 20 * 18);
+  memcpy(gbSgbATF,&gbSgbATFList[n * 20 * 18], 20 * 18);
 
   if(gbSgbPacket[1] & 0x40) {
     gbSgbMask = 0;
@@ -375,16 +375,16 @@ void gbSgbSetATF(int n)
 void gbSgbSetPalette()
 {
   uint16_t pal = READ16LE((((uint16_t *)&gbSgbPacket[1])))&511;
-  __builtin_memcpy(&gbPalette[0], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
+  memcpy(&gbPalette[0], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
   pal = READ16LE((((uint16_t *)&gbSgbPacket[3])))&511;
-  __builtin_memcpy(&gbPalette[4], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
+  memcpy(&gbPalette[4], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
   pal = READ16LE((((uint16_t *)&gbSgbPacket[5])))&511;
-  __builtin_memcpy(&gbPalette[8], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
+  memcpy(&gbPalette[8], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
   pal = READ16LE((((uint16_t *)&gbSgbPacket[7])))&511;
-  __builtin_memcpy(&gbPalette[12], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
+  memcpy(&gbPalette[12], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
   uint8_t atf = gbSgbPacket[9];
 
@@ -629,7 +629,7 @@ void gbSgbMaskEnable()
     break;
   case 2:
     gbSgbFillScreen(0x0000);
-    //    __builtin_memset(&gbPalette[0], 0, 128*sizeof(uint16_t));
+    //    memset(&gbPalette[0], 0, 128*sizeof(uint16_t));
     break;
   case 3:
     gbSgbFillScreen(gbPalette[0]);
@@ -652,7 +652,7 @@ void gbSgbChrTransfer()
   else
     gbSgbCGBSupport |= 1;
 
-  __builtin_memcpy(&gbSgbBorderChar[address], gbSgbScreenBuffer, 128 * 32);
+  memcpy(&gbSgbBorderChar[address], gbSgbScreenBuffer, 128 * 32);
 
   if(gbBorderAutomatic && !gbBorderOn && gbSgbCGBSupport > 4) {
     gbBorderOn = 1;

@@ -2272,7 +2272,7 @@ int armExecute()
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, its used during operations and generates LHS without it
 	#ifdef __ANDROID__
-		__builtin_prefetch(&clockTicks);
+		prefetch(&clockTicks);
 	#else
 		 __dcbt(&clockTicks);
 	#endif

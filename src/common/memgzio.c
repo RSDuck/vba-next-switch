@@ -713,17 +713,17 @@ long ZEXPORT memtell(file)
  */
 typedef struct
 {
-  unsigned int zipid __attribute__ ((__packed__));  // 0x04034b50
-  unsigned short zipversion __attribute__ ((__packed__));
-  unsigned short zipflags __attribute__ ((__packed__));
-  unsigned short compressionMethod __attribute__ ((__packed__));
-  unsigned short lastmodtime __attribute__ ((__packed__));
-  unsigned short lastmoddate __attribute__ ((__packed__));
-  unsigned int crc32 __attribute__ ((__packed__));
-  unsigned int compressedSize __attribute__ ((__packed__));
-  unsigned int uncompressedSize __attribute__ ((__packed__));
-  unsigned short filenameLength __attribute__ ((__packed__));
-  unsigned short extraDataLength __attribute__ ((__packed__));
+  unsigned int zipid;  /* 0x04034b50 */
+  unsigned short zipversion;
+  unsigned short zipflags;
+  unsigned short compressionMethod;
+  unsigned short lastmodtime;
+  unsigned short lastmoddate;
+  unsigned int crc32;
+  unsigned int compressedSize;
+  unsigned int uncompressedSize;
+  unsigned short filenameLength;
+  unsigned short extraDataLength;
 } PKZIPHEADER;
 
 /*
@@ -775,14 +775,16 @@ void get_zipfilename(char * filename, char * outfilename)
 	/* Detect Zip file */
 	if (memcmp(in, "PK", 2) == 0)
 	{
+		int len;
+		PKZIPHEADER *pkzip;
 		/* Read remaining header data */
 		fread(in + 2, sizeof(PKZIPHEADER) - 2, 1, fd);
 
 		/* Zip header pointer */
-		PKZIPHEADER *pkzip = (PKZIPHEADER *) in;
+		pkzip = (PKZIPHEADER *) in;
 
 		/* Return compressed file name */
-		int len = FLIP16(pkzip->filenameLength);
+		len = FLIP16(pkzip->filenameLength);
 		if (len >= 1024) len = 1024 - 1;
 		fread(outfilename, len, 1, fd);
 		outfilename[len] = 0;

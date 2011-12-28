@@ -23,7 +23,7 @@ extern bool cheatsEnabled;
 
 void gbCheatUpdateMap()
 {
-  __builtin_memset(gbCheatMap, 0, 0x10000);
+  memset(gbCheatMap, 0, 0x10000);
 
   for(int i = 0; i < gbCheatNumber; i++) {
     if(gbCheatList[i].enabled)
@@ -381,7 +381,7 @@ void gbCheatRemove(int i)
   }
 
   if((i+1) <  gbCheatNumber) {
-    __builtin_memcpy(&gbCheatList[i], &gbCheatList[i+1], sizeof(gbCheat)*
+    memcpy(&gbCheatList[i], &gbCheatList[i+1], sizeof(gbCheat)*
            (gbCheatNumber-i-1));
   }
 

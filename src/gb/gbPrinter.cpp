@@ -1,3 +1,4 @@
+#include <string.h>
 #include "../System.h"
 
 uint8_t gbPrinterStatus = 0;
@@ -94,19 +95,19 @@ void gbPrinterReceiveData()
       if(control & 0x80) { // repeated data
         control &= 0x7f;
         control += 2;
-        __builtin_memset(dest, *data++, control);
+        memset(dest, *data++, control);
         len += control;
         dest += control;
       } else { // raw data
         control++;
-        __builtin_memcpy(dest, data, control);
+        memcpy(dest, data, control);
         dest += control;
         data += control;
         len += control;
       }
     }
   } else {
-    __builtin_memcpy(&gbPrinterData[gbPrinterDataCount],
+    memcpy(&gbPrinterData[gbPrinterDataCount],
            &gbPrinterPacket[6],
            gbPrinterDataSize);
     gbPrinterDataCount += gbPrinterDataSize;

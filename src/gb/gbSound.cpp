@@ -378,7 +378,7 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 	for ( int i = 0; regs_to_copy [i] >= 0; i++ )
 		s.regs [regs_to_copy [i]] = gbMemory [0xFF10 + regs_to_copy [i]];
 
-	__builtin_memcpy( &s.regs [0x20], &gbMemory [0xFF30], 0x10 ); // wave
+	memcpy( &s.regs [0x20], &gbMemory [0xFF30], 0x10 ); // wave
 }
 
 // New state format
@@ -421,7 +421,7 @@ void gbSoundSaveGame( gzFile out )
 	gb_apu->save_state( &state.apu );
 
 	// Be sure areas for expansion get written as zero
-	__builtin_memset( dummy_state, 0, sizeof dummy_state );
+	memset( dummy_state, 0, sizeof dummy_state );
 
 	state.version = 1;
 	utilWriteData( out, gb_state );

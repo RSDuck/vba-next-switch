@@ -136,7 +136,7 @@ inline int dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
 
 
 // Waitstates when executing opcode
-static int __attribute__((always_inline)) codeTicksAccess16(u32 address) // THUMB NON SEQ
+static INLINE int codeTicksAccess16(u32 address) // THUMB NON SEQ
 {
 	int addr = (address>>24) & 15;
 
@@ -157,7 +157,7 @@ static int __attribute__((always_inline)) codeTicksAccess16(u32 address) // THUM
 	return memoryWait[addr];
 }
 
-static int __attribute__((always_inline)) codeTicksAccess32(u32 address) // ARM NON SEQ
+static INLINE int codeTicksAccess32(u32 address) // ARM NON SEQ
 {
 	int addr = (address>>24)&15;
 
@@ -178,7 +178,7 @@ static int __attribute__((always_inline)) codeTicksAccess32(u32 address) // ARM 
 	return memoryWait32[addr];
 }
 
-static int __attribute__((always_inline)) codeTicksAccessSeq16(u32 address) // THUMB SEQ
+static INLINE int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 {
 	int addr = (address>>24) & 15;
 
@@ -201,7 +201,7 @@ static int __attribute__((always_inline)) codeTicksAccessSeq16(u32 address) // T
 	return memoryWaitSeq[addr];
 }
 
-static int __attribute__((always_inline)) codeTicksAccessSeq32(u32 address) // ARM SEQ
+static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
 	int addr = (address>>24)&15;
 
@@ -230,7 +230,7 @@ static int __attribute__((always_inline)) codeTicksAccessSeq32(u32 address) // A
 
 // Emulates the Cheat System (m) code
 #ifdef USE_CHEATS
-static void __attribute__((always_inline)) cpuMasterCodeCheck()
+static INLINE void cpuMasterCodeCheck()
 {
   if((mastercode) && (mastercode == armNextPC))
   {

@@ -11,6 +11,10 @@
 #  define LSEEK lseek
 #endif
 
+#ifdef _MSC_VER
+#define lseek fseek
+#endif
+
 /* Local functions */
 local void gz_reset OF((gz_statep));
 local gzFile gz_open OF((const char *, int, const char *));

@@ -511,7 +511,7 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
       audio_cb(finalWave[i + 0], finalWave[i + 1]);
 }
 
-static uint16_t pix_buf[160 * 256] __attribute__((aligned(16)));
+static uint16_t pix_buf[160 * 256];
 
 #if __SSE2__
 #include <emmintrin.h>
