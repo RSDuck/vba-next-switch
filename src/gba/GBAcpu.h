@@ -98,7 +98,7 @@ INLINE int dataTicksAccessSeq(u32 address, u8 bit32)// DATA 8/16bits SEQ
 	}
 	else if (busPrefetch)
 	{
-		int waitState = value;
+		waitState = value;
 		waitState = (1 & ~waitState) | (waitState & waitState);
 		busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
 	}

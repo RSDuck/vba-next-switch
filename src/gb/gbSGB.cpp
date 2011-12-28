@@ -374,16 +374,16 @@ void gbSgbSetATF(int n)
 
 void gbSgbSetPalette()
 {
-  uint16_t pal = READ16LE((((uint16_t *)&gbSgbPacket[1])))&511;
+  uint16_t pal = READ16LE((((uint16_t *)&gbSgbPacket[1]))) & 511;
   memcpy(&gbPalette[0], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
-  pal = READ16LE((((uint16_t *)&gbSgbPacket[3])))&511;
+  pal = READ16LE((((uint16_t *)&gbSgbPacket[3]))) & 511;
   memcpy(&gbPalette[4], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
-  pal = READ16LE((((uint16_t *)&gbSgbPacket[5])))&511;
+  pal = READ16LE((((uint16_t *)&gbSgbPacket[5]))) & 511;
   memcpy(&gbPalette[8], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
-  pal = READ16LE((((uint16_t *)&gbSgbPacket[7])))&511;
+  pal = READ16LE((((uint16_t *)&gbSgbPacket[7]))) & 511;
   memcpy(&gbPalette[12], &gbSgbSCPPalette[pal*4], 4 * sizeof(uint16_t));
 
   uint8_t atf = gbSgbPacket[9];

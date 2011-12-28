@@ -12,6 +12,7 @@ static __inline int isel( int a, int x, int y )
 }
 
 #ifdef _MSC_VER
+#include <stdlib.h>
 #define strcasecmp _stricmp
 #endif
 
@@ -21,6 +22,11 @@ static __inline int isel( int a, int x, int y )
 #define READ32LE( base )        ({unsigned ppc_lwbrx_; asm( "lwbrx %0,0,%1" : "=r" (ppc_lwbrx_) : "r" (base), "0" (ppc_lwbrx_) ); ppc_lwbrx_;})
 #define WRITE16LE( base, value )    ({asm( "sthbrx %0,0,%1" : : "r" (value), "r" (base) );})
 #define WRITE32LE( base, value)    ({asm( "stwbrx %0,0,%1" : : "r" (value), "r" (base) );})
+#elif _XBOX
+#define READ16LE( base)	_byteswap_ushort(*((u16 *)(base)))
+#define READ32LE( base) _byteswap_ulong(*((u32 *)(base)))
+#define WRITE16LE( base, value) *((u16 *)base) = _byteswap_ushort((value))
+#define WRITE32LE( base, value) *((u32 *)base) = _byteswap_ulong((value))
 #else
 #define READ16LE(x) (*((u16 *)(x))<<8)|(*((u16 *)(x))>>8);
 #define READ32LE(x) (*((u32 *)(x))<<24)|((*((u32 *)(x))<<8)&0xff0000)|((((*((u32 *)(x))x>>8)&0xff00)|(*((u32 *)(x))>>24);
