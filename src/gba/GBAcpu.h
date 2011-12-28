@@ -54,91 +54,64 @@ extern void CPUSoftwareInterrupt(int comment);
 
 
 // Waitstates when accessing data
-inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
+INLINE int dataTicksAccess(u32 address, u8 bit32) // DATA 8/16bits NON SEQ
 {
-  int addr = (address>>24)&15;
-  int value =  memoryWait[addr];
+	int addr, value, waitState;
 
-  if ((addr>=0x08) || (addr < 0x02))
-  {
-    busPrefetchCount=0;
-    busPrefetch=false;
-  }
-  else if (busPrefetch)
-  {
-    int waitState = value;
-    waitState = (1 & ~waitState) | (waitState & waitState);
-	busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1; 
-  }
+	addr = (address>>24)&15;
 
-  return value;
+	if(bit32)	/* DATA 32bits NON SEQ */
+		value = memoryWait32[addr];
+	else		/* DATA 8/16bits NON SEQ */
+		value =  memoryWait[addr];
+
+	if ((addr>=0x08) || (addr < 0x02))
+	{
+		busPrefetchCount=0;
+		busPrefetch=false;
+	}
+	else if (busPrefetch)
+	{
+		waitState = value;
+		waitState = (1 & ~waitState) | (waitState & waitState);
+		busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1; 
+	}
+
+	return value;
 }
 
-inline int dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
+INLINE int dataTicksAccessSeq(u32 address, u8 bit32)// DATA 8/16bits SEQ
 {
-  int addr = (address>>24)&15;
-  int value = memoryWait32[addr];
+	int addr, value, waitState;
 
-  if ((addr>=0x08) || (addr < 0x02))
-  {
-    busPrefetchCount=0;
-    busPrefetch=false;
-  }
-  else if (busPrefetch)
-  {
-    int waitState = value;
-    waitState = (1 & ~waitState) | (waitState & waitState);
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
-  }
+	addr = (address>>24)&15;
 
-  return value;
+	if (bit32)		/* DATA 32bits SEQ */
+		value = memoryWaitSeq32[addr];
+	else			/* DATA 8/16bits SEQ */
+		value = memoryWaitSeq[addr];
+
+	if ((addr>=0x08) || (addr < 0x02))
+	{
+		busPrefetchCount=0;
+		busPrefetch=false;
+	}
+	else if (busPrefetch)
+	{
+		int waitState = value;
+		waitState = (1 & ~waitState) | (waitState & waitState);
+		busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+	}
+
+	return value;
 }
-
-inline int dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
-{
-  int addr = (address>>24)&15;
-  int value = memoryWaitSeq[addr];
-
-  if ((addr>=0x08) || (addr < 0x02))
-  {
-    busPrefetchCount=0;
-    busPrefetch=false;
-  }
-  else if (busPrefetch)
-  {
-    int waitState = value;
-    waitState = (1 & ~waitState) | (waitState & waitState);
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
-  }
-
-  return value;
-}
-
-inline int dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
-{
-  int addr = (address>>24)&15;
-  int value =  memoryWaitSeq32[addr];
-
-  if ((addr>=0x08) || (addr < 0x02))
-  {
-    busPrefetchCount=0;
-    busPrefetch=false;
-  }
-  else if (busPrefetch)
-  {
-    int waitState = value;
-    waitState = (1 & ~waitState) | (waitState & waitState);
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
-  }
-
-  return value;
-}
-
 
 // Waitstates when executing opcode
-static INLINE int codeTicksAccess16(u32 address) // THUMB NON SEQ
+static INLINE int codeTicksAccess(u32 address, u8 bit32) // THUMB NON SEQ
 {
-	int addr = (address>>24) & 15;
+	int addr, ret;
+
+	addr = (address>>24) & 15;
 
 	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
 	{
@@ -154,28 +127,13 @@ static INLINE int codeTicksAccess16(u32 address) // THUMB NON SEQ
 		}
 	}
 	busPrefetchCount = 0;
-	return memoryWait[addr];
-}
 
-static INLINE int codeTicksAccess32(u32 address) // ARM NON SEQ
-{
-	int addr = (address>>24)&15;
+	if(bit32)		/* ARM NON SEQ */
+		ret = memoryWait32[addr];
+	else			/* THUMB NON SEQ */
+		ret = memoryWait[addr];
 
-	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
-	{
-		if (busPrefetchCount&0x1)
-		{
-			if (busPrefetchCount&0x2)
-			{
-				busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
-				return 0;
-			}
-			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
-			return memoryWaitSeq[addr] - 1;
-		}
-	}
-	busPrefetchCount = 0;
-	return memoryWait32[addr];
+	return ret;
 }
 
 static INLINE int codeTicksAccessSeq16(u32 address) // THUMB SEQ
