@@ -1,5 +1,19 @@
 #include <stdio.h>
 #include <string.h>
+
+#ifndef _MSC_VER
+#define TRUE 1
+#define FALSE 0
+#endif
+
+#define LIBSNES_CORE 1
+
+#if defined(_MSC_VER) && defined(LIBSNES_CORE)
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT
+#endif
+
 #include "libsnes.hpp"
 
 #include "../src/Util.h"
@@ -7,7 +21,6 @@
 #include "../src/gba/Sound.h"
 #include "../src/gba/RTC.h"
 #include "../src/gba/Globals.h"
-
 
 static snes_video_refresh_t video_cb;
 static snes_audio_sample_t audio_cb;
@@ -19,7 +32,8 @@ extern uint64_t joy;
 uint16_t systemGbPalette[24];
 uint8_t libsnes_save_buf[0x20000 + 0x2000];
 static unsigned libsnes_save_size = sizeof(libsnes_save_buf);
-uint8_t *snes_get_memory_data(unsigned id)
+
+EXPORT uint8_t *snes_get_memory_data(unsigned id)
 {
    if (id != SNES_MEMORY_CARTRIDGE_RAM)
       return 0;
@@ -27,7 +41,7 @@ uint8_t *snes_get_memory_data(unsigned id)
    return libsnes_save_buf;
 }
 
-unsigned snes_get_memory_size(unsigned id)
+EXPORT unsigned snes_get_memory_size(unsigned id)
 {
    if (id != SNES_MEMORY_CARTRIDGE_RAM)
       return 0;
@@ -81,53 +95,55 @@ static void adjust_save_ram()
 }
 
 
-unsigned snes_library_revision_major(void)
+EXPORT unsigned snes_library_revision_major(void)
 {
    return 1;
 }
 
-unsigned snes_library_revision_minor(void)
+EXPORT unsigned snes_library_revision_minor(void)
 {
    return 3;
 }
 
-const char *snes_library_id(void)
+EXPORT const char *snes_library_id(void)
 {
    return "VBANext";
 }
 
-void snes_set_video_refresh(snes_video_refresh_t cb)
+EXPORT void snes_set_video_refresh(snes_video_refresh_t cb)
 {
    video_cb = cb;
 }
 
-void snes_set_audio_sample(snes_audio_sample_t cb)
+EXPORT void snes_set_audio_sample(snes_audio_sample_t cb)
 {
    audio_cb = cb;
 }
 
-void snes_set_input_poll(snes_input_poll_t cb)
+EXPORT void snes_set_input_poll(snes_input_poll_t cb)
 {
    poll_cb = cb;
 }
 
-void snes_set_input_state(snes_input_state_t cb)
+EXPORT void snes_set_input_state(snes_input_state_t cb)
 {
    input_cb = cb;
 }
 
-void snes_set_controller_port_device(bool, unsigned)
-{}
+EXPORT void snes_set_controller_port_device(bool, unsigned)
+{
+}
 
-void snes_set_cartridge_basename(const char*)
-{}
+EXPORT void snes_set_cartridge_basename(const char*)
+{
+}
 
 // SSNES extension.
 static snes_environment_t environ_cb;
-void snes_set_environment(snes_environment_t cb) { environ_cb = cb; }
+EXPORT void snes_set_environment(snes_environment_t cb) { environ_cb = cb; }
 static const char *full_path;
 
-void snes_init(void)
+EXPORT void snes_init(void)
 {
    memset(libsnes_save_buf, 0xff, sizeof(libsnes_save_buf));
 
@@ -146,7 +162,6 @@ void snes_init(void)
       environ_cb(SNES_ENVIRONMENT_SET_TIMING, &timing);
    }
 }
-////
 
 static unsigned serialize_size = 0;
 
@@ -343,14 +358,14 @@ static void gba_init(void)
 	delete[] state_buf;
 }
 
-void snes_term(void) {}
+EXPORT void snes_term(void) {}
 
-void snes_power(void)
+EXPORT void snes_power(void)
 {
    CPUReset();
 }
 
-void snes_reset(void)
+EXPORT void snes_reset(void)
 {
    CPUReset();
 }
@@ -384,7 +399,8 @@ static void systemReadJoypadGBA(void)
 
 static bool can_dupe;
 static bool screen_drawn;
-void snes_run(void)
+
+EXPORT void snes_run(void)
 {
    static bool first = true;
    if (first)
@@ -404,28 +420,28 @@ void snes_run(void)
 }
 
 
-unsigned snes_serialize_size(void)
+EXPORT unsigned snes_serialize_size(void)
 {
    return serialize_size;
 }
 
-bool snes_serialize(uint8_t *data, unsigned size)
+EXPORT bool snes_serialize(uint8_t *data, unsigned size)
 {
    return CPUWriteState_libgba(data, size);
 }
 
-bool snes_unserialize(const uint8_t *data, unsigned size)
+EXPORT bool snes_unserialize(const uint8_t *data, unsigned size)
 {
    return CPUReadState_libgba(data, size);
 }
 
-void snes_cheat_reset(void)
+EXPORT void snes_cheat_reset(void)
 {}
 
-void snes_cheat_set(unsigned, bool, const char*)
+EXPORT void snes_cheat_set(unsigned, bool, const char*)
 {}
 
-bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned rom_size)
+EXPORT bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned rom_size)
 {
    const char *tmppath = "VBA-tmp.gba";
    unsigned ret;
@@ -449,35 +465,35 @@ bool snes_load_cartridge_normal(const char*, const uint8_t *rom_data, unsigned r
    return ret;
 }
 
-bool snes_load_cartridge_bsx_slotted(
+EXPORT bool snes_load_cartridge_bsx_slotted(
   const char*, const uint8_t*, unsigned,
   const char*, const uint8_t*, unsigned
 )
 { return false; }
 
-bool snes_load_cartridge_bsx(
+EXPORT bool snes_load_cartridge_bsx(
   const char*, const uint8_t *, unsigned,
   const char*, const uint8_t *, unsigned
 )
 { return false; }
 
-bool snes_load_cartridge_sufami_turbo(
+EXPORT bool snes_load_cartridge_sufami_turbo(
   const char*, const uint8_t*, unsigned,
   const char*, const uint8_t*, unsigned,
   const char*, const uint8_t*, unsigned
 )
 { return false; }
 
-bool snes_load_cartridge_super_game_boy(
+EXPORT bool snes_load_cartridge_super_game_boy(
   const char*, const uint8_t*, unsigned,
   const char*, const uint8_t*, unsigned
 )
 { return false; }
 
-void snes_unload_cartridge(void)
+EXPORT void snes_unload_cartridge(void)
 {}
 
-bool snes_get_region(void)
+EXPORT bool snes_get_region(void)
 {
    return SNES_REGION_NTSC;
 }
