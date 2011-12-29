@@ -347,7 +347,7 @@ class Stereo_Buffer
 		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );
 
-		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
+		long samples_avail() { return (((long)bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
 		enum { bufs_size = 3 };

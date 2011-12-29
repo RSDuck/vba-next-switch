@@ -30,17 +30,6 @@ void Gb_Osc::reset()
         enabled  = false;
 }
 
-INLINE void Gb_Osc::update_amp( int32_t time, int new_amp )
-{
-        output->set_modified();
-        int delta = new_amp - last_amp;
-        if ( delta )
-        {
-                last_amp = new_amp;
-                med_synth->offset( time, delta, output );
-        }
-}
-
 // Units
 
 void Gb_Osc::clock_length()
@@ -52,16 +41,14 @@ void Gb_Osc::clock_length()
         }
 }
 
-INLINE int Gb_Env::reload_env_timer()
-{
-        int raw = regs [2] & 7;
-        env_delay = (raw ? raw : 8);
-        return raw;
-}
-
 void Gb_Env::clock_envelope()
 {
-        if ( env_enabled && --env_delay <= 0 && reload_env_timer() )
+	int raw;
+
+	raw = regs[2] & 7;
+	env_delay = (raw ? raw : 8);
+
+        if ( env_enabled && --env_delay <= 0 && raw )
         {
                 int v = volume + (regs [2] & 0x08 ? +1 : -1);
                 if ( 0 <= v && v <= 15 )
@@ -219,8 +206,11 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 		case 4:
 			if ( write_trig( frame_phase, max_len, old ) )
 			{
+				int raw;
+
 				volume = regs [2] >> 4;
-				reload_env_timer();
+				raw = regs [2] & 7;
+				env_delay = (raw ? raw : 8);
 				env_enabled = true;
 				if ( frame_phase == 7 )
 					env_delay++;
@@ -376,7 +366,13 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 vol = -vol;
                         }
                 }
-                update_amp( time, amp );
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
         }
 
         // Generate wave
@@ -530,7 +526,13 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
 		#endif
 
-                update_amp( time, amp );
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
         }
 
         // Run timer and calculate time of next LFSR clock
@@ -622,7 +624,13 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
 
                         amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - dac_bias;
                 }
-                update_amp( time, amp );
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
         }
 
         // Generate wave
