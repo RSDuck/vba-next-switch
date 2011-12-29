@@ -228,12 +228,9 @@ int const blip_sample_bits = 30;
         const Blip_Buffer::buf_t_* BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
-// Gets value to pass to BLIP_READER_NEXT()
-#define BLIP_READER_BASS( blip_buffer ) ((blip_buffer).bass_shift_)
-
 // Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
 // code at the cost of having no bass control
-int const blip_reader_default_bass = 9;
+#define BLIP_READER_DEFAULT_BASS 9
 
 // Current sample
 #define BLIP_READER_READ( name )        (name##_reader_accum >> (blip_sample_bits - 16))
@@ -261,9 +258,8 @@ int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
 }
 
 #define BLIP_READER_NEXT_RAW_IDX_( name, bass, idx ) {\
-        name##_reader_accum -= name##_reader_accum >> (bass);\
-        name##_reader_accum +=\
-                        *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx));\
+        name##_reader_accum -= name##_reader_accum >> (bass); \
+        name##_reader_accum += *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx)); \
 }
 
 const int blip_low_quality  = blip_med_quality;
