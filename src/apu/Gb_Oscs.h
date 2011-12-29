@@ -5,6 +5,7 @@
 #define GB_OSCS_H
 
 #include "blargg_common.h"
+#include "blargg_source.h"
 #include "Sound_Buffer.h"
 
 #ifndef GB_APU_OVERCLOCK
@@ -173,23 +174,37 @@ class Gb_Wave : public Gb_Osc
 
 	void corrupt_wave();
 
-	uint8_t* wave_bank() const { return &wave_ram [(~regs [0] & bank40_mask) >> 2 & agb_mask]; }
-
 	// Wave index that would be accessed, or -1 if no access would occur
 	int access( unsigned addr ) const;
 };
 
 INLINE int Gb_Wave::read( unsigned addr ) const
 {
-	int index = access( addr );
-	return (index < 0 ? 0xFF : wave_bank() [index]);
+	int index;
+
+	if(enabled)
+		index = access( addr );
+	else
+		index = addr & 0x0F;
+	
+	unsigned char const * wave_bank = &wave_ram[(~regs[0] & bank40_mask) >> 2 & agb_mask];
+
+	return (index < 0 ? 0xFF : wave_bank[index]);
 }
 
 INLINE void Gb_Wave::write( unsigned addr, int data )
 {
-        int index = access( addr );
-        if ( index >= 0 )
-                wave_bank() [index] = data;;
+	int index;
+
+	if(enabled)
+		index = access( addr );
+	else
+		index = addr & 0x0F;
+	
+	unsigned char * wave_bank = &wave_ram[(~regs[0] & bank40_mask) >> 2 & agb_mask];
+
+	if ( index >= 0 )
+		wave_bank[index] = data;;
 }
 
 #endif

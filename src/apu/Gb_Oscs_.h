@@ -111,20 +111,17 @@ void Gb_Sweep_Square::clock_sweep()
 
 int Gb_Wave::access( unsigned addr ) const
 {
-        if ( enabled )
-        {
-                addr = phase & (bank_size - 1);
-		#ifndef USE_GBA_ONLY
-                if ( mode == mode_dmg )
-                {
-                        addr++;
-                        if ( delay > clk_mul )
-                                return -1; // can only access within narrow time window while playing
-                }
-		#endif
-                addr >>= 1;
-        }
-        return addr & 0x0F;
+	addr = phase & (bank_size - 1);
+#ifndef USE_GBA_ONLY
+	if ( mode == mode_dmg )
+	{
+		addr++;
+		if ( delay > clk_mul )
+			return -1; // can only access within narrow time window while playing
+	}
+#endif
+	addr >>= 1;
+	return addr & 0x0F;
 }
 
 // write_register
