@@ -26,23 +26,20 @@ int const power_mask = 0x80;
 
 #define osc_count 4
 
-INLINE int Gb_Apu::calc_output( int osc ) const
-{
-	int bits = regs [stereo_reg - start_addr] >> osc;
-	return (bits >> 3 & 2) | (bits & 1);
-}
-
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
+	int i;
 
-	int i = osc;
+	i = osc;
 	do
 	{
+		int bits;
 		Gb_Osc& o = *oscs [i];
 		o.outputs [1] = right;
 		o.outputs [2] = left;
 		o.outputs [3] = center;
-		o.output = o.outputs [calc_output( i )];
+		bits = regs [stereo_reg - start_addr] >> i;
+		o.output = o.outputs [((bits >> 3 & 2) | (bits & 1))];
 		++i;
 	}
 	while ( i < osc );
@@ -57,11 +54,13 @@ void Gb_Apu::synth_volume( int iv )
 
 void Gb_Apu::apply_volume()
 {
+	int data, left, right;
+
 	// TODO: Doesn't handle differing left and right volumes (panning).
 	// Not worth the complexity.
-	int data  = regs [vol_reg - start_addr];
-	int left  = data >> 4 & 7;
-	int right = data & 7;
+	data  = regs [vol_reg - start_addr];
+	left  = data >> 4 & 7;
+	right = data & 7;
 	synth_volume( max( left, right ) + 1 );
 }
 
@@ -99,6 +98,12 @@ void Gb_Apu::reduce_clicks( bool reduce )
 
 void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 {
+	int i, b;
+	static byte const initial_wave [2] [16] = {
+		{0x84,0x40,0x43,0xAA,0x2D,0x78,0x92,0x3C,0x60,0x59,0x59,0xB0,0x34,0xB8,0x2E,0xDA},
+		{0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF},
+	};
+
 	// Hardware mode
 	#ifndef USE_GBA_ONLY
 	if ( agb_wave )
@@ -118,7 +123,7 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 	last_time   = 0;
 	frame_phase = 0;
 
-	for ( int i = 0; i < 0x20; i++ )
+	for ( i = 0; i < 0x20; i++ )
 		regs [i] = 0;
 
 	square1.reset();
@@ -134,16 +139,12 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 	noise  .length_ctr = 64;
 
 	// Load initial wave RAM
-	static byte const initial_wave [2] [16] = {
-		{0x84,0x40,0x43,0xAA,0x2D,0x78,0x92,0x3C,0x60,0x59,0x59,0xB0,0x34,0xB8,0x2E,0xDA},
-		{0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF},
-	};
-	for ( int b = 2; --b >= 0; )
+	for ( b = 2; --b >= 0; )
 	{
 		// Init both banks (does nothing if not in AGB mode)
 		// TODO: verify that this works
 		write_register( 0, 0xFF1A, b * 0x40 );
-		for ( unsigned i = 0; i < sizeof initial_wave [0]; i++ )
+		for ( i = 0; i < sizeof(initial_wave [0]); i++ )
 #ifdef USE_GBA_ONLY
 			write_register( 0, i + wave_ram, initial_wave [1] [i] );
 #else
@@ -154,6 +155,8 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 
 Gb_Apu::Gb_Apu()
 {
+	int i;
+
 	wave.wave_ram = &regs [wave_ram - start_addr];
 
 	oscs [0] = &square1;
@@ -161,7 +164,7 @@ Gb_Apu::Gb_Apu()
 	oscs [2] = &wave;
 	oscs [3] = &noise;
 
-	for ( int i = osc_count; --i >= 0; )
+	for ( i = osc_count; --i >= 0; )
 	{
 		Gb_Osc& o = *oscs [i];
 		o.regs        = &regs [i * 5];
@@ -185,10 +188,12 @@ Gb_Apu::Gb_Apu()
 
 void Gb_Apu::run_until_( int32_t end_time )
 {
-   do
+	int32_t time;
+
+	do
 	{
 		// run oscillators
-		int32_t time = end_time;
+		time = end_time;
 		if ( time > frame_time )
 			time = frame_time;
 
@@ -205,39 +210,33 @@ void Gb_Apu::run_until_( int32_t end_time )
 		frame_time += frame_period * clk_mul;
 		switch ( frame_phase++ )
 		{
-		case 2:
-		case 6:
-			// 128 Hz
-			square1.clock_sweep();
-		case 0:
-		case 4:
-			// 256 Hz
-			square1.clock_length();
-			square2.clock_length();
-			wave   .clock_length();
-			noise  .clock_length();
-			break;
+			case 2:
+			case 6:
+				// 128 Hz
+				square1.clock_sweep();
+			case 0:
+			case 4:
+				// 256 Hz
+				square1.clock_length();
+				square2.clock_length();
+				wave   .clock_length();
+				noise  .clock_length();
+				break;
 
-		case 7:
-			// 64 Hz
-			frame_phase = 0;
-			square1.clock_envelope();
-			square2.clock_envelope();
-			noise  .clock_envelope();
+			case 7:
+				// 64 Hz
+				frame_phase = 0;
+				square1.clock_envelope();
+				square2.clock_envelope();
+				noise  .clock_envelope();
 		}
 	}while(1);
-}
-
-INLINE void Gb_Apu::run_until( int32_t time )
-{
-	if ( time > last_time )
-		run_until_( time );
 }
 
 void Gb_Apu::end_frame( int32_t end_time )
 {
 	if ( end_time > last_time )
-		run_until( end_time );
+		run_until_( end_time );
 
 	frame_time -= end_time;
 
@@ -280,7 +279,8 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			data &= 0x3F; // clear square duty
 	}
 
-	run_until( time );
+	if ( time > last_time )
+		run_until_( time );
 
 	if ( addr >= wave_ram )
 	{
@@ -309,8 +309,10 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			// Stereo panning
 			for ( int i = osc_count; --i >= 0; )
 			{
+				int bits;
 				Gb_Osc& o = *oscs [i];
-				Blip_Buffer* out = o.outputs [calc_output( i )];
+				 bits = regs [stereo_reg - start_addr] >> i;
+				Blip_Buffer* out = o.outputs [((bits >> 3 & 2) | (bits & 1))];
 				if ( o.output != out )
 				{
 					silence_osc( o );
@@ -354,8 +356,10 @@ void Gb_Apu::apply_stereo()
 {
 	for ( int i = osc_count; --i >= 0; )
 	{
+		int bits;
 		Gb_Osc& o = *oscs [i];
-		Blip_Buffer* out = o.outputs [calc_output( i )];
+		bits = regs [stereo_reg - start_addr] >> i;
+		Blip_Buffer* out = o.outputs [((bits >> 3 & 2) | (bits & 1))];
 		if ( o.output != out )
 		{
 			silence_osc( o );
@@ -367,9 +371,12 @@ void Gb_Apu::apply_stereo()
 
 int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
-	run_until( time );
+	int reg, mask, data;
 
-	int reg = addr - start_addr;
+	if ( time > last_time )
+		run_until_( time );
+
+	reg = addr - start_addr;
 	if ( (unsigned) reg >= register_count )
 		return 0;
 
@@ -385,10 +392,13 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 		0x00,0x00,0x70,
 		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
 	};
-	int mask = masks [reg];
+
+	mask = masks [reg];
+
 	if ( wave.agb_mask && (reg == 10 || reg == 12) )
 		mask = 0x1F; // extra implemented bits in wave regs on AGB
-	int data = regs [reg] | mask;
+
+	data = regs [reg] | mask;
 
 	// Status register
 	if ( addr == status_reg )
