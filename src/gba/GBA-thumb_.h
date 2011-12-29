@@ -19,16 +19,10 @@
 #ifdef USE_AGBPRINT
 #include "agbprint.h"
 #endif
-#ifdef PROFILING
-#include "prof/prof.h"
-#endif
 
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
 #endif
-
-///////////////////////////////////////////////////////////////////////////
-
 
 static  void thumbUnknownInsn(u32 opcode)
 {

@@ -37,10 +37,6 @@ uint64_t joy = 0;
 #include "agbprint.h"
 #endif
 
-#ifdef PROFILING
-#include "prof/prof.h"
-#endif
-
 int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
 int gfxBG2Changed = 0;
@@ -214,11 +210,6 @@ bool cpuEEPROMSensorEnabled = false;
 uint32_t cpuPrefetch[2];
 
 int cpuTotalTicks = 0;
-#ifdef PROFILING
-int profilingTicks = 0;
-int profilingTicksReload = 0;
-static profile_segment *profilSegment = NULL;
-#endif
 
 int lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 uint8_t timerOnOffDelay = 0;
@@ -595,64 +586,40 @@ variable_desc saveGameStruct[] = {
 
 static int romSize = 0x2000000;
 
-#ifdef PROFILING
-void cpuProfil(profile_segment *seg)
-{
-	profilSegment = seg;
-}
-
-void cpuEnableProfiling(int hz)
-{
-	if(hz == 0)
-		hz = 100;
-	profilingTicks = profilingTicksReload = 16777216 / hz;
-	profSetHertz(hz);
-}
-#endif
-
-
 inline int CPUUpdateTicks()
 {
-  int cpuLoopTicks = lcdTicks;
+	int cpuLoopTicks = lcdTicks;
 
-  if(soundTicks < cpuLoopTicks)
-    cpuLoopTicks = soundTicks;
+	if(soundTicks < cpuLoopTicks)
+		cpuLoopTicks = soundTicks;
 
-  if(timer0On && (timer0Ticks < cpuLoopTicks))
-    cpuLoopTicks = timer0Ticks;
+	if(timer0On && (timer0Ticks < cpuLoopTicks))
+		cpuLoopTicks = timer0Ticks;
 
-  if(timer1On && !(TM1CNT & 4) && (timer1Ticks < cpuLoopTicks))
-    cpuLoopTicks = timer1Ticks;
+	if(timer1On && !(TM1CNT & 4) && (timer1Ticks < cpuLoopTicks))
+		cpuLoopTicks = timer1Ticks;
 
-  if(timer2On && !(TM2CNT & 4) && (timer2Ticks < cpuLoopTicks))
-    cpuLoopTicks = timer2Ticks;
+	if(timer2On && !(TM2CNT & 4) && (timer2Ticks < cpuLoopTicks))
+		cpuLoopTicks = timer2Ticks;
 
-  if(timer3On && !(TM3CNT & 4) && (timer3Ticks < cpuLoopTicks))
-    cpuLoopTicks = timer3Ticks;
-
-#ifdef PROFILING
-  if(profilingTicksReload != 0)
-  {
-    if(profilingTicks < cpuLoopTicks)
-      cpuLoopTicks = profilingTicks;
-  }
-#endif
+	if(timer3On && !(TM3CNT & 4) && (timer3Ticks < cpuLoopTicks))
+		cpuLoopTicks = timer3Ticks;
 
 #ifdef USE_SWITICKS
-  if (SWITicks)
-  {
-    if (SWITicks < cpuLoopTicks)
-        cpuLoopTicks = SWITicks;
-  }
+	if (SWITicks)
+	{
+		if (SWITicks < cpuLoopTicks)
+			cpuLoopTicks = SWITicks;
+	}
 #endif
 
-  if (IRQTicks)
-  {
-    if (IRQTicks < cpuLoopTicks)
-        cpuLoopTicks = IRQTicks;
-  }
+	if (IRQTicks)
+	{
+		if (IRQTicks < cpuLoopTicks)
+			cpuLoopTicks = IRQTicks;
+	}
 
-  return cpuLoopTicks;
+	return cpuLoopTicks;
 }
 
 #define CPUUpdateWindow0() \
@@ -1205,12 +1172,6 @@ bool CPUIsELF(const char *file)
 
 static void CPUCleanUp()
 {
-#ifdef PROFILING
-	if(profilingTicksReload) {
-		profCleanup();
-	}
-#endif
-
 	if(rom != NULL) {
 		free(rom);
 		rom = NULL;
@@ -4094,24 +4055,6 @@ void CPUSoftwareInterrupt(int comment)
 {
 	//static bool disableMessage = false;
 	if(armState) comment >>= 16;
-#ifdef PROFILING
-	if(comment == 0xfe) {
-		profStartup(reg[0].I, reg[1].I);
-		return;
-	}
-	if(comment == 0xfd) {
-		profControl(reg[0].I);
-		return;
-	}
-	if(comment == 0xfc) {
-		profCleanup();
-		return;
-	}
-	if(comment == 0xfb) {
-		profCount();
-		return;
-	}
-#endif
 #ifdef USE_AGBPRINT
 	if(comment == 0xfa) {
 		agbPrintFlush();
@@ -5983,33 +5926,7 @@ updateLoop:
 			}
 
 			timerOverflow = 0;
-
-
-
-#ifdef PROFILING
-			profilingTicks -= clockTicks;
-			if(profilingTicks <= 0) {
-				profilingTicks += profilingTicksReload;
-				if(profilSegment) {
-					profile_segment *seg = profilSegment;
-					do {
-						uint16_t *b = (uint16_t *)seg->sbuf;
-						int pc = ((reg[15].I - seg->s_lowpc) * seg->s_scale)/0x10000;
-						if(pc >= 0 && pc < seg->ssiz) {
-							b[pc]++;
-							break;
-						}
-
-						seg = seg->next;
-					} while(seg);
-				}
-			}
-#endif
-
 			ticks -= clockTicks;
-
-
-
 			cpuNextEvent = CPUUpdateTicks();
 
 			if(cpuDmaTicksToUpdate > 0) {

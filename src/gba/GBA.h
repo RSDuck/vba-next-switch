@@ -92,11 +92,6 @@ extern void CPULoop(int ticks);
 extern void CPULoop();
 #endif
 extern void CPUCheckDMA(int,int);
-#ifdef PROFILING
-#include "prof/prof.h"
-extern void cpuProfil(profile_segment *seg);
-extern void cpuEnableProfiling(int hz);
-#endif
 
 #define R13_IRQ  18
 #define R14_IRQ  19
