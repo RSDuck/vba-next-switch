@@ -51,47 +51,7 @@ static  void armUnknownInsn(u32 opcode)
     // CPU Undefined Exception - end of ghetto inline
 }
 
-// Subroutine to count instructions (for debugging/optimizing)
-//#define INSN_COUNTER  // comment out if you don't want it
-#ifdef INSN_COUNTER
-static void count(u32 opcode, int cond_res)
-{
-    static int insncount = 0;    // number of insns seen
-    static int executed = 0;     // number of insns executed
-    static int mergewith[4096];  // map instructions to routines
-    static int count[4096];      // count of each 12-bit code
-    int index = ((opcode>>16)&0xFF0) | ((opcode>>4)&0x0F);
-    static FILE *outfile = NULL;
-
-    if (!insncount) {
-        for (int i = 0; i < 4096; i++) {
-            for (int j = 0; j < i; j++) {
-                if (armInsnTable[i] == armInsnTable[j])
-                    break;
-            }
-            mergewith[i] = j;
-        }
-        outfile = fopen("VBA-armcount.txt", "w");
-    }
-    if (cond_res) {
-        count[mergewith[index]]++;
-        executed++;
-    }
-    insncount++;
-    if (outfile && insncount%1000000 == 0) {
-        fprintf(outfile, "Total instructions: %d\n", insncount);
-        fprintf(outfile, "Instructions executed: %d\n", executed);
-        for (int i = 0; i < 4096; i++) {
-            if (count[i])
-                fprintf(outfile, "arm%03X: %d\n", i, count[i]);
-        }
-    }
-}
-#endif
-
 // Common macros //////////////////////////////////////////////////////////
-
-#define CONSOLE_OUTPUT(a,b)  /* nothing */
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)

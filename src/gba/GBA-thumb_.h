@@ -16,9 +16,6 @@
 #endif
 #include "../Util.h"
 #include "../System.h"
-#ifdef USE_AGBPRINT
-#include "agbprint.h"
-#endif
 
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
@@ -39,12 +36,6 @@ static  void thumbUnknownInsn(u32 opcode)
   reg[15].I += 4;
     // CPU Undefined Exception - end of ghetto inline
 }
-
-
-// Common macros //////////////////////////////////////////////////////////
-
-# define THUMB_CONSOLE_OUTPUT(a,b)
-# define UPDATE_OLDREG
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -496,7 +487,6 @@ static  void thumb40_0(u32 opcode)
 
   reg[dest].I = val;
 
-  THUMB_CONSOLE_OUTPUT(NULL, reg[2].I);
 }
 
 // EOR Rd, Rs
@@ -769,7 +759,6 @@ static  void thumb46_2(u32 opcode)
 {
   reg[(opcode&7)+8].I = reg[(opcode>>3)&7].I;
   if((opcode&7) == 7) {
-    UPDATE_OLDREG;
     reg[15].I &= 0xFFFFFFFE;
     armNextPC = reg[15].I;
     reg[15].I += 2;
@@ -784,7 +773,6 @@ static  void thumb46_3(u32 opcode)
 {
   reg[(opcode&7)+8].I = reg[((opcode>>3)&7)+8].I;
   if((opcode&7) == 7) {
-    UPDATE_OLDREG;
     reg[15].I &= 0xFFFFFFFE;
     armNextPC = reg[15].I;
     reg[15].I += 2;
@@ -800,7 +788,6 @@ static  void thumb47(u32 opcode)
 {
   int base = (opcode >> 3) & 15;
   busPrefetchCount=0;
-  UPDATE_OLDREG;
   reg[15].I = reg[base].I;
   if(reg[base].I & 1) {
     armState = false;
@@ -1217,7 +1204,6 @@ static  void thumbC8(u32 opcode)
 static  void thumbD0(u32 opcode)
 {
   int val;
-  UPDATE_OLDREG;
   if(Z_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1236,7 +1222,6 @@ static  void thumbD0(u32 opcode)
 // BNE offset
 static  void thumbD1(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!Z_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1251,7 +1236,6 @@ static  void thumbD1(u32 opcode)
 // BCS offset
 static  void thumbD2(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(C_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1266,7 +1250,6 @@ static  void thumbD2(u32 opcode)
 // BCC offset
 static  void thumbD3(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!C_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1281,7 +1264,6 @@ static  void thumbD3(u32 opcode)
 // BMI offset
 static  void thumbD4(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(N_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1296,7 +1278,6 @@ static  void thumbD4(u32 opcode)
 // BPL offset
 static  void thumbD5(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!N_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1311,7 +1292,6 @@ static  void thumbD5(u32 opcode)
 // BVS offset
 static  void thumbD6(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(V_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1326,7 +1306,6 @@ static  void thumbD6(u32 opcode)
 // BVC offset
 static  void thumbD7(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!V_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1341,7 +1320,6 @@ static  void thumbD7(u32 opcode)
 // BHI offset
 static  void thumbD8(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(C_FLAG && !Z_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1356,7 +1334,6 @@ static  void thumbD8(u32 opcode)
 // BLS offset
 static  void thumbD9(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!C_FLAG || Z_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1371,7 +1348,6 @@ static  void thumbD9(u32 opcode)
 // BGE offset
 static  void thumbDA(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(N_FLAG == V_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1386,7 +1362,6 @@ static  void thumbDA(u32 opcode)
 // BLT offset
 static  void thumbDB(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(N_FLAG != V_FLAG) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1401,7 +1376,6 @@ static  void thumbDB(u32 opcode)
 // BGT offset
 static  void thumbDC(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(!Z_FLAG && (N_FLAG == V_FLAG)) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
@@ -1416,7 +1390,6 @@ static  void thumbDC(u32 opcode)
 // BLE offset
 static  void thumbDD(u32 opcode)
 {
-  UPDATE_OLDREG;
   if(Z_FLAG || (N_FLAG != V_FLAG)) {
     reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     armNextPC = reg[15].I;
