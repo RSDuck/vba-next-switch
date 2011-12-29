@@ -18,9 +18,6 @@
 #endif
 #include "../Util.h"
 #include "../System.h"
-#ifdef USE_AGBPRINT
-#include "agbprint.h"
-#endif
 
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>

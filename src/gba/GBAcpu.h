@@ -1,9 +1,6 @@
 #ifndef GBACPU_H
 #define GBACPU_H
 
-extern int armExecute();
-extern int thumbExecute();
-
 #define UPDATE_REG(address, value)\
   {\
     WRITE16LE(((u16 *)&ioMem[address]),value);\

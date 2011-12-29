@@ -33,9 +33,6 @@ uint64_t joy = 0;
 #include "../Util.h"
 #include "../common/Port.h"
 #include "../System.h"
-#ifdef USE_AGBPRINT
-#include "agbprint.h"
-#endif
 
 int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
@@ -4055,12 +4052,6 @@ void CPUSoftwareInterrupt(int comment)
 {
 	//static bool disableMessage = false;
 	if(armState) comment >>= 16;
-#ifdef USE_AGBPRINT
-	if(comment == 0xfa) {
-		agbPrintFlush();
-		return;
-	}
-#endif
 	if(useBios) {
 		CPUSoftwareInterrupt_();
 		return;
@@ -5246,12 +5237,6 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 		*((uint16_t *)&rom[0x1fe209c]) = 0xdffa; // SWI 0xFA
 		*((uint16_t *)&rom[0x1fe209e]) = 0x4770; // BX LR
 	}
-#ifdef USE_AGBPRINT
-	else
-	{
-		agbPrintEnable(false);
-	}
-#endif
 }
 
 void CPUReset()

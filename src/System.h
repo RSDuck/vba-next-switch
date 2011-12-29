@@ -65,9 +65,6 @@ extern int systemGreenShift;
 extern int systemBlueShift;
 
 extern int systemColorDepth;
-#ifdef USE_AGBPRINT
-extern int systemVerbose;
-#endif
 extern int systemFrameSkip;
 extern int systemSaveUpdateCounter;
 extern int systemSpeed;

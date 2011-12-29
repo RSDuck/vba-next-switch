@@ -5,9 +5,6 @@
 #include "../common/Port.h"
 #include "RTC.h"
 #include "Sound.h"
-#ifdef USE_AGBPRINT
-#include "agbprint.h"
-#endif
 #include "GBAcpu.h"
 
 extern const u32 objTilesAddress[3];
@@ -406,14 +403,8 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 		case 8:
 		case 9:
 			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-#ifdef USE_AGBPRINT
-			{
-#endif
 				if(!rtcWrite(address, value))
 					goto unwritable;
-#ifdef USE_AGBPRINT
-			} else if(!agbPrintWrite(address, value)) goto unwritable;
-#endif
 			break;
 		case 13:
 			if(cpuEEPROMEnabled) {
