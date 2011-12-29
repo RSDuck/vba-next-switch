@@ -7,7 +7,7 @@
 #include "Sound_Buffer.h"
 #include "../System.h"
 
-// Blip_Buffer 0.4.1. http://www.slack.net/~ant/
+/* Blip_Buffer 0.4.1. http://www.slack.net/~ant/*/
 
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -73,7 +73,7 @@ void Blip_Buffer::clear( int entire_buffer )
         modified_     = 0;
         if ( buffer_ )
         {
-                long count = (entire_buffer ? buffer_size_ : samples_avail());
+                long count = (entire_buffer ? buffer_size_ : SAMPLES_AVAILABLE());
                 memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof (buf_t_) );
         }
 }
@@ -83,9 +83,9 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
         if ( buffer_size_ == silent_buf_size )
                 return "Internal (tried to resize Silent_Blip_Buffer)";
 
-        // start with maximum length that resampled time can represent
+        /* start with maximum length that resampled time can represent*/
         long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - blip_buffer_extra_ - 64;
-        if ( msec != blip_max_length )
+        if ( msec != 0)
         {
                 long s = (new_rate * (msec + 1) + 999) / 1000;
                 if ( s < new_size )
@@ -102,18 +102,18 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 
         buffer_size_ = new_size;
 
-        // update things based on the sample rate
+        /* update things based on the sample rate*/
         sample_rate_ = new_rate;
         length_ = new_size * 1000 / new_rate - 1;
 
-        // update these since they depend on sample rate
+        /* update these since they depend on sample rate*/
         if ( clock_rate_ )
                 clock_rate( clock_rate_ );
         bass_freq( bass_freq_ );
 
         clear();
 
-        return 0; // success
+        return 0;
 }
 
 uint32_t Blip_Buffer::clock_rate_factor( long rate ) const
@@ -141,7 +141,7 @@ void Blip_Buffer::end_frame( int32_t t )
         offset_ += t * factor_;
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
         if ( clear_modified() )
-                last_non_silence = samples_avail() + blip_buffer_extra_;
+                last_non_silence = SAMPLES_AVAILABLE() + blip_buffer_extra_;
 #endif
 }
 
@@ -154,13 +154,13 @@ void Blip_Buffer::remove_samples( long count )
 
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
-	// copy remaining samples to beginning and clear old samples
-	long remain = samples_avail() + blip_buffer_extra_;
+	/* copy remaining samples to beginning and clear old samples*/
+	long remain = SAMPLES_AVAILABLE() + blip_buffer_extra_;
 	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
 	memset( buffer_ + remain, 0, count * sizeof *buffer_ );
 }
 
-// Blip_Synth_
+/* Blip_Synth_*/
 
 Blip_Synth_Fast_::Blip_Synth_Fast_()
 {
@@ -171,7 +171,7 @@ Blip_Synth_Fast_::Blip_Synth_Fast_()
 
 void Blip_Synth_Fast_::volume_unit( double new_unit )
 {
-        delta_factor = int (new_unit * (1L << blip_sample_bits) + 0.5);
+        delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
 }
 
 long Blip_Buffer::read_samples( int16_t * out, long count)
@@ -184,7 +184,7 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	do
 	{
 		int32_t s = BLIP_READER_READ( reader );
-		BLIP_READER_NEXT_IDX_( reader, BLIP_READER_DEFAULT_BASS, offset );
+		BLIP_READER_NEXT_IDX_( reader, offset );
 		BLIP_CLAMP( s, s );
 		out_tmp [offset] = (int16_t) s;
 	}
@@ -193,8 +193,6 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	BLIP_READER_END( reader, *this );
 
 	remove_samples( count );
-	//}
-		//end of Blip Buffer read_samples
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 		if ( (last_non_silence -= count) < 0 )
@@ -226,11 +224,11 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 uint32_t Blip_Buffer::non_silent() const
 {
-        return last_non_silence | (reader_accum_ >> (blip_sample_bits - 16));
+        return last_non_silence | (reader_accum_ >> 14);
 }
 #endif
 
-// Stereo_Buffer
+/* Stereo_Buffer*/
 
 int const stereo = 2;
 
@@ -295,20 +293,20 @@ void Stereo_Buffer::end_frame( int32_t time )
 
 long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 {
-        out_size = min( out_size, samples_avail() );
+        out_size = min( out_size, STEREO_BUFFER_SAMPLES_AVAILABLE());
 
         int pair_count = int (out_size >> 1);
         if ( pair_count )
         {
                 mixer_read_pairs( out, pair_count );
 
-                if ( samples_avail() <= 0 || immediate_removal_ )
+                if (STEREO_BUFFER_SAMPLES_AVAILABLE() <= 0 || immediate_removal_ )
                 {
                         for ( int i = bufs_size; --i >= 0; )
                         {
                                 buf_t& b = bufs_buffer [i];
             #ifndef FASTER_SOUND_HACK_NON_SILENCE
-                                // TODO: might miss non-silence setting since it checks END of last read
+                                /* TODO: might miss non-silence setting since it checks END of last read*/
                                 if ( !b.non_silent() )
             {
                                         blip_buffer_remove_silence( mixer_samples_read );
@@ -324,17 +322,17 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 }
 
 
-// Stereo_Mixer
+/* Stereo_Mixer*/
 
-// mixers use a single index value to improve performance on register-challenged processors
-// offset goes from negative to zero
+/* mixers use a single index value to improve performance on register-challenged processors*/
+/* offset goes from negative to zero*/
 
 
 void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 {
-	// TODO: if caller never marks buffers as modified, uses mono
-	// except that buffer isn't cleared, so caller can encounter
-	// subtle problems and not realize the cause.
+	/* TODO: if caller never marks buffers as modified, uses mono*/
+	/* except that buffer isn't cleared, so caller can encounter*/
+	/* subtle problems and not realize the cause.*/
 	mixer_samples_read += count;
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
@@ -342,7 +340,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 #endif
 		int16_t* BLIP_RESTRICT outtemp = out + count * stereo;
 
-		// do left + center and right + center separately to reduce register load
+		/* do left + center and right + center separately to reduce register load*/
 		Blip_Buffer* const* buf = &mixer_bufs [2];
 		{
 			--buf;
@@ -357,13 +355,13 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				blargg_long s = center_reader_accum + side_reader_accum;
+				s >>= 14;
+				BLIP_READER_NEXT_IDX_( side,   offset );
+				BLIP_READER_NEXT_IDX_( center, offset );
 				BLIP_CLAMP( s, s );
 
-				++offset; // before write since out is decremented to slightly before end
+				++offset; /* before write since out is decremented to slightly before end*/
 				outtemp [offset * stereo] = (int16_t) s;
 			}while ( offset );
 
@@ -382,19 +380,19 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				blargg_long s = center_reader_accum + side_reader_accum;
+				s >>= 14;
+				BLIP_READER_NEXT_IDX_( side,   offset );
+				BLIP_READER_NEXT_IDX_( center, offset );
 				BLIP_CLAMP( s, s );
 
-				++offset; // before write since out is decremented to slightly before end
+				++offset; /* before write since out is decremented to slightly before end*/
 				outtemp [offset * stereo] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
 
-			// only end center once
+			/* only end center once*/
 			BLIP_READER_END( center, *mixer_bufs [2] );
 		}
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
@@ -410,7 +408,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		do
 		{
 			blargg_long s = BLIP_READER_READ( center );
-			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
 
 			outtemp [offset] [0] = (int16_t) s;
@@ -426,7 +424,7 @@ int const fixed_shift = 12;
 #define TO_FIXED( f )   fixed_t ((f) * ((fixed_t) 1 << fixed_shift))
 #define FROM_FIXED( f ) ((f) >> fixed_shift)
 
-int const max_read = 2560; // determines minimum delay
+int const max_read = 2560; /* determines minimum delay*/
 
 #ifndef USE_GBA_ONLY
 void Effects_Buffer::clear()
@@ -435,9 +433,10 @@ void Effects_Buffer::clear()
 
 void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 {
-	// TODO: if caller never marks buffers as modified, uses mono
-	// except that buffer isn't cleared, so caller can encounter
-	// subtle problems and not realize the cause.
+	/* TODO: if caller never marks buffers as modified, uses mono
+	   except that buffer isn't cleared, so caller can encounter
+	   subtle problems and not realize the cause. */
+
 	mixer_samples_read += count;
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
 	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
@@ -445,7 +444,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 #endif
 		int16_t * BLIP_RESTRICT outtemp = out + count * stereo;
 
-		// do left + center and right + center separately to reduce register load
+		/* do left + center and right + center separately to reduce register load*/
 		Blip_Buffer* const* buf = &mixer_bufs [2];
 		{
 			--buf;
@@ -460,13 +459,13 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				blargg_long s = center_reader_accum + side_reader_accum;
+				s >>= 14;
+				BLIP_READER_NEXT_IDX_( side,   offset );
+				BLIP_READER_NEXT_IDX_( center, offset );
 				BLIP_CLAMP( s, s );
 
-				++offset; // before write since out is decremented to slightly before end
+				++offset; /* before write since out is decremented to slightly before end */
 				outtemp [offset * stereo] = (int16_t) s;
 			}while ( offset );
 
@@ -485,19 +484,19 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
-				s >>= blip_sample_bits - 16;
-				BLIP_READER_NEXT_IDX_( side,   BLIP_READER_DEFAULT_BASS, offset );
-				BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+				blargg_long s = center_reader_accum + side_reader_accum;
+				s >>= 14;
+				BLIP_READER_NEXT_IDX_( side,   offset );
+				BLIP_READER_NEXT_IDX_( center, offset );
 				BLIP_CLAMP( s, s );
 
-				++offset; // before write since out is decremented to slightly before end
+				++offset; /* before write since out is decremented to slightly before end*/
 				outtemp [offset * stereo] = (int16_t) s;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
 
-			// only end center once
+			/* only end center once*/
 			BLIP_READER_END( center, *mixer_bufs [2] );
 		}
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
@@ -513,7 +512,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		do
 		{
 			blargg_long s = BLIP_READER_READ( center );
-			BLIP_READER_NEXT_IDX_( center, BLIP_READER_DEFAULT_BASS, offset );
+			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
 
 			outtemp [offset] [0] = (int16_t) s;
@@ -527,7 +526,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 
 Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 {
-	//from Multi_Buffer
+	/* from Multi_Buffer */
 	samples_per_frame_      = stereo;
 	length_                 = 0;
 	sample_rate_            = 0;
@@ -545,7 +544,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
         no_echo     = true;
         no_effects  = true;
 
-        // defaults
+        /* defaults */
         config_.enabled   = false;
         config_.delay [0] = 120;
         config_.delay [1] = 122;
@@ -582,7 +581,7 @@ Effects_Buffer::~Effects_Buffer()
         bufs_size = 0;
 }
 
-// avoid using new []
+/* avoid using new [] */
 const char * Effects_Buffer::new_bufs( int size )
 {
         bufs_buffer = (buf_t*) malloc( size * sizeof *bufs_buffer );
@@ -595,7 +594,7 @@ const char * Effects_Buffer::new_bufs( int size )
 
 const char * Effects_Buffer::set_sample_rate( long rate, int msec )
 {
-        // extra to allow farther past-the-end pointers
+        /* extra to allow farther past-the-end pointers */
         mixer_samples_read = 0;
         RETURN_ERR( echo.resize( echo_size + stereo ) );
 	sample_rate_ = rate;
@@ -648,7 +647,8 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
                 ch.cfg.surround = false;
                 ch.cfg.echo     = false;
         }
-        // side channels with echo
+
+        /* side channels with echo */
         chans [2].cfg.echo = true;
         chans [3].cfg.echo = true;
 
@@ -675,9 +675,9 @@ channel_t Effects_Buffer::channel( int i )
 }
 
 
-// Configuration
+/* Configuration*/
 
-// 3 wave positions with/without surround, 2 multi (one with same config as wave)
+/* 3 wave positions with/without surround, 2 multi (one with same config as wave)*/
 int const simple_bufs = 3 * 2 + 2 - 1;
 
 Simple_Effects_Buffer::Simple_Effects_Buffer() :
@@ -745,183 +745,183 @@ void Simple_Effects_Buffer::apply_config()
 
 void Effects_Buffer::apply_config()
 {
-        int i;
+	int i;
 
-        if ( !bufs_size )
-                return;
+	if ( !bufs_size )
+		return;
 
-        s.treble = TO_FIXED( config_.treble );
+	s.treble = TO_FIXED( config_.treble );
 
-        bool echo_dirty = false;
+	bool echo_dirty = false;
 
-        fixed_t old_feedback = s.feedback;
-        s.feedback = TO_FIXED( config_.feedback );
-        if ( !old_feedback && s.feedback )
-                echo_dirty = true;
+	fixed_t old_feedback = s.feedback;
+	s.feedback = TO_FIXED( config_.feedback );
+	if ( !old_feedback && s.feedback )
+		echo_dirty = true;
 
-        // delays
-        for ( i = stereo; --i >= 0; )
-        {
-                long delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
-                delay = max( delay, long (max_read * stereo) );
-                delay = min( delay, long (echo_size - max_read * stereo) );
-                if ( s.delay [i] != delay )
-                {
-                        s.delay [i] = delay;
-                        echo_dirty = true;
-                }
-        }
+	/* delays*/
+	for ( i = stereo; --i >= 0; )
+	{
+		long delay = config_.delay [i] * sample_rate_ / 1000 * stereo;
+		delay = max( delay, long (max_read * stereo) );
+		delay = min( delay, long (echo_size - max_read * stereo) );
+		if ( s.delay [i] != delay )
+		{
+			s.delay [i] = delay;
+			echo_dirty = true;
+		}
+	}
 
-        // side channels
-        for ( i = 2; --i >= 0; )
-        {
-                chans [i+2].cfg.vol = chans [i].cfg.vol = config_.side_chans [i].vol * 0.5f;
-                chans [i+2].cfg.pan = chans [i].cfg.pan = config_.side_chans [i].pan;
-        }
+	/* side channels*/
+	for ( i = 2; --i >= 0; )
+	{
+		chans [i+2].cfg.vol = chans [i].cfg.vol = config_.side_chans [i].vol * 0.5f;
+		chans [i+2].cfg.pan = chans [i].cfg.pan = config_.side_chans [i].pan;
+	}
 
-        // convert volumes
-        for ( i = chans.size(); --i >= 0; )
-        {
-                chan_t& ch = chans [i];
-                ch.vol [0] = TO_FIXED( ch.cfg.vol - ch.cfg.vol * ch.cfg.pan );
-                ch.vol [1] = TO_FIXED( ch.cfg.vol + ch.cfg.vol * ch.cfg.pan );
-                if ( ch.cfg.surround )
-                        ch.vol [0] = -ch.vol [0];
-        }
+	/* convert volumes*/
+	for ( i = chans.size(); --i >= 0; )
+	{
+		chan_t& ch = chans [i];
+		ch.vol [0] = TO_FIXED( ch.cfg.vol - ch.cfg.vol * ch.cfg.pan );
+		ch.vol [1] = TO_FIXED( ch.cfg.vol + ch.cfg.vol * ch.cfg.pan );
+		if ( ch.cfg.surround )
+			ch.vol [0] = -ch.vol [0];
+	}
 
-   //Begin of assign buffers
-        // assign channels to buffers
-        int buf_count = 0;
-        for ( int i = 0; i < (int) chans.size(); i++ )
-        {
-                // put second two side channels at end to give priority to main channels
-                // in case closest matching is necessary
-                int x = i;
-                if ( i > 1 )
-                        x += 2;
-                if ( x >= (int) chans.size() )
-                        x -= (chans.size() - 2);
-                chan_t& ch = chans [x];
+	/*Begin of assign buffers*/
+	/* assign channels to buffers*/
+	int buf_count = 0;
+	for ( int i = 0; i < (int) chans.size(); i++ )
+	{
+		/* put second two side channels at end to give priority to main channels*/
+		/* in case closest matching is necessary*/
+		int x = i;
+		if ( i > 1 )
+			x += 2;
+		if ( x >= (int) chans.size() )
+			x -= (chans.size() - 2);
+		chan_t& ch = chans [x];
 
-                int b = 0;
-                for ( ; b < buf_count; b++ )
-                {
-                        if (    ch.vol [0] == bufs_buffer [b].vol [0] &&
-                                        ch.vol [1] == bufs_buffer [b].vol [1] &&
-                                        (ch.cfg.echo == bufs_buffer [b].echo || !s.feedback) )
-                                break;
-                }
+		int b = 0;
+		for ( ; b < buf_count; b++ )
+		{
+			if (    ch.vol [0] == bufs_buffer [b].vol [0] &&
+					ch.vol [1] == bufs_buffer [b].vol [1] &&
+					(ch.cfg.echo == bufs_buffer [b].echo || !s.feedback) )
+				break;
+		}
 
-                if ( b >= buf_count )
-                {
-                        if ( buf_count < bufs_max )
-                        {
-                                bufs_buffer [b].vol [0] = ch.vol [0];
-                                bufs_buffer [b].vol [1] = ch.vol [1];
-                                bufs_buffer [b].echo    = ch.cfg.echo;
-                                buf_count++;
-                        }
-                        else
-                        {
-                                // TODO: this is a mess, needs refinement
-                                b = 0;
-                                fixed_t best_dist = TO_FIXED( 8 );
-                                for ( int h = buf_count; --h >= 0; )
-                                {
-                                        #define CALC_LEVELS( vols, sum, diff, surround ) \
-                                        fixed_t sum, diff;\
-                                        bool surround = false;\
-                                        {\
-                                                fixed_t vol_0 = vols [0];\
-                                                if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
-                                                fixed_t vol_1 = vols [1];\
-                                                if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
-                                                sum  = vol_0 + vol_1;\
-                                                diff = vol_0 - vol_1;\
-                                        }
-                                        CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
-                                        CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
+		if ( b >= buf_count )
+		{
+			if ( buf_count < bufs_max )
+			{
+				bufs_buffer [b].vol [0] = ch.vol [0];
+				bufs_buffer [b].vol [1] = ch.vol [1];
+				bufs_buffer [b].echo    = ch.cfg.echo;
+				buf_count++;
+			}
+			else
+			{
+				/* TODO: this is a mess, needs refinement*/
+				b = 0;
+				fixed_t best_dist = TO_FIXED( 8 );
+				for ( int h = buf_count; --h >= 0; )
+				{
+#define CALC_LEVELS( vols, sum, diff, surround ) \
+					fixed_t sum, diff;\
+					bool surround = false;\
+					{\
+						fixed_t vol_0 = vols [0];\
+						if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
+						fixed_t vol_1 = vols [1];\
+						if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
+						sum  = vol_0 + vol_1;\
+						diff = vol_0 - vol_1;\
+					}
+					CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
+					CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
 
-                                        fixed_t dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
+					fixed_t dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
 
-                                        if ( ch_surround != buf_surround )
-                                                dist += TO_FIXED( 1 ) / 2;
+					if ( ch_surround != buf_surround )
+						dist += TO_FIXED( 1 ) / 2;
 
-                                        if ( s.feedback && ch.cfg.echo != bufs_buffer [h].echo )
-                                                dist += TO_FIXED( 1 ) / 2;
+					if ( s.feedback && ch.cfg.echo != bufs_buffer [h].echo )
+						dist += TO_FIXED( 1 ) / 2;
 
-                                        if ( best_dist > dist )
-                                        {
-                                                best_dist = dist;
-                                                b = h;
-                                        }
-                                }
-                        }
-                }
+					if ( best_dist > dist )
+					{
+						best_dist = dist;
+						b = h;
+					}
+				}
+			}
+		}
 
-                ch.channel.center = &bufs_buffer [b];
-        }
-   //End of assign buffers
+		ch.channel.center = &bufs_buffer [b];
+	}
+	/*End of assign buffers*/
 
-        // set side channels
-        for ( i = chans.size(); --i >= 0; )
-        {
-                chan_t& ch = chans [i];
-                ch.channel.left  = chans [ch.cfg.echo*2  ].channel.center;
-                ch.channel.right = chans [ch.cfg.echo*2+1].channel.center;
-        }
+	/* set side channels*/
+	for ( i = chans.size(); --i >= 0; )
+	{
+		chan_t& ch = chans [i];
+		ch.channel.left  = chans [ch.cfg.echo*2  ].channel.center;
+		ch.channel.right = chans [ch.cfg.echo*2+1].channel.center;
+	}
 
-        bool old_echo = !no_echo && !no_effects;
+	bool old_echo = !no_echo && !no_effects;
 
-        // determine whether effects and echo are needed at all
-        no_effects = true;
-        no_echo    = true;
-        for ( i = chans.size(); --i >= extra_chans; )
-        {
-                chan_t& ch = chans [i];
-                if ( ch.cfg.echo && s.feedback )
-                        no_echo = false;
+	/* determine whether effects and echo are needed at all*/
+	no_effects = true;
+	no_echo    = true;
+	for ( i = chans.size(); --i >= extra_chans; )
+	{
+		chan_t& ch = chans [i];
+		if ( ch.cfg.echo && s.feedback )
+			no_echo = false;
 
-                if ( ch.vol [0] != TO_FIXED( 1 ) || ch.vol [1] != TO_FIXED( 1 ) )
-                        no_effects = false;
-        }
-        if ( !no_echo )
-                no_effects = false;
+		if ( ch.vol [0] != TO_FIXED( 1 ) || ch.vol [1] != TO_FIXED( 1 ) )
+			no_effects = false;
+	}
+	if ( !no_echo )
+		no_effects = false;
 
-        if (    chans [0].vol [0] != TO_FIXED( 1 ) ||
-                        chans [0].vol [1] != TO_FIXED( 0 ) ||
-                        chans [1].vol [0] != TO_FIXED( 0 ) ||
-                        chans [1].vol [1] != TO_FIXED( 1 ) )
-                no_effects = false;
+	if (    chans [0].vol [0] != TO_FIXED( 1 ) ||
+			chans [0].vol [1] != TO_FIXED( 0 ) ||
+			chans [1].vol [0] != TO_FIXED( 0 ) ||
+			chans [1].vol [1] != TO_FIXED( 1 ) )
+		no_effects = false;
 
-        if ( !config_.enabled )
-                no_effects = true;
+	if ( !config_.enabled )
+		no_effects = true;
 
-        if ( no_effects )
-        {
-                for ( i = chans.size(); --i >= 0; )
-                {
-                        chan_t& ch = chans [i];
-                        ch.channel.center = &bufs_buffer [2];
-                        ch.channel.left   = &bufs_buffer [0];
-                        ch.channel.right  = &bufs_buffer [1];
-                }
-        }
+	if ( no_effects )
+	{
+		for ( i = chans.size(); --i >= 0; )
+		{
+			chan_t& ch = chans [i];
+			ch.channel.center = &bufs_buffer [2];
+			ch.channel.left   = &bufs_buffer [0];
+			ch.channel.right  = &bufs_buffer [1];
+		}
+	}
 
-        mixer_bufs [0] = &bufs_buffer [0];
-        mixer_bufs [1] = &bufs_buffer [1];
-        mixer_bufs [2] = &bufs_buffer [2];
+	mixer_bufs [0] = &bufs_buffer [0];
+	mixer_bufs [1] = &bufs_buffer [1];
+	mixer_bufs [2] = &bufs_buffer [2];
 
-        if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
-   {
-      if ( echo.size() )
-         memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
-   }
+	if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
+	{
+		if ( echo.size() )
+			memset( echo.begin(), 0, echo.size() * sizeof echo [0] );
+	}
 
-        channels_changed();
+	channels_changed();
 }
 
-// Mixing
+/* Mixing */
 
 void Effects_Buffer::end_frame( int32_t time )
 {
@@ -931,7 +931,7 @@ void Effects_Buffer::end_frame( int32_t time )
 
 long Effects_Buffer::read_samples( int16_t * out, long out_size )
 {
-        out_size = min( out_size, samples_avail() );
+        out_size = min( out_size, STEREO_BUFFER_SAMPLES_AVAILABLE());
 
         int pair_count = int (out_size >> 1);
         if ( pair_count )
@@ -945,14 +945,14 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
                         int pairs_remain = pair_count;
                         do
                         {
-                                // mix at most max_read pairs at a time
+                                /* mix at most max_read pairs at a time*/
                                 int count = max_read;
                                 if ( count > pairs_remain )
                                         count = pairs_remain;
 
                                 if ( no_echo )
                                 {
-                                        // optimization: clear echo here to keep mix_effects() a leaf function
+                                        /* optimization: clear echo here to keep mix_effects() a leaf function*/
                                         echo_pos = 0;
                                         memset( echo.begin(), 0, count * stereo * sizeof echo [0] );
                                 }
@@ -971,12 +971,12 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
                         while ( pairs_remain );
                 }
 
-                if ( samples_avail() <= 0 || immediate_removal_ )
+                if ( STEREO_BUFFER_SAMPLES_AVAILABLE() <= 0 || immediate_removal_ )
                 {
                         for ( int i = bufs_size; --i >= 0; )
                         {
                                 buf_t& b = bufs_buffer [i];
-                                // TODO: might miss non-silence settling since it checks END of last read
+                                /* TODO: might miss non-silence settling since it checks END of last read*/
             #ifdef FASTER_SOUND_HACK_NON_SILENCE
                                 b.remove_samples( mixer_samples_read );
             #else
@@ -998,11 +998,11 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
 {
         typedef fixed_t stereo_fixed_t [stereo];
 
-        // add channels with echo, do echo, add channels without echo, then convert to 16-bit and output
+        /* add channels with echo, do echo, add channels without echo, then convert to 16-bit and output*/
         int echo_phase = 1;
         do
         {
-                // mix any modified buffers
+                /* mix any modified buffers*/
                 {
                         buf_t* buf = bufs_buffer;
                         int bufs_remain = bufs_size;
@@ -1034,7 +1034,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                                 do
                                                 {
                                                         fixed_t s = BLIP_READER_READ( in );
-                                                        BLIP_READER_NEXT_IDX_( in, BLIP_READER_DEFAULT_BASS, offset );
+                                                        BLIP_READER_NEXT_IDX_( in, offset );
 
                                                         out [offset] [0] += s * vol_0;
                                                         out [offset] [1] += s * vol_1;
@@ -1053,7 +1053,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                         while ( --bufs_remain );
                 }
 
-                // add echo
+                /* add echo*/
                 if ( echo_phase && !no_echo )
                 {
                         fixed_t const feedback = s.feedback;
@@ -1071,8 +1071,8 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                         out_offset -= echo_size;
                                 fixed_t* BLIP_RESTRICT out_pos = &echo [out_offset];
 
-                                // break into up to three chunks to avoid having to handle wrap-around
-                                // in middle of core loop
+                                /* break into up to three chunks to avoid having to handle wrap-around*/
+                                /* in middle of core loop*/
                                 int remain = pair_count;
                                 do
                                 {
@@ -1107,7 +1107,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
         }
         while ( --echo_phase >= 0 );
 
-        // clamp to 16 bits
+        /* clamp to 16 bits*/
         {
                 stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
                 typedef int16_t stereo_blip_sample_t [stereo];

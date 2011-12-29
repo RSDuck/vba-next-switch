@@ -403,18 +403,18 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 
 void psoundTickfn()
 {
-		// Run sound hardware to present
-		//end_frame( SOUND_CLOCK_TICKS );
-		pcm [0].pcm.end_frame( SOUND_CLOCK_TICKS );
-		pcm [1].pcm.end_frame( SOUND_CLOCK_TICKS );
+	// Run sound hardware to present
+	//end_frame( SOUND_CLOCK_TICKS );
+	pcm [0].pcm.end_frame( SOUND_CLOCK_TICKS );
+	pcm [1].pcm.end_frame( SOUND_CLOCK_TICKS );
 
-		gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
-		stereo_buffer->end_frame( SOUND_CLOCK_TICKS );
+	gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
+	stereo_buffer->end_frame( SOUND_CLOCK_TICKS );
 
-		// dump all the samples available
-		// VBA will only ever store 1 frame worth of samples
-		int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail() );
-		systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
+	// dump all the samples available
+	// VBA will only ever store 1 frame worth of samples
+	int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail() );
+	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
 static void apply_muting()

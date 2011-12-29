@@ -141,7 +141,6 @@ class Blip_Buffer
 int const blip_widest_impulse_ = 16;
 int const blip_buffer_extra_ = blip_widest_impulse_ + 2;
 int const blip_res = 1 << BLIP_PHASE_BITS;
-class blip_eq_t;
 
 class Blip_Synth_Fast_
 {
@@ -195,26 +194,6 @@ class Blip_Synth {
 		Blip_Synth_Fast_ impl;
 };
 
-// Low-pass equalization parameters
-class blip_eq_t {
-	public:
-		// Logarithmic rolloff to treble dB at half sampling rate. Negative values reduce
-		// treble, small positive values (0 to 5.0) increase treble.
-		blip_eq_t( double treble_db = 0 );
-
-		// See blip_buffer.txt
-		blip_eq_t( double treble, long rolloff_freq, long sample_rate, long cutoff_freq = 0 );
-
-	private:
-		double treble;
-		long rolloff_freq;
-		long sample_rate;
-		long cutoff_freq;
-		void generate( float* out, int count ) const;
-};
-
-int const blip_sample_bits = 30;
-
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
 #define BLIP_RESTRICT __restrict
 #else
@@ -228,15 +207,14 @@ int const blip_sample_bits = 30;
         const Blip_Buffer::buf_t_* BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
-// Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
-// code at the cost of having no bass control
+/* Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
+   code at the cost of having no bass control */
+
 #define BLIP_READER_DEFAULT_BASS 9
+#define BLIP_SAMPLE_BITS 30
 
-// Current sample
-#define BLIP_READER_READ( name )        (name##_reader_accum >> (blip_sample_bits - 16))
-
-// Current raw sample in full internal resolution
-#define BLIP_READER_READ_RAW( name )    (name##_reader_accum)
+/* Current sample */
+#define BLIP_READER_READ( name )        (name##_reader_accum >> 14)
 
 // Advances to next sample
 #define BLIP_READER_NEXT( name, bass ) \
@@ -252,13 +230,13 @@ int const blip_sample_bits = 30;
 
 int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
 
-#define BLIP_READER_NEXT_IDX_( name, bass, idx ) {\
-        name##_reader_accum -= name##_reader_accum >> (bass);\
+#define BLIP_READER_NEXT_IDX_( name, idx ) {\
+        name##_reader_accum -= name##_reader_accum >> BLIP_READER_DEFAULT_BASS;\
         name##_reader_accum += name##_reader_buf [(idx)];\
 }
 
-#define BLIP_READER_NEXT_RAW_IDX_( name, bass, idx ) {\
-        name##_reader_accum -= name##_reader_accum >> (bass); \
+#define BLIP_READER_NEXT_RAW_IDX_( name, idx ) {\
+        name##_reader_accum -= name##_reader_accum >> BLIP_READER_DEFAULT_BASS; \
         name##_reader_accum += *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx)); \
 }
 
@@ -328,8 +306,7 @@ inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
 	offset_resampled( t * impl.buf->factor_ + impl.buf->offset_, delta, impl.buf );
 }
 
-inline blip_eq_t::blip_eq_t( double t ) : treble( t ), rolloff_freq( 0 ), sample_rate( 44100 ), cutoff_freq( 0 ) { }
-inline blip_eq_t::blip_eq_t( double t, long rf, long sr, long cf ) : treble( t ), rolloff_freq( rf ), sample_rate( sr ), cutoff_freq( cf ) { }
+#define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
 
 inline int  Blip_Buffer::length() const         { return length_; }
 inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
@@ -337,8 +314,8 @@ inline long Blip_Buffer::sample_rate() const    { return sample_rate_; }
 inline long Blip_Buffer::clock_rate() const     { return clock_rate_; }
 inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
-int const blip_max_length = 0;
-int const blip_default_length = 250; // 1/4 second
+/* 1/4th of a second */
+#define BLIP_DEFAULT_LENGTH 250
 
 #define	wave_type	0x100
 #define noise_type	0x200
@@ -351,20 +328,22 @@ struct channel_t {
 	Blip_Buffer* right;
 };
 
-// Uses three buffers (one for center) and outputs stereo sample pairs.
-class Stereo_Buffer {
+/* Uses three buffers (one for center) and outputs stereo sample pairs. */
+
+#define STEREO_BUFFER_SAMPLES_AVAILABLE() ((long)(bufs_buffer[0].offset_ -  mixer_samples_read) << 1)
+
+class Stereo_Buffer
+{
 	public:
 		Stereo_Buffer();
 		~Stereo_Buffer();
-		const char * set_sample_rate( long, int msec = blip_default_length );
+		const char * set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
 		void clock_rate( long );
 		void bass_freq( int );
 		void clear();
 
-      // Custom.
-      double real_ratio();
+		double real_ratio();
 
-		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );
 
@@ -381,23 +360,22 @@ class Stereo_Buffer {
 		channel_t chan;
 		long samples_avail_;
 
-		//from Multi_Buffer
+		/* Count of changes to channel configuration. Incremented whenever
+		   a change is made to any of the Blip_Buffers for any channel. */
 
-		// Count of changes to channel configuration. Incremented whenever
-		// a change is made to any of the Blip_Buffers for any channel.
 		unsigned channels_changed_count_;
 		long sample_rate_;
-		// Length of buffer, in milliseconds
+		/* Length of buffer, in milliseconds */
 		int length_;
 		int channel_count_;
-		// Number of samples per output frame (1 = mono, 2 = stereo)
+		/* Number of samples per output frame (1 = mono, 2 = stereo) */
 		int samples_per_frame_;
 		int const* channel_types_;
 };
 
 
 #ifndef USE_GBA_ONLY
-// See Simple_Effects_Buffer (below) for a simpler interface
+/* See Simple_Effects_Buffer (below) for a simpler interface */
 
 class Effects_Buffer {
 	public:
@@ -438,10 +416,11 @@ class Effects_Buffer {
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
 		void clear();
-		const char * set_sample_rate( long samples_per_sec, int msec = blip_default_length );
+		const char * set_sample_rate( long samples_per_sec, int msec = BLIP_DEFAULT_LENGTH);
 
-		// Sets the number of channels available and optionally their types
-		// (type information used by Effects_Buffer)
+		/* Sets the number of channels available and optionally their types
+		(type information used by Effects_Buffer) */
+
 		const char * set_channel_count( int, int const* = 0 );
 		void clock_rate( long );
 		void bass_freq( int );
@@ -513,7 +492,7 @@ class Effects_Buffer {
 		int samples_per_frame_;
 };
 
-// Simpler interface and lower memory usage
+/* Simpler interface and lower memory usage */
 class Simple_Effects_Buffer : public Effects_Buffer
 {
 	public:
