@@ -12,7 +12,7 @@
 	memset(array, -1, sizeof(u32)*240);\
   }
 
-static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
+static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
 				     u32 *line)
 {
   u16 *palette = (u16 *)paletteRAM;
@@ -157,7 +157,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
   }
 }
 
-static inline void gfxDrawRotScreen(u16 control,
+static INLINE void gfxDrawRotScreen(u16 control,
 				    u16 x_l, u16 x_h,
 				    u16 y_l, u16 y_h,
 				    u16 pa,  u16 pb,
@@ -304,7 +304,7 @@ static inline void gfxDrawRotScreen(u16 control,
   }
 }
 
-static inline void gfxDrawRotScreen16Bit(u16 control,
+static INLINE void gfxDrawRotScreen16Bit(u16 control,
 					 u16 x_l, u16 x_h,
 					 u16 y_l, u16 y_h,
 					 u16 pa,  u16 pb,
@@ -414,7 +414,7 @@ static inline void gfxDrawRotScreen16Bit(u16 control,
   }
 }
 
-static inline void gfxDrawRotScreen256(u16 control,
+static INLINE void gfxDrawRotScreen256(u16 control,
 				       u16 x_l, u16 x_h,
 				       u16 y_l, u16 y_h,
 				       u16 pa,  u16 pb,
@@ -525,7 +525,7 @@ static inline void gfxDrawRotScreen256(u16 control,
   }
 }
 
-static inline void gfxDrawRotScreen16Bit160(u16 control,
+static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 					    u16 x_l, u16 x_h,
 					    u16 y_l, u16 y_h,
 					    u16 pa,  u16 pb,
@@ -635,7 +635,7 @@ static inline void gfxDrawRotScreen16Bit160(u16 control,
   }
 }
 
-static inline void gfxDrawSprites()
+static INLINE void gfxDrawSprites (void)
 {
   // lineOBJpix is used to keep track of the drawn OBJs
   // and to stop drawing them if the 'maximum number of OBJ per line'
@@ -1101,372 +1101,372 @@ static inline void gfxDrawSprites()
   }
 }
 
-static inline void gfxDrawOBJWin()
+static INLINE void gfxDrawOBJWin (void)
 {
 
 	CLEAR_ARRAY(line[lineOBJWin]);
 
-  if((layerEnable & 0x9000) == 0x9000) {
-    u16 *sprites = (u16 *)oam;
-    // u16 *spritePalette = &((u16 *)paletteRAM)[256];
-    for(int x = 0; x < 128 ; x++) {
-      int lineOBJpix = lineOBJpixleft[x];
-      u16 a0 = READ16LE(sprites++);
-      u16 a1 = READ16LE(sprites++);
-      u16 a2 = READ16LE(sprites++);
-      sprites++;
+	if((layerEnable & 0x9000) == 0x9000) {
+		u16 *sprites = (u16 *)oam;
+		// u16 *spritePalette = &((u16 *)paletteRAM)[256];
+		for(int x = 0; x < 128 ; x++) {
+			int lineOBJpix = lineOBJpixleft[x];
+			u16 a0 = READ16LE(sprites++);
+			u16 a1 = READ16LE(sprites++);
+			u16 a2 = READ16LE(sprites++);
+			sprites++;
 
-      if (lineOBJpix<=0)
-        continue;
+			if (lineOBJpix<=0)
+				continue;
 
-      // ignores non OBJ-WIN and disabled OBJ-WIN
-      if(((a0 & 0x0c00) != 0x0800) || ((a0 & 0x0300) == 0x0200))
-        continue;
+			// ignores non OBJ-WIN and disabled OBJ-WIN
+			if(((a0 & 0x0c00) != 0x0800) || ((a0 & 0x0300) == 0x0200))
+				continue;
 
-      if ((a0 & 0x0c00) == 0x0c00)
-        a0 &=0xF3FF;
+			if ((a0 & 0x0c00) == 0x0c00)
+				a0 &=0xF3FF;
 
-      if ((a0>>14) == 3)
-      {
-        a0 &= 0x3FFF;
-        a1 &= 0x3FFF;
-      }
+			if ((a0>>14) == 3)
+			{
+				a0 &= 0x3FFF;
+				a1 &= 0x3FFF;
+			}
 
-      int sizeX = 8<<(a1>>14);
-      int sizeY = sizeX;
+			int sizeX = 8<<(a1>>14);
+			int sizeY = sizeX;
 
-      if ((a0>>14) & 1)
-      {
-        if (sizeX<32)
-          sizeX<<=1;
-        if (sizeY>8)
-          sizeY>>=1;
-      }
-      else if ((a0>>14) & 2)
-      {
-        if (sizeX>8)
-          sizeX>>=1;
-        if (sizeY<32)
-          sizeY<<=1;
-      }
+			if ((a0>>14) & 1)
+			{
+				if (sizeX<32)
+					sizeX<<=1;
+				if (sizeY>8)
+					sizeY>>=1;
+			}
+			else if ((a0>>14) & 2)
+			{
+				if (sizeX>8)
+					sizeX>>=1;
+				if (sizeY<32)
+					sizeY<<=1;
+			}
 
-      int sy = (a0 & 255);
+			int sy = (a0 & 255);
 
-      if(a0 & 0x0100) {
-        int fieldX = sizeX;
-        int fieldY = sizeY;
-        if(a0 & 0x0200) {
-          fieldX <<= 1;
-          fieldY <<= 1;
-        }
-        if((sy+fieldY) > 256)
-          sy -= 256;
-        int t = VCOUNT - sy;
-        if((t >= 0) && (t < fieldY)) {
-          int sx = (a1 & 0x1FF);
-          int startpix = 0;
-          if ((sx+fieldX)> 512)
-          {
-            startpix=512-sx;
-          }
-          if((sx < 240) || startpix) {
-            lineOBJpix-=8;
-            // int t2 = t - (fieldY >> 1);
-            int rot = (a1 >> 9) & 0x1F;
-            u16 *OAM = (u16 *)oam;
-            int dx = READ16LE(&OAM[3 + (rot << 4)]);
-            if(dx & 0x8000)
-              dx |= 0xFFFF8000;
-            int dmx = READ16LE(&OAM[7 + (rot << 4)]);
-            if(dmx & 0x8000)
-              dmx |= 0xFFFF8000;
-            int dy = READ16LE(&OAM[11 + (rot << 4)]);
-            if(dy & 0x8000)
-              dy |= 0xFFFF8000;
-            int dmy = READ16LE(&OAM[15 + (rot << 4)]);
-            if(dmy & 0x8000)
-              dmy |= 0xFFFF8000;
+			if(a0 & 0x0100) {
+				int fieldX = sizeX;
+				int fieldY = sizeY;
+				if(a0 & 0x0200) {
+					fieldX <<= 1;
+					fieldY <<= 1;
+				}
+				if((sy+fieldY) > 256)
+					sy -= 256;
+				int t = VCOUNT - sy;
+				if((t >= 0) && (t < fieldY)) {
+					int sx = (a1 & 0x1FF);
+					int startpix = 0;
+					if ((sx+fieldX)> 512)
+					{
+						startpix=512-sx;
+					}
+					if((sx < 240) || startpix) {
+						lineOBJpix-=8;
+						// int t2 = t - (fieldY >> 1);
+						int rot = (a1 >> 9) & 0x1F;
+						u16 *OAM = (u16 *)oam;
+						int dx = READ16LE(&OAM[3 + (rot << 4)]);
+						if(dx & 0x8000)
+							dx |= 0xFFFF8000;
+						int dmx = READ16LE(&OAM[7 + (rot << 4)]);
+						if(dmx & 0x8000)
+							dmx |= 0xFFFF8000;
+						int dy = READ16LE(&OAM[11 + (rot << 4)]);
+						if(dy & 0x8000)
+							dy |= 0xFFFF8000;
+						int dmy = READ16LE(&OAM[15 + (rot << 4)]);
+						if(dmy & 0x8000)
+							dmy |= 0xFFFF8000;
 
-            int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx
-              + t * dmx;
-            int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy
-              + t * dmy;
+						int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx
+							+ t * dmx;
+						int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy
+							+ t * dmy;
 
-            // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+						// u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
-            if(a0 & 0x2000) {
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 2;
-              else
-                c &= 0x3FE;
-              for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
-                int xxx = realX >> 8;
-                int yyy = realY >> 8;
+						if(a0 & 0x2000) {
+							int c = (a2 & 0x3FF);
+							if((DISPCNT & 7) > 2 && (c < 512))
+								continue;
+							int inc = 32;
+							if(DISPCNT & 0x40)
+								inc = sizeX >> 2;
+							else
+								c &= 0x3FE;
+							for(int x = 0; x < fieldX; x++) {
+								if (x >= startpix)
+									lineOBJpix-=2;
+								if (lineOBJpix<0)
+									continue;
+								int xxx = realX >> 8;
+								int yyy = realY >> 8;
 
-                if(xxx < 0 || xxx >= sizeX ||
-                   yyy < 0 || yyy >= sizeY ||
-                   sx >= 240) {
-                } else {
-                  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-                                    + ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
-                                   (xxx & 7))&0x7fff)];
-                  if(color) {
-                    line[lineOBJWin][sx] = 1;
-                  }
-                }
-                sx = (sx+1)&511;
-                realX += dx;
-                realY += dy;
-              }
-            } else {
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+								if(xxx < 0 || xxx >= sizeX ||
+										yyy < 0 || yyy >= sizeY ||
+										sx >= 240) {
+								} else {
+									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+												+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
+												(xxx & 7))&0x7fff)];
+									if(color) {
+										line[lineOBJWin][sx] = 1;
+									}
+								}
+								sx = (sx+1)&511;
+								realX += dx;
+								realY += dy;
+							}
+						} else {
+							int c = (a2 & 0x3FF);
+							if((DISPCNT & 7) > 2 && (c < 512))
+								continue;
 
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 3;
-              // int palette = (a2 >> 8) & 0xF0;
-              for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
-                int xxx = realX >> 8;
-                int yyy = realY >> 8;
+							int inc = 32;
+							if(DISPCNT & 0x40)
+								inc = sizeX >> 3;
+							// int palette = (a2 >> 8) & 0xF0;
+							for(int x = 0; x < fieldX; x++) {
+								if (x >= startpix)
+									lineOBJpix-=2;
+								if (lineOBJpix<0)
+									continue;
+								int xxx = realX >> 8;
+								int yyy = realY >> 8;
 
-                //              if(x == 0 || x == (sizeX-1) ||
-                //                 t == 0 || t == (sizeY-1)) {
-                //                lineOBJ[sx] = 0x001F | prio;
-                //              } else {
-                  if(xxx < 0 || xxx >= sizeX ||
-                     yyy < 0 || yyy >= sizeY ||
-                     sx >= 240) {
-                  } else {
-                    u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-                                     + ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
-                                     ((xxx & 7)>>1))&0x7fff)];
-                    if(xxx & 1)
-                      color >>= 4;
-                    else
-                      color &= 0x0F;
+								//              if(x == 0 || x == (sizeX-1) ||
+								//                 t == 0 || t == (sizeY-1)) {
+								//                lineOBJ[sx] = 0x001F | prio;
+								//              } else {
+								if(xxx < 0 || xxx >= sizeX ||
+										yyy < 0 || yyy >= sizeY ||
+										sx >= 240) {
+								} else {
+									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+												+ ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
+												((xxx & 7)>>1))&0x7fff)];
+									if(xxx & 1)
+										color >>= 4;
+									else
+										color &= 0x0F;
 
-                    if(color) {
-                      line[lineOBJWin][sx] = 1;
-                    }
-                  }
-                  //            }
-                sx = (sx+1)&511;
-                realX += dx;
-                realY += dy;
-              }
-            }
-          }
-        }
-      } else {
-        if((sy+sizeY) > 256)
-          sy -= 256;
-        int t = VCOUNT - sy;
-        if((t >= 0) && (t < sizeY)) {
-          int sx = (a1 & 0x1FF);
-          int startpix = 0;
-          if ((sx+sizeX)> 512)
-          {
-            startpix=512-sx;
-          }
-          if((sx < 240) || startpix) {
-            lineOBJpix+=2;
-            if(a0 & 0x2000) {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+									if(color) {
+										line[lineOBJWin][sx] = 1;
+									}
+								}
+								//            }
+								sx = (sx+1)&511;
+								realX += dx;
+								realY += dy;
+							}
+						}
+					}
+				}
+			} else {
+				if((sy+sizeY) > 256)
+					sy -= 256;
+				int t = VCOUNT - sy;
+				if((t >= 0) && (t < sizeY)) {
+					int sx = (a1 & 0x1FF);
+					int startpix = 0;
+					if ((sx+sizeX)> 512)
+					{
+						startpix=512-sx;
+					}
+					if((sx < 240) || startpix) {
+						lineOBJpix+=2;
+						if(a0 & 0x2000) {
+							if(a1 & 0x2000)
+								t = sizeY - t - 1;
+							int c = (a2 & 0x3FF);
+							if((DISPCNT & 7) > 2 && (c < 512))
+								continue;
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 2;
-              } else {
-                c &= 0x3FE;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX-1;
-              int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
-                + ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7))&0x7fff);
-              if(a1 & 0x1000)
-                xxx = 7;
-              // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-              for(int xx = 0; xx < sizeX; xx++) {
-                if (xx >= startpix)
-                  lineOBJpix--;
-                if (lineOBJpix<0)
-                  continue;
-                if(sx < 240) {
-                  u8 color = vram[address];
-                  if(color) {
-                    line[lineOBJWin][sx] = 1;
-                  }
-                }
+							int inc = 32;
+							if(DISPCNT & 0x40) {
+								inc = sizeX >> 2;
+							} else {
+								c &= 0x3FE;
+							}
+							int xxx = 0;
+							if(a1 & 0x1000)
+								xxx = sizeX-1;
+							int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
+										+ ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7))&0x7fff);
+							if(a1 & 0x1000)
+								xxx = 7;
+							// u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+							for(int xx = 0; xx < sizeX; xx++) {
+								if (xx >= startpix)
+									lineOBJpix--;
+								if (lineOBJpix<0)
+									continue;
+								if(sx < 240) {
+									u8 color = vram[address];
+									if(color) {
+										line[lineOBJWin][sx] = 1;
+									}
+								}
 
-                sx = (sx+1) & 511;
-                if(a1 & 0x1000) {
-                  xxx--;
-                  address--;
-                  if(xxx == -1) {
-                    address -= 56;
-                    xxx = 7;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
-                } else {
-                  xxx++;
-                  address++;
-                  if(xxx == 8) {
-                    address += 56;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
-                }
-              }
-            } else {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+								sx = (sx+1) & 511;
+								if(a1 & 0x1000) {
+									xxx--;
+									address--;
+									if(xxx == -1) {
+										address -= 56;
+										xxx = 7;
+									}
+									if(address < 0x10000)
+										address += 0x8000;
+								} else {
+									xxx++;
+									address++;
+									if(xxx == 8) {
+										address += 56;
+										xxx = 0;
+									}
+									if(address > 0x17fff)
+										address -= 0x8000;
+								}
+							}
+						} else {
+							if(a1 & 0x2000)
+								t = sizeY - t - 1;
+							int c = (a2 & 0x3FF);
+							if((DISPCNT & 7) > 2 && (c < 512))
+								continue;
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 3;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX - 1;
-              int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
-                + ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7fff);
-              // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-              // int palette = (a2 >> 8) & 0xF0;
-              if(a1 & 0x1000) {
-                xxx = 7;
-                for(int xx = sizeX - 1; xx >= 0; xx--) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
-                    u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+							int inc = 32;
+							if(DISPCNT & 0x40) {
+								inc = sizeX >> 3;
+							}
+							int xxx = 0;
+							if(a1 & 0x1000)
+								xxx = sizeX - 1;
+							int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
+										+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7fff);
+							// u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+							// int palette = (a2 >> 8) & 0xF0;
+							if(a1 & 0x1000) {
+								xxx = 7;
+								for(int xx = sizeX - 1; xx >= 0; xx--) {
+									if (xx >= startpix)
+										lineOBJpix--;
+									if (lineOBJpix<0)
+										continue;
+									if(sx < 240) {
+										u8 color = vram[address];
+										if(xx & 1) {
+											color = (color >> 4);
+										} else
+											color &= 0x0F;
 
-                    if(color) {
-                      line[lineOBJWin][sx] = 1;
-                    }
-                  }
-                  sx = (sx+1) & 511;
-                  xxx--;
-                  if(!(xx & 1))
-                    address--;
-                  if(xxx == -1) {
-                    xxx = 7;
-                    address -= 28;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
-                }
-              } else {
-                for(int xx = 0; xx < sizeX; xx++) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
-                    u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+										if(color) {
+											line[lineOBJWin][sx] = 1;
+										}
+									}
+									sx = (sx+1) & 511;
+									xxx--;
+									if(!(xx & 1))
+										address--;
+									if(xxx == -1) {
+										xxx = 7;
+										address -= 28;
+									}
+									if(address < 0x10000)
+										address += 0x8000;
+								}
+							} else {
+								for(int xx = 0; xx < sizeX; xx++) {
+									if (xx >= startpix)
+										lineOBJpix--;
+									if (lineOBJpix<0)
+										continue;
+									if(sx < 240) {
+										u8 color = vram[address];
+										if(xx & 1) {
+											color = (color >> 4);
+										} else
+											color &= 0x0F;
 
-                    if(color) {
-                      line[lineOBJWin][sx] = 1;
-                    }
-                  }
-                  sx = (sx+1) & 511;
-                  xxx++;
-                  if(xx & 1)
-                    address++;
-                  if(xxx == 8) {
-                    address += 28;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+										if(color) {
+											line[lineOBJWin][sx] = 1;
+										}
+									}
+									sx = (sx+1) & 511;
+									xxx++;
+									if(xx & 1)
+										address++;
+									if(xxx == 8) {
+										address += 28;
+										xxx = 0;
+									}
+									if(address > 0x17fff)
+										address -= 0x8000;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
-static inline u32 gfxIncreaseBrightness(u32 color, int coeff)
+static INLINE u32 gfxIncreaseBrightness(u32 color, int coeff)
 {
-  color &= 0xffff;
-  color = ((color << 16) | color) & 0x3E07C1F;
+	color &= 0xffff;
+	color = ((color << 16) | color) & 0x3E07C1F;
 
-  color += (((0x3E07C1F - color) * coeff) >> 4);
-  color &= 0x3E07C1F;
+	color += (((0x3E07C1F - color) * coeff) >> 4);
+	color &= 0x3E07C1F;
 
-  return (color >> 16) | color;
+	return (color >> 16) | color;
 }
 
-static inline u32 gfxDecreaseBrightness(u32 color, int coeff)
+static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
 {
-  color &= 0xffff;
-  color = ((color << 16) | color) & 0x3E07C1F;
+	color &= 0xffff;
+	color = ((color << 16) | color) & 0x3E07C1F;
 
-  color -= (((color * coeff) >> 4) & 0x3E07C1F);
+	color -= (((color * coeff) >> 4) & 0x3E07C1F);
 
-  return (color >> 16) | color;
+	return (color >> 16) | color;
 }
 
-static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
+static INLINE u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 {
-  if(color < 0x80000000) {
-    color&=0xffff;
-    color2&=0xffff;
+	if(color < 0x80000000) {
+		color&=0xffff;
+		color2&=0xffff;
 
-    color = ((color << 16) | color) & 0x03E07C1F;
-    color2 = ((color2 << 16) | color2) & 0x03E07C1F;
-    color = ((color * ca) + (color2 * cb)) >> 4;
+		color = ((color << 16) | color) & 0x03E07C1F;
+		color2 = ((color2 << 16) | color2) & 0x03E07C1F;
+		color = ((color * ca) + (color2 * cb)) >> 4;
 
-    if ((ca + cb)>16)
-    {
-      if (color & 0x20)
-        color |= 0x1f;
-      if (color & 0x8000)
-        color |= 0x7C00;
-      if (color & 0x4000000)
-        color |= 0x03E00000;
-    }
+		if ((ca + cb)>16)
+		{
+			if (color & 0x20)
+				color |= 0x1f;
+			if (color & 0x8000)
+				color |= 0x7C00;
+			if (color & 0x4000000)
+				color |= 0x03E00000;
+		}
 
-    color &= 0x03E07C1F;
-    color = (color >> 16) | color;
-  }
-  return color;
+		color &= 0x03E07C1F;
+		color = (color >> 16) | color;
+	}
+	return color;
 }
 
 #endif // GFX_H

@@ -15,6 +15,7 @@
 #define lineOBJ 4
 #define lineOBJWin 5
 
+static int romSize = 0x2000000;
 uint32_t line[6][240];
 bool gfxInWin[2][240];
 int lineOBJpixleft[128];
@@ -581,9 +582,7 @@ variable_desc saveGameStruct[] = {
   { NULL, 0 }
 };
 
-static int romSize = 0x2000000;
-
-inline int CPUUpdateTicks()
+INLINE int CPUUpdateTicks()
 {
 	int cpuLoopTicks = lcdTicks;
 

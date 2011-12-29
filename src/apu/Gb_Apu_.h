@@ -26,7 +26,7 @@ int const power_mask = 0x80;
 
 #define osc_count 4
 
-inline int Gb_Apu::calc_output( int osc ) const
+INLINE int Gb_Apu::calc_output( int osc ) const
 {
 	int bits = regs [stereo_reg - start_addr] >> osc;
 	return (bits >> 3 & 2) | (bits & 1);
@@ -228,7 +228,7 @@ void Gb_Apu::run_until_( int32_t end_time )
 	}while(1);
 }
 
-inline void Gb_Apu::run_until( int32_t time )
+INLINE void Gb_Apu::run_until( int32_t time )
 {
 	if ( time > last_time )
 		run_until_( time );
@@ -409,7 +409,7 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 
 #define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
 
-inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
+INLINE const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
 	int format = io->format0;
 	REFLECT( format, format );
@@ -441,7 +441,7 @@ inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 }
 
 // second function to avoid inline limits of some compilers
-inline void Gb_Apu::save_load2( gb_apu_state_t* io, bool save )
+INLINE void Gb_Apu::save_load2( gb_apu_state_t* io, bool save )
 {
 	for ( int i = osc_count; --i >= 0; )
 	{

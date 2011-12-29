@@ -25,7 +25,7 @@ static bool declicking     = false;
 #define chan_count 4
 int const ticks_to_time = 2 * GB_APU_OVERCLOCK;
 
-static inline int32_t blip_time()
+static INLINE int32_t blip_time()
 {
 	return (SOUND_CLOCK_TICKS - soundTicks) * ticks_to_time;
 }

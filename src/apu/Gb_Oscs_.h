@@ -30,7 +30,7 @@ void Gb_Osc::reset()
         enabled  = false;
 }
 
-inline void Gb_Osc::update_amp( int32_t time, int new_amp )
+INLINE void Gb_Osc::update_amp( int32_t time, int new_amp )
 {
         output->set_modified();
         int delta = new_amp - last_amp;
@@ -52,7 +52,7 @@ void Gb_Osc::clock_length()
         }
 }
 
-inline int Gb_Env::reload_env_timer()
+INLINE int Gb_Env::reload_env_timer()
 {
         int raw = regs [2] & 7;
         env_delay = (raw ? raw : 8);
@@ -156,7 +156,7 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
         return data & trigger_mask;
 }
 
-inline void Gb_Env::zombie_volume( int old, int data )
+INLINE void Gb_Env::zombie_volume( int old, int data )
 {
         int v = volume;
 	#ifndef USE_GBA_ONLY
@@ -243,7 +243,7 @@ bool Gb_Square::write_register( int frame_phase, int reg, int old_data, int data
         return result;
 }
 
-inline void Gb_Noise::write_register( int frame_phase, int reg, int old_data, int data )
+INLINE void Gb_Noise::write_register( int frame_phase, int reg, int old_data, int data )
 {
         if ( Gb_Env::write_register( frame_phase, reg, old_data, data ) )
         {
@@ -252,7 +252,7 @@ inline void Gb_Noise::write_register( int frame_phase, int reg, int old_data, in
         }
 }
 
-inline void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_data, int data )
+INLINE void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_data, int data )
 {
         if ( reg == 0 && sweep_enabled && sweep_neg && !(data & 0x08) )
                 enabled = false; // sweep negate disabled after used
@@ -278,7 +278,7 @@ void Gb_Wave::corrupt_wave()
                         wave_ram [i] = wave_ram [(pos & ~3) + i];
 }
 
-inline void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int data )
+INLINE void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int data )
 {
         switch ( reg )
 	{

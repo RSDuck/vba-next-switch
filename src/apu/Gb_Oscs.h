@@ -179,13 +179,13 @@ class Gb_Wave : public Gb_Osc
 	int access( unsigned addr ) const;
 };
 
-inline int Gb_Wave::read( unsigned addr ) const
+INLINE int Gb_Wave::read( unsigned addr ) const
 {
 	int index = access( addr );
 	return (index < 0 ? 0xFF : wave_bank() [index]);
 }
 
-inline void Gb_Wave::write( unsigned addr, int data )
+INLINE void Gb_Wave::write( unsigned addr, int data )
 {
         int index = access( addr );
         if ( index >= 0 )

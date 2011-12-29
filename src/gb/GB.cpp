@@ -570,9 +570,9 @@ uint8_t ZeroTable[256] = {
 #define GBSAVE_GAME_VERSION_12 12
 #define GBSAVE_GAME_VERSION GBSAVE_GAME_VERSION_12
 
-int inline gbGetValue(int min,int max,int v)
+int INLINE gbGetValue(int min,int max,int v)
 {
-  return (int)(min+(float)(max-min)*(2.0*(v/31.0)-(v/31.0)*(v/31.0)));
+	return (int)(min+(float)(max-min)*(2.0*(v/31.0)-(v/31.0)*(v/31.0)));
 }
 
 void gbGenFilter()

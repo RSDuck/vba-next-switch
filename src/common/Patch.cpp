@@ -4,8 +4,6 @@
 #include <zlib.h>
 
 #include "Patch.h"
-
-
 #include "../System.h"
 
 #ifdef __GNUC__
@@ -24,11 +22,8 @@ typedef off64_t __off64_t;
 #endif /* __APPLE__ || BSD */
 #endif /* __GNUC__ */
 
-#ifndef _MSC_VER
-#define _stricmp strcasecmp
-#endif // ! _MSC_VER
-
 #ifdef _MSC_VER
+#define strcasecmp _stricmp
 #define fseeko64 _fseeki64
 #define ftello64 _ftelli64
 typedef	__int64 __off64_t;
@@ -457,11 +452,11 @@ bool applyPatch(const char *patchname, u8 **rom, int *size)
   const char * p = strrchr(patchname, '.');
   if (p == NULL)
     return false;
-  if (_stricmp(p, ".ips") == 0)
+  if (strcasecmp(p, ".ips") == 0)
     return patchApplyIPS(patchname, rom, size);
-  if (_stricmp(p, ".ups") == 0)
+  if (strcasecmp(p, ".ups") == 0)
     return patchApplyUPS(patchname, rom, size);
-  if (_stricmp(p, ".ppf") == 0)
+  if (strcasecmp(p, ".ppf") == 0)
     return patchApplyPPF(patchname, rom, size);
   return false;
 }

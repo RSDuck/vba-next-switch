@@ -266,7 +266,7 @@ struct blip_buffer_state_t
 
 
 template<int quality,int range>
-inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
+INLINE void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
 	// If this assertion fails, it means that an attempt was made to add a delta
 	// at a negative time or past the end of the buffer.
@@ -293,13 +293,13 @@ inline void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delt
 #undef BLIP_REV
 
 template<int quality,int range>
-inline void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer* buf ) const
+INLINE void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer* buf ) const
 {
         offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
 }
 
 template<int quality,int range>
-inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
+INLINE void Blip_Synth<quality,range>::update( int32_t t, int amp)
 {
 	int delta = amp - impl.last_amp;
 	impl.last_amp = amp;
@@ -308,11 +308,11 @@ inline void Blip_Synth<quality,range>::update( int32_t t, int amp)
 
 #define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
 
-inline int  Blip_Buffer::length() const         { return length_; }
-inline long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
-inline long Blip_Buffer::sample_rate() const    { return sample_rate_; }
-inline long Blip_Buffer::clock_rate() const     { return clock_rate_; }
-inline void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
+INLINE int  Blip_Buffer::length() const         { return length_; }
+INLINE long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
+INLINE long Blip_Buffer::sample_rate() const    { return sample_rate_; }
+INLINE long Blip_Buffer::clock_rate() const     { return clock_rate_; }
+INLINE void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
 /* 1/4th of a second */
 #define BLIP_DEFAULT_LENGTH 250

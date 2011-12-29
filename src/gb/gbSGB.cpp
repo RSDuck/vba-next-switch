@@ -37,17 +37,17 @@ uint8_t  gbSgbATF[20 * 18];
 uint8_t  gbSgbATFList[45 * 20 * 18];
 uint8_t  gbSgbScreenBuffer[4160];
 
-inline void gbSgbDraw24Bit(uint8_t *p, uint16_t v)
+INLINE void gbSgbDraw24Bit(uint8_t *p, uint16_t v)
 {
-  *((uint32_t*) p) = systemColorMap32[v];
+	*((uint32_t*) p) = systemColorMap32[v];
 }
 
-inline void gbSgbDraw32Bit(uint32_t *p, uint16_t v)
+INLINE void gbSgbDraw32Bit(uint32_t *p, uint16_t v)
 {
-  *p = systemColorMap32[v];
+	*p = systemColorMap32[v];
 }
 
-inline void gbSgbDraw16Bit(uint16_t *p, uint16_t v)
+INLINE void gbSgbDraw16Bit(uint16_t *p, uint16_t v)
 {
   *p = systemColorMap16[v];
 }
