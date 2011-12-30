@@ -1,13 +1,5 @@
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
-
-#include "Gb_Apu_.h"
-#include "Gb_Oscs_.h"
-#include "Sound_Buffer.h"
-#include "../System.h"
-
-/* Blip_Buffer 0.4.1. http://www.slack.net/~ant/*/
+/* Gb_Snd_Emu 0.2.0. http://www.slack.net/~ant/ */
+/* Blip_Buffer 0.4.1. http://www.slack.net/~ant */
 
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -19,6 +11,1134 @@ FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
 details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
+
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+
+#include "../System.h"
+
+#include "Gb_Apu.h"
+#include "blargg_source.h"
+
+unsigned const vol_reg    = 0xFF24;
+unsigned const stereo_reg = 0xFF25;
+unsigned const status_reg = 0xFF26;
+unsigned const wave_ram   = 0xFF30;
+
+int const power_mask = 0x80;
+
+#define osc_count 4
+
+void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
+{
+	int i;
+
+	i = osc;
+	do
+	{
+		int bits;
+		Gb_Osc& o = *oscs [i];
+		o.outputs [1] = right;
+		o.outputs [2] = left;
+		o.outputs [3] = center;
+		bits = regs [stereo_reg - start_addr] >> i;
+		o.output = o.outputs [((bits >> 3 & 2) | (bits & 1))];
+		++i;
+	}
+	while ( i < osc );
+}
+
+void Gb_Apu::synth_volume( int iv )
+{
+	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv;
+	good_synth.volume( v );
+	med_synth .volume( v );
+}
+
+void Gb_Apu::apply_volume()
+{
+	int data, left, right;
+
+	/* TODO: Doesn't handle differing left and right volumes (panning).*/
+	/* Not worth the complexity.*/
+	data  = regs [vol_reg - start_addr];
+	left  = data >> 4 & 7;
+	right = data & 7;
+	synth_volume( max( left, right ) + 1 );
+}
+
+void Gb_Apu::volume( double v )
+{
+	if ( volume_ != v )
+	{
+		volume_ = v;
+		apply_volume();
+	}
+}
+
+void Gb_Apu::reduce_clicks( bool reduce )
+{
+	reduce_clicks_ = reduce;
+
+	/* Click reduction makes DAC off generate same output as volume 0*/
+	int dac_off_amp = 0;
+	if ( reduce && wave.mode != mode_agb ) /* AGB already eliminates clicks*/
+		dac_off_amp = -dac_bias;
+
+	oscs [0]->dac_off_amp = dac_off_amp;
+	oscs [1]->dac_off_amp = dac_off_amp;
+	oscs [2]->dac_off_amp = dac_off_amp;
+	oscs [3]->dac_off_amp = dac_off_amp;
+
+	/* AGB always eliminates clicks on wave channel using same method*/
+	if ( wave.mode == mode_agb )
+		wave.dac_off_amp = -dac_bias;
+}
+
+void Gb_Apu::reset( uint32_t mode, bool agb_wave )
+{
+	int i, b;
+	static unsigned char const initial_wave [2] [16] = {
+		{0x84,0x40,0x43,0xAA,0x2D,0x78,0x92,0x3C,0x60,0x59,0x59,0xB0,0x34,0xB8,0x2E,0xDA},
+		{0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF},
+	};
+
+	/* Hardware mode*/
+	if ( agb_wave )
+		mode = mode_agb; /* using AGB wave features implies AGB hardware*/
+	wave.agb_mask = agb_wave ? 0xFF : 0;
+
+	oscs [0]->mode = mode;
+	oscs [1]->mode = mode;
+	oscs [2]->mode = mode;
+	oscs [3]->mode = mode;
+
+	reduce_clicks( reduce_clicks_ );
+
+	/* Reset state*/
+	frame_time  = 0;
+	last_time   = 0;
+	frame_phase = 0;
+
+	for ( i = 0; i < 0x20; i++ )
+		regs [i] = 0;
+
+	square1.reset();
+	square2.reset();
+	wave   .reset();
+	noise  .reset();
+
+	apply_volume();
+
+	square1.length_ctr = 64;
+	square2.length_ctr = 64;
+	wave   .length_ctr = 256;
+	noise  .length_ctr = 64;
+
+	/* Load initial wave RAM*/
+	for ( b = 2; --b >= 0; )
+	{
+		/* Init both banks (does nothing if not in AGB mode)*/
+		/* TODO: verify that this works*/
+		write_register( 0, 0xFF1A, b * 0x40 );
+		for ( i = 0; i < sizeof(initial_wave [0]); i++ )
+			write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
+	}
+}
+
+Gb_Apu::Gb_Apu()
+{
+	int i;
+
+	wave.wave_ram = &regs [wave_ram - start_addr];
+
+	oscs [0] = &square1;
+	oscs [1] = &square2;
+	oscs [2] = &wave;
+	oscs [3] = &noise;
+
+	for ( i = osc_count; --i >= 0; )
+	{
+		Gb_Osc& o = *oscs [i];
+		o.regs        = &regs [i * 5];
+		o.output      = 0;
+		o.outputs [0] = 0;
+		o.outputs [1] = 0;
+		o.outputs [2] = 0;
+		o.outputs [3] = 0;
+		o.good_synth  = &good_synth;
+		o.med_synth   = &med_synth;
+	}
+
+	reduce_clicks_ = false;
+	/*begin set Tempo ( 1.0)*/
+	frame_period = 4194304 / 512; /* 512 Hz*/
+	/*end set Tempo ( 1.0)*/
+
+	volume_ = 1.0;
+	reset();
+}
+
+void Gb_Apu::run_until_( int32_t end_time )
+{
+	int32_t time;
+
+	do
+	{
+		/* run oscillators*/
+		time = end_time;
+		if ( time > frame_time )
+			time = frame_time;
+
+		square1.run( last_time, time );
+		square2.run( last_time, time );
+		wave   .run( last_time, time );
+		noise  .run( last_time, time );
+		last_time = time;
+
+		if ( time == end_time )
+			break;
+
+		/* run frame sequencer*/
+		frame_time += frame_period * clk_mul;
+		switch ( frame_phase++ )
+		{
+			case 2:
+			case 6:
+				/* 128 Hz*/
+				square1.clock_sweep();
+			case 0:
+			case 4:
+				/* 256 Hz*/
+				square1.clock_length();
+				square2.clock_length();
+				wave   .clock_length();
+				noise  .clock_length();
+				break;
+
+			case 7:
+				/* 64 Hz*/
+				frame_phase = 0;
+				square1.clock_envelope();
+				square2.clock_envelope();
+				noise  .clock_envelope();
+		}
+	}while(1);
+}
+
+void Gb_Apu::end_frame( int32_t end_time )
+{
+	if ( end_time > last_time )
+		run_until_( end_time );
+
+	frame_time -= end_time;
+
+	last_time -= end_time;
+}
+
+void Gb_Apu::silence_osc( Gb_Osc& o )
+{
+	int delta = -o.last_amp;
+	if ( delta )
+	{
+		o.last_amp = 0;
+		if ( o.output )
+		{
+			o.output->set_modified();
+			med_synth.offset( last_time, delta, o.output );
+		}
+	}
+}
+
+void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
+{
+	int reg = addr - start_addr;
+	if ( (unsigned) reg >= register_count )
+		return;
+
+	if ( addr < status_reg && !(regs [status_reg - start_addr] & power_mask) )
+	{
+		/* Power is off*/
+
+		/* length counters can only be written in DMG mode*/
+		if ( wave.mode != mode_dmg || (reg != 1 && reg != 5+1 && reg != 10+1 && reg != 15+1) )
+			return;
+
+		if ( reg < 10 )
+			data &= 0x3F; /* clear square duty*/
+	}
+
+	if ( time > last_time )
+		run_until_( time );
+
+	if ( addr >= wave_ram )
+	{
+		wave.write( addr, data );
+	}
+	else
+	{
+		int old_data = regs [reg];
+		regs [reg] = data;
+
+		if ( addr < vol_reg )
+		{
+			/* Oscillator*/
+			write_osc( reg / 5, reg, old_data, data );
+		}
+		else if ( addr == vol_reg && data != old_data )
+		{
+			/* Master volume*/
+			for ( int i = osc_count; --i >= 0; )
+				silence_osc( *oscs [i] );
+
+			apply_volume();
+		}
+		else if ( addr == stereo_reg )
+		{
+			/* Stereo panning*/
+			for ( int i = osc_count; --i >= 0; )
+			{
+				int bits;
+				Gb_Osc& o = *oscs [i];
+				 bits = regs [stereo_reg - start_addr] >> i;
+				Blip_Buffer* out = o.outputs [((bits >> 3 & 2) | (bits & 1))];
+				if ( o.output != out )
+				{
+					silence_osc( o );
+					o.output = out;
+				}
+			}
+		}
+		else if ( addr == status_reg && (data ^ old_data) & power_mask )
+		{
+			/* Power control*/
+			frame_phase = 0;
+			for ( int i = osc_count; --i >= 0; )
+				silence_osc( *oscs [i] );
+
+			for ( int i = 0; i < 0x20; i++ )
+				regs [i] = 0;
+
+			square1.reset();
+			square2.reset();
+			wave   .reset();
+			noise  .reset();
+
+			apply_volume();
+
+			if ( wave.mode != mode_dmg )
+			{
+				square1.length_ctr = 64;
+				square2.length_ctr = 64;
+				wave   .length_ctr = 256;
+				noise  .length_ctr = 64;
+			}
+
+			regs [status_reg - start_addr] = data;
+		}
+	}
+}
+
+void Gb_Apu::apply_stereo()
+{
+	for ( int i = osc_count; --i >= 0; )
+	{
+		int bits;
+		Gb_Osc& o = *oscs [i];
+		bits = regs [stereo_reg - start_addr] >> i;
+		Blip_Buffer* out = o.outputs [((bits >> 3 & 2) | (bits & 1))];
+		if ( o.output != out )
+		{
+			silence_osc( o );
+			o.output = out;
+		}
+	}
+}
+
+
+int Gb_Apu::read_register( int32_t time, unsigned addr )
+{
+	int reg, mask, data;
+
+	if ( time > last_time )
+		run_until_( time );
+
+	reg = addr - start_addr;
+	if ( (unsigned) reg >= register_count )
+		return 0;
+
+	if ( addr >= wave_ram )
+		return wave.read( addr );
+
+	/* Value read back has some bits always set*/
+	static unsigned char const masks [] = {
+		0x80,0x3F,0x00,0xFF,0xBF,
+		0xFF,0x3F,0x00,0xFF,0xBF,
+		0x7F,0xFF,0x9F,0xFF,0xBF,
+		0xFF,0xFF,0x00,0x00,0xBF,
+		0x00,0x00,0x70,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
+	};
+
+	mask = masks [reg];
+
+	if ( wave.agb_mask && (reg == 10 || reg == 12) )
+		mask = 0x1F; /* extra implemented bits in wave regs on AGB*/
+
+	data = regs [reg] | mask;
+
+	/* Status register*/
+	if ( addr == status_reg )
+	{
+		data &= 0xF0;
+		data |= (int) square1.enabled << 0;
+		data |= (int) square2.enabled << 1;
+		data |= (int) wave   .enabled << 2;
+		data |= (int) noise  .enabled << 3;
+	}
+
+	return data;
+}
+
+/* Gb_Apu_State.cpp*/
+
+#define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
+
+INLINE const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
+{
+	int format = io->format0;
+	REFLECT( format, format );
+	if ( format != io->format0 )
+		return "Unsupported sound save state format";
+
+	int version = 0;
+	REFLECT( version, version );
+
+	/* Registers and wave RAM*/
+	if ( save )
+		memcpy( io->regs, regs, sizeof io->regs );
+	else
+		memcpy( regs, io->regs, sizeof     regs );
+
+	/* Frame sequencer*/
+	REFLECT( frame_time,  frame_time  );
+	REFLECT( frame_phase, frame_phase );
+
+	REFLECT( square1.sweep_freq,    sweep_freq );
+	REFLECT( square1.sweep_delay,   sweep_delay );
+	REFLECT( square1.sweep_enabled, sweep_enabled );
+	REFLECT( square1.sweep_neg,     sweep_neg );
+
+	REFLECT( noise.divider,         noise_divider );
+	REFLECT( wave.sample_buf,       wave_buf );
+
+	return 0;
+}
+
+/* second function to avoid inline limits of some compilers*/
+INLINE void Gb_Apu::save_load2( gb_apu_state_t* io, bool save )
+{
+	for ( int i = osc_count; --i >= 0; )
+	{
+		Gb_Osc& osc = *oscs [i];
+		REFLECT( osc.delay,      delay      [i] );
+		REFLECT( osc.length_ctr, length_ctr [i] );
+		REFLECT( osc.phase,      phase      [i] );
+		REFLECT( osc.enabled,    enabled    [i] );
+
+		if ( i != 2 )
+		{
+			int j = min( i, 2 );
+			Gb_Env& env = STATIC_CAST(Gb_Env&,osc);
+			REFLECT( env.env_delay,   env_delay   [j] );
+			REFLECT( env.volume,      env_volume  [j] );
+			REFLECT( env.env_enabled, env_enabled [j] );
+		}
+	}
+}
+
+void Gb_Apu::save_state( gb_apu_state_t* out )
+{
+	(void) save_load( out, true );
+	save_load2( out, true );
+}
+
+const char * Gb_Apu::load_state( gb_apu_state_t const& in )
+{
+	RETURN_ERR( save_load( CONST_CAST(gb_apu_state_t*,&in), false));
+	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );
+
+	apply_stereo();
+	synth_volume( 0 );          /* suppress output for the moment*/
+	run_until_( last_time );    /* get last_amp updated*/
+	apply_volume();             /* now use correct volume*/
+
+	return 0;
+}
+
+bool const cgb_02 = false; /* enables bug in early CGB units that causes problems in some games*/
+bool const cgb_05 = false; /* enables CGB-05 zombie behavior*/
+
+#define trigger_mask 0x80
+#define length_enabled 0x40
+
+void Gb_Osc::reset()
+{
+        output   = 0;
+        last_amp = 0;
+        delay    = 0;
+        phase    = 0;
+        enabled  = false;
+}
+
+/* Units*/
+
+void Gb_Osc::clock_length()
+{
+        if ( (regs [4] & length_enabled) && length_ctr )
+        {
+                if ( --length_ctr <= 0 )
+                        enabled = false;
+        }
+}
+
+void Gb_Env::clock_envelope()
+{
+	int raw;
+
+	raw = regs[2] & 7;
+	env_delay = (raw ? raw : 8);
+
+        if ( env_enabled && --env_delay <= 0 && raw )
+        {
+                int v = volume + (regs [2] & 0x08 ? +1 : -1);
+                if ( 0 <= v && v <= 15 )
+                        volume = v;
+                else
+                        env_enabled = false;
+        }
+}
+
+#define reload_sweep_timer() \
+        sweep_delay = (regs [0] & period_mask) >> 4; \
+        if ( !sweep_delay ) \
+                sweep_delay = 8;
+
+void Gb_Sweep_Square::calc_sweep( bool update )
+{
+        int const shift = regs [0] & shift_mask;
+        int const delta = sweep_freq >> shift;
+        sweep_neg = (regs [0] & 0x08) != 0;
+        int const freq = sweep_freq + (sweep_neg ? -delta : delta);
+
+        if ( freq > 0x7FF )
+        {
+                enabled = false;
+        }
+        else if ( shift && update )
+        {
+                sweep_freq = freq;
+
+                regs [3] = freq & 0xFF;
+                regs [4] = (regs [4] & ~0x07) | (freq >> 8 & 0x07);
+        }
+}
+
+void Gb_Sweep_Square::clock_sweep()
+{
+        if ( --sweep_delay <= 0 )
+        {
+                reload_sweep_timer();
+                if ( sweep_enabled && (regs [0] & period_mask) )
+                {
+                        calc_sweep( true  );
+                        calc_sweep( false );
+                }
+        }
+}
+
+int Gb_Wave::access( unsigned addr ) const
+{
+	addr = phase & (bank_size - 1);
+	if ( mode == mode_dmg )
+	{
+		addr++;
+		if ( delay > clk_mul )
+			return -1; /* can only access within narrow time window while playing*/
+	}
+
+	addr >>= 1;
+	return addr & 0x0F;
+}
+
+/* write_register*/
+
+int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
+{
+        int data = regs [4];
+
+        if ( (frame_phase & 1) && !(old_data & length_enabled) && length_ctr )
+        {
+                if ( (data & length_enabled) || cgb_02 )
+                        length_ctr--;
+        }
+
+        if ( data & trigger_mask )
+        {
+                enabled = true;
+                if ( !length_ctr )
+                {
+                        length_ctr = max_len;
+                        if ( (frame_phase & 1) && (data & length_enabled) )
+                                length_ctr--;
+                }
+        }
+
+        if ( !length_ctr )
+                enabled = false;
+
+        return data & trigger_mask;
+}
+
+INLINE void Gb_Env::zombie_volume( int old, int data )
+{
+        int v = volume;
+        if ( mode == mode_agb || cgb_05 )
+        {
+                /* CGB-05 behavior, very close to AGB behavior as well*/
+                if ( (old ^ data) & 8 )
+                {
+                        if ( !(old & 8) )
+                        {
+                                v++;
+                                if ( old & 7 )
+                                        v++;
+                        }
+
+                        v = 16 - v;
+                }
+                else if ( (old & 0x0F) == 8 )
+                {
+                        v++;
+                }
+        }
+        else
+        {
+                /* CGB-04&02 behavior, very close to MGB behavior as well*/
+                if ( !(old & 7) && env_enabled )
+                        v++;
+                else if ( !(old & 8) )
+                        v += 2;
+
+                if ( (old ^ data) & 8 )
+                        v = 16 - v;
+        }
+        volume = v & 0x0F;
+}
+
+bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
+{
+        int const max_len = 64;
+
+        switch ( reg )
+	{
+		case 1:
+			length_ctr = max_len - (data & (max_len - 1));
+			break;
+
+		case 2:
+			if ( !dac_enabled() )
+				enabled = false;
+
+			zombie_volume( old, data );
+
+			if ( (data & 7) && env_delay == 8 )
+			{
+				env_delay = 1;
+				clock_envelope(); /* TODO: really happens at next length clock*/
+			}
+			break;
+
+		case 4:
+			if ( write_trig( frame_phase, max_len, old ) )
+			{
+				int raw;
+
+				volume = regs [2] >> 4;
+				raw = regs [2] & 7;
+				env_delay = (raw ? raw : 8);
+				env_enabled = true;
+				if ( frame_phase == 7 )
+					env_delay++;
+				if ( !dac_enabled() )
+					enabled = false;
+				return true;
+			}
+	}
+        return false;
+}
+
+bool Gb_Square::write_register( int frame_phase, int reg, int old_data, int data )
+{
+        bool result = Gb_Env::write_register( frame_phase, reg, old_data, data );
+        if ( result )
+                delay = (delay & (4 * clk_mul - 1)) + period();
+        return result;
+}
+
+INLINE void Gb_Noise::write_register( int frame_phase, int reg, int old_data, int data )
+{
+        if ( Gb_Env::write_register( frame_phase, reg, old_data, data ) )
+        {
+                phase = 0x7FFF;
+                delay += 8 * clk_mul;
+        }
+}
+
+INLINE void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_data, int data )
+{
+        if ( reg == 0 && sweep_enabled && sweep_neg && !(data & 0x08) )
+                enabled = false; /* sweep negate disabled after used*/
+
+        if ( Gb_Square::write_register( frame_phase, reg, old_data, data ) )
+        {
+                sweep_freq = frequency();
+                sweep_neg = false;
+                reload_sweep_timer();
+                sweep_enabled = (regs [0] & (period_mask | shift_mask)) != 0;
+                if ( regs [0] & shift_mask )
+                        calc_sweep( false );
+        }
+}
+
+void Gb_Wave::corrupt_wave()
+{
+        int pos = ((phase + 1) & (bank_size - 1)) >> 1;
+        if ( pos < 4 )
+                wave_ram [0] = wave_ram [pos];
+        else
+                for ( int i = 4; --i >= 0; )
+                        wave_ram [i] = wave_ram [(pos & ~3) + i];
+}
+
+INLINE void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int data )
+{
+        switch ( reg )
+	{
+		case 0:
+			if ( !dac_enabled() )
+				enabled = false;
+			break;
+
+		case 1:
+			length_ctr = 256 - data;
+			break;
+
+		case 4:
+			bool was_enabled = enabled;
+			if ( write_trig( frame_phase, 256, old_data ) )
+			{
+				if ( !dac_enabled() )
+					enabled = false;
+				else if ( mode == mode_dmg && was_enabled && (unsigned) (delay - 2 * clk_mul) < 2 * clk_mul )
+					corrupt_wave();
+				phase = 0;
+				delay    = period() + 6 * clk_mul;
+			}
+	}
+}
+
+void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
+{
+        reg -= index * 5;
+        switch ( index )
+	{
+		case 0:
+			square1.write_register( frame_phase, reg, old_data, data );
+			break;
+		case 1:
+			square2.write_register( frame_phase, reg, old_data, data );
+			break;
+		case 2:
+			wave   .write_register( frame_phase, reg, old_data, data );
+			break;
+		case 3:
+			noise  .write_register( frame_phase, reg, old_data, data );
+			break;
+	}
+}
+
+/* Synthesis*/
+
+void Gb_Square::run( int32_t time, int32_t end_time )
+{
+        /* Calc duty and phase*/
+        static unsigned char const duty_offsets [4] = { 1, 1, 3, 7 };
+        static unsigned char const duties       [4] = { 1, 2, 4, 6 };
+        int const duty_code = regs [1] >> 6;
+        int32_t duty_offset = duty_offsets [duty_code];
+        int32_t duty = duties [duty_code];
+        if ( mode == mode_agb )
+        {
+                /* AGB uses inverted duty*/
+                duty_offset -= duty;
+                duty = 8 - duty;
+        }
+        int ph = (phase + duty_offset) & 7;
+
+        /* Determine what will be generated*/
+        int vol = 0;
+        Blip_Buffer* const out = output;
+        if ( out )
+        {
+                int amp = dac_off_amp;
+                if ( dac_enabled() )
+                {
+                        if ( enabled )
+                                vol = volume;
+
+                        amp = -dac_bias;
+                        if ( mode == mode_agb )
+                                amp = -(vol >> 1);
+
+                        /* Play inaudible frequencies as constant amplitude*/
+                        if ( frequency() >= 0x7FA && delay < 32 * clk_mul )
+                        {
+                                amp += (vol * duty) >> 3;
+                                vol = 0;
+                        }
+
+                        if ( ph < duty )
+                        {
+                                amp += vol;
+                                vol = -vol;
+                        }
+                }
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
+        }
+
+        /* Generate wave*/
+        time += delay;
+        if ( time < end_time )
+        {
+                int const per = period();
+                if ( !vol )
+                {
+                        /* Maintain phase when not playing*/
+                        int count = (end_time - time + per - 1) / per;
+                        ph += count; /* will be masked below*/
+                        time += (int32_t) count * per;
+                }
+                else
+                {
+                        /* Output amplitude transitions*/
+                        int delta = vol;
+                        do
+                        {
+                                ph = (ph + 1) & 7;
+                                if ( ph == 0 || ph == duty )
+                                {
+                                        good_synth->offset_inline( time, delta, out );
+                                        delta = -delta;
+                                }
+                                time += per;
+                        }
+                        while ( time < end_time );
+
+                        if ( delta != vol )
+                                last_amp -= delta;
+                }
+                phase = (ph - duty_offset) & 7;
+        }
+        delay = time - end_time;
+}
+
+/* Quickly runs LFSR for a large number of clocks. For use when noise is generating*/
+/* no sound.*/
+static unsigned run_lfsr( unsigned s, unsigned mask, int count )
+{
+	/* optimization used in several places:*/
+	/* ((s & (1 << b)) << n) ^ ((s & (1 << b)) << (n + 1)) = (s & (1 << b)) * (3 << n)*/
+
+	if ( mask == 0x4000 )
+	{
+		if ( count >= 32767 )
+			count %= 32767;
+
+		/* Convert from Fibonacci to Galois configuration,*/
+		/* shifted left 1 bit*/
+		s ^= (s & 1) * 0x8000;
+
+		/* Each iteration is equivalent to clocking LFSR 255 times*/
+		while ( (count -= 255) > 0 )
+			s ^= ((s & 0xE) << 12) ^ ((s & 0xE) << 11) ^ (s >> 3);
+		count += 255;
+
+		/* Each iteration is equivalent to clocking LFSR 15 times*/
+		/* (interesting similarity to single clocking below)*/
+		while ( (count -= 15) > 0 )
+			s ^= ((s & 2) * (3 << 13)) ^ (s >> 1);
+		count += 15;
+
+		/* Remaining singles*/
+		do{
+			--count;
+			s = ((s & 2) * (3 << 13)) ^ (s >> 1);
+		}while(count >= 0);
+
+		/* Convert back to Fibonacci configuration*/
+		s &= 0x7FFF;
+	}
+	else if ( count < 8)
+	{
+		/* won't fully replace upper 8 bits, so have to do the unoptimized way*/
+		do{
+			--count;
+			s = (s >> 1 | mask) ^ (mask & -((s - 1) & 2));
+		}while(count >= 0);
+	}
+	else
+	{
+		if ( count > 127 )
+		{
+			count %= 127;
+			if ( !count )
+				count = 127; /* must run at least once*/
+		}
+
+		/* Need to keep one extra bit of history*/
+		s = s << 1 & 0xFF;
+
+		/* Convert from Fibonacci to Galois configuration,*/
+		/* shifted left 2 bits*/
+		s ^= (s & 2) * 0x80;
+
+		/* Each iteration is equivalent to clocking LFSR 7 times*/
+		/* (interesting similarity to single clocking below)*/
+		while ( (count -= 7) > 0 )
+			s ^= ((s & 4) * (3 << 5)) ^ (s >> 1);
+		count += 7;
+
+		/* Remaining singles*/
+		while ( --count >= 0 )
+			s = ((s & 4) * (3 << 5)) ^ (s >> 1);
+
+		/* Convert back to Fibonacci configuration and*/
+		/* repeat last 8 bits above significant 7*/
+		s = (s << 7 & 0x7F80) | (s >> 1 & 0x7F);
+	}
+
+	return s;
+}
+
+void Gb_Noise::run( int32_t time, int32_t end_time )
+{
+        /* Determine what will be generated*/
+        int vol = 0;
+        Blip_Buffer* const out = output;
+        if ( out )
+        {
+                int amp = dac_off_amp;
+                if ( dac_enabled() )
+                {
+                        if ( enabled )
+                                vol = volume;
+
+                        amp = -dac_bias;
+                        if ( mode == mode_agb )
+                                amp = -(vol >> 1);
+
+                        if ( !(phase & 1) )
+                        {
+                                amp += vol;
+                                vol = -vol;
+                        }
+                }
+
+                /* AGB negates final output*/
+                if ( mode == mode_agb )
+                {
+                        vol = -vol;
+                        amp    = -amp;
+                }
+
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
+        }
+
+        /* Run timer and calculate time of next LFSR clock*/
+        static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
+        int const period1 = period1s [regs [3] & 7] * clk_mul;
+        {
+                int extra = (end_time - time) - delay;
+                int const per2 = period2();
+                time += delay + ((divider ^ (per2 >> 1)) & (per2 - 1)) * period1;
+
+                int count = (extra < 0 ? 0 : (extra + period1 - 1) / period1);
+                divider = (divider - count) & period2_mask;
+                delay = count * period1 - extra;
+        }
+
+        /* Generate wave*/
+        if ( time < end_time )
+        {
+                unsigned const mask = lfsr_mask();
+                unsigned bits = phase;
+
+                int per = period2( period1 * 8 );
+                if ( period2_index() >= 0xE )
+                {
+                        time = end_time;
+                }
+                else if ( !vol )
+                {
+                        /* Maintain phase when not playing*/
+                        int count = (end_time - time + per - 1) / per;
+                        time += (int32_t) count * per;
+                        bits = run_lfsr( bits, ~mask, count );
+                }
+                else
+                {
+                        /* Output amplitude transitions*/
+                        int delta = -vol;
+                        do
+                        {
+                                unsigned changed = bits + 1;
+                                bits = bits >> 1 & mask;
+                                if ( changed & 2 )
+                                {
+                                        bits |= ~mask;
+                                        delta = -delta;
+                                        med_synth->offset_inline( time, delta, out );
+                                }
+                                time += per;
+                        }
+                        while ( time < end_time );
+
+                        if ( delta == vol )
+                                last_amp += delta;
+                }
+                phase = bits;
+        }
+}
+
+#define volume_shift	2
+#define volume_shift_plus_four	6
+#define size20_mask 0x20
+
+void Gb_Wave::run( int32_t time, int32_t end_time )
+{
+        /* Calc volume*/
+        static unsigned char const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
+        int const volume_idx = regs [2] >> 5 & (agb_mask | 3); /* 2 bits on DMG/CGB, 3 on AGB*/
+        int const volume_mul = volumes [volume_idx];
+
+        /* Determine what will be generated*/
+        int playing = false;
+        Blip_Buffer* const out = output;
+        if ( out )
+        {
+                int amp = dac_off_amp;
+                if ( dac_enabled() )
+                {
+                        /* Play inaudible frequencies as constant amplitude*/
+                        amp = 8 << 4; /* really depends on average of all samples in wave*/
+
+                        /* if delay is larger, constant amplitude won't start yet*/
+                        if ( frequency() <= 0x7FB || delay > 15 * clk_mul )
+                        {
+                                if ( volume_mul )
+                                        playing = (int) enabled;
+
+                                amp = (sample_buf << (phase << 2 & 4) & 0xF0) * playing;
+                        }
+
+                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - dac_bias;
+                }
+		output->set_modified();
+		int delta = amp - last_amp;
+		if ( delta )
+		{
+			last_amp = amp;
+			med_synth->offset( time, delta, output );
+		}
+        }
+
+        /* Generate wave*/
+        time += delay;
+        if ( time < end_time )
+        {
+                unsigned char const* wave = wave_ram;
+
+                /* wave size and bank*/
+                int const flags = regs [0] & agb_mask;
+                int const wave_mask = (flags & size20_mask) | 0x1F;
+                int swap_banks = 0;
+                if ( flags & bank40_mask )
+                {
+                        swap_banks = flags & size20_mask;
+                        wave += bank_size/2 - (swap_banks >> 1);
+                }
+
+                int ph = phase ^ swap_banks;
+                ph = (ph + 1) & wave_mask; /* pre-advance*/
+
+                int const per = period();
+                if ( !playing )
+                {
+                        /* Maintain phase when not playing*/
+                        int count = (end_time - time + per - 1) / per;
+                        ph += count; /* will be masked below*/
+                        time += (int32_t) count * per;
+                }
+                else
+                {
+                        /* Output amplitude transitions*/
+                        int lamp = last_amp + dac_bias;
+                        do
+                        {
+                                /* Extract nybble*/
+                                int nybble = wave [ph >> 1] << (ph << 2 & 4) & 0xF0;
+                                ph = (ph + 1) & wave_mask;
+
+                                /* Scale by volume*/
+                                int amp = (nybble * volume_mul) >> (volume_shift_plus_four);
+
+                                int delta = amp - lamp;
+                                if ( delta )
+                                {
+                                        lamp = amp;
+                                        med_synth->offset_inline( time, delta, out );
+                                }
+                                time += per;
+                        }
+                        while ( time < end_time );
+                        last_amp = lamp - dac_bias;
+                }
+                ph = (ph - 1) & wave_mask; /* undo pre-advance and mask position*/
+
+                /* Keep track of last byte read*/
+                if ( enabled )
+                        sample_buf = wave [ph >> 1];
+
+                phase = ph ^ swap_banks; /* undo swapped banks*/
+        }
+        delay = time - end_time;
+}
+
+#include "Sound_Buffer.h"
 
 #include "blargg_source.h"
 
@@ -355,7 +1475,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = center_reader_accum + side_reader_accum;
+				int s = center_reader_accum + side_reader_accum;
 				s >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
@@ -380,7 +1500,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = center_reader_accum + side_reader_accum;
+				int s = center_reader_accum + side_reader_accum;
 				s >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
@@ -407,7 +1527,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		int offset = -count;
 		do
 		{
-			blargg_long s = BLIP_READER_READ( center );
+			int s = BLIP_READER_READ( center );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
 
@@ -421,12 +1541,11 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 }
 
 int const fixed_shift = 12;
-#define TO_FIXED( f )   fixed_t ((f) * ((fixed_t) 1 << fixed_shift))
+#define TO_FIXED( f )   int ((f) * ((int) 1 << fixed_shift))
 #define FROM_FIXED( f ) ((f) >> fixed_shift)
 
 int const max_read = 2560; /* determines minimum delay*/
 
-#ifndef USE_GBA_ONLY
 void Effects_Buffer::clear()
 {
 }
@@ -459,7 +1578,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = center_reader_accum + side_reader_accum;
+				int s = center_reader_accum + side_reader_accum;
 				s >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
@@ -484,7 +1603,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			int offset = -count;
 			do
 			{
-				blargg_long s = center_reader_accum + side_reader_accum;
+				int s = center_reader_accum + side_reader_accum;
 				s >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
@@ -511,7 +1630,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		int offset = -count;
 		do
 		{
-			blargg_long s = BLIP_READER_READ( center );
+			int s = BLIP_READER_READ( center );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
 
@@ -754,7 +1873,7 @@ void Effects_Buffer::apply_config()
 
 	bool echo_dirty = false;
 
-	fixed_t old_feedback = s.feedback;
+	int old_feedback = s.feedback;
 	s.feedback = TO_FIXED( config_.feedback );
 	if ( !old_feedback && s.feedback )
 		echo_dirty = true;
@@ -825,16 +1944,16 @@ void Effects_Buffer::apply_config()
 			{
 				/* TODO: this is a mess, needs refinement*/
 				b = 0;
-				fixed_t best_dist = TO_FIXED( 8 );
+				int best_dist = TO_FIXED( 8 );
 				for ( int h = buf_count; --h >= 0; )
 				{
 #define CALC_LEVELS( vols, sum, diff, surround ) \
-					fixed_t sum, diff;\
+					int sum, diff;\
 					bool surround = false;\
 					{\
-						fixed_t vol_0 = vols [0];\
+						int vol_0 = vols [0];\
 						if ( vol_0 < 0 ) vol_0 = -vol_0, surround = true;\
-						fixed_t vol_1 = vols [1];\
+						int vol_1 = vols [1];\
 						if ( vol_1 < 0 ) vol_1 = -vol_1, surround = true;\
 						sum  = vol_0 + vol_1;\
 						diff = vol_0 - vol_1;\
@@ -842,7 +1961,7 @@ void Effects_Buffer::apply_config()
 					CALC_LEVELS( ch.vol,       ch_sum,  ch_diff,  ch_surround );
 					CALC_LEVELS( bufs_buffer [h].vol, buf_sum, buf_diff, buf_surround );
 
-					fixed_t dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
+					int dist = abs( ch_sum - buf_sum ) + abs( ch_diff - buf_diff );
 
 					if ( ch_surround != buf_surround )
 						dist += TO_FIXED( 1 ) / 2;
@@ -959,7 +2078,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
 
                                 mix_effects( out, count );
 
-                                blargg_long new_echo_pos = echo_pos + count * stereo;
+                                int new_echo_pos = echo_pos + count * stereo;
                                 if ( new_echo_pos >= echo_size )
                                         new_echo_pos -= echo_size;
                                 echo_pos = new_echo_pos;
@@ -996,149 +2115,174 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
 
 void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
 {
-        typedef fixed_t stereo_fixed_t [stereo];
+	typedef int stereo_fixed_t [stereo];
 
-        /* add channels with echo, do echo, add channels without echo, then convert to 16-bit and output*/
-        int echo_phase = 1;
-        do
-        {
-                /* mix any modified buffers*/
-                {
-                        buf_t* buf = bufs_buffer;
-                        int bufs_remain = bufs_size;
-                        do
-                        {
-            #ifdef FASTER_SOUND_HACK_NON_SILENCE
-                                if ( ( buf->echo == !!echo_phase ) )
-            #else
-                                if ( buf->non_silent() && ( buf->echo == !!echo_phase ) )
-            #endif
-                                {
-                                        stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
-                                        BLIP_READER_BEGIN( in, *buf );
-                                        BLIP_READER_ADJ_( in, mixer_samples_read );
-                                        fixed_t const vol_0 = buf->vol [0];
-                                        fixed_t const vol_1 = buf->vol [1];
+	/* add channels with echo, do echo, add channels without echo, then convert to 16-bit and output*/
+	int echo_phase = 1;
+	do
+	{
+		/* mix any modified buffers*/
+		int bufs_remain;
 
-                                        int count = unsigned (echo_size - echo_pos) / stereo;
-                                        int remain = pair_count;
-                                        if ( count > remain )
-                                                count = remain;
-                                        do
-                                        {
-                                                remain -= count;
-                                                BLIP_READER_ADJ_( in, count );
-
-                                                out += count;
-                                                int offset = -count;
-                                                do
-                                                {
-                                                        fixed_t s = BLIP_READER_READ( in );
-                                                        BLIP_READER_NEXT_IDX_( in, offset );
-
-                                                        out [offset] [0] += s * vol_0;
-                                                        out [offset] [1] += s * vol_1;
-                                                }
-                                                while ( ++offset );
-
-                                                out = (stereo_fixed_t*) echo.begin();
-                                                count = remain;
-                                        }
-                                        while ( remain );
-
-                                        BLIP_READER_END( in, *buf );
-                                }
-                                buf++;
-                        }
-                        while ( --bufs_remain );
-                }
-
-                /* add echo*/
-                if ( echo_phase && !no_echo )
-                {
-                        fixed_t const feedback = s.feedback;
-                        fixed_t const treble   = s.treble;
-
-                        int i = 1;
-                        do
-                        {
-                                fixed_t low_pass = s.low_pass [i];
-
-                                fixed_t* echo_end = &echo [echo_size + i];
-                                fixed_t const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
-                                blargg_long out_offset = echo_pos + i + s.delay [i];
-                                if ( out_offset >= echo_size )
-                                        out_offset -= echo_size;
-                                fixed_t* BLIP_RESTRICT out_pos = &echo [out_offset];
-
-                                /* break into up to three chunks to avoid having to handle wrap-around*/
-                                /* in middle of core loop*/
-                                int remain = pair_count;
-                                do
-                                {
-                                        fixed_t const* pos = in_pos;
-                                        if ( pos < out_pos )
-                                                pos = out_pos;
-                                        int count = blargg_ulong ((char*) echo_end - (char const*) pos) /
-                                                        unsigned (stereo * sizeof (fixed_t));
-                                        if ( count > remain )
-                                                count = remain;
-                                        remain -= count;
-
-                                        in_pos  += count * stereo;
-                                        out_pos += count * stereo;
-                                        int offset = -count;
-                                        do
-                                        {
-                                                low_pass += FROM_FIXED( in_pos [offset * stereo] - low_pass ) * treble;
-                                                out_pos [offset * stereo] = FROM_FIXED( low_pass ) * feedback;
-                                        }
-                                        while ( ++offset );
-
-                                        if (  in_pos >= echo_end )  in_pos -= echo_size;
-                                        if ( out_pos >= echo_end ) out_pos -= echo_size;
-                                }
-                                while ( remain );
-
-                                s.low_pass [i] = low_pass;
-                        }
-                        while ( --i >= 0 );
-                }
-        }
-        while ( --echo_phase >= 0 );
-
-        /* clamp to 16 bits*/
-        {
-                stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
-                typedef int16_t stereo_blip_sample_t [stereo];
-                stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
-                int count = unsigned (echo_size - echo_pos) / (unsigned) stereo;
-                int remain = pair_count;
-                if ( count > remain )
-                        count = remain;
-                do
-                {
-                        remain -= count;
-                        in  += count;
-                        out += count;
-                        int offset = -count;
-                        do
-                        {
-                                fixed_t in_0 = FROM_FIXED( in [offset] [0] );
-                                fixed_t in_1 = FROM_FIXED( in [offset] [1] );
-
-                                BLIP_CLAMP( in_0, in_0 );
-                                out [offset] [0] = (int16_t) in_0;
-
-                                BLIP_CLAMP( in_1, in_1 );
-                                out [offset] [1] = (int16_t) in_1;
-                        }
-                        while ( ++offset );
-
-                        in = (stereo_fixed_t*) echo.begin();
-                        count = remain;
-                }
-                while ( remain );
-        }
-}
+		buf_t* buf = bufs_buffer;
+		bufs_remain = bufs_size;
+		do
+		{
+#ifdef FASTER_SOUND_HACK_NON_SILENCE
+			if ( ( buf->echo == !!echo_phase ) )
+#else
+				if ( buf->non_silent() && ( buf->echo == !!echo_phase ) )
 #endif
+				{
+					int vol_0, vol_1, count, remain;
+
+					stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
+					BLIP_READER_BEGIN( in, *buf );
+					BLIP_READER_ADJ_( in, mixer_samples_read );
+					vol_0 = buf->vol [0];
+					vol_1 = buf->vol [1];
+
+					count = unsigned (echo_size - echo_pos) / stereo;
+					remain = pair_count;
+
+					if ( count > remain )
+						count = remain;
+					do
+					{
+						remain -= count;
+						BLIP_READER_ADJ_( in, count );
+
+						out += count;
+						int offset = -count;
+						do
+						{
+							int s = BLIP_READER_READ( in );
+							BLIP_READER_NEXT_IDX_( in, offset );
+
+							out [offset] [0] += s * vol_0;
+							out [offset] [1] += s * vol_1;
+							offset++;
+						}
+						while ( offset );
+
+						out = (stereo_fixed_t*) echo.begin();
+						count = remain;
+					}
+					while ( remain );
+
+					BLIP_READER_END( in, *buf );
+				}
+			buf++;
+			bufs_remain--;
+		}
+		while (bufs_remain);
+
+		/* add echo*/
+		if ( echo_phase && !no_echo )
+		{
+			int feedback, treble, i;
+
+			feedback = s.feedback;
+			treble   = s.treble;
+
+			i = 1;
+
+			do
+			{
+				int low_pass, *echo_end, out_offset, remain;
+
+				low_pass = s.low_pass [i];
+
+				echo_end = &echo [echo_size + i];
+
+				int const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
+
+				out_offset = echo_pos + i + s.delay [i];
+
+				if ( out_offset >= echo_size )
+					out_offset -= echo_size;
+
+				int * BLIP_RESTRICT out_pos = &echo [out_offset];
+
+				/* break into up to three chunks to avoid having to handle wrap-around*/
+				/* in middle of core loop*/
+				remain = pair_count;
+
+				do
+				{
+					int count, offset;
+
+					int const * pos = in_pos;
+
+					if ( pos < out_pos )
+						pos = out_pos;
+
+					count = unsigned ((char*) echo_end - (char const*) pos) /
+						unsigned (stereo * sizeof(int));
+					if ( count > remain )
+						count = remain;
+					remain -= count;
+
+					in_pos  += count * stereo;
+					out_pos += count * stereo;
+					offset = -count;
+
+					do
+					{
+						low_pass += FROM_FIXED( in_pos [offset * stereo] - low_pass ) * treble;
+						out_pos [offset * stereo] = FROM_FIXED( low_pass ) * feedback;
+						offset++;
+					}
+					while(offset);
+
+					if(in_pos >= echo_end)
+						in_pos -= echo_size;
+					if(out_pos >= echo_end)
+						out_pos -= echo_size;
+				}
+				while ( remain );
+
+				s.low_pass [i] = low_pass;
+				i--;
+			}
+			while ( i >= 0 );
+		}
+		echo_phase--;
+	}
+	while ( echo_phase >= 0 );
+
+	/* clamp to 16 bits*/
+	stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
+	typedef int16_t stereo_blip_sample_t [stereo];
+	stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
+	int count = unsigned (echo_size - echo_pos) / (unsigned) stereo;
+	int remain = pair_count;
+	if ( count > remain )
+		count = remain;
+	do
+	{
+		int offset;
+		remain -= count;
+		in  += count;
+		out += count;
+		offset = -count;
+		do
+		{
+			int in_0, in_1;
+
+			in_0 = FROM_FIXED( in [offset] [0] );
+			in_1 = FROM_FIXED( in [offset] [1] );
+
+			BLIP_CLAMP( in_0, in_0 );
+			out [offset] [0] = (int16_t) in_0;
+
+			BLIP_CLAMP( in_1, in_1 );
+			out [offset] [1] = (int16_t) in_1;
+		}
+		while ( ++offset );
+
+		in = (stereo_fixed_t*) echo.begin();
+		count = remain;
+	}
+	while ( remain );
+}

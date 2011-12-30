@@ -16,11 +16,7 @@
 #include "fex/fex.h"
 #endif
 
-#ifndef USE_GBA_ONLY
 #include "gb/gbGlobals.h"
-#endif
-
-
 #include "common/memgzio.h"
 
 extern int systemColorDepth;

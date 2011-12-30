@@ -31,8 +31,6 @@
  #define offset offset_
 #endif
 
-///////////////////////////////////////////////////////////////////////////
-
 static int clockTicks;
 
 static  void armUnknownInsn(u32 opcode)

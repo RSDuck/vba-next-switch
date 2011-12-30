@@ -390,7 +390,6 @@ void soundTimerOverflow(int timer)
 	pcm [1].timer_overflowed( timer );
 }
 
-#ifndef USE_GBA_ONLY
 void flush_samples(Simple_Effects_Buffer * buffer)
 {
 	// dump all the samples available
@@ -398,8 +397,6 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 	int numSamples = buffer->read_samples( (int16_t*) soundFinalWave, buffer->samples_avail() );
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
-#endif
-
 
 void psoundTickfn()
 {
