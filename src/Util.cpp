@@ -12,10 +12,6 @@
 #include "gba/RTC.h"
 #include "common/Port.h"
 
-#ifdef USE_FEX
-#include "fex/fex.h"
-#endif
-
 #include "gb/gbGlobals.h"
 #include "common/memgzio.h"
 
@@ -133,51 +129,6 @@ void utilStripDoubleExtension(const char *file, char *buffer)
   }
 }
 
-// Opens and scans archive using accept(). Returns fex_t if found.
-// If error or not found, displays message and returns NULL.
-#ifdef USE_FEX
-static fex_t* scan_arc(const char *file, bool (*accept)(const char *),
-		char (&buffer) [2048] )
-{
-	fex_t* fe;
-	fex_err_t err = fex_open( &fe, file );
-	if(!fe)
-	{
-		systemMessage(MSG_CANNOT_OPEN_FILE, N_("Cannot open file %s: %s"), file, err);
-		return NULL;
-	}
-
-	// Scan filenames
-	bool found=false;
-	while(!fex_done(fe)) {
-		strncpy(buffer,fex_name(fe),sizeof buffer);
-		buffer [sizeof buffer-1] = '\0';
-
-		utilStripDoubleExtension(buffer, buffer);
-
-		if(accept(buffer)) {
-			found = true;
-			break;
-		}
-
-		fex_err_t err = fex_next(fe);
-		if(err) {
-			systemMessage(MSG_BAD_ZIP_FILE, N_("Cannot read archive %s: %s"), file, err);
-			fex_close(fe);
-			return NULL;
-		}
-	}
-
-	if(!found) {
-		systemMessage(MSG_NO_IMAGE_ON_ZIP,
-									N_("No image found in file %s"), file);
-		fex_close(fe);
-		return NULL;
-	}
-	return fe;
-}
-#endif
-
 static bool utilIsImage(const char *file)
 {
 	return utilIsGBAImage(file) || utilIsGBImage(file);
@@ -187,17 +138,7 @@ uint32_t utilFindType(const char *file)
 {
 	char buffer [2048];
 	if ( !utilIsImage( file ) ) // TODO: utilIsArchive() instead?
-	{
-      #ifdef USE_FEX
-		fex_t* fe = scan_arc(file,utilIsImage,buffer);
-		if(!fe)
-      #endif
-			return IMAGE_UNKNOWN;
-      #ifdef USE_FEX
-		fex_close(fe);
-		file = buffer;
-      #endif
-	}
+		return IMAGE_UNKNOWN;
 
 	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_GB;
 }
@@ -211,50 +152,6 @@ static int utilGetSize(int size)
 }
 
 uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data, int &size)
-#ifdef USE_FEX
-{
-	// find image file
-	char buffer [2048];
-	fex_t *fe = scan_arc(file,accept,buffer);
-	if(!fe)
-		return NULL;
-
-	// Allocate space for image
-	fex_err_t err = fex_stat(fe);
-	int fileSize = fex_size(fe);
-	if(size == 0)
-		size = fileSize;
-
-	uint8_t *image = data;
-
-	if(image == NULL) {
-		// allocate buffer memory if none was passed to the function
-		image = (uint8_t *)malloc(utilGetSize(size));
-		if(image == NULL) {
-			fex_close(fe);
-			systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-					"data");
-			return NULL;
-		}
-		size = fileSize;
-	}
-
-	// Read image
-	int read = fileSize <= size ? fileSize : size; // do not read beyond file
-	err = fex_read(fe, image, read);
-	fex_close(fe);
-	if(err) {
-		systemMessage(MSG_ERROR_READING_IMAGE,
-				N_("Error reading image from %s: %s"), buffer, err);
-		if(data == NULL)
-			free(image);
-		return NULL;
-	}
-
-	size = fileSize;
-	return image;
-}
-#else
 {
 	FILE *fp = NULL;
 	char *buf = NULL;
@@ -302,7 +199,6 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 	fclose(fp);
 	return image;
 }
-#endif
 
 void utilWriteInt(gzFile gzFile, int i)
 {
