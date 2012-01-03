@@ -140,4 +140,8 @@ extern uint32_t frame_count;
 extern char DEFAULT_SHADER_FILE[MAX_PATH_LENGTH];
 extern char DEFAULT_MENU_SHADER_FILE[MAX_PATH_LENGTH];
 
+extern PSGLdevice* psgl_device;
+
+extern "C" void _jsPlatformSwapBuffers( PSGLdevice* device);
+
 #endif /* PS3Graphics_H_ */

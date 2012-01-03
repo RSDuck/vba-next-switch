@@ -70,7 +70,7 @@ static CGparameter _cgp_vertex_OutputSize[3];
 static CGparameter _cgp_timer[3];
 static CGparameter _cgp_vertex_timer[3];
 
-static PSGLdevice* psgl_device;
+PSGLdevice* psgl_device;
 static PSGLcontext* psgl_context;
 static CellVideoOutState m_stored_video_state;
 //snes_tracker_t *tracker; // State tracker
