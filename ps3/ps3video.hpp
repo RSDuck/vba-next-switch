@@ -148,12 +148,11 @@ unsigned ps3graphics_get_orientation_name (void);
 void ps3graphics_init_dbgfont();
 
 extern uint32_t frame_count;
-//extern snes_tracker_t *tracker; // State tracker
+/*extern snes_tracker_t *tracker;*/
 
 /* emulator-specific private variables */
 extern char DEFAULT_SHADER_FILE[MAX_PATH_LENGTH];
 extern char DEFAULT_MENU_SHADER_FILE[MAX_PATH_LENGTH];
-
 
 extern PSGLdevice* psgl_device;
 
