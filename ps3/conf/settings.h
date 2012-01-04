@@ -17,6 +17,7 @@
 struct SSettings
 {
 	int		PS3OverscanAmount;
+	uint32_t	Orientation;
 	uint32_t	PS3FontSize;
 	uint32_t	ControlStyle;
 	uint32_t	PS3KeepAspect;

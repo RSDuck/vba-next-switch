@@ -50,6 +50,7 @@ static GLuint tex_menu;
 static GLuint tex_backdrop;
 static GLuint vbo[2];
 static unsigned m_width, m_height, m_pitch;
+static unsigned m_orientation;
 
 static GLfloat m_left, m_right, m_bottom, m_top, m_zNear, m_zFar;
 static char curFragmentShaderPath[3][MAX_PATH_LENGTH];
@@ -75,6 +76,34 @@ static PSGLcontext* psgl_context;
 static CellVideoOutState m_stored_video_state;
 //snes_tracker_t *tracker; // State tracker
 //static std::vector<lookup_texture> lut_textures; // Lookup textures in use.
+
+static GLfloat texcoords[] = {
+	0, 1,		// top-left
+	0, 0,		// bottom-left
+	1, 0,		// bottom-right
+	1, 1		// top-right
+};
+
+static GLfloat texcoords_vertical[] = {
+	1, 1,		// top-right
+	0, 1,		// top-left
+	0, 0,		// bottom-left
+	1, 0		// bottom-right
+};
+
+static GLfloat texcoords_flipped[] = {
+	1, 0,		// bottom-right
+	1, 1,		// top-right
+	0, 1,		// top-left
+	0, 0		// bottom-left
+};
+
+static GLfloat texcoords_flipped_rotated[] = {
+	0, 0,		// bottom-left
+	1, 0,		// bottom-right
+	1, 1,		// top-right
+	0, 1		// top-left
+};
 
 /******************************************************************************* 
 	Calculate macros
@@ -303,6 +332,50 @@ int32_t ps3graphics_init_cg()
 	return CELL_OK;
 }
 
+unsigned ps3graphics_get_orientation_name (void)
+{
+	return m_orientation;
+}
+
+void ps3graphics_set_orientation(unsigned orientation)
+{
+	GLfloat vertex_buf[128];
+	GLfloat vertexes[] = {
+		0, 0,
+		0, 0,
+		1, 0,
+		1, 1,
+		0, 1,
+		0, 0,
+	};
+
+	memcpy(vertex_buf, vertexes, 12 * sizeof(GLfloat));
+	m_orientation = orientation;
+
+	switch(orientation)
+	{
+		case NORMAL:
+			memcpy(vertex_buf + 32, texcoords, 8 * sizeof(GLfloat));
+			memcpy(vertex_buf + 32 * 3, texcoords, 8 * sizeof(GLfloat));
+			break;
+		case VERTICAL:
+			memcpy(vertex_buf + 32, texcoords_vertical, 8 * sizeof(GLfloat));
+			memcpy(vertex_buf + 32 * 3, texcoords_vertical, 8 * sizeof(GLfloat));
+			break;
+		case FLIPPED:
+			memcpy(vertex_buf + 32, texcoords_flipped, 8 * sizeof(GLfloat));
+			memcpy(vertex_buf + 32 * 3, texcoords_flipped, 8 * sizeof(GLfloat));
+			break;
+		case FLIPPED_ROTATED:
+			memcpy(vertex_buf + 32, texcoords_flipped_rotated, 8 * sizeof(GLfloat));
+			memcpy(vertex_buf + 32 * 3, texcoords_flipped_rotated, 8 * sizeof(GLfloat));
+			break;
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buf), vertex_buf, GL_STREAM_DRAW);
+}
+
 static int32_t ps3graphics_psgl_init(uint32_t scaleEnable, uint32_t scaleFactor)
 {
 	glDisable(GL_DEPTH_TEST);
@@ -341,27 +414,9 @@ static int32_t ps3graphics_psgl_init(uint32_t scaleEnable, uint32_t scaleFactor)
 	glClear(GL_COLOR_BUFFER_BIT);
 	psglSwap();
 
-	// Vertexes
-	GLfloat vertexes[] = {
-		0, 0, 0,
-		0, 1, 0,
-		1, 1, 0,
-		1, 0, 0,
-		0, 1,
-		0, 0,
-		1, 0,
-		1, 1
-	};
-
 	SetScreenDimensions(m_width, m_height, m_width, 0);
 
-	GLfloat vertex_buf[128];
-	memcpy(vertex_buf, vertexes, 12 * sizeof(GLfloat));
-	memcpy(vertex_buf + 32, vertexes + 12, 8 * sizeof(GLfloat));
-	memcpy(vertex_buf + 32 * 3, vertexes + 12, 8 * sizeof(GLfloat));
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buf), vertex_buf, GL_STREAM_DRAW);
+	ps3graphics_set_orientation(NORMAL);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);

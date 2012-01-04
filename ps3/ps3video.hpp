@@ -64,6 +64,16 @@ enum
 	ASPECT_RATIO_CUSTOM
 };
 
+enum
+{
+	NORMAL,
+	VERTICAL,
+	FLIPPED,
+	FLIPPED_ROTATED
+};
+
+#define MAX_ORIENTATION FLIPPED_ROTATED
+
 enum menu_type
 {
 	TEXTURE_BACKDROP,
@@ -130,6 +140,10 @@ void ps3graphics_set_triple_buffering(uint32_t triple_buffering);
 void ps3graphics_set_vsync(uint32_t vsync);
 uint32_t ps3graphics_set_text_message_speed(uint32_t value);
 
+/* orientation */
+void ps3graphics_set_orientation(unsigned orientation);
+unsigned ps3graphics_get_orientation_name (void);
+
 /* libdbgfont */
 void ps3graphics_init_dbgfont();
 
@@ -139,6 +153,7 @@ extern uint32_t frame_count;
 /* emulator-specific private variables */
 extern char DEFAULT_SHADER_FILE[MAX_PATH_LENGTH];
 extern char DEFAULT_MENU_SHADER_FILE[MAX_PATH_LENGTH];
+
 
 extern PSGLdevice* psgl_device;
 

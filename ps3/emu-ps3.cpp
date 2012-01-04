@@ -849,6 +849,7 @@ static void emulator_init_settings()
 	init_setting_uint("PS3General::ViewportWidth", Settings.ViewportWidth, 0);
 	init_setting_uint("PS3General::ViewportHeight", Settings.ViewportHeight, 0);
 	init_setting_uint("PS3General::ScaleEnabled", Settings.ScaleEnabled, 1);
+	init_setting_uint("PS3General::Orientation", Settings.Orientation, 0);
 	init_setting_uint("PS3General::PS3CurrentResolution", Settings.PS3CurrentResolution, NULL);
 	init_setting_uint("PS3General::OverscanEnabled", Settings.PS3OverscanEnabled, 0);
 	init_setting_int("PS3General::OverscanAmount", Settings.PS3OverscanAmount, 0);
@@ -886,6 +887,7 @@ void emulator_implementation_set_shader_preset(const char * fname)
 	init_setting_uint("Smooth", Settings.PS3Smooth, Settings.PS3Smooth);
 	init_setting_uint("Smooth2", Settings.PS3Smooth2, Settings.PS3Smooth2);
 	init_setting_uint("ScaleEnabled", Settings.ScaleEnabled, Settings.ScaleEnabled);
+	init_setting_uint("Orientation", Settings.Orientation, Settings.Orientation);
 	init_setting_char("PS3CurrentShader", Settings.PS3CurrentShader, DEFAULT_SHADER_FILE);
 	init_setting_char("PS3CurrentShader2", Settings.PS3CurrentShader2, DEFAULT_SHADER_FILE);
 	init_setting_char("Border", Settings.PS3CurrentBorder, DEFAULT_BORDER_FILE);
@@ -951,6 +953,7 @@ void emulator_save_settings(uint64_t filetosave)
 			config_set_string(currentconfig, "PS3Paths::PathROMDirectory", Settings.PS3PathROMDirectory);
 			config_set_string(currentconfig, "RSound::RSoundServerIPAddress", Settings.RSoundServerIPAddress);
 			config_set_uint(currentconfig, "PS3General::ScaleEnabled", Settings.ScaleEnabled);
+			config_set_uint(currentconfig, "PS3General::Orientation", Settings.Orientation);
 
 			//Emulator-specific settings
 			config_set_string(currentconfig, "VBA::GBABIOS",Settings.GBABIOS);
@@ -1027,6 +1030,7 @@ void emulator_save_settings(uint64_t filetosave)
 					config_set_uint(currentconfig, "ViewportHeight", ps3graphics_get_viewport_height());
 					config_set_uint(currentconfig, "ScaleFactor", Settings.ScaleFactor);
 					config_set_uint(currentconfig, "ScaleEnabled", Settings.ScaleEnabled);
+					config_set_uint(currentconfig, "Orientation", Settings.Orientation);
 					config_set_uint(currentconfig, "OverscanEnabled", Settings.PS3OverscanEnabled);
 					config_set_uint(currentconfig, "OverscanAmount", Settings.PS3OverscanAmount);
 					config_file_write(currentconfig, filepath);
@@ -1451,7 +1455,7 @@ static void sysutil_exit_callback (uint64_t status, uint64_t param, void *userda
 static void ingame_menu(void)
 {
 	uint32_t menuitem_colors[MENU_ITEM_LAST];
-	char comment[256];
+	char comment[256], msg_temp[256];
 	do
 	{
 		input_code_state_begin();
@@ -1604,6 +1608,33 @@ static void ingame_menu(void)
 					ingame_menu_reset_entry_colors (ingame_menu_item);
 					strcpy(comment, "Press LEFT or RIGHT to change the [Overscan] settings.\nPress START to reset back to default values.");
 					break;
+				case MENU_ITEM_ORIENTATION:
+					if(CTRL_LEFT(button_was_pressed)  ||  CTRL_LSTICK_LEFT(button_was_pressed) || CTRL_CROSS(button_was_pressed) || CTRL_LSTICK_LEFT(button_was_held))
+					{
+						if(Settings.Orientation > 0)
+						{
+							Settings.Orientation--;
+							ps3graphics_set_orientation(Settings.Orientation);
+						}
+					}
+
+					if(CTRL_RIGHT(button_was_pressed) || CTRL_LSTICK_RIGHT(button_was_pressed) || CTRL_CROSS(button_was_pressed) || CTRL_LSTICK_RIGHT(button_was_held))
+					{
+						if(Settings.Orientation != MAX_ORIENTATION)
+						{
+							Settings.Orientation++;
+							ps3graphics_set_orientation(Settings.Orientation);
+						}
+					}
+
+					if(CTRL_START(button_was_pressed))
+					{
+						Settings.Orientation = NORMAL;
+						ps3graphics_set_orientation(Settings.Orientation);
+					}
+					ingame_menu_reset_entry_colors (ingame_menu_item);
+					strcpy(comment, "Press LEFT or RIGHT to change the [Orientation] settings.\nPress START to reset back to default values.");
+					break;
 				case MENU_ITEM_FRAME_ADVANCE:
 					if(CTRL_CROSS(state) || CTRL_R2(state) || CTRL_L2(state))
 					{
@@ -1749,35 +1780,70 @@ static void ingame_menu(void)
 #define font_size 1.1f
 #define ypos 0.19f
 #define ypos_increment 0.04f
-		cellDbgFontPrintf	(x_position,	0.10f,	1.4f+0.01f,	BLUE,               "Quick Menu");
-		cellDbgFontPrintf	(x_position,	0.10f,	1.4f,	WHITE,               "Quick Menu");
+		cellDbgFontPrintf	(x_position,	0.10f,	1.4f+0.01f,	BLUE,		"Quick Menu");
+		cellDbgFontPrintf	(x_position,	0.10f,	1.4f,		WHITE,		"Quick Menu");
+
 		cellDbgFontPrintf	(x_position,	ypos,	font_size+0.01f,	BLUE,	"Load State #%d", Settings.CurrentSaveStateSlot);
 		cellDbgFontPrintf	(x_position,	ypos,	font_size,	menuitem_colors[MENU_ITEM_LOAD_STATE],	"Load State #%d", Settings.CurrentSaveStateSlot);
+
 		cellDbgFontPrintf	(x_position,	ypos+(ypos_increment*MENU_ITEM_SAVE_STATE),	font_size+0.01f,	BLUE,	"Save State #%d", Settings.CurrentSaveStateSlot);
 		cellDbgFontPrintf	(x_position,	ypos+(ypos_increment*MENU_ITEM_SAVE_STATE),	font_size,	menuitem_colors[MENU_ITEM_SAVE_STATE],	"Save State #%d", Settings.CurrentSaveStateSlot);
+
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_KEEP_ASPECT_RATIO)),	font_size+0.01f,	BLUE,	"Aspect Ratio: %s %s %d:%d", ps3graphics_calculate_aspect_ratio_before_game_load() ?"(Auto)" : "", Settings.PS3KeepAspect == LAST_ASPECT_RATIO ? "Custom" : "", (int)ps3graphics_get_aspect_ratio_int(0), (int)ps3graphics_get_aspect_ratio_int(1));
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_KEEP_ASPECT_RATIO)),	font_size,	menuitem_colors[MENU_ITEM_KEEP_ASPECT_RATIO],	"Aspect Ratio: %s %s %d:%d", ps3graphics_calculate_aspect_ratio_before_game_load() ?"(Auto)" : "", Settings.PS3KeepAspect == LAST_ASPECT_RATIO ? "Custom" : "", (int)ps3graphics_get_aspect_ratio_int(0), (int)ps3graphics_get_aspect_ratio_int(1));
+		
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_OVERSCAN_AMOUNT)),	font_size+0.01f,	BLUE,	"Overscan: %f", (float)Settings.PS3OverscanAmount/100);
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_OVERSCAN_AMOUNT)),	font_size,	menuitem_colors[MENU_ITEM_OVERSCAN_AMOUNT],	"Overscan: %f", (float)Settings.PS3OverscanAmount/100);
+
+
+		switch(ps3graphics_get_orientation_name())
+		{
+			case NORMAL:
+				snprintf(msg_temp, sizeof(msg_temp), "Normal");
+				break;
+			case VERTICAL:
+				snprintf(msg_temp, sizeof(msg_temp), "Vertical");
+				break;
+			case FLIPPED:
+				snprintf(msg_temp, sizeof(msg_temp), "Flipped");
+				break;
+			case FLIPPED_ROTATED:
+				snprintf(msg_temp, sizeof(msg_temp), "Flipped Rotated");
+				break;
+		}
+
+
+		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_ORIENTATION)),	font_size+0.01f,	BLUE,	"Orientation: %s", msg_temp);
+		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_ORIENTATION)),	font_size,	menuitem_colors[MENU_ITEM_ORIENTATION],	"Orientation: %s", msg_temp);
+
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RESIZE_MODE)),	font_size+0.01f,	BLUE,	"Resize Mode");
 		cellDbgFontPrintf	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RESIZE_MODE)),	font_size,	menuitem_colors[MENU_ITEM_RESIZE_MODE],	"Resize Mode");
+
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_FRAME_ADVANCE)),	font_size+0.01f,	BLUE,	"Frame Advance");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_FRAME_ADVANCE)),	font_size,	menuitem_colors[MENU_ITEM_FRAME_ADVANCE],	"Frame Advance");
+
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_SCREENSHOT_MODE)),	font_size+0.01f,	BLUE,	"Screenshot Mode");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_SCREENSHOT_MODE)),	font_size,	menuitem_colors[MENU_ITEM_SCREENSHOT_MODE],	"Screenshot Mode");
+
 		cellDbgFontDraw();
+
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RESET)),	font_size+0.01f,	BLUE,	"Reset");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RESET)),	font_size,	menuitem_colors[MENU_ITEM_RESET],	"Reset");
+
 		cellDbgFontPuts   (x_position,   (ypos+(ypos_increment*MENU_ITEM_RETURN_TO_GAME)),   font_size+0.01f,  BLUE,  "Return to Game");
 		cellDbgFontPuts   (x_position,   (ypos+(ypos_increment*MENU_ITEM_RETURN_TO_GAME)),   font_size,  menuitem_colors[MENU_ITEM_RETURN_TO_GAME],  "Return to Game");
+
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_MENU)),	font_size+0.01f,	BLUE,	"Return to Menu");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_MENU)),	font_size,	menuitem_colors[MENU_ITEM_RETURN_TO_MENU],	"Return to Menu");
+
 #ifdef MULTIMAN_SUPPORT
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_MULTIMAN)),	font_size+0.01f,	BLUE,	"Return to multiMAN");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_MULTIMAN)),	font_size,	menuitem_colors[MENU_ITEM_RETURN_TO_MULTIMAN],	"Return to multiMAN");
 #endif
+
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_XMB)),	font_size+0.01f,	BLUE,	"Return to XMB");
 		cellDbgFontPuts	(x_position,	(ypos+(ypos_increment*MENU_ITEM_RETURN_TO_XMB)),	font_size,	menuitem_colors[MENU_ITEM_RETURN_TO_XMB],	"Return to XMB");
+
 		if(frame_count < special_action_msg_expired)
 		{
 			cellDbgFontPrintf (0.09f, 0.90f, 1.51f, BLUE,	special_action_msg);
@@ -1799,6 +1865,7 @@ static void ingame_menu(void)
 
 static void emulator_start()
 {
+	ps3graphics_set_orientation(Settings.Orientation);
 	if (ps3graphics_get_current_resolution() == CELL_VIDEO_OUT_RESOLUTION_576)
 	{
 		if(ps3graphics_check_resolution(CELL_VIDEO_OUT_RESOLUTION_576))
@@ -1992,6 +2059,7 @@ int main(int argc, char **argv)
 		switch(mode_switch)
 		{
 			case MODE_MENU:
+				ps3graphics_set_orientation(NORMAL);
 				MenuMainLoop();
 				break;
 			case MODE_EMULATION:
