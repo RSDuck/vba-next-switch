@@ -15,4 +15,9 @@
 // Uncomment if automatic byte-order determination doesn't work
 //#define BLARGG_BIG_ENDIAN 1
 
+// Use standard config.h if present
+#ifdef HAVE_CONFIG_H
+	#include "config.h"
+#endif
+
 #endif
