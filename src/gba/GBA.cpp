@@ -69,8 +69,6 @@ bool skipBios = false;
 int frameSkip = 1;
 bool speedup = false;
 #endif
-//bool synchronize = true;
-//bool cpuDisableSfx = false;
 bool cpuIsMultiBoot = false;
 int layerSettings = 0xff00;
 int layerEnable = 0xff00;
@@ -188,8 +186,6 @@ bool busPrefetchEnable = false;
 uint32_t busPrefetchCount = 0;
 int cpuDmaTicksToUpdate = 0;
 int cpuDmaCount = 0;
-//bool cpuDmaHack = false;
-//uint32_t cpuDmaLast = 0;
 int dummyAddress = 0;
 
 bool cpuBreakLoop = false;
@@ -272,15 +268,6 @@ uint8_t memoryWaitSeq[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 4, 4, 8, 8, 4, 0 };
 uint8_t memoryWaitSeq32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 5, 5, 9, 9, 17, 17, 4, 0 };
-
-// The videoMemoryWait constants are used to add some waitstates
-// if the opcode access video memory data outside of vblank/hblank
-// It seems to happen on only one ticks for each pixel.
-// Not used for now (too problematic with current code).
-//const uint8_t videoMemoryWait[16] =
-//  {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-
 uint8_t biosProtected[4];
 
 #ifndef LSB_FIRST
@@ -4312,8 +4299,6 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 		else
 		{
 			do {
-				//cpuDmaLast = CPUReadMemory(s);
-				//CPUWriteMemory(d, cpuDmaLast);
 				CPUWriteMemory(d, CPUReadMemory(s));
 				d += di;
 				s += si;
@@ -4337,10 +4322,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 		else
 		{
 			do{
-				//cpuDmaLast = CPUReadHalfWord(s);
-				//CPUWriteHalfWord(d, cpuDmaLast);
 				CPUWriteHalfWord(d, CPUReadHalfWord(s));
-				//cpuDmaLast |= (cpuDmaLast<<16);
 				d += di;
 				s += si;
 				c--;
@@ -4404,7 +4386,6 @@ void CPUCheckDMA(int reason, int dmamask)
 			doDMA(dma0Source, dma0Dest, sourceIncrement, destIncrement,
 					DM0CNT_L ? DM0CNT_L : 0x4000,
 					DM0CNT_H & 0x0400);
-			//cpuDmaHack = true;
 
 			if(DM0CNT_H & 0x4000)
 			{
@@ -4473,7 +4454,6 @@ void CPUCheckDMA(int reason, int dmamask)
 				transfer_value = DM1CNT_H & 0x0400;
 			}
 			doDMA(dma1Source, dma1Dest, sourceIncrement, di_value, c_value, transfer_value);
-			//cpuDmaHack = true;
 
 			if(DM1CNT_H & 0x4000) {
 				IF |= 0x0200;
@@ -4541,7 +4521,6 @@ void CPUCheckDMA(int reason, int dmamask)
 				transfer_value = DM2CNT_H & 0x0400;
 			}
 			doDMA(dma2Source, dma2Dest, sourceIncrement, di_value, c_value, transfer_value);
-			//cpuDmaHack = true;
 
 			if(DM2CNT_H & 0x4000) {
 				IF |= 0x0400;
@@ -5544,8 +5523,6 @@ void CPUReset()
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	//cpuDmaHack = false;
-
 #ifdef USE_FRAMESKIP
 	lastTime = systemGetClock();
 #endif
@@ -5632,7 +5609,6 @@ void CPULoop()
 
 			clockTicks = cpuNextEvent;
 			cpuTotalTicks = 0;
-			//cpuDmaHack = false;
 
 updateLoop:
 
@@ -5921,7 +5897,6 @@ updateLoop:
 				cpuDmaTicksToUpdate -= clockTicks;
 				if(cpuDmaTicksToUpdate < 0)
 					cpuDmaTicksToUpdate = 0;
-				//cpuDmaHack = true;
 				goto updateLoop;
 			}
 

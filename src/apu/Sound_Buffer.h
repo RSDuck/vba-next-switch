@@ -374,7 +374,6 @@ class Stereo_Buffer
 };
 
 
-#ifndef USE_GBA_ONLY
 /* See Simple_Effects_Buffer (below) for a simpler interface */
 
 class Effects_Buffer {
@@ -512,6 +511,5 @@ class Simple_Effects_Buffer : public Effects_Buffer
 	config_t config_;
 	void chan_config(); // hide
 };
-#endif
 
 #endif

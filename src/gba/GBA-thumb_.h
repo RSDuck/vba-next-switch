@@ -23,18 +23,16 @@
 
 static  void thumbUnknownInsn(u32 opcode)
 {
-    // CPU Undefined Exception - ghetto inline
-  u32 PC = reg[15].I;
-  bool savedArmState = armState;
-  CPUSwitchMode(0x1b, true, false);
-  reg[14].I = PC - (savedArmState ? 4 : 2);
-  reg[15].I = 0x04;
-  armState = true;
-  armIrqEnable = false;
-  armNextPC = 0x04;
-  ARM_PREFETCH;
-  reg[15].I += 4;
-    // CPU Undefined Exception - end of ghetto inline
+	u32 PC = reg[15].I;
+	bool savedArmState = armState;
+	CPUSwitchMode(0x1b, true, false);
+	reg[14].I = PC - (savedArmState ? 4 : 2);
+	reg[15].I = 0x04;
+	armState = true;
+	armIrqEnable = false;
+	armNextPC = 0x04;
+	ARM_PREFETCH;
+	reg[15].I += 4;
 }
 
 #define NEG(i) ((i) >> 31)

@@ -1,10 +1,9 @@
 #ifndef GBACPU_H
 #define GBACPU_H
 
-#define UPDATE_REG(address, value)\
-  {\
-    WRITE16LE(((u16 *)&ioMem[address]),value);\
-  }\
+#define UPDATE_REG(address, value)	WRITE16LE(((u16 *)&ioMem[address]),value);
+#define ARM_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);
+#define THUMB_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
 
 #define ARM_PREFETCH \
   {\
@@ -17,12 +16,6 @@
     cpuPrefetch[0] = CPUReadHalfWordQuick(armNextPC);\
     cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
   }
-
-#define ARM_PREFETCH_NEXT \
-  cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);
-
-#define THUMB_PREFETCH_NEXT\
-  cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
  
 #ifdef USE_SWITICKS
 extern int SWITicks;

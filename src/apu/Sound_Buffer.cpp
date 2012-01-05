@@ -195,14 +195,12 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	remove_samples( count );
 
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
-		if ( (last_non_silence -= count) < 0 )
-			last_non_silence = 0;
+	if ( (last_non_silence -= count) < 0 )
+		last_non_silence = 0;
 #endif
 
-		return count;
+	return count;
 }
-
-uint32_t const subsample_mask = (1L << BLIP_BUFFER_ACCURACY) - 1;
 
 void Blip_Buffer::save_state( blip_buffer_state_t* out )
 {
@@ -426,7 +424,6 @@ int const fixed_shift = 12;
 
 int const max_read = 2560; /* determines minimum delay*/
 
-#ifndef USE_GBA_ONLY
 void Effects_Buffer::clear()
 {
 }
@@ -1141,4 +1138,3 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                 while ( remain );
         }
 }
-#endif

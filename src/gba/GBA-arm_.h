@@ -1,5 +1,3 @@
-#include <stdarg.h>
-#include <string.h>
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"

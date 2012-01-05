@@ -19,8 +19,6 @@ extern bool cpuEEPROMEnabled;
 #ifdef USE_MOTION_SENSOR
 extern bool cpuEEPROMSensorEnabled;
 #endif
-//extern bool cpuDmaHack;
-//extern u32 cpuDmaLast;
 extern bool timer0On;
 extern int timer0Ticks;
 extern int timer0ClockReload;
@@ -35,121 +33,110 @@ extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
 
-#define CPUReadByteQuick(addr) \
-  map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
-
-#define CPUReadHalfWordQuick(addr) \
-  READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
-
-#define CPUReadMemoryQuick(addr) \
-  READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+#define CPUReadByteQuick(addr)		map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
+#define CPUReadHalfWordQuick(addr)	READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+#define CPUReadMemoryQuick(addr)	READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
 static INLINE u32 CPUReadMemory(u32 address)
 {
-  u32 value;
-  switch(address >> 24)
-  {
-	  case 0:
-		  if(reg[15].I >> 24) {
-			  if(address < 0x4000) {
-				  value = READ32LE(((u32 *)&biosProtected));
-			  }
-			  else goto unreadable;
-		  } else
-			  value = READ32LE(((u32 *)&bios[address & 0x3FFC]));
-		  break;
-	  case 2:
-		  value = READ32LE(((u32 *)&workRAM[address & 0x3FFFC]));
-		  break;
-	  case 3:
-		  value = READ32LE(((u32 *)&internalRAM[address & 0x7ffC]));
-		  break;
-	  case 4:
-		  if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
-			  if(ioReadable[(address & 0x3fc) + 2]) {
-				  value = READ32LE(((u32 *)&ioMem[address & 0x3fC]));
-#if 0
-				  if ((address & 0x3fc) == COMM_JOY_RECV_L)
-					  UPDATE_REG(COMM_JOYSTAT, READ16LE(&ioMem[COMM_JOYSTAT]) & ~JOYSTAT_RECV);
-#endif
-			  } else {
-				  value = READ16LE(((u16 *)&ioMem[address & 0x3fc]));
-			  }
-		  }
-		  else
-			  goto unreadable;
-		  break;
-	  case 5:
-		  value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
-		  break;
-	  case 6:
-		  address = (address & 0x1fffc);
-		  if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-		  {
-			  value = 0;
-			  break;
-		  }
-		  if ((address & 0x18000) == 0x18000)
-			  address &= 0x17fff;
-		  value = READ32LE(((u32 *)&vram[address]));
-		  break;
-	  case 7:
-		  value = READ32LE(((u32 *)&oam[address & 0x3FC]));
-		  break;
-	  case 8:
-	  case 9:
-	  case 10:
-	  case 11:
-	  case 12:
-		  value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
-		  break;
-	  case 13:
-		  if(cpuEEPROMEnabled)
-			  // no need to swap this
-			  return eepromRead(address);
-		  goto unreadable;
-	  case 14:
-		  if(cpuFlashEnabled | cpuSramEnabled)
-			  // no need to swap this
-			  return flashRead(address);
-		  // default
-	  default:
+	u32 value;
+	switch(address >> 24)
+	{
+		case 0:
+			if(reg[15].I >> 24)
+			{
+				if(address < 0x4000)
+					value = READ32LE(((u32 *)&biosProtected));
+				else goto unreadable;
+			}
+			else
+				value = READ32LE(((u32 *)&bios[address & 0x3FFC]));
+			break;
+		case 2:
+			value = READ32LE(((u32 *)&workRAM[address & 0x3FFFC]));
+			break;
+		case 3:
+			value = READ32LE(((u32 *)&internalRAM[address & 0x7ffC]));
+			break;
+		case 4:
+			if((address < 0x4000400) && ioReadable[address & 0x3fc])
+			{
+				if(ioReadable[(address & 0x3fc) + 2])
+					value = READ32LE(((u32 *)&ioMem[address & 0x3fC]));
+				else
+					value = READ16LE(((u16 *)&ioMem[address & 0x3fc]));
+			}
+			else
+				goto unreadable;
+			break;
+		case 5:
+			value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
+			break;
+		case 6:
+			address = (address & 0x1fffc);
+			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			{
+				value = 0;
+				break;
+			}
+			if ((address & 0x18000) == 0x18000)
+				address &= 0x17fff;
+			value = READ32LE(((u32 *)&vram[address]));
+			break;
+		case 7:
+			value = READ32LE(((u32 *)&oam[address & 0x3FC]));
+			break;
+		case 8:
+		case 9:
+		case 10:
+		case 11:
+		case 12:
+			value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+			break;
+		case 13:
+			if(cpuEEPROMEnabled)
+				// no need to swap this
+				return eepromRead(address);
+			goto unreadable;
+		case 14:
+			if(cpuFlashEnabled | cpuSramEnabled)
+				return flashRead(address);	// no need to swap this
+		default:
 unreadable:
 
-#if 0
-		  if(cpuDmaHack) {
-			  value = cpuDmaLast;
-		  } else {
-#endif
-			  if(armState) {
-				  value = CPUReadMemoryQuick(reg[15].I);
-			  } else {
-				  value = CPUReadHalfWordQuick(reg[15].I) |
-					  CPUReadHalfWordQuick(reg[15].I) << 16;
-			  }
-		  }
+			if(armState)
+				value = CPUReadMemoryQuick(reg[15].I);
+			else
+			{
+				value = CPUReadHalfWordQuick(reg[15].I) |
+					CPUReadHalfWordQuick(reg[15].I) << 16;
+			}
+	}
 
-		  if(address & 3) {
-			  int shift = (address & 3) << 3;
-			  value = (value >> shift) | (value << (32 - shift));
-		  }
-		  return value;
-  }
+	if(address & 3) {
+		int shift = (address & 3) << 3;
+		value = (value >> shift) | (value << (32 - shift));
+	}
+	return value;
+}
 
 extern u32 myROM[];
 
 static INLINE u32 CPUReadHalfWord(u32 address)
 {
-
 	u32 value;
 
-	switch(address >> 24) {
+	switch(address >> 24)
+	{
 		case 0:
-			if (reg[15].I >> 24) {
-				if(address < 0x4000) {
+			if (reg[15].I >> 24)
+			{
+				if(address < 0x4000)
 					value = READ16LE(((u16 *)&biosProtected[address&2]));
-				} else goto unreadable;
-			} else
+				else
+					goto unreadable;
+			}
+			else
 				value = READ16LE(((u16 *)&bios[address & 0x3FFE]));
 			break;
 		case 2:
@@ -218,23 +205,16 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			// default
 		default:
 unreadable:
-#if 0
-			if(cpuDmaHack) {
-				value = cpuDmaLast & 0xFFFF;
+			if(armState) {
+				value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
 			} else {
-#endif
-				if(armState) {
-					value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
-				} else {
-					value = CPUReadHalfWordQuick(reg[15].I);
-				}
-				//}
+				value = CPUReadHalfWordQuick(reg[15].I);
+			}
 			break;
 	}
 
-	if(address & 1) {
+	if(address & 1)
 		value = (value >> 8) | (value << 24);
-	}
 
 	return value;
 }
@@ -249,12 +229,15 @@ static INLINE u16 CPUReadHalfWordSigned(u32 address)
 
 static INLINE u8 CPUReadByte(u32 address)
 {
-	switch(address >> 24) {
+	switch(address >> 24)
+	{
 		case 0:
-			if (reg[15].I >> 24) {
-				if(address < 0x4000) {
+			if (reg[15].I >> 24)
+			{
+				if(address < 0x4000)
 					return biosProtected[address & 3];
-				} else goto unreadable;
+				else
+					goto unreadable;
 			}
 			return bios[address & 0x3FFF];
 		case 2:
@@ -306,75 +289,66 @@ static INLINE u8 CPUReadByte(u32 address)
 			// default
 		default:
 unreadable:
-#if 0
-			if(cpuDmaHack) {
-				return cpuDmaLast & 0xFF;
-			} else {
-#endif
-				if(armState) {
-					return CPUReadByteQuick(reg[15].I+(address & 3));
-				} else {
-					return CPUReadByteQuick(reg[15].I+(address & 1));
-				}
-				//}
+			if(armState)
+				return CPUReadByteQuick(reg[15].I+(address & 3));
+			else
+				return CPUReadByteQuick(reg[15].I+(address & 1));
 			break;
 	}
 }
 
 static INLINE void CPUWriteMemory(u32 address, u32 value)
 {
+	switch(address >> 24)
+	{
+		case 0x02:
+			WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
+			break;
+		case 0x03:
+			WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
+			break;
+		case 0x04:
+			if(address < 0x4000400)
+			{
+				CPUUpdateRegister((address & 0x3FC), value & 0xFFFF);
+				CPUUpdateRegister((address & 0x3FC) + 2, (value >> 16));
+			}
+			break;
+		case 0x05:
+			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
+			break;
+		case 0x06:
+			address = (address & 0x1fffc);
+			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+				return;
+			if ((address & 0x18000) == 0x18000)
+				address &= 0x17fff;
 
 
-  switch(address >> 24) {
-  case 0x02:
-      WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
-    break;
-  case 0x03:
-      WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
-    break;
-  case 0x04:
-    if(address < 0x4000400) {
-      CPUUpdateRegister((address & 0x3FC), value & 0xFFFF);
-      CPUUpdateRegister((address & 0x3FC) + 2, (value >> 16));
-    } else goto unwritable;
-    break;
-  case 0x05:
-      WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
-    break;
-  case 0x06:
-    address = (address & 0x1fffc);
-    if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-      return;
-    if ((address & 0x18000) == 0x18000)
-      address &= 0x17fff;
-
-
-      WRITE32LE(((u32 *)&vram[address]), value);
-    break;
-  case 0x07:
-      WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
-    break;
-  case 0x0D:
-    if(cpuEEPROMEnabled) {
-      eepromWrite(address, value);
-      break;
-    }
-    goto unwritable;
-  case 0x0E:
-    if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
-      (*cpuSaveGameFunc)(address, (u8)value);
-      break;
-    }
-    // default
-  default:
-unwritable:
-    break;
-  }
+			WRITE32LE(((u32 *)&vram[address]), value);
+			break;
+		case 0x07:
+			WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
+			break;
+		case 0x0D:
+			if(cpuEEPROMEnabled) {
+				eepromWrite(address, value);
+				break;
+			}
+			break;
+		case 0x0E:
+			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)
+				(*cpuSaveGameFunc)(address, (u8)value);
+			break;
+		default:
+			break;
+	}
 }
 
 static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 {
-	switch(address >> 24) {
+	switch(address >> 24)
+	{
 		case 2:
 			WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
 			break;
@@ -384,7 +358,6 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 		case 4:
 			if(address < 0x4000400)
 				CPUUpdateRegister(address & 0x3fe, value);
-			else goto unwritable;
 			break;
 		case 5:
 			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
@@ -404,29 +377,25 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 		case 9:
 			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
 				if(!rtcWrite(address, value))
-					goto unwritable;
+					break;
 			break;
 		case 13:
-			if(cpuEEPROMEnabled) {
+			if(cpuEEPROMEnabled)
 				eepromWrite(address, (u8)value);
-				break;
-			}
-			goto unwritable;
+			break;
 		case 14:
-			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
+			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)
 				(*cpuSaveGameFunc)(address, (u8)value);
-				break;
-			}
-			goto unwritable;
+			break;
 		default:
-unwritable:
 			break;
 	}
 }
 
 static INLINE void CPUWriteByte(u32 address, u8 b)
 {
-	switch(address >> 24) {
+	switch(address >> 24)
+	{
 		case 2:
 			workRAM[address & 0x3FFFF] = b;
 			break;
@@ -434,8 +403,10 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			internalRAM[address & 0x7fff] = b;
 			break;
 		case 4:
-			if(address < 0x4000400) {
-				switch(address & 0x3FF) {
+			if(address < 0x4000400)
+			{
+				switch(address & 0x3FF)
+				{
 					case 0x60:
 					case 0x61:
 					case 0x62:
@@ -479,7 +450,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 						{
 							int gb_addr = gba_to_gb_sound(address & 0xFF);
 							soundEvent_u8(gb_addr, address&0xFF, b);
-							break;
 						}
 						break;
 					case 0x301: // HALTCNT, undocumented
@@ -498,7 +468,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 						}
 				}
 				break;
-			} else goto unwritable;
+			}
 			break;
 		case 5:
 			// no need to switch
@@ -514,9 +484,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
 			if ((address) < objTilesAddress[((DISPCNT&7)+1)>>2])
-			{
 				*((u16 *)&vram[address]) = (b << 8) | b;
-			}
 			break;
 		case 7:
 			// no need to switch
@@ -524,24 +492,18 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			//    *((u16 *)&oam[address & 0x3FE]) = (b << 8) | b;
 			break;
 		case 13:
-			if(cpuEEPROMEnabled) {
+			if(cpuEEPROMEnabled)
 				eepromWrite(address, b);
-				break;
-			}
-			goto unwritable;
+			break;
 		case 14:
-			if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
-
-				//if(!cpuEEPROMEnabled && (cpuSramEnabled | cpuFlashEnabled)) {
-
+			if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled))
+			{
 				(*cpuSaveGameFunc)(address, b);
 				break;
 			}
-			// default
-				default:
-unwritable:
+		default:
 			break;
-			}
 	}
+}
 
 #endif // GBAINLINE_H
