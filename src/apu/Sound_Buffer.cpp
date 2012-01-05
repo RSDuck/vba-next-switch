@@ -74,7 +74,7 @@ void Blip_Buffer::clear( int entire_buffer )
         if ( buffer_ )
         {
                 long count = (entire_buffer ? buffer_size_ : SAMPLES_AVAILABLE());
-                memset( buffer_, 0, (count + blip_buffer_extra_) * sizeof (buf_t_) );
+                memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof (buf_t_) );
         }
 }
 
@@ -84,7 +84,7 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
                 return "Internal (tried to resize Silent_Blip_Buffer)";
 
         /* start with maximum length that resampled time can represent*/
-        long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - blip_buffer_extra_ - 64;
+        long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
         if ( msec != 0)
         {
                 long s = (new_rate * (msec + 1) + 999) / 1000;
@@ -94,7 +94,7 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 
         if ( buffer_size_ != new_size )
         {
-                void* p = realloc( buffer_, (new_size + blip_buffer_extra_) * sizeof *buffer_ );
+                void* p = realloc( buffer_, (new_size + BLIP_BUFFER_EXTRA_) * sizeof *buffer_ );
                 if ( !p )
                         return "Out of memory";
                 buffer_ = (buf_t_*) p;
@@ -141,7 +141,7 @@ void Blip_Buffer::end_frame( int32_t t )
         offset_ += t * factor_;
 #ifndef FASTER_SOUND_HACK_NON_SILENCE
         if ( clear_modified() )
-                last_non_silence = SAMPLES_AVAILABLE() + blip_buffer_extra_;
+                last_non_silence = SAMPLES_AVAILABLE() + BLIP_BUFFER_EXTRA_;
 #endif
 }
 
@@ -155,7 +155,7 @@ void Blip_Buffer::remove_samples( long count )
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
 	/* copy remaining samples to beginning and clear old samples*/
-	long remain = SAMPLES_AVAILABLE() + blip_buffer_extra_;
+	long remain = SAMPLES_AVAILABLE() + BLIP_BUFFER_EXTRA_;
 	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
 	memset( buffer_ + remain, 0, count * sizeof *buffer_ );
 }

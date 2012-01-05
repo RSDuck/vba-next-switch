@@ -138,8 +138,8 @@ class Blip_Buffer
 #endif
 
 // Internal
-int const blip_widest_impulse_ = 16;
-int const blip_buffer_extra_ = blip_widest_impulse_ + 2;
+#define BLIP_WIDEST_IMPULSE_ 16
+#define BLIP_BUFFER_EXTRA_ 18
 int const blip_res = 1 << BLIP_PHASE_BITS;
 
 class Blip_Synth_Fast_
@@ -240,10 +240,6 @@ int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
         name##_reader_accum += *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx)); \
 }
 
-const int blip_low_quality  = blip_med_quality;
-const int blip_best_quality = blip_high_quality;
-
-
 #if defined (_M_IX86) || defined (_M_IA64) || defined (__i486__) || \
                 defined (__x86_64__) || defined (__ia64__) || defined (__i386__)
         #define BLIP_CLAMP_( in ) in < -0x8000 || 0x7FFF < in
@@ -259,7 +255,7 @@ struct blip_buffer_state_t
 {
         uint32_t offset_;
         int32_t reader_accum_;
-        int32_t buf [blip_buffer_extra_];
+        int32_t buf [BLIP_BUFFER_EXTRA_];
 };
 
 // End of public interface

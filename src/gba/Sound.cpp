@@ -37,7 +37,8 @@
 
 extern bool stopState;      // TODO: silence sound when true
 
-int const SOUND_CLOCK_TICKS_ = 167772; // 1/100 second
+// 1/100th of a second
+#define SOUND_CLOCK_TICKS_ 167772 
 
 static int16_t   soundFinalWave [1600];
 long  soundSampleRate    = 22050;
