@@ -40,8 +40,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="-g -Wall -fno-exceptions -fno-rtti"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\common\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\vba\gba&quot;;&quot;$(SolutionDir)\..\..\src\vba\gb&quot;;&quot;$(SolutionDir)\..\..\vba\common&quot;;&quot;$(SolutionDir)\..\..\vba\apu&quot;;&quot;$(SolutionDir)\..\..\vba&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;"
-				PreprocessorDefinitions="SN_TARGET_PS3;_DEBUG;__GCC__;__CELL_ASSERT__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;SWITCH_TO_ARRAYVAL=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;FINAL_VERSION;__ppc__;SPEEDHAX;__POWERPC__;C_CORE;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\..\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\gba&quot;;&quot;$(SolutionDir)\..\..\src\gb&quot;;&quot;$(SolutionDir)\..\..\src\apu&quot;;&quot;$(SolutionDir)\..\..\src&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;"
+				PreprocessorDefinitions="SN_TARGET_PS3;_DEBUG;__GCC__;__CELL_ASSERT__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;FINAL_VERSION;__ppc__;SPEEDHAX;__POWERPC__;C_CORE;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;__CELLOS_LV2__;INLINE=inline;GEKKO"
 				ProgramDataBaseFileName=""
 				CompileAs="0"
 			/>
@@ -57,7 +57,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="-fno-exceptions -fno-rtti"
-				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
+				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_screenshot_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
 				OutputFile="$(OutDir)/$(ProjectName).ppu.elf"
 				AdditionalLibraryDirectories="C:\usr\local\cell\target\ppu\lib\PSGL\RSX\opt"
 				ProgramDatabaseFile=""
@@ -110,9 +110,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="-O2 -Wall -fno-exceptions -fno-rtti"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\common\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\vba\gba&quot;;&quot;$(SolutionDir)\..\..\src\vba\gb&quot;;&quot;$(SolutionDir)\..\..\src\vba\common&quot;;&quot;$(SolutionDir)\..\..\src\vba\apu&quot;;&quot;$(SolutionDir)\..\..\src\vba&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;"
-				PreprocessorDefinitions="SN_TARGET_PS3;NDEBUG;__GCC__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;SWITCH_TO_ARRAYVAL=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;FINAL_VERSION;__ppc__;SPEEDHAX;__POWERPC__;C_CORE;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1"
+				AdditionalOptions="-Wall -fno-exceptions -fno-rtti -O2"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\..\..\utils\zlib&quot;;&quot;$(SolutionDir)\..\..\src\gba&quot;;&quot;$(SolutionDir)\..\..\src\gb&quot;;&quot;$(SolutionDir)\..\..\src\apu&quot;;&quot;$(SolutionDir)\..\..\src&quot;;&quot;$(SN_PS3_PATH)\ppu\include\sn&quot;;&quot;$(SCE_PS3_ROOT)\target\ppu\include&quot;;&quot;$(SCE_PS3_ROOT)\target\common\include&quot;"
+				PreprocessorDefinitions="SN_TARGET_PS3;NDEBUG;__GCC__;PSGL;BRANCHLESS_GBA_GFX;BLIP_BUFFER_FAST=1;FASTER_SOUND_HACK_NON_SILENCE=1;PATH_MAX=1024;FINAL_VERSION;__ppc__;SPEEDHAX;__POWERPC__;WORDS_BIGENDIAN;USE_CACHE_PREFETCH=1;BLARGG_BIG_ENDIAN=1;INLINE=inline;GEKKO"
 				ProgramDataBaseFileName=""
 				CompileAs="0"
 			/>
@@ -128,7 +128,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="-fno-exceptions -fno-rtti"
-				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
+				AdditionalDependencies="&quot;$(SN_PS3_PATH)\ppu\lib\sn\libsn.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libdbgfont.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGL.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\PSGL\RSX\opt\libPSGLcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libcgc.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_cmd.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libgcm_sys_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libresc_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libm.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libfs_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_game_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysutil_screenshot_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpngdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libjpgdec_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libsysmodule_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libaudio_stub.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libpthread.a&quot; &quot;$(SCE_PS3_ROOT)\target\ppu\lib\libnet_stub.a&quot;"
 				OutputFile="$(OutDir)/$(ProjectName).ppu.elf"
 				AdditionalLibraryDirectories=""
 				ProgramDatabaseFile=""
@@ -172,14 +172,14 @@
 					Name="vba"
 					>
 					<File
-						RelativePath="..\..\..\src\vba\Util.cpp"
+						RelativePath="..\..\..\src\Util.cpp"
 						>
 					</File>
 					<Filter
 						Name="common"
 						>
 						<File
-							RelativePath="..\..\..\src\vba\common\memgzio.c"
+							RelativePath="..\..\..\src\common\memgzio.c"
 							>
 							<FileConfiguration
 								Name="PS3 Debug|Win32"
@@ -189,13 +189,25 @@
 									CompileAs="1"
 								/>
 							</FileConfiguration>
+							<FileConfiguration
+								Name="PS3 Release|Win32"
+								>
+								<Tool
+									Name="VCCLCompilerTool"
+									CompileAs="1"
+								/>
+							</FileConfiguration>
+						</File>
+						<File
+							RelativePath="..\..\..\src\common\Patch.cpp"
+							>
 						</File>
 					</Filter>
 					<Filter
 						Name="apu"
 						>
 						<File
-							RelativePath="..\..\..\src\vba\apu\Sound_Buffer.cpp"
+							RelativePath="..\..\..\src\apu\Sound_Buffer.cpp"
 							>
 						</File>
 					</Filter>
@@ -203,39 +215,39 @@
 						Name="gb"
 						>
 						<File
-							RelativePath="..\..\..\src\vba\gb\GB.cpp"
+							RelativePath="..\..\..\src\gb\GB.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbCheats.cpp"
+							RelativePath="..\..\..\src\gb\gbCheats.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbDis.cpp"
+							RelativePath="..\..\..\src\gb\gbDis.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbGfx.cpp"
+							RelativePath="..\..\..\src\gb\gbGfx.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbGlobals.cpp"
+							RelativePath="..\..\..\src\gb\gbGlobals.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbMemory.cpp"
+							RelativePath="..\..\..\src\gb\gbMemory.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbPrinter.cpp"
+							RelativePath="..\..\..\src\gb\gbPrinter.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbSGB.cpp"
+							RelativePath="..\..\..\src\gb\gbSGB.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gb\gbSound.cpp"
+							RelativePath="..\..\..\src\gb\gbSound.cpp"
 							>
 						</File>
 					</Filter>
@@ -243,249 +255,53 @@
 						Name="gba"
 						>
 						<File
-							RelativePath="..\..\..\src\vba\gba\agbprint.cpp"
+							RelativePath="..\..\..\src\gba\bios.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\bios.cpp"
+							RelativePath="..\..\..\src\gba\Cheats.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\Cheats.cpp"
+							RelativePath="..\..\..\src\gba\EEprom.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\CheatSearch.cpp"
+							RelativePath="..\..\..\src\gba\Flash.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\EEprom.cpp"
+							RelativePath="..\..\..\src\gba\GBA.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\Flash.cpp"
+							RelativePath="..\..\..\src\gba\RTC.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\GBA.cpp"
+							RelativePath="..\..\..\src\gba\Sound.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\..\src\vba\gba\gbafilter.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\RTC.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\Sound.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\src\vba\gba\Sram.cpp"
+							RelativePath="..\..\..\src\gba\Sram.cpp"
 							>
 						</File>
 					</Filter>
-				</Filter>
-				<Filter
-					Name="zlib"
-					>
-					<File
-						RelativePath="..\..\common\utils\zlib\adler32.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\compress.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\crc32.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\deflate.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\gzclose.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\gzlib.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\gzread.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\gzwrite.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\infback.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\inffast.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\inflate.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\inftrees.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\trees.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\uncompr.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\common\utils\zlib\zutil.c"
-						>
-						<FileConfiguration
-							Name="PS3 Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								CompileAs="1"
-							/>
-						</FileConfiguration>
-					</File>
 				</Filter>
 			</Filter>
 			<Filter
 				Name="cellemuframework"
 				>
 				<File
-					RelativePath="..\..\ps3\src\emu-ps3.cpp"
+					RelativePath="..\..\emu-ps3.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\menu.cpp"
+					RelativePath="..\..\menu.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\ps3input.c"
+					RelativePath="..\..\ps3input.c"
 					>
 					<FileConfiguration
 						Name="PS3 Debug|Win32"
@@ -495,16 +311,24 @@
 							CompileAs="1"
 						/>
 					</FileConfiguration>
+					<FileConfiguration
+						Name="PS3 Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							CompileAs="1"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\ps3video.cpp"
+					RelativePath="..\..\ps3video.cpp"
 					>
 				</File>
 				<Filter
 					Name="conf"
 					>
 					<File
-						RelativePath="..\..\ps3\src\conf\config_file.c"
+						RelativePath="..\..\conf\config_file.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -524,7 +348,7 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\conf\snes_state.c"
+						RelativePath="..\..\conf\snes_state.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -546,14 +370,310 @@
 				</Filter>
 			</Filter>
 			<Filter
-				Name="cellframework"
+				Name="utils"
 				>
 				<Filter
-					Name="fileio"
+					Name="zlib"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework\fileio\FileBrowser.cpp"
+						RelativePath="..\..\..\utils\zlib\adler32.c"
 						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\compress.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\crc32.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\deflate.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\gzclose.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\gzlib.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\gzread.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\gzwrite.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\infback.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\inffast.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\inflate.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\inftrees.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\trees.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\uncompr.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\..\utils\zlib\zutil.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
 					</File>
 				</Filter>
 			</Filter>
@@ -564,7 +684,7 @@
 					Name="audio"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\audioport.c"
+						RelativePath="..\..\cellframework2\audio\audioport.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -584,7 +704,7 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\librsound.c"
+						RelativePath="..\..\cellframework2\audio\librsound.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -604,7 +724,27 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\rsound.c"
+						RelativePath="..\..\cellframework2\audio\resampler.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\cellframework2\audio\rsound.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -628,7 +768,7 @@
 					Name="input"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\input\mouse_input.c"
+						RelativePath="..\..\cellframework2\input\mouse_input.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -648,7 +788,7 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\input\pad_input.c"
+						RelativePath="..\..\cellframework2\input\pad_input.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
@@ -672,10 +812,42 @@
 					Name="utility"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\utility\oskutil.c"
+						RelativePath="..\..\cellframework2\utility\oskutil.c"
 						>
 						<FileConfiguration
 							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+					</File>
+				</Filter>
+				<Filter
+					Name="fileio"
+					>
+					<File
+						RelativePath="..\..\cellframework2\fileio\file_browser.c"
+						>
+						<FileConfiguration
+							Name="PS3 Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								CompileAs="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="PS3 Release|Win32"
 							>
 							<Tool
 								Name="VCCLCompilerTool"
@@ -694,74 +866,42 @@
 				Name="cellemuframework"
 				>
 				<File
-					RelativePath="..\..\ps3\src\colors.h"
+					RelativePath="..\..\colors.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\emu-ps3.hpp"
+					RelativePath="..\..\emu-ps3-constants.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\menu.hpp"
+					RelativePath="..\..\emu-ps3.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\ps3input.h"
+					RelativePath="..\..\menu.hpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\ps3\src\ps3video.hpp"
+					RelativePath="..\..\ps3input.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ps3video.hpp"
 					>
 				</File>
 				<Filter
 					Name="conf"
 					>
 					<File
-						RelativePath="..\..\ps3\src\conf\config_file.h"
+						RelativePath="..\..\conf\config_file.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\conf\settings.h"
+						RelativePath="..\..\conf\settings.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\conf\snes_state.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="menu"
-					>
-					<File
-						RelativePath="..\..\ps3\src\menu\menu-choice.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\ps3\src\menu\menu-entries.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\ps3\src\menu\menu-helpmessages.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\ps3\src\menu\menu-logic.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\ps3\src\menu\settings-logic.h"
-						>
-					</File>
-				</Filter>
-			</Filter>
-			<Filter
-				Name="cellframework"
-				>
-				<Filter
-					Name="fileio"
-					>
-					<File
-						RelativePath="..\..\ps3\src\cellframework\fileio\FileBrowser.h"
+						RelativePath="..\..\conf\snes_state.h"
 						>
 					</File>
 				</Filter>
@@ -773,15 +913,23 @@
 					Name="audio"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\buffer.h"
+						RelativePath="..\..\cellframework2\audio\buffer.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\rsound.h"
+						RelativePath="..\..\cellframework2\audio\buffer_.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\audio\stream.h"
+						RelativePath="..\..\cellframework2\audio\resampler.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\cellframework2\audio\rsound.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\cellframework2\audio\stream.h"
 						>
 					</File>
 				</Filter>
@@ -789,11 +937,11 @@
 					Name="input"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\input\mouse_input.h"
+						RelativePath="..\..\cellframework2\input\mouse_input.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\input\pad_input.h"
+						RelativePath="..\..\cellframework2\input\pad_input.h"
 						>
 					</File>
 				</Filter>
@@ -801,7 +949,15 @@
 					Name="utility"
 					>
 					<File
-						RelativePath="..\..\ps3\src\cellframework2\utility\oskutil.h"
+						RelativePath="..\..\cellframework2\utility\oskutil.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="fileio"
+					>
+					<File
+						RelativePath="..\..\cellframework2\fileio\file_browser.h"
 						>
 					</File>
 				</Filter>
@@ -810,54 +966,38 @@
 				Name="emu"
 				>
 				<File
-					RelativePath="..\..\..\src\vba\AutoBuild.h"
+					RelativePath="..\..\..\src\NLS.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\src\vba\NLS.h"
+					RelativePath="..\..\..\src\System.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\src\vba\System.h"
+					RelativePath="..\..\..\src\Util.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\src\vba\Util.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\src\vba\VbaNext.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\src\vba\version.h"
+					RelativePath="..\..\..\src\VbaNext.h"
 					>
 				</File>
 				<Filter
 					Name="common"
 					>
 					<File
-						RelativePath="..\..\..\src\vba\common\Array.h"
+						RelativePath="..\..\..\src\common\memgzio.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\common\memgzio.h"
+						RelativePath="..\..\..\src\common\Patch.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\common\Patch.h"
+						RelativePath="..\..\..\src\common\Port.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\common\Port.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\common\RingBuffer.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\common\Types.h"
+						RelativePath="..\..\..\src\common\Types.h"
 						>
 					</File>
 				</Filter>
@@ -865,35 +1005,27 @@
 					Name="apu"
 					>
 					<File
-						RelativePath="..\..\..\src\vba\apu\blargg_common.h"
+						RelativePath="..\..\..\src\apu\blargg_common.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\apu\blargg_config.h"
+						RelativePath="..\..\..\src\apu\blargg_config.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\apu\blargg_source.h"
+						RelativePath="..\..\..\src\apu\blargg_source.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\apu\Gb_Apu.h"
+						RelativePath="..\..\..\src\apu\Gb_Apu.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\apu\Gb_Apu_.h"
+						RelativePath="..\..\..\src\apu\Gb_Oscs.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\apu\Gb_Oscs.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\apu\Gb_Oscs_.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\apu\Sound_Buffer.h"
+						RelativePath="..\..\..\src\apu\Sound_Buffer.h"
 						>
 					</File>
 				</Filter>
@@ -901,39 +1033,39 @@
 					Name="gb"
 					>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gb.h"
+						RelativePath="..\..\..\src\gb\gb.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbCheats.h"
+						RelativePath="..\..\..\src\gb\gbCheats.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbCodes.h"
+						RelativePath="..\..\..\src\gb\gbCodes.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbCodesCB.h"
+						RelativePath="..\..\..\src\gb\gbCodesCB.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbGlobals.h"
+						RelativePath="..\..\..\src\gb\gbGlobals.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbMemory.h"
+						RelativePath="..\..\..\src\gb\gbMemory.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbPrinter.h"
+						RelativePath="..\..\..\src\gb\gbPrinter.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbSGB.h"
+						RelativePath="..\..\..\src\gb\gbSGB.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gb\gbSound.h"
+						RelativePath="..\..\..\src\gb\gbSound.h"
 						>
 					</File>
 				</Filter>
@@ -941,71 +1073,51 @@
 					Name="gba"
 					>
 					<File
-						RelativePath="..\..\..\src\vba\gba\agbprint.h"
+						RelativePath="..\..\..\src\gba\bios.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\bios.h"
+						RelativePath="..\..\..\src\gba\Cheats.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\Cheats.h"
+						RelativePath="..\..\..\src\gba\EEprom.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\CheatSearch.h"
+						RelativePath="..\..\..\src\gba\Flash.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\EEprom.h"
+						RelativePath="..\..\..\src\gba\GBA.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\Flash.h"
+						RelativePath="..\..\..\src\gba\GBAcpu.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\GBA-arm_.h"
+						RelativePath="..\..\..\src\gba\GBAGfx.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\GBA-thumb_.h"
+						RelativePath="..\..\..\src\gba\GBAinline.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\GBA.h"
+						RelativePath="..\..\..\src\gba\Globals.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\GBAcpu.h"
+						RelativePath="..\..\..\src\gba\RTC.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\gbafilter.h"
+						RelativePath="..\..\..\src\gba\Sound.h"
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\vba\gba\GBAGfx.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\gba\GBAinline.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\gba\Globals.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\gba\RTC.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\gba\Sound.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\..\src\vba\gba\Sram.h"
+						RelativePath="..\..\..\src\gba\Sram.h"
 						>
 					</File>
 				</Filter>

@@ -16,6 +16,8 @@
 #ifndef RSD_RESAMPLER
 #define RSD_RESAMPLER
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,7 +34,7 @@ static inline void resampler_float_to_int16_t(int16_t * restrict out, const floa
 {
    for (uint32_t i = 0; i < samples; i++)
    {
-      s32 temp = in[i] * 0x7FFF; 
+      int32_t temp = in[i] * 0x7FFF; 
       if (temp > 0x7FFE)
          out[i] = 0x7FFE;
       else if (temp < -0x8000)
