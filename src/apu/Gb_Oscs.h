@@ -8,16 +8,14 @@
 #include "blargg_source.h"
 #include "Sound_Buffer.h"
 
-#ifndef GB_APU_OVERCLOCK
-        #define GB_APU_OVERCLOCK 1
-#endif
-
-#if GB_APU_OVERCLOCK & (GB_APU_OVERCLOCK - 1)
-        #error "GB_APU_OVERCLOCK must be a power of 2"
-#endif
-
-#define	clk_mul	GB_APU_OVERCLOCK
-#define dac_bias 7
+#define	CLK_MUL	GB_APU_OVERCLOCK
+#define CLK_MUL_MUL_2 8
+#define CLK_MUL_MUL_4 16
+#define CLK_MUL_MUL_6 24
+#define CLK_MUL_MUL_8 32
+#define CLK_MUL_MUL_15 60
+#define CLK_MUL_MUL_32 128
+#define DAC_BIAS 7
 
 class Gb_Osc
 {
@@ -86,7 +84,7 @@ class Gb_Square : public Gb_Env
 	}
 	private:
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (4 * clk_mul); }
+	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_4); }
 };
 
 #define PERIOD_MASK 0x70
@@ -130,7 +128,7 @@ class Gb_Noise : public Gb_Env
 	{
 		divider = 0;
 		Gb_Env::reset();
-		delay = 4 * clk_mul; // TODO: remove?
+		delay = CLK_MUL_MUL_4; // TODO: remove?
 	}
 	private:
 	int period2_index() const { return regs [3] >> 4; }
@@ -167,7 +165,7 @@ class Gb_Wave : public Gb_Osc
 	friend class Gb_Apu;
 
 	// Frequency timer period
-	int period() const { return (2048 - frequency()) * (2 * clk_mul); }
+	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_2); }
 
 	// Non-zero if DAC is enabled
 	int dac_enabled() const { return regs [0] & 0x80; }

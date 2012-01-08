@@ -25,11 +25,13 @@ struct gb_apu_state_t;
 #define REGISTER_COUNT	48
 #define REGS_SIZE 64
 
+/* Clock rate that sound hardware runs at.*/
+/* 4194304 * 4 */
+#define CLOCK_RATE 16777216
+
 class Gb_Apu
 {
 	public:
-	// Clock rate that sound hardware runs at.
-	enum { clock_rate = 4194304 * GB_APU_OVERCLOCK };
 
 	// Sets buffer(s) to generate sound into. If left and right are NULL, output is mono.
 	// If all are NULL, no output is generated but other emulation still runs.

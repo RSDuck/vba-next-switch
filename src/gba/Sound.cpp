@@ -450,7 +450,7 @@ static void remake_stereo_buffer()
 
 	stereo_buffer = new Stereo_Buffer; // TODO: handle out of memory
 	stereo_buffer->set_sample_rate( soundSampleRate ); // TODO: handle out of memory
-	stereo_buffer->clock_rate( gb_apu->clock_rate );
+	stereo_buffer->clock_rate( CLOCK_RATE );
 
 	// PCM
 	pcm [0].which = 0;

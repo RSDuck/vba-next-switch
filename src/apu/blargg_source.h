@@ -40,9 +40,4 @@ BLARGG_DEF_MIN_MAX( double )
 #undef  max
 #define max blargg_max
 
-// BLARGG_SOURCE_BEGIN: If defined, #included, allowing redefition of dprintf and check
-#ifdef BLARGG_SOURCE_BEGIN
-	#include BLARGG_SOURCE_BEGIN
-#endif
-
 #endif

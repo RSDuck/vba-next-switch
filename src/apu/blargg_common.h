@@ -1,5 +1,4 @@
 // Sets up common environment for Shay Green's libraries.
-// To change configuration options, modify blargg_config.h, not this file.
 
 // Gb_Snd_Emu 0.2.0
 #ifndef BLARGG_COMMON_H
@@ -8,11 +7,17 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#undef BLARGG_COMMON_H
-// allow blargg_config.h to #include blargg_common.h
-#include "blargg_config.h"
-#ifndef BLARGG_COMMON_H
-#define BLARGG_COMMON_H
+// Uncomment to have Gb_Apu run at 4x normal clock rate (16777216 Hz), useful in
+// a Game Boy Advance emulator.
+#define GB_APU_OVERCLOCK 4
+
+#define GB_APU_CUSTOM_STATE 1
+
+// Uncomment to enable platform-specific (and possibly non-portable) optimizations.
+#define BLARGG_NONPORTABLE 1
+
+// Uncomment if automatic byte-order determination doesn't work
+//#define BLARGG_BIG_ENDIAN 1
 
 // STATIC_CAST(T,expr): Used in place of static_cast<T> (expr)
 // CONST_CAST( T,expr): Used in place of const_cast<T> (expr)
@@ -72,7 +77,6 @@ public:
 	#endif
 #endif
 #if defined (BLARGG_COMPILER_HAS_BOOL) && !BLARGG_COMPILER_HAS_BOOL
-	// If you get errors here, modify your blargg_config.h file
 	typedef int bool;
 	const bool true  = 1;
 	const bool false = 0;
@@ -87,5 +91,4 @@ public:
 	#include <inttypes.h>
 #endif
 
-#endif
 #endif

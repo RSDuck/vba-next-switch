@@ -80,7 +80,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 	// Click reduction makes DAC off generate same output as volume 0
 	int dac_off_amp = 0;
 	if ( reduce && wave.mode != MODE_AGB ) // AGB already eliminates clicks
-		dac_off_amp = -dac_bias;
+		dac_off_amp = -DAC_BIAS;
 
 	oscs [0]->dac_off_amp = dac_off_amp;
 	oscs [1]->dac_off_amp = dac_off_amp;
@@ -89,7 +89,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 
 	// AGB always eliminates clicks on wave channel using same method
 	if ( wave.mode == MODE_AGB )
-		wave.dac_off_amp = -dac_bias;
+		wave.dac_off_amp = -DAC_BIAS;
 }
 
 void Gb_Apu::reset( uint32_t mode, bool agb_wave )
@@ -189,7 +189,7 @@ void Gb_Apu::run_until_( int32_t end_time )
 			break;
 
 		// run frame sequencer
-		frame_time += frame_period * clk_mul;
+		frame_time += frame_period * CLK_MUL;
 		switch ( frame_phase++ )
 		{
 		case 2:

@@ -7,7 +7,7 @@
 #include "Sound_Buffer.h"
 #include "../System.h"
 
-/* Blip_Buffer 0.4.1. http://www.slack.net/~ant/*/
+/* Blip_Buffer 0.4.1. http://www.slack.net/~ant */
 
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -22,13 +22,9 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #include "blargg_source.h"
 
-#ifdef BLARGG_ENABLE_OPTIMIZER
-        #include BLARGG_ENABLE_OPTIMIZER
-#endif
-
 /* BLIP BUFFER */
 
-#define silent_buf_size 1
+#define SILENT_BUF_SIZE 1
 
 Blip_Buffer::Blip_Buffer()
 {
@@ -59,7 +55,7 @@ Blip_Buffer::Blip_Buffer()
 
 Blip_Buffer::~Blip_Buffer()
 {
-        if ( buffer_size_ != silent_buf_size )
+        if ( buffer_size_ != SILENT_BUF_SIZE )
                 free( buffer_ );
 }
 
@@ -80,7 +76,7 @@ void Blip_Buffer::clear( int entire_buffer )
 
 const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 {
-        if ( buffer_size_ == silent_buf_size )
+        if ( buffer_size_ == SILENT_BUF_SIZE )
                 return "Internal (tried to resize Silent_Blip_Buffer)";
 
         /* start with maximum length that resampled time can represent*/
