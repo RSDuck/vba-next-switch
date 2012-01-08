@@ -70,7 +70,7 @@ void Blip_Buffer::clear( int entire_buffer )
         if ( buffer_ )
         {
                 long count = (entire_buffer ? buffer_size_ : SAMPLES_AVAILABLE());
-                memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof (buf_t_) );
+                memset( buffer_, 0, (count + BLIP_BUFFER_EXTRA_) * sizeof (int32_t) );
         }
 }
 
@@ -93,7 +93,7 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
                 void* p = realloc( buffer_, (new_size + BLIP_BUFFER_EXTRA_) * sizeof *buffer_ );
                 if ( !p )
                         return "Out of memory";
-                buffer_ = (buf_t_*) p;
+                buffer_ = (int32_t *) p;
         }
 
         buffer_size_ = new_size;
@@ -104,13 +104,15 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 
         /* update these since they depend on sample rate*/
         if ( clock_rate_ )
-                clock_rate( clock_rate_ );
+                factor_ = clock_rate_factor( clock_rate_);
         bass_freq( bass_freq_ );
 
         clear();
 
         return 0;
 }
+
+/* Sets number of source time units per second */
 
 uint32_t Blip_Buffer::clock_rate_factor( long rate ) const
 {
@@ -172,7 +174,9 @@ void Blip_Synth_Fast_::volume_unit( double new_unit )
 
 long Blip_Buffer::read_samples( int16_t * out, long count)
 {
-	BLIP_READER_BEGIN( reader, *this );
+	const int32_t * BLIP_RESTRICT reader_reader_buf = buffer_;
+	int32_t reader_reader_accum = reader_accum_;
+
 	BLIP_READER_ADJ_( reader, count );
 	int16_t * BLIP_RESTRICT out_tmp = out + count;
 	int32_t offset = (int32_t) -count;
@@ -247,20 +251,20 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
         mixer_samples_read = 0;
         for ( int i = BUFS_SIZE; --i >= 0; )
                 RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
-	sample_rate_ = bufs_buffer[0].sample_rate();
-	length_ = bufs_buffer[0].length();
+	sample_rate_ = bufs_buffer[0].sample_rate_;
+	length_ = bufs_buffer[0].length_;
         return 0; 
 }
 
 void Stereo_Buffer::clock_rate( long rate )
 {
         for ( int i = BUFS_SIZE; --i >= 0; )
-                bufs_buffer [i].clock_rate( rate );
+                bufs_buffer[i].factor_ = bufs_buffer [i].clock_rate_factor( rate );
 }
 
 double Stereo_Buffer::real_ratio()
 {
-   return (double)bufs_buffer[0].clock_rate() * (double)bufs_buffer[0].clock_rate_factor(bufs_buffer[0].clock_rate()) / (1 << BLIP_BUFFER_ACCURACY);
+   return (double)bufs_buffer[0].clock_rate_ * (double)bufs_buffer[0].clock_rate_factor(bufs_buffer[0].clock_rate_) / (1 << BLIP_BUFFER_ACCURACY);
 }
 
 void Stereo_Buffer::bass_freq( int bass )
@@ -296,7 +300,7 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
                 {
                         for ( int i = BUFS_SIZE; --i >= 0; )
                         {
-                                buf_t& b = bufs_buffer [i];
+                                Blip_Buffer & b = bufs_buffer [i];
             #ifndef FASTER_SOUND_HACK_NON_SILENCE
                                 /* TODO: might miss non-silence setting since it checks END of last read*/
                                 if ( !b.non_silent() )
@@ -424,6 +428,9 @@ void Effects_Buffer::clear()
 
 void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 {
+	int offset, s_tmp;
+	int16_t * BLIP_RESTRICT outtemp;
+
 	/* TODO: if caller never marks buffers as modified, uses mono
 	   except that buffer isn't cleared, so caller can encounter
 	   subtle problems and not realize the cause. */
@@ -433,7 +440,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 	if ( mixer_bufs [0]->non_silent() | mixer_bufs [1]->non_silent() )
 	{
 #endif
-		int16_t * BLIP_RESTRICT outtemp = out + count * STEREO;
+		outtemp = out + count * STEREO;
 
 		/* do left + center and right + center separately to reduce register load*/
 		Blip_Buffer* const* buf = &mixer_bufs [2];
@@ -447,17 +454,17 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			BLIP_READER_ADJ_( side,   mixer_samples_read );
 			BLIP_READER_ADJ_( center, mixer_samples_read );
 
-			int offset = -count;
+			offset = -count;
 			do
 			{
-				int s = center_reader_accum + side_reader_accum;
-				s >>= 14;
+				s_tmp = center_reader_accum + side_reader_accum;
+				s_tmp >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
-				BLIP_CLAMP( s, s );
+				BLIP_CLAMP( s_tmp, s_tmp );
 
 				++offset; /* before write since out is decremented to slightly before end */
-				outtemp [offset * STEREO] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s_tmp;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
@@ -472,17 +479,17 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			BLIP_READER_ADJ_( side,   mixer_samples_read );
 			BLIP_READER_ADJ_( center, mixer_samples_read );
 
-			int offset = -count;
+			offset = -count;
 			do
 			{
-				int s = center_reader_accum + side_reader_accum;
-				s >>= 14;
+				s_tmp = center_reader_accum + side_reader_accum;
+				s_tmp >>= 14;
 				BLIP_READER_NEXT_IDX_( side,   offset );
 				BLIP_READER_NEXT_IDX_( center, offset );
-				BLIP_CLAMP( s, s );
+				BLIP_CLAMP( s_tmp, s_tmp );
 
 				++offset; /* before write since out is decremented to slightly before end*/
-				outtemp [offset * STEREO] = (int16_t) s;
+				outtemp [offset * STEREO] = (int16_t) s_tmp;
 			}while ( offset );
 
 			BLIP_READER_END( side,   **buf );
@@ -499,15 +506,15 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 
 		typedef int16_t stereo_blip_sample_t [STEREO];
 		stereo_blip_sample_t* BLIP_RESTRICT outtemp = (stereo_blip_sample_t*) out + count;
-		int offset = -count;
+		offset = -count;
 		do
 		{
-			int s = BLIP_READER_READ( center );
+			s_tmp = BLIP_READER_READ( center );
 			BLIP_READER_NEXT_IDX_( center, offset );
-			BLIP_CLAMP( s, s );
+			BLIP_CLAMP( s_tmp, s_tmp );
 
-			outtemp [offset] [0] = (int16_t) s;
-			outtemp [offset] [1] = (int16_t) s;
+			outtemp [offset] [0] = (int16_t) s_tmp;
+			outtemp [offset] [1] = (int16_t) s_tmp;
 		}
 		while ( ++offset );
 		BLIP_READER_END( center, *mixer_bufs [2] );
@@ -597,7 +604,7 @@ void Effects_Buffer::clock_rate( long rate )
 {
         clock_rate_ = rate;
         for ( int i = bufs_size; --i >= 0; )
-                bufs_buffer [i].clock_rate( clock_rate_ );
+                bufs_buffer[i].factor_ = bufs_buffer [i].clock_rate_factor( clock_rate_ );
 }
 
 void Effects_Buffer::bass_freq( int freq )
@@ -736,7 +743,7 @@ void Simple_Effects_Buffer::apply_config()
 
 void Effects_Buffer::apply_config()
 {
-	int i;
+	int i, buf_count, x, b, old_feedback;
 
 	if ( !bufs_size )
 		return;
@@ -745,7 +752,7 @@ void Effects_Buffer::apply_config()
 
 	bool echo_dirty = false;
 
-	int old_feedback = s.feedback;
+	old_feedback = s.feedback;
 	s.feedback = TO_FIXED( config_.feedback );
 	if ( !old_feedback && s.feedback )
 		echo_dirty = true;
@@ -782,19 +789,22 @@ void Effects_Buffer::apply_config()
 
 	/*Begin of assign buffers*/
 	/* assign channels to buffers*/
-	int buf_count = 0;
-	for ( int i = 0; i < (int) chans.size(); i++ )
+	buf_count = 0;
+
+	for ( i = 0; i < (int) chans.size(); i++ )
 	{
 		/* put second two side channels at end to give priority to main channels*/
 		/* in case closest matching is necessary*/
-		int x = i;
+		x = i;
+
 		if ( i > 1 )
 			x += 2;
 		if ( x >= (int) chans.size() )
 			x -= (chans.size() - 2);
 		chan_t& ch = chans [x];
 
-		int b = 0;
+		b = 0;
+
 		for ( ; b < buf_count; b++ )
 		{
 			if (    ch.vol [0] == bufs_buffer [b].vol [0] &&
@@ -1024,11 +1034,11 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                                 int offset = -count;
                                                 do
                                                 {
-                                                        int s = BLIP_READER_READ( in );
+                                                        int s_tmp = BLIP_READER_READ( in );
                                                         BLIP_READER_NEXT_IDX_( in, offset );
 
-                                                        out [offset] [0] += s * vol_0;
-                                                        out [offset] [1] += s * vol_1;
+                                                        out [offset] [0] += s_tmp * vol_0;
+                                                        out [offset] [1] += s_tmp * vol_1;
                                                 }
                                                 while ( ++offset );
 

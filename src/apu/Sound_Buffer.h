@@ -26,8 +26,6 @@ class Blip_Buffer
 	// untouched and returns "Out of memory", otherwise returns NULL.
 	const char * set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
 
-	// Sets number of source time units per second
-	void clock_rate( long clocks_per_sec );
 
 	// Ends current time frame of specified duration and makes its samples available
 	// (along with any still-unread samples) for reading with read_samples(). Begins
@@ -55,15 +53,6 @@ class Blip_Buffer
 	// Sets frequency high-pass filter frequency, where higher values reduce bass more
 	void bass_freq( int frequency );
 
-	// Current output sample rate
-	long sample_rate() const;
-
-	// Length of buffer in milliseconds
-	int length() const;
-
-	// Number of source time units per second
-	long clock_rate() const;
-
 	// Experimental features
 
 	// Saves state, including high-pass filter and tails of last deltas.
@@ -85,33 +74,26 @@ class Blip_Buffer
 	void remove_silence( long count );
 	uint32_t resampled_time( int32_t t ) const { return t * factor_ + offset_; }
 	uint32_t clock_rate_factor( long clock_rate ) const;
-	public:
+	long clock_rate_;
+
+	int length_;		/* Length of buffer in milliseconds*/
+	long sample_rate_;	/* Current output sample rate*/
+	uint32_t factor_;
+	uint32_t offset_;
+	int32_t * buffer_;
+	int32_t buffer_size_;
+	int32_t reader_accum_;
+	int bass_shift_;
+	Blip_Buffer* modified_; /* non-zero = true (more optimal than using bool, heh)*/
+	int32_t last_non_silence;
 	Blip_Buffer();
 	~Blip_Buffer();
 	private:
 	// noncopyable
 	Blip_Buffer( const Blip_Buffer& );
 	Blip_Buffer& operator = ( const Blip_Buffer& );
-	public:
-	typedef int32_t buf_t_;
-	uint32_t factor_;
-	uint32_t offset_;
-	buf_t_* buffer_;
-	int32_t buffer_size_;
-	int32_t reader_accum_;
-	int bass_shift_;
-	Blip_Buffer* modified_; /* non-zero = true (more optimal than using bool, heh)*/
-	int32_t last_non_silence;
-	private:
-	long sample_rate_;
-	long clock_rate_;
 	int bass_freq_;
-	int length_;
 };
-
-#ifdef HAVE_CONFIG_H
-        #include "config.h"
-#endif
 
 /* Number of bits in resample ratio fraction. Higher values give a more accurate ratio*/
 /* but reduce maximum buffer size.*/
@@ -190,7 +172,7 @@ class Blip_Synth {
 
 // Begins reading from buffer. Name should be unique to the current block.
 #define BLIP_READER_BEGIN( name, blip_buffer ) \
-        const Blip_Buffer::buf_t_* BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
+        const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
 /* Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
@@ -214,7 +196,7 @@ class Blip_Synth {
 // experimental
 #define BLIP_READER_ADJ_( name, offset ) (name##_reader_buf += offset)
 
-int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
+int32_t const blip_reader_idx_factor = sizeof (int32_t);
 
 #define BLIP_READER_NEXT_IDX_( name, idx ) {\
         name##_reader_accum -= name##_reader_accum >> BLIP_READER_DEFAULT_BASS;\
@@ -223,7 +205,7 @@ int32_t const blip_reader_idx_factor = sizeof (Blip_Buffer::buf_t_);
 
 #define BLIP_READER_NEXT_RAW_IDX_( name, idx ) {\
         name##_reader_accum -= name##_reader_accum >> BLIP_READER_DEFAULT_BASS; \
-        name##_reader_accum += *(Blip_Buffer::buf_t_ const*) ((char const*) name##_reader_buf + (idx)); \
+        name##_reader_accum += *(int32_t const*) ((char const*) name##_reader_buf + (idx)); \
 }
 
 #if defined (_M_IX86) || defined (_M_IA64) || defined (__i486__) || \
@@ -290,11 +272,7 @@ INLINE void Blip_Synth<quality,range>::update( int32_t t, int amp)
 
 #define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
 
-INLINE int  Blip_Buffer::length() const         { return length_; }
 INLINE long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
-INLINE long Blip_Buffer::sample_rate() const    { return sample_rate_; }
-INLINE long Blip_Buffer::clock_rate() const     { return clock_rate_; }
-INLINE void Blip_Buffer::clock_rate( long cps ) { factor_ = clock_rate_factor( clock_rate_ = cps ); }
 
 /* 1/4th of a second */
 #define BLIP_DEFAULT_LENGTH 250
@@ -332,8 +310,7 @@ class Stereo_Buffer
 		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
-		typedef Blip_Buffer buf_t;
-		buf_t bufs_buffer [BUFS_SIZE];
+		Blip_Buffer bufs_buffer [BUFS_SIZE];
 		bool immediate_removal_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
