@@ -27,7 +27,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 INLINE int Gb_Apu::calc_output( int osc ) const
 {
-	int bits = regs [STEREO_REG - start_addr] >> osc;
+	int bits = regs [STEREO_REG - START_ADDR] >> osc;
 	return (bits >> 3 & 2) | (bits & 1);
 }
 
@@ -58,7 +58,7 @@ void Gb_Apu::apply_volume()
 {
 	// TODO: Doesn't handle differing left and right volumes (panning).
 	// Not worth the complexity.
-	int data  = regs [VOL_REG - start_addr];
+	int data  = regs [VOL_REG - START_ADDR];
 	int left  = data >> 4 & 7;
 	int right = data & 7;
 	synth_volume( max( left, right ) + 1 );
@@ -79,7 +79,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 
 	// Click reduction makes DAC off generate same output as volume 0
 	int dac_off_amp = 0;
-	if ( reduce && wave.mode != mode_agb ) // AGB already eliminates clicks
+	if ( reduce && wave.mode != MODE_AGB ) // AGB already eliminates clicks
 		dac_off_amp = -dac_bias;
 
 	oscs [0]->dac_off_amp = dac_off_amp;
@@ -88,7 +88,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 	oscs [3]->dac_off_amp = dac_off_amp;
 
 	// AGB always eliminates clicks on wave channel using same method
-	if ( wave.mode == mode_agb )
+	if ( wave.mode == MODE_AGB )
 		wave.dac_off_amp = -dac_bias;
 }
 
@@ -96,7 +96,7 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 {
 	// Hardware mode
 	if ( agb_wave )
-		mode = mode_agb; // using AGB wave features implies AGB hardware
+		mode = MODE_AGB; // using AGB wave features implies AGB hardware
 	wave.agb_mask = agb_wave ? 0xFF : 0;
 	oscs [0]->mode = mode;
 	oscs [1]->mode = mode;
@@ -135,13 +135,13 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 		// TODO: verify that this works
 		write_register( 0, 0xFF1A, b * 0x40 );
 		for ( unsigned i = 0; i < sizeof initial_wave [0]; i++ )
-			write_register( 0, i + WAVE_RAM, initial_wave [(mode != mode_dmg)] [i] );
+			write_register( 0, i + WAVE_RAM, initial_wave [(mode != MODE_DMG)] [i] );
 	}
 }
 
 Gb_Apu::Gb_Apu()
 {
-	wave.wave_ram = &regs [WAVE_RAM - start_addr];
+	wave.wave_ram = &regs [WAVE_RAM - START_ADDR];
 
 	oscs [0] = &square1;
 	oscs [1] = &square2;
@@ -167,7 +167,7 @@ Gb_Apu::Gb_Apu()
 	//end set Tempo ( 1.0)
 
 	volume_ = 1.0;
-	reset();
+	reset(MODE_CGB, false);
 }
 
 void Gb_Apu::run_until_( int32_t end_time )
@@ -247,16 +247,16 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 
 void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 {
-	int reg = addr - start_addr;
-	if ( (unsigned) reg >= register_count )
+	int reg = addr - START_ADDR;
+	if ( (unsigned) reg >= REGISTER_COUNT )
 		return;
 
-	if ( addr < STATUS_REG && !(regs [STATUS_REG - start_addr] & POWER_MASK) )
+	if ( addr < STATUS_REG && !(regs [STATUS_REG - START_ADDR] & POWER_MASK) )
 	{
 		// Power is off
 
 		// length counters can only be written in DMG mode
-		if ( wave.mode != mode_dmg || (reg != 1 && reg != 5+1 && reg != 10+1 && reg != 15+1) )
+		if ( wave.mode != MODE_DMG || (reg != 1 && reg != 5+1 && reg != 10+1 && reg != 15+1) )
 			return;
 
 		if ( reg < 10 )
@@ -318,7 +318,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 
 			apply_volume();
 
-			if ( wave.mode != mode_dmg )
+			if ( wave.mode != MODE_DMG )
 			{
 				square1.length_ctr = 64;
 				square2.length_ctr = 64;
@@ -326,7 +326,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 				noise  .length_ctr = 64;
 			}
 
-			regs [STATUS_REG - start_addr] = data;
+			regs [STATUS_REG - START_ADDR] = data;
 		}
 	}
 }
@@ -350,8 +350,8 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
 	run_until( time );
 
-	int reg = addr - start_addr;
-	if ( (unsigned) reg >= register_count )
+	int reg = addr - START_ADDR;
+	if ( (unsigned) reg >= REGISTER_COUNT )
 		return 0;
 
 	if ( addr >= WAVE_RAM )

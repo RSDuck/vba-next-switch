@@ -21,8 +21,7 @@ static float soundVolume_  = -1;
 static int prevSoundEnable = -1;
 static bool declicking     = false;
 
-//int const chan_count = 4;
-#define chan_count 4
+#define CHAN_COUNT 4
 int const ticks_to_time = 2 * GB_APU_OVERCLOCK;
 
 static INLINE int32_t blip_time()
@@ -63,7 +62,7 @@ static void apply_effects()
 	stereo_buffer->config().surround = gb_effects_config_current.surround;
 	stereo_buffer->apply_config();
 
-	for ( int i = 0; i < chan_count; i++ )
+	for ( int i = 0; i < CHAN_COUNT; i++ )
 	{
 		channel_t ch = { 0, 0, 0 };
 		if ( prevSoundEnable >> i & 1 )
@@ -106,12 +105,12 @@ void gbSoundTick()
 
 static void reset_apu()
 {
-	uint32_t mode = mode_dmg;
+	uint32_t mode = MODE_DMG;
 	if ( gbHardware & 2 )
-		mode = mode_cgb;
+		mode = MODE_CGB;
 	if ( gbHardware & 8 || declicking )
-		mode = mode_agb;
-	gb_apu->reset( mode );
+		mode = MODE_AGB;
+	gb_apu->reset( mode, false );
 	gb_apu->reduce_clicks( declicking );
 
 	if ( stereo_buffer )
@@ -131,11 +130,11 @@ static void remake_stereo_buffer()
 	stereo_buffer->clock_rate( gb_apu->clock_rate );
 
 	// APU
-	static int const chan_types [chan_count] = {
+	static int const chan_types [CHAN_COUNT] = {
 		wave_type+1, wave_type+2,
 		wave_type+3, mixed_type+1
 	};
-	if ( stereo_buffer->set_channel_count( chan_count, chan_types ) ) { } // TODO: handle errors
+	if ( stereo_buffer->set_channel_count( CHAN_COUNT, chan_types ) ) { } // TODO: handle errors
 
 	if ( !gb_apu )
 	{

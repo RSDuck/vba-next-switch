@@ -10,9 +10,6 @@
 
 /* BLIP BUFFER */
 
-// Output samples are 16-bit signed, with a range of -32768 to 32767
-enum { blip_sample_max = 32767 };
-
 struct blip_buffer_state_t;
 
 class Blip_Buffer
@@ -74,16 +71,6 @@ class Blip_Buffer
 	// Clears buffer before loading state.
 	void load_state( blip_buffer_state_t const& in );
 
-	// Number of samples delay from synthesis to samples read out
-	//int output_latency() const;
-
-	// Number of raw samples that can be mixed within frame of specified duration.
-	//long count_samples( int32_t duration ) const;
-
-	// Mixes in 'count' samples from 'buf_in'
-	//void mix_samples( int16_t const* buf_in, long count );
-
-
 	// Signals that sound has been added to buffer. Could be done automatically in
 	// Blip_Synth, but that would affect performance more, as you can arrange that
 	// this is called only once per time frame rather than for every delta.
@@ -97,10 +84,6 @@ class Blip_Buffer
 	public:
 	Blip_Buffer();
 	~Blip_Buffer();
-
-	// Deprecated
-	const char * sample_rate( long r ) { return set_sample_rate( r ); }
-	const char * sample_rate( long r, int msec ) { return set_sample_rate( r, msec ); }
 	private:
 	// noncopyable
 	Blip_Buffer( const Blip_Buffer& );
@@ -113,7 +96,7 @@ class Blip_Buffer
 	int32_t buffer_size_;
 	int32_t reader_accum_;
 	int bass_shift_;
-	Blip_Buffer* modified_; // non-zero = true (more optimal than using bool, heh)
+	Blip_Buffer* modified_; /* non-zero = true (more optimal than using bool, heh)*/
 	int32_t last_non_silence;
 	private:
 	long sample_rate_;
@@ -126,21 +109,20 @@ class Blip_Buffer
         #include "config.h"
 #endif
 
-// Number of bits in resample ratio fraction. Higher values give a more accurate ratio
-// but reduce maximum buffer size.
+/* Number of bits in resample ratio fraction. Higher values give a more accurate ratio*/
+/* but reduce maximum buffer size.*/
 #define BLIP_BUFFER_ACCURACY 16
 
-// Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in
-// noticeable broadband noise when synthesizing high frequency square waves.
-// Affects size of Blip_Synth objects since they store the waveform directly.
-#ifndef BLIP_PHASE_BITS
-                #define BLIP_PHASE_BITS 8
-#endif
+/* Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in*/
+/* noticeable broadband noise when synthesizing high frequency square waves.*/
+/* Affects size of Blip_Synth objects since they store the waveform directly.*/
+#define BLIP_PHASE_BITS 8
 
-// Internal
+/* Internal*/
 #define BLIP_WIDEST_IMPULSE_ 16
 #define BLIP_BUFFER_EXTRA_ 18
-int const blip_res = 1 << BLIP_PHASE_BITS;
+#define BLIP_RES 256
+#define BLIP_RES_MIN_ONE 255
 
 class Blip_Synth_Fast_
 {
@@ -270,7 +252,7 @@ INLINE void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delt
 
 	delta *= impl.delta_factor;
 	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
-	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (blip_res - 1));
+	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & BLIP_RES_MIN_ONE);
 
 	int32_t left = buf [0] + delta;
 

@@ -6,6 +6,26 @@
 #include <stddef.h>
 #endif
 
+#define CPU_UPDATE_CPSR() \
+{ \
+	uint32_t CPSR; \
+	CPSR = reg[16].I & 0x40; \
+	if(N_FLAG) \
+		CPSR |= 0x80000000; \
+	if(Z_FLAG) \
+		CPSR |= 0x40000000; \
+	if(C_FLAG) \
+		CPSR |= 0x20000000; \
+	if(V_FLAG) \
+		CPSR |= 0x10000000; \
+	if(!armState) \
+		CPSR |= 0x00000020; \
+	if(!armIrqEnable) \
+		CPSR |= 0x80; \
+	CPSR |= (armMode & 0x1F); \
+	reg[16].I = CPSR; \
+}
+
 #include "GBA-arm_.h"
 #include "GBA-thumb_.h"
 #include "GBA.h"
@@ -186,7 +206,6 @@ bool busPrefetchEnable = false;
 uint32_t busPrefetchCount = 0;
 int cpuDmaTicksToUpdate = 0;
 int cpuDmaCount = 0;
-int dummyAddress = 0;
 
 bool cpuBreakLoop = false;
 int cpuNextEvent = 0;
@@ -241,8 +260,6 @@ bool windowOn = false;
 #ifdef USE_FRAMESKIP
 int frameCount = 0;
 #endif
-char buffer[1024];
-FILE *out = NULL;
 #ifdef USE_FRAMESKIP
 uint32_t lastTime = 0;
 #endif
@@ -3859,24 +3876,6 @@ bool CPUReadMemState(char *memory, int available)
 	return res;
 }
 
-void CPUUpdateCPSR()
-{
-	uint32_t CPSR = reg[16].I & 0x40;
-	if(N_FLAG)
-		CPSR |= 0x80000000;
-	if(Z_FLAG)
-		CPSR |= 0x40000000;
-	if(C_FLAG)
-		CPSR |= 0x20000000;
-	if(V_FLAG)
-		CPSR |= 0x10000000;
-	if(!armState)
-		CPSR |= 0x00000020;
-	if(!armIrqEnable)
-		CPSR |= 0x80;
-	CPSR |= (armMode & 0x1F);
-	reg[16].I = CPSR;
-}
 
 void CPUUpdateFlags(bool breakLoop)
 {
@@ -3922,7 +3921,7 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 	//  if(armMode == mode)
 	//    return;
 
-	CPUUpdateCPSR();
+	CPU_UPDATE_CPSR();
 
 	switch(armMode) {
 		case 0x10:
@@ -4030,7 +4029,7 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 	}
 	armMode = mode;
 	CPUUpdateFlags(breakLoop);
-	CPUUpdateCPSR();
+	CPU_UPDATE_CPSR();
 }
 
 
@@ -5363,7 +5362,7 @@ void CPUReset()
 	// disable FIQ
 	reg[16].I |= 0x40;
 
-	CPUUpdateCPSR();
+	CPU_UPDATE_CPSR();
 
 	armNextPC = reg[15].I;
 	reg[15].I += 4;
@@ -5421,7 +5420,7 @@ void CPUReset()
 
 
 	for(int i = 0; i < 256; i++) {
-		map[i].address = (uint8_t *)&dummyAddress;
+		map[i].address = 0;
 		map[i].mask = 0;
 	}
 

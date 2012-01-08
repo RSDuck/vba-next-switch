@@ -26,7 +26,6 @@ extern bool armState;
 extern bool armIrqEnable;
 extern u32 armNextPC;
 extern int armMode;
-extern u32 stop;
 extern int saveType;
 extern bool useBios;
 extern bool skipBios;

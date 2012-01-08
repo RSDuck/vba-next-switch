@@ -8,16 +8,22 @@
 
 struct gb_apu_state_t;
 
-#define osc_count 4
+/* 0: Square 1, 1: Square 2, 2: Wave, 3: Noise */
+#define OSC_COUNT 4
 
-// Resets hardware to initial power on state BEFORE boot ROM runs. Mode selects
-// sound hardware. Additional AGB wave features are enabled separately.
-//mode_dmg = Game Boy monochrome
-//mode_cgb = Game Boy Color
-//mode_agb = Game Boy Advance
-#define mode_dmg	0
-#define mode_cgb	1
-#define mode_agb	2
+/* Resets hardware to initial power on state BEFORE boot ROM runs. Mode selects*/
+/* sound hardware. Additional AGB wave features are enabled separately.*/
+#define MODE_DMG	0
+#define MODE_CGB	1
+#define MODE_AGB	2
+
+#define START_ADDR	0xFF10
+#define END_ADDR	0xFF3F
+
+/* Reads and writes must be within the START_ADDR to END_ADDR range, inclusive.*/
+/* Addresses outside this range are not mapped to the sound hardware.*/
+#define REGISTER_COUNT	48
+#define REGS_SIZE 64
 
 class Gb_Apu
 {
@@ -28,17 +34,11 @@ class Gb_Apu
 	// Sets buffer(s) to generate sound into. If left and right are NULL, output is mono.
 	// If all are NULL, no output is generated but other emulation still runs.
 	// If chan is specified, only that channel's output is changed, otherwise all are.
-	//enum { osc_count = 4 }; // 0: Square 1, 1: Square 2, 2: Wave, 3: Noise
 	void set_output( Blip_Buffer* center, Blip_Buffer* left = NULL, Blip_Buffer* right = NULL,
-			int chan = osc_count );
+			int chan = OSC_COUNT );
 
-	void reset( uint32_t mode = mode_cgb, bool agb_wave = false );
+	void reset( uint32_t mode, bool agb_wave);
 
-	// Reads and writes must be within the start_addr to end_addr range, inclusive.
-	// Addresses outside this range are not mapped to the sound hardware.
-	enum { start_addr = 0xFF10 };
-	enum { end_addr   = 0xFF3F };
-	enum { register_count = end_addr - start_addr + 1 };
 
 	// Times are specified as the number of clocks since the beginning of the
 	// current time frame.
@@ -62,18 +62,6 @@ class Gb_Apu
 	// emulation accuracy, since the clicks are authentic.
 	void reduce_clicks( bool reduce = true );
 
-	// Treble and bass values for various hardware.
-	enum {
-		speaker_treble =  -47, // speaker on system
-		speaker_bass   = 2000,
-		dmg_treble     =    0, // headphones on each system
-		dmg_bass       =   30,
-		cgb_treble     =    0,
-		cgb_bass       =  300, // CGB has much less bass
-		agb_treble     =    0,
-		agb_bass       =   30
-	};
-
 	// Save states
 
 	// Saves full emulation state to state_out. Data format is portable and
@@ -91,7 +79,7 @@ class Gb_Apu
 	Gb_Apu( const Gb_Apu& );
 	Gb_Apu& operator = ( const Gb_Apu& );
 
-	Gb_Osc*     oscs [osc_count];
+	Gb_Osc*     oscs [OSC_COUNT];
 	int32_t last_time;          // time sound emulator has been run to
 	int32_t frame_period;       // clocks between each frame sequencer step
 	double      volume_;
@@ -103,8 +91,7 @@ class Gb_Apu
 	Gb_Noise        noise;
 	int32_t     frame_time;     // time of next frame sequencer action
 	int             frame_phase;    // phase of next frame sequencer step
-	enum { regs_size = register_count + 0x10 };
-	uint8_t  regs [regs_size];// last values written to registers
+	uint8_t  regs [REGS_SIZE];// last values written to registers
 
 	// large objects after everything else
 	Gb_Osc::Good_Synth  good_synth;

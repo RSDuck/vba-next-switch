@@ -89,6 +89,9 @@ class Gb_Square : public Gb_Env
 	int period() const { return (2048 - frequency()) * (4 * clk_mul); }
 };
 
+#define PERIOD_MASK 0x70
+#define SHIFT_MASK 0x07
+
 class Gb_Sweep_Square : public Gb_Square
 {
 	public:
@@ -109,12 +112,11 @@ class Gb_Sweep_Square : public Gb_Square
 		Gb_Square::reset();
 	}
 	private:
-	enum { period_mask = 0x70 };
-	enum { shift_mask  = 0x07 };
-
 	void calc_sweep( bool update );
 	void reload_sweep_timer();
 };
+
+#define PERIOD2_MASK 0x1FFFF
 
 class Gb_Noise : public Gb_Env
 {
@@ -131,12 +133,15 @@ class Gb_Noise : public Gb_Env
 		delay = 4 * clk_mul; // TODO: remove?
 	}
 	private:
-	enum { period2_mask = 0x1FFFF };
-
 	int period2_index() const { return regs [3] >> 4; }
-	int period2( int base = 8 ) const { return base << period2_index(); }
+	int period2( int base) const { return base << period2_index(); }
 	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
 };
+
+#define BANK40_MASK 0x40
+#define BANK_SIZE 32
+#define BANK_SIZE_MIN_ONE 31
+#define BANK_SIZE_DIV_TWO 16
 
 class Gb_Wave : public Gb_Osc
 {
@@ -159,9 +164,6 @@ class Gb_Wave : public Gb_Osc
 	}
 
 	private:
-	enum { bank40_mask = 0x40 };
-	enum { bank_size   = 32 };
-
 	friend class Gb_Apu;
 
 	// Frequency timer period
@@ -185,7 +187,7 @@ INLINE int Gb_Wave::read( unsigned addr ) const
 	else
 		index = addr & 0x0F;
 	
-	unsigned char const * wave_bank = &wave_ram[(~regs[0] & bank40_mask) >> 2 & agb_mask];
+	unsigned char const * wave_bank = &wave_ram[(~regs[0] & BANK40_MASK) >> 2 & agb_mask];
 
 	return (index < 0 ? 0xFF : wave_bank[index]);
 }
@@ -199,7 +201,7 @@ INLINE void Gb_Wave::write( unsigned addr, int data )
 	else
 		index = addr & 0x0F;
 	
-	unsigned char * wave_bank = &wave_ram[(~regs[0] & bank40_mask) >> 2 & agb_mask];
+	unsigned char * wave_bank = &wave_ram[(~regs[0] & BANK40_MASK) >> 2 & agb_mask];
 
 	if ( index >= 0 )
 		wave_bank[index] = data;;

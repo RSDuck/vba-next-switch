@@ -687,10 +687,13 @@ static  void arm149(u32 opcode)
 // MRS Rd, CPSR
 static  void arm100(u32 opcode)
 {
-    if ((opcode & 0x0FFF0FFF) == 0x010F0000) {
-        CPUUpdateCPSR();
-        reg[(opcode >> 12) & 0x0F].I = reg[16].I;
-    } else {
+    if ((opcode & 0x0FFF0FFF) == 0x010F0000)
+    {
+	    CPU_UPDATE_CPSR();
+	    reg[(opcode >> 12) & 0x0F].I = reg[16].I;
+    }
+    else
+    {
         armUnknownInsn(opcode);
     }
 }
@@ -708,30 +711,33 @@ static  void arm140(u32 opcode)
 // MSR CPSR_fields, Rm
 static  void arm120(u32 opcode)
 {
-    if ((opcode & 0x0FF0FFF0) == 0x0120F000) {
-        CPUUpdateCPSR();
-        u32 value = reg[opcode & 15].I;
-        u32 newValue = reg[16].I;
-        if (armMode > 0x10) {
-            if (opcode & 0x00010000)
-                newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
-            if (opcode & 0x00020000)
-                newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
-            if (opcode & 0x00040000)
-                newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
-        }
-        if (opcode & 0x00080000)
-            newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
-        newValue |= 0x10;
-        CPUSwitchMode(newValue & 0x1F, false, true);
-        reg[16].I = newValue;
-        CPUUpdateFlags();
-        if (!armState) {  // this should not be allowed, but it seems to work
-            THUMB_PREFETCH;
-            reg[15].I = armNextPC + 2;
-        }
-    } else {
-        armUnknownInsn(opcode);
+    if ((opcode & 0x0FF0FFF0) == 0x0120F000)
+    {
+	    CPU_UPDATE_CPSR();
+	    u32 value = reg[opcode & 15].I;
+	    u32 newValue = reg[16].I;
+	    if (armMode > 0x10) {
+		    if (opcode & 0x00010000)
+			    newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
+		    if (opcode & 0x00020000)
+			    newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
+		    if (opcode & 0x00040000)
+			    newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
+	    }
+	    if (opcode & 0x00080000)
+		    newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
+	    newValue |= 0x10;
+	    CPUSwitchMode(newValue & 0x1F, false, true);
+	    reg[16].I = newValue;
+	    CPUUpdateFlags();
+	    if (!armState) {  // this should not be allowed, but it seems to work
+		    THUMB_PREFETCH;
+		    reg[15].I = armNextPC + 2;
+	    }
+    }
+    else
+    {
+	    armUnknownInsn(opcode);
     }
 }
 
@@ -758,34 +764,35 @@ static  void arm160(u32 opcode)
 // MSR CPSR_fields, #
 static  void arm320(u32 opcode)
 {
-    if ((opcode & 0x0FF0F000) == 0x0320F000) {
-        CPUUpdateCPSR();
-        u32 value = opcode & 0xFF;
-        int shift = (opcode & 0xF00) >> 7;
-        if (shift) {
-            ROR_IMM_MSR;
-        }
-        u32 newValue = reg[16].I;
-        if (armMode > 0x10) {
-            if (opcode & 0x00010000)
-                newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
-            if (opcode & 0x00020000)
-                newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
-            if (opcode & 0x00040000)
-                newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
-        }
-        if (opcode & 0x00080000)
-            newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
+    if ((opcode & 0x0FF0F000) == 0x0320F000)
+    {
+	    CPU_UPDATE_CPSR();
+	    u32 value = opcode & 0xFF;
+	    int shift = (opcode & 0xF00) >> 7;
+	    if (shift) {
+		    ROR_IMM_MSR;
+	    }
+	    u32 newValue = reg[16].I;
+	    if (armMode > 0x10) {
+		    if (opcode & 0x00010000)
+			    newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
+		    if (opcode & 0x00020000)
+			    newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
+		    if (opcode & 0x00040000)
+			    newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
+	    }
+	    if (opcode & 0x00080000)
+		    newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
 
-        newValue |= 0x10;
+	    newValue |= 0x10;
 
-        CPUSwitchMode(newValue & 0x1F, false, true);
-        reg[16].I = newValue;
-        CPUUpdateFlags();
-        if (!armState) {  // this should not be allowed, but it seems to work
-            THUMB_PREFETCH;
-            reg[15].I = armNextPC + 2;
-        }
+	    CPUSwitchMode(newValue & 0x1F, false, true);
+	    reg[16].I = newValue;
+	    CPUUpdateFlags();
+	    if (!armState) {  // this should not be allowed, but it seems to work
+		    THUMB_PREFETCH;
+		    reg[15].I = armNextPC + 2;
+	    }
     } else {
         armUnknownInsn(opcode);
     }
