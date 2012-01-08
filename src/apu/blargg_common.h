@@ -26,11 +26,6 @@
 	#endif
 #endif
 
-// blargg_err_t (0 on success, otherwise error string)
-#ifndef blargg_err_t
-	typedef const char* blargg_err_t;
-#endif
-
 // blargg_vector - very lightweight vector of POD types (no constructor/destructor)
 template<class T>
 class blargg_vector {
@@ -42,7 +37,7 @@ public:
 	size_t size() const { return size_; }
 	T* begin() const { return begin_; }
 	T* end() const { return begin_ + size_; }
-	blargg_err_t resize( size_t n )
+	const char * resize( size_t n )
 	{
 		// TODO: blargg_common.cpp to hold this as an outline function, ugh
 		void* p = realloc( begin_, n * sizeof (T) );
@@ -53,7 +48,6 @@ public:
 		size_ = n;
 		return 0;
 	}
-	void clear() { void* p = begin_; begin_ = 0; size_ = 0; free( p ); }
 	T& operator [] ( size_t n ) const
 	{
 		return begin_ [n];
@@ -82,20 +76,6 @@ public:
 	typedef int bool;
 	const bool true  = 1;
 	const bool false = 0;
-#endif
-
-// blargg_long/blargg_ulong = at least 32 bits, int if it's big enough
-
-#if INT_MAX < 0x7FFFFFFF || LONG_MAX == 0x7FFFFFFF
-	typedef long blargg_long;
-#else
-	typedef int blargg_long;
-#endif
-
-#if UINT_MAX < 0xFFFFFFFF || ULONG_MAX == 0xFFFFFFFF
-	typedef unsigned long blargg_ulong;
-#else
-	typedef unsigned blargg_ulong;
 #endif
 
 // HAVE_STDINT_H: If defined, use <stdint.h> for int8_t etc.

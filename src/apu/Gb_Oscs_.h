@@ -325,8 +325,8 @@ void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 void Gb_Square::run( int32_t time, int32_t end_time )
 {
         // Calc duty and phase
-        static byte const duty_offsets [4] = { 1, 1, 3, 7 };
-        static byte const duties       [4] = { 1, 2, 4, 6 };
+        static unsigned char const duty_offsets [4] = { 1, 1, 3, 7 };
+        static unsigned char const duties       [4] = { 1, 2, 4, 6 };
         int const duty_code = regs [1] >> 6;
         int32_t duty_offset = duty_offsets [duty_code];
         int32_t duty = duties [duty_code];
@@ -518,7 +518,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         }
 
         // Run timer and calculate time of next LFSR clock
-        static byte const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
+        static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
         int const period1 = period1s [regs [3] & 7] * clk_mul;
         {
                 int extra = (end_time - time) - delay;
@@ -580,7 +580,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
 void Gb_Wave::run( int32_t time, int32_t end_time )
 {
         // Calc volume
-        static byte const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
+        static unsigned char const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
         int const volume_idx = regs [2] >> 5 & (agb_mask | 3); // 2 bits on DMG/CGB, 3 on AGB
         int const volume_mul = volumes [volume_idx];
 
@@ -613,7 +613,7 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
         time += delay;
         if ( time < end_time )
         {
-                byte const* wave = wave_ram;
+                unsigned char const* wave = wave_ram;
 
                 // wave size and bank
                 int const flags = regs [0] & agb_mask;

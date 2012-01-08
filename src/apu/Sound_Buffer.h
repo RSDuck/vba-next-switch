@@ -4,6 +4,10 @@
 #ifndef MULTI_BUFFER_H
 #define MULTI_BUFFER_H
 
+#define STEREO 2
+#define EXTRA_CHANS 4
+#define BUFS_SIZE 3
+
 #include "../System.h"
 
 #include "blargg_common.h"
@@ -328,13 +332,12 @@ class Stereo_Buffer
 		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
-		enum { bufs_size = 3 };
 		typedef Blip_Buffer buf_t;
-		buf_t bufs_buffer [bufs_size];
+		buf_t bufs_buffer [BUFS_SIZE];
 		bool immediate_removal_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
-		blargg_long mixer_samples_read;
+		int mixer_samples_read;
 		channel_t chan;
 		long samples_avail_;
 
@@ -388,7 +391,7 @@ class Effects_Buffer {
 			bool surround;  // if true, negates left volume to put sound in back
 			bool echo;      // false = channel doesn't have any echo
 		};
-		chan_config_t& chan_config( int i ) { return chans [i + extra_chans].cfg; }
+		chan_config_t& chan_config( int i ) { return chans [i + EXTRA_CHANS].cfg; }
 
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
@@ -407,8 +410,6 @@ class Effects_Buffer {
 		void end_frame( int32_t );
 		long read_samples( int16_t*, long );
 		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
-		enum { stereo = 2 };
-		typedef blargg_long fixed_t;
 		void mixer_read_pairs( int16_t* out, int count );
 		bool immediate_removal_;
 		long sample_rate_;
@@ -416,18 +417,17 @@ class Effects_Buffer {
 		int channel_count_;
 		int const* channel_types_;
 	protected:
-		enum { extra_chans = stereo * stereo };
 		void channels_changed() { channels_changed_count_++; }
 	private:
 		config_t config_;
 		long clock_rate_;
 		int bass_freq_;
 
-		blargg_long echo_size;
+		int echo_size;
 
 		struct chan_t
 		{
-			fixed_t vol [stereo];
+			int vol [STEREO];
 			chan_config_t cfg;
 			channel_t channel;
 		};
@@ -435,7 +435,7 @@ class Effects_Buffer {
 
 		struct buf_t : Blip_Buffer
 		{
-		fixed_t vol [stereo];
+		int vol [STEREO];
 		bool echo;
 
 		void* operator new ( size_t, void* p ) { return p; }
@@ -447,17 +447,17 @@ class Effects_Buffer {
 		int bufs_size;
 		int bufs_max; // bufs_size <= bufs_max, to limit memory usage
 		Blip_Buffer* mixer_bufs [3];
-		blargg_long mixer_samples_read;
+		int mixer_samples_read;
 
 		struct {
-			long delay [stereo];
-			fixed_t treble;
-			fixed_t feedback;
-			fixed_t low_pass [stereo];
+			long delay [STEREO];
+			int treble;
+			int feedback;
+			int low_pass [STEREO];
 		} s;
 
-		blargg_vector<fixed_t> echo;
-		blargg_long echo_pos;
+		blargg_vector<int> echo;
+		int echo_pos;
 
 		bool no_effects;
 		bool no_echo;
