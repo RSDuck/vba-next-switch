@@ -24,7 +24,6 @@
 static menu menuStack[25];
 int menu_is_running = 0;			// is the menu running
 static int menuStackindex = 0;
-static bool update_item_colors = true;
 static bool set_initial_dir_tmpbrowser;
 filebrowser_t browser;				// main file browser->for rom browser
 filebrowser_t tmpBrowser;			// tmp file browser->for everything else
@@ -178,323 +177,24 @@ static void RenderBrowser(filebrowser_t * b)
 
 #include "menu/menu-helpmessages.h"
 
-#define do_controls_refreshpage(beginvalue, endvalue) \
-{ \
-	float increment = 0.13f; \
-	for (int i= beginvalue; i < endvalue; i++) \
-	{ \
-		menu_controlssettings.items[i].text_xpos = 0.09f; \
-		menu_controlssettings.items[i].text_ypos = increment;  \
-		increment += 0.03f; \
-	} \
-	menu_controlssettings.refreshpage = 0; \
-}
-
-#define FIRST_CONTROLS_SETTING_PAGE_2 menu_controlssettings.items[FIRST_CONTROLS_SETTING_PAGE_1+18].enum_id
-#define FIRST_CONTROLS_SETTING_PAGE_3 menu_controlssettings.items[FIRST_CONTROLS_SETTING_PAGE_1+36].enum_id
-
-static void do_controls_settings(void)
-{
-	uint64_t state = cell_pad_input_poll_device(0);
-	static uint64_t old_state = 0;
-	uint64_t diff_state = old_state ^ state;
-	uint64_t button_was_pressed = old_state & diff_state;
-
-	if(frame_count < special_action_msg_expired)
-	{
-	}
-	else
-	{
-		// back to ROM menu if CIRCLE is pressed
-		if (CTRL_L1(button_was_pressed) || CTRL_CIRCLE(button_was_pressed))
-		{
-			menuStackindex--;
-			old_state = state;
-			return;
-		}
-
-		if (CTRL_DOWN(state)  || CTRL_LSTICK_DOWN(state))	// down to next setting
-		{
-			menu_controlssettings.selected++;
-
-			if (menu_controlssettings.selected >= MAX_NO_OF_CONTROLS_SETTINGS)
-				menu_controlssettings.selected = FIRST_CONTROLS_SETTING_PAGE_1;
-
-			set_text_message("", 7);
-
-			if(menu_controlssettings.selected < FIRST_CONTROLS_SETTING_PAGE_2)
-			{
-				if(menu_controlssettings.page != 0)
-					menu_controlssettings.refreshpage = 1;
-
-				menu_controlssettings.page = 0;
-			}
-			else if(menu_controlssettings.selected < MAX_NO_OF_CONTROLS_SETTINGS)
-			{
-				if(menu_controlssettings.page != 1)
-					menu_controlssettings.refreshpage = 1;
-
-				menu_controlssettings.page = 1;
-			}
-		}
-
-		if (CTRL_UP(state)  || CTRL_LSTICK_UP(state))	// up to previous setting
-		{
-			menu_controlssettings.selected--;
-
-			if (menu_controlssettings.selected < FIRST_CONTROLS_SETTING_PAGE_1)
-				menu_controlssettings.selected = MAX_NO_OF_CONTROLS_SETTINGS-1;
-
-			set_text_message("", 7);
-
-			if(menu_controlssettings.selected < FIRST_CONTROLS_SETTING_PAGE_2)
-			{
-				if(menu_controlssettings.page != 0)
-					menu_controlssettings.refreshpage = 1;
-
-				menu_controlssettings.page = 0;
-			}
-			else if(menu_controlssettings.selected < MAX_NO_OF_CONTROLS_SETTINGS)
-			{
-				if(menu_controlssettings.page != 1)
-					menu_controlssettings.refreshpage = 1;
-
-				menu_controlssettings.page = 1;
-			}
-		}
-
-		if (menu_controlssettings.refreshpage)
-		{
-			switch(menu_controlssettings.page)
-			{
-				case 0:
-					do_controls_refreshpage(FIRST_CONTROLS_SETTING_PAGE_1,SETTING_CONTROLS_BUTTON_L2_BUTTON_L3+1);
-					break;
-				case 1:
-					do_controls_refreshpage(SETTING_CONTROLS_BUTTON_L2_BUTTON_L3,SETTING_CONTROLS_DEFAULT_ALL+1);
-					break;
-			}
-			menu_controlssettings.refreshpage = 0;
-		}
-
-		if (CTRL_L3(state) && CTRL_R3(state))
-		{
-			// if a rom is loaded then resume it
-			if (Emulator_IsROMLoaded())
-			{
-				menu_is_running = 0;
-				Emulator_StartROMRunning(1);
-				set_text_message("", 15);
-			}
-			old_state = state;
-			return;
-		}
-		switch(menu_controlssettings.selected)
-		{
-			case SETTING_CONTROLS_SCHEME:
-				if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_CROSS(button_was_pressed) | CTRL_RIGHT(state)  || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(button_was_pressed))
-				{
-					menuStackindex++;
-					menuStack[menuStackindex] = menu_filebrowser;
-					menuStack[menuStackindex].enum_id = INPUT_PRESET_CHOICE;
-					set_initial_dir_tmpbrowser = true;
-				}
-				if(CTRL_START(state))
-				{
-					snprintf(Settings.PS3CurrentInputPresetTitle, sizeof(Settings.PS3CurrentInputPresetTitle), "%s", "Default");
-					emulator_set_controls("", SET_ALL_CONTROLS_TO_DEFAULT, "Default");
-				}
-				break;
-			case SETTING_CONTROLS_NUMBER:
-				if(CTRL_LEFT(state) || CTRL_LSTICK_LEFT(state) || CTRL_CROSS(button_was_pressed))
-				{
-					if(currently_selected_controller_menu != 0)
-						currently_selected_controller_menu--;
-					set_text_message("", 7);
-				}
-
-				if(CTRL_RIGHT(state)  || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(button_was_pressed))
-				{
-					if(currently_selected_controller_menu < 6)
-						currently_selected_controller_menu++;
-					set_text_message("", 7);
-				}
-
-				if(CTRL_START(state))
-					currently_selected_controller_menu = 0;
-
-				break; 
-			case SETTING_CONTROLS_DPAD_UP:
-			case SETTING_CONTROLS_DPAD_DOWN:
-			case SETTING_CONTROLS_DPAD_LEFT:
-			case SETTING_CONTROLS_DPAD_RIGHT:
-			case SETTING_CONTROLS_BUTTON_CIRCLE:
-			case SETTING_CONTROLS_BUTTON_CROSS:
-			case SETTING_CONTROLS_BUTTON_TRIANGLE:
-			case SETTING_CONTROLS_BUTTON_SQUARE:
-			case SETTING_CONTROLS_BUTTON_SELECT:
-			case SETTING_CONTROLS_BUTTON_START:
-			case SETTING_CONTROLS_BUTTON_L1:
-			case SETTING_CONTROLS_BUTTON_R1:
-			case SETTING_CONTROLS_BUTTON_L2:
-			case SETTING_CONTROLS_BUTTON_R2:
-			case SETTING_CONTROLS_BUTTON_L3:
-			case SETTING_CONTROLS_BUTTON_R3:
-			case SETTING_CONTROLS_BUTTON_L2_BUTTON_L3:
-			case SETTING_CONTROLS_BUTTON_L2_BUTTON_R3:
-			case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_RIGHT:
-			case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_LEFT:
-			case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_UP:
-			case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_DOWN:
-			case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_RIGHT:
-			case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_LEFT:
-			case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_UP:
-			case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_DOWN:
-			case SETTING_CONTROLS_BUTTON_R2_BUTTON_R3:
-			case SETTING_CONTROLS_BUTTON_R3_BUTTON_L3:
-			case SETTING_CONTROLS_ANALOG_R_UP:
-			case SETTING_CONTROLS_ANALOG_R_DOWN:
-			case SETTING_CONTROLS_ANALOG_R_LEFT:
-			case SETTING_CONTROLS_ANALOG_R_RIGHT:
-				if(CTRL_LEFT(state) | CTRL_LSTICK_LEFT(state))
-				{
-					Input_MapButton(control_binds[currently_selected_controller_menu][(menu_controlssettings.selected-SETTING_CONTROLS_DPAD_UP)],false,NULL);
-					set_text_message("", 7);
-				}
-				if(CTRL_RIGHT(state)  || CTRL_LSTICK_RIGHT(state) || CTRL_CROSS(button_was_pressed))
-				{
-					Input_MapButton(control_binds[currently_selected_controller_menu][(menu_controlssettings.selected-SETTING_CONTROLS_DPAD_UP)],true,NULL);
-					set_text_message("", 7);
-				}
-				if(CTRL_START(state))
-				{
-					Input_MapButton(control_binds[currently_selected_controller_menu][(menu_controlssettings.selected-SETTING_CONTROLS_DPAD_UP)],true, default_control_binds[menu_controlssettings.selected-SETTING_CONTROLS_DPAD_UP]);
-				}
-				old_state = state;
-				break;
-			case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
-				if(CTRL_LEFT(button_was_pressed) || CTRL_LSTICK_LEFT(button_was_pressed) || CTRL_RIGHT(button_was_pressed) ||  CTRL_LSTICK_RIGHT(button_was_pressed) || CTRL_CROSS(button_was_pressed) || CTRL_START(state))
-					emulator_save_settings(INPUT_PRESET_FILE);
-				break;
-			case SETTING_CONTROLS_DEFAULT_ALL:
-				if(CTRL_LEFT(button_was_pressed)  || CTRL_LSTICK_LEFT(button_was_pressed) || CTRL_RIGHT(button_was_pressed)  || CTRL_LSTICK_RIGHT(button_was_pressed) || CTRL_CROSS(button_was_pressed) || CTRL_START(state))
-				{
-					emulator_set_controls("", SET_ALL_CONTROLS_TO_DEFAULT, "Default");
-				}
-				break;
-		} // end of switch 
-	}
-
-	produce_menubar(menu_controlssettings.enum_id);
-	cellDbgFontDraw();
-
-//PAGE 1
-if(menu_controlssettings.page == 0)
-{
-	cellDbgFontPuts(0.09f,	menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == SETTING_CONTROLS_SCHEME ? YELLOW : WHITE,	menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text);
-	cellDbgFontPrintf(0.5f,   menu_controlssettings.items[SETTING_CONTROLS_SCHEME].text_ypos,   Emulator_GetFontSize(), Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? GREEN : ORANGE, Settings.PS3CurrentInputPresetTitle);
-
-	cellDbgFontPuts(0.09f,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == SETTING_CONTROLS_NUMBER ? YELLOW : WHITE,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text);
-	cellDbgFontPrintf(0.5f,	menu_controlssettings.items[SETTING_CONTROLS_NUMBER].text_ypos,	Emulator_GetFontSize(),	currently_selected_controller_menu == 0 ? GREEN : ORANGE, "%d", currently_selected_controller_menu+1);
-
-	for(int i = SETTING_CONTROLS_DPAD_UP; i < FIRST_CONTROLS_SETTING_PAGE_2; i++)
-	{
-		cellDbgFontPuts(0.09f,	menu_controlssettings.items[i].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == menu_controlssettings.items[i].enum_id ? YELLOW : WHITE,	menu_controlssettings.items[i].text);
-		cellDbgFontPuts(0.5f,	menu_controlssettings.items[i].text_ypos,	Emulator_GetFontSize(),	control_binds[currently_selected_controller_menu][i-(FIRST_CONTROL_BIND)] == default_control_binds[i-FIRST_CONTROL_BIND] ? GREEN : ORANGE, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][i-FIRST_CONTROL_BIND]));
-		cellDbgFontDraw();
-	}
-}
-
-//PAGE 2
-if(menu_controlssettings.page == 1)
-{
-	for(int i = FIRST_CONTROLS_SETTING_PAGE_2; i < SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS; i++)
-	{
-		cellDbgFontPuts		(0.09f,	menu_controlssettings.items[i].text_ypos,	Emulator_GetFontSize(),	menu_controlssettings.selected == menu_controlssettings.items[i].enum_id ? YELLOW : WHITE,	menu_controlssettings.items[i].text);
-		cellDbgFontPuts		(0.5f,	menu_controlssettings.items[i].text_ypos,	Emulator_GetFontSize(),	control_binds[currently_selected_controller_menu][i-FIRST_CONTROL_BIND] == default_control_binds[i-FIRST_CONTROL_BIND] ? GREEN : ORANGE, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][i-FIRST_CONTROL_BIND]));
-		cellDbgFontDraw();
-	}
-
-	cellDbgFontPrintf(0.09f, menu_controlssettings.items[SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS].text_ypos, Emulator_GetFontSize(), menu_controlssettings.selected == SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS ? YELLOW : GREEN, menu_controlssettings.items[SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS].text);
-
-	cellDbgFontPrintf(0.09f, menu_controlssettings.items[SETTING_CONTROLS_DEFAULT_ALL].text_ypos, Emulator_GetFontSize(), menu_controlssettings.selected == SETTING_CONTROLS_DEFAULT_ALL ? YELLOW : GREEN, menu_controlssettings.items[SETTING_CONTROLS_DEFAULT_ALL].text);
-	cellDbgFontDraw();
-
-}
-
-	DisplayHelpMessage(menu_controlssettings.selected);
-
-	cellDbgFontPuts(0.09f, 0.91f, Emulator_GetFontSize(), YELLOW,
-	"UP/DOWN - select  L3+R3 - resume game   X/LEFT/RIGHT - change");
-	cellDbgFontPuts(0.09f, 0.95f, Emulator_GetFontSize(), YELLOW,
-	"START - default   L1/CIRCLE - go back");
-	cellDbgFontDraw();
-	old_state = state;
-}
-
 #include "menu/settings-logic.h"
 
-#define set_next_menu(menu_obj) \
-	menuStackindex++; \
-	switch(menu_obj) \
-	{ \
-		case GENERAL_VIDEO_MENU: \
-			menuStack[menuStackindex] = menu_generalaudiosettings; \
-			old_state = state; \
-			break; \
-		case GENERAL_AUDIO_MENU: \
-			menuStack[menuStackindex] = menu_emu_settings; \
-			old_state = state; \
-			break; \
-		case EMU_GENERAL_MENU: \
-			menuStack[menuStackindex] = menu_emu_videosettings; \
-			old_state = state; \
-			break; \
-		case EMU_VIDEO_MENU: \
-			menuStack[menuStackindex] = menu_emu_audiosettings; \
-			old_state = state; \
-			break; \
-		case EMU_AUDIO_MENU: \
-			menuStack[menuStackindex] = menu_pathsettings; \
-			old_state = state; \
-			break; \
-		case PATH_MENU: \
-			menuStack[menuStackindex] = menu_controlssettings; \
-			old_state = state; \
-			break; \
-	}
-
-static void do_settings(menu * menu_obj)
+static void select_setting(menu * menu_obj)
 {
-	uint64_t state = cell_pad_input_poll_device(0);
+	uint64_t state, diff_state, button_was_pressed, i;
 	static uint64_t old_state = 0;
-	uint64_t diff_state = old_state ^ state;
-	uint64_t button_was_pressed = old_state & diff_state;
 
-	if(update_item_colors)
-	{
-		toggle_settings_items();
-	}
+	state = cell_pad_input_poll_device(0);
+	diff_state = old_state ^ state;
+	button_was_pressed = old_state & diff_state;
 
-
-	if (menu_obj->refreshpage)
-	{
-		float increment = 0.13f;
-		for (int i= menu_obj->first_setting; i < menu_obj->max_settings; i++)
-		{
-			menu_obj->items[i].text_xpos = 0.09f;
-			menu_obj->items[i].text_ypos = increment; 
-			increment += 0.03f;
-		}
-		menu_obj->refreshpage = 0;
-	}
 
 	if(frame_count < special_action_msg_expired)
 	{
 	}
 	else
 	{
-		// back to ROM menu if CIRCLE is pressed
+		/* back to ROM menu if CIRCLE is pressed */
 		if (CTRL_L1(button_was_pressed) || CTRL_CIRCLE(button_was_pressed))
 		{
 			menuStackindex--;
@@ -504,61 +204,77 @@ static void do_settings(menu * menu_obj)
 
 		if (CTRL_R1(button_was_pressed))
 		{
-			menuStackindex++;
 			switch(menu_obj->enum_id)
 			{
 				case GENERAL_VIDEO_MENU:
+					menuStackindex++;
 					menuStack[menuStackindex] = menu_generalaudiosettings;
 					old_state = state;
 					break;
 				case GENERAL_AUDIO_MENU:
+					menuStackindex++;
 					menuStack[menuStackindex] = menu_emu_settings;
 					old_state = state;
 					break;
 				case EMU_GENERAL_MENU:
+					menuStackindex++;
+					menuStack[menuStackindex] = menu_emu_videosettings;
+					old_state = state;
+					break;
+				case EMU_VIDEO_MENU:
+					menuStackindex++;
 					menuStack[menuStackindex] = menu_emu_audiosettings;
 					old_state = state;
 					break;
 				case EMU_AUDIO_MENU:
+					menuStackindex++;
 					menuStack[menuStackindex] = menu_pathsettings;
 					old_state = state;
 					break;
 				case PATH_MENU:
+					menuStackindex++;
 					menuStack[menuStackindex] = menu_controlssettings;
 					old_state = state;
+					break;
+				case CONTROLS_MENU:
 					break;
 			}
 		}
 
-		if (CTRL_DOWN(state) || CTRL_LSTICK_DOWN(state))	// down to next settin
+		/* down to next setting */
+
+		if (CTRL_DOWN(state) || CTRL_LSTICK_DOWN(state))
 		{
 			menu_obj->selected++;
-
-			while(menu_obj->items[menu_obj->selected].enabled == 0)
-				menu_obj->selected++;
 
 			if (menu_obj->selected >= menu_obj->max_settings)
 				menu_obj->selected = menu_obj->first_setting; 
 
+			if (menu_obj->items[menu_obj->selected].page != menu_obj->page)
+				menu_obj->page = menu_obj->items[menu_obj->selected].page;
+
 			set_text_message("", 7);
 		}
 
-		if (CTRL_UP(state) || CTRL_LSTICK_UP(state))	// up to previous setting
+		/* up to previous setting */
+
+		if (CTRL_UP(state) || CTRL_LSTICK_UP(state))
 		{
 			if (menu_obj->selected == menu_obj->first_setting)
 				menu_obj->selected = menu_obj->max_settings-1;
 			else
 				menu_obj->selected--;
 
-			while (menu_obj->items[menu_obj->selected].enabled == 0)
-				menu_obj->selected--;
+			if (menu_obj->items[menu_obj->selected].page != menu_obj->page)
+				menu_obj->page = menu_obj->items[menu_obj->selected].page;
 
 			set_text_message("", 7);
 		}
 
+		/* if a rom is loaded then resume it */
+
 		if (CTRL_L3(state) && CTRL_R3(state))
 		{
-			// if a rom is loaded then resume it
 			if (Emulator_IsROMLoaded())
 			{
 				menu_is_running = 0;
@@ -573,16 +289,20 @@ static void do_settings(menu * menu_obj)
 		producesettingentry(menu_obj->selected);
 	}
 
-	produce_menubar(menu_obj->enum_id);
+	display_menubar(menu_obj->enum_id);
 	cellDbgFontDraw();
 
-	for (int i = menu_obj->first_setting; i < menu_obj->max_settings; i++)
+	for ( i = menu_obj->first_setting; i < menu_obj->max_settings; i++)
 	{
-		cellDbgFontPuts(menu_obj->items[i].text_xpos, menu_obj->items[i].text_ypos, Emulator_GetFontSize(), menu_obj->selected == menu_obj->items[i].enum_id ? menu_obj->items[i].text_selected_color : menu_obj->items[i].text_unselected_color, menu_obj->items[i].text);
-		producelabelvalue(i);
+		if(menu_obj->items[i].page == menu_obj->page)
+		{
+			cellDbgFontPuts(menu_obj->items[i].text_xpos, menu_obj->items[i].text_ypos, Emulator_GetFontSize(), menu_obj->selected == menu_obj->items[i].enum_id ? menu_obj->items[i].text_selected_color : menu_obj->items[i].text_unselected_color, menu_obj->items[i].text);
+			display_label_value(i);
+			cellDbgFontDraw();
+		}
 	}
 
-	DisplayHelpMessage(menu_obj->selected);
+	display_help_text(menu_obj->selected);
 
 	cellDbgFontPuts(0.09f, 0.91f, Emulator_GetFontSize(), YELLOW, "UP/DOWN - select  L3+R3 - resume game   X/LEFT/RIGHT - change");
 	cellDbgFontPuts(0.09f, 0.95f, Emulator_GetFontSize(), YELLOW, "START - default   L1/CIRCLE - go back   R1 - go forward");
@@ -669,12 +389,47 @@ static void do_ROMMenu(void)
 	old_state = state;
 }
 
-void MenuInit(void)
+static void menu_init_settings_pages(menu * menu_obj)
 {
-	filebrowser_new(&browser, Settings.PS3PathROMDirectory, ROM_EXTENSIONS);
+	int page, i, j;
+	float increment;
+
+	page = 0;
+	j = 0;
+	increment = 0.13f;
+
+	for(i = menu_obj->first_setting; i < menu_obj->max_settings; i++)
+	{
+		if(!(j < (NUM_ENTRY_PER_PAGE)))
+		{
+			j = 0;
+			increment = 0.13f;
+			page++;
+		}
+
+		menu_obj->items[i].text_xpos = 0.09f;
+		menu_obj->items[i].text_ypos = increment; 
+		menu_obj->items[i].page = page;
+		increment += 0.03f;
+		j++;
+	}
+	menu_obj->refreshpage = 0;
 }
 
-void MenuMainLoop(void)
+void menu_init(void)
+{
+	filebrowser_new(&browser, Settings.PS3PathROMDirectory, ROM_EXTENSIONS);
+
+	menu_init_settings_pages(&menu_generalvideosettings);
+	menu_init_settings_pages(&menu_generalaudiosettings);
+	menu_init_settings_pages(&menu_emu_settings);
+	menu_init_settings_pages(&menu_emu_videosettings);
+	menu_init_settings_pages(&menu_emu_audiosettings);
+	menu_init_settings_pages(&menu_pathsettings);
+	menu_init_settings_pages(&menu_controlssettings);
+}
+
+void menu_loop(void)
 {
 	menuStack[0] = menu_filebrowser;
 	menuStack[0].enum_id = FILE_BROWSER_MENU;
@@ -698,10 +453,8 @@ void MenuMainLoop(void)
 			case EMU_VIDEO_MENU:
 			case EMU_AUDIO_MENU:
 			case PATH_MENU:
-				do_settings(&menuStack[menuStackindex]);
-				break;
 			case CONTROLS_MENU:
-				do_controls_settings();
+				select_setting(&menuStack[menuStackindex]);
 				break;
 			case SHADER_CHOICE:
 			case PRESET_CHOICE:

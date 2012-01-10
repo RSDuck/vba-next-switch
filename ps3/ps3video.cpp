@@ -27,7 +27,7 @@ static uint32_t m_pal60Hz;
 static uint32_t m_smooth, m_smooth2;
 static uint8_t *decode_buffer;
 static uint32_t m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height;
-static uint32_t m_viewport_x_temp, m_viewport_y_temp, m_viewport_width_temp, m_viewport_height_temp, m_delta_temp;
+static uint32_t m_viewport_x_temp, m_viewport_y_temp, m_viewport_width_temp, m_viewport_height_temp;
 static uint32_t m_vsync;
 static int m_calculate_aspect_ratio_before_game_load;
 static int m_currentResolutionPos;
@@ -109,63 +109,72 @@ static GLfloat texcoords_flipped_rotated[] = {
 	Calculate macros
 ********************************************************************************/
 
-#define CalculateViewports() \
-	float device_aspect = psglGetDeviceAspectRatio(psgl_device); \
-   GLuint temp_width = gl_width; \
-   GLuint temp_height = gl_height; \
-	/* calculate the glOrtho matrix needed to transform the texture to the desired aspect ratio */ \
-	/* If the aspect ratios of screen and desired aspect ratio are sufficiently equal (floating point stuff), assume they are actually equal */ \
-   float delta; \
-	if (m_ratio == SCREEN_CUSTOM_ASPECT_RATIO) \
-	{ \
-	  m_viewport_x_temp = m_viewport_x; \
-	  m_viewport_y_temp = m_viewport_y; \
-	  m_viewport_width_temp = m_viewport_width;  \
-	  m_viewport_height_temp = m_viewport_height; \
-	} \
-	else if ( (int)(device_aspect*1000) > (int)(m_ratio * 1000) ) \
-	{ \
-     delta = (m_ratio / device_aspect - 1.0) / 2.0 + 0.5; \
-	  m_viewport_x_temp = temp_width * (0.5 - delta); \
-	  m_viewport_y_temp = 0; \
-     m_viewport_width_temp = (int)(2.0 * temp_width * delta); \
-	  m_viewport_height_temp = temp_height; \
-	} \
-	else if ( (int)(device_aspect*1000) < (int)(m_ratio * 1000) ) \
-	{ \
-     delta = (device_aspect / m_ratio - 1.0) / 2.0 + 0.5; \
-	  m_viewport_x_temp = 0; \
-	  m_viewport_y_temp = temp_height * (0.5 - delta); \
-	  m_viewport_width_temp = temp_width; \
-	  m_viewport_height_temp = (int)(2.0 * temp_height * delta); \
-	} \
-	else \
-	{ \
-	  m_viewport_x_temp = 0; \
-	  m_viewport_y_temp = 0; \
-	  m_viewport_width_temp = temp_width; \
-	  m_viewport_height_temp = temp_height; \
-	} \
-	if (m_overscan) \
-   { \
-      m_left = -m_overscan_amount/2; \
-      m_right = 1 + m_overscan_amount/2; \
-      m_bottom = -m_overscan_amount/2; \
-      m_top = 1 + m_overscan_amount/2; \
-      m_zFar = -1; \
-      m_zNear = 1; \
-   } \
-	else \
-   { \
-      m_left = 0; \
-      m_right = 1; \
-      m_bottom = 0; \
-      m_top = 1; \
-      m_zNear = -1; \
-      m_zFar = 1; \
-   } \
-	_cgViewWidth = m_viewport_width_temp; \
+static void CalculateViewports (void)
+{
+	float delta, device_aspect;
+	GLuint temp_width, temp_height;
+
+	device_aspect = psglGetDeviceAspectRatio(psgl_device);
+	temp_width = gl_width;
+	temp_height = gl_height;
+
+	/* calculate the glOrtho matrix needed to transform the texture to the 
+	   desired aspect ratio.
+
+	   If the aspect ratios of screen and desired aspect ratio are 
+	   sufficiently equal (floating point stuff), assume they are actually equal */
+
+	if (m_ratio == SCREEN_CUSTOM_ASPECT_RATIO)
+	{
+		m_viewport_x_temp = m_viewport_x;
+		m_viewport_y_temp = m_viewport_y;
+		m_viewport_width_temp = m_viewport_width;
+		m_viewport_height_temp = m_viewport_height;
+	}
+	else if ( (int)(device_aspect*1000) > (int)(m_ratio * 1000) )
+	{
+		delta = (m_ratio / device_aspect - 1.0) / 2.0 + 0.5;
+		m_viewport_x_temp = temp_width * (0.5f - delta);
+		m_viewport_y_temp = 0;
+		m_viewport_width_temp = (int)(2.0 * temp_width * delta);
+		m_viewport_height_temp = temp_height;
+	}
+	else if ( (int)(device_aspect*1000) < (int)(m_ratio * 1000) )
+	{
+		delta = (device_aspect / m_ratio - 1.0) / 2.0 + 0.5;
+		m_viewport_x_temp = 0;
+		m_viewport_y_temp = temp_height * (0.5f - delta);
+		m_viewport_width_temp = temp_width;
+		m_viewport_height_temp = (int)(2.0 * temp_height * delta);
+	}
+	else
+	{
+		m_viewport_x_temp = 0;
+		m_viewport_y_temp = 0;
+		m_viewport_width_temp = temp_width;
+		m_viewport_height_temp = temp_height;
+	}
+	if (m_overscan)
+	{
+		m_left = -m_overscan_amount/2;
+		m_right = 1 + m_overscan_amount/2;
+		m_bottom = -m_overscan_amount/2;
+		m_top = 1 + m_overscan_amount/2;
+		m_zFar = -1;
+		m_zNear = 1;
+	}
+	else
+	{
+		m_left = 0;
+		m_right = 1;
+		m_bottom = 0;
+		m_top = 1;
+		m_zNear = -1;
+		m_zFar = 1;
+	}
+	_cgViewWidth = m_viewport_width_temp;
 	_cgViewHeight = m_viewport_height_temp;
+}
 
 #define setup_aspect_ratio_array() \
    aspectratios[ASPECT_RATIO_4_3] = SCREEN_4_3_ASPECT_RATIO; \
@@ -805,7 +814,6 @@ void ps3graphics_draw(uint8_t *XBuf)
 void ps3graphics_draw_menu(int width, int height)
 {
 	frame_count++;
-	float device_aspect = psglGetDeviceAspectRatio(psgl_device);
 	GLuint temp_width = gl_width;
 	GLuint temp_height = gl_height;
 	_cgViewWidth = temp_width;
@@ -853,38 +861,22 @@ void ps3graphics_draw_menu(int width, int height)
 void ps3graphics_resize_aspect_mode_input_loop(uint64_t state)
 {
 	if(CTRL_LSTICK_LEFT(state) || CTRL_LEFT(state))
-	{
 		m_viewport_x -= 1;
-	}
 	else if (CTRL_LSTICK_RIGHT(state) || CTRL_RIGHT(state))
-	{
 		m_viewport_x += 1;
-	}		
 	if (CTRL_LSTICK_UP(state) || CTRL_UP(state))
-	{
 		m_viewport_y += 1;
-	}
 	else if (CTRL_LSTICK_DOWN(state) || CTRL_DOWN(state)) 
-	{
 		m_viewport_y -= 1;
-	}
 
 	if (CTRL_RSTICK_LEFT(state) || CTRL_L1(state))
-	{
 		m_viewport_width -= 1;
-	}
 	else if (CTRL_RSTICK_RIGHT(state) || CTRL_R1(state))
-	{
 		m_viewport_width += 1;
-	}		
 	if (CTRL_RSTICK_UP(state) || CTRL_L2(state))
-	{
 		m_viewport_height += 1;
-	}
 	else if (CTRL_RSTICK_DOWN(state) || CTRL_R2(state))
-	{
 		m_viewport_height -= 1;
-	}
 
 	if (CTRL_TRIANGLE(state))
 	{
@@ -1245,9 +1237,11 @@ void ps3graphics_set_aspect_ratio(uint32_t aspect, uint32_t width, uint32_t heig
 			m_calculate_aspect_ratio_before_game_load = 1;
 			if(width != 0 && height != 0)
 			{
-				unsigned len = width < height ? width : height;
-				unsigned highest = 1;
-				for (unsigned i = 1; i < len; i++)
+				unsigned len, highest, i;
+
+				len = width < height ? width : height;
+				highest = 1;
+				for ( i = 1; i < len; i++)
 				{
 					if ((width % i) == 0 && (height % i) == 0)
 						highest = i;
@@ -1516,9 +1510,9 @@ error:
 	return false;
 }
 
-static void ps3graphics_setup_texture(GLuint tex, unsigned width, unsigned height)
+static void ps3graphics_setup_texture(GLuint tex_tmp, unsigned width, unsigned height)
 {
-	glBindTexture(GL_TEXTURE_2D, tex);
+	glBindTexture(GL_TEXTURE_2D, tex_tmp);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1533,7 +1527,7 @@ static void ps3graphics_setup_texture(GLuint tex, unsigned width, unsigned heigh
 	glClientActiveTexture(GL_TEXTURE0);
 
 	/* Go back to old stuff.*/
-	glBindTexture(GL_TEXTURE_2D, tex);
+	glBindTexture(GL_TEXTURE_2D, tex_tmp);
 }
 
 bool ps3graphics_load_menu_texture(enum menu_type type, const char * path)

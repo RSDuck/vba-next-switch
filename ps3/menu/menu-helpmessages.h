@@ -8,7 +8,7 @@
 			snprintf(menu.items[currentsetting].comment, sizeof(menu.items[currentsetting].comment), *(menu.items[currentsetting].setting_ptr) ? menu.items[currentsetting].comment_yes : menu.items[currentsetting].comment_no); \
 			print_help_message(menu, currentsetting);
 
-static void DisplayHelpMessage(int currentsetting)
+static void display_help_text(int currentsetting)
 {
 	switch(currentsetting)
 	{
@@ -65,10 +65,53 @@ static void DisplayHelpMessage(int currentsetting)
 			snprintf(menu_generalaudiosettings.items[currentsetting].comment, sizeof(menu_generalaudiosettings.items[currentsetting].comment), Settings.SoundMode == SOUND_MODE_RSOUND ? "INFO - [Sound Output] is set to 'RSound' - the sound will be streamed over the\n network to the RSound audio server." : Settings.SoundMode == SOUND_MODE_HEADSET ? "INFO - [Sound Output] is set to 'USB/Bluetooth Headset' - sound will\n be output through the headset" : "INFO - [Sound Output] is set to 'Normal' - normal audio output will be\nused.");
 			print_help_message(menu_generalaudiosettings, currentsetting);
 			break;
+		case SETTING_CONTROLS_SCHEME:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Input Control scheme preset [%s] is selected.\n", Settings.PS3CurrentInputPresetTitle);
+			break;
+		case SETTING_CONTROLS_DPAD_UP:
+		case SETTING_CONTROLS_DPAD_DOWN:
+		case SETTING_CONTROLS_DPAD_LEFT:
+		case SETTING_CONTROLS_DPAD_RIGHT:
+		case SETTING_CONTROLS_BUTTON_CIRCLE:
+		case SETTING_CONTROLS_BUTTON_CROSS:
+		case SETTING_CONTROLS_BUTTON_TRIANGLE:
+		case SETTING_CONTROLS_BUTTON_SQUARE:
+		case SETTING_CONTROLS_BUTTON_SELECT:
+		case SETTING_CONTROLS_BUTTON_START:
+		case SETTING_CONTROLS_BUTTON_L1:
+		case SETTING_CONTROLS_BUTTON_R1:
+		case SETTING_CONTROLS_BUTTON_L2:
+		case SETTING_CONTROLS_BUTTON_R2:
+		case SETTING_CONTROLS_BUTTON_L3:
+		case SETTING_CONTROLS_BUTTON_R3:
+		case SETTING_CONTROLS_BUTTON_L2_BUTTON_L3:
+		case SETTING_CONTROLS_BUTTON_L2_BUTTON_R3:
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_RIGHT:
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_LEFT:
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_UP:
+		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_DOWN:
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_RIGHT:
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_LEFT:
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_UP:
+		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_DOWN:
+		case SETTING_CONTROLS_BUTTON_R2_BUTTON_R3:
+		case SETTING_CONTROLS_BUTTON_R3_BUTTON_L3:
+		case SETTING_CONTROLS_ANALOG_R_UP:
+		case SETTING_CONTROLS_ANALOG_R_DOWN:
+		case SETTING_CONTROLS_ANALOG_R_LEFT:
+		case SETTING_CONTROLS_ANALOG_R_RIGHT:
+			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [%s] on the PS3 controller is mapped to action:\n[%s].", menu_controlssettings.items[currentsetting].text, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][currentsetting-FIRST_CONTROL_BIND]));
+			break;
+		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
+			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Save the custom control settings.\nNOTE: This option will not do anything with Control Scheme [New] or [Default].");
+			break;
+		case SETTING_CONTROLS_DEFAULT_ALL:
+			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Set all 'Controls' settings back to their default values.");
+			break;
 	}
 }
 
-static void producelabelvalue(uint64_t switchvalue)
+static void display_label_value(uint64_t switchvalue)
 {
 	switch(switchvalue)
 	{
@@ -164,7 +207,10 @@ static void producelabelvalue(uint64_t switchvalue)
 			cellDbgFontPuts		(0.5f,	menu_pathsettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	!(strcmp(Settings.PS3PathSRAM,"")) ? GREEN : ORANGE, !(strcmp(Settings.PS3PathSRAM,"")) ? "Same dir as ROM" : Settings.PS3PathSRAM);
 			break;
 		case SETTING_CONTROLS_SCHEME:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Input Control scheme preset [%s] is selected.\n", Settings.PS3CurrentInputPresetTitle);
+			cellDbgFontPrintf(0.5f,   menu_controlssettings.items[switchvalue].text_ypos,   Emulator_GetFontSize(), Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? GREEN : ORANGE, Settings.PS3CurrentInputPresetTitle);
+			break;
+		case SETTING_CONTROLS_NUMBER:
+			cellDbgFontPrintf(0.5f,	menu_controlssettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	currently_selected_controller_menu == 0 ? GREEN : ORANGE, "%d", currently_selected_controller_menu+1);
 			break;
 		case SETTING_CONTROLS_DPAD_UP:
 		case SETTING_CONTROLS_DPAD_DOWN:
@@ -198,17 +244,12 @@ static void producelabelvalue(uint64_t switchvalue)
 		case SETTING_CONTROLS_ANALOG_R_DOWN:
 		case SETTING_CONTROLS_ANALOG_R_LEFT:
 		case SETTING_CONTROLS_ANALOG_R_RIGHT:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [%s] on the PS3 controller is mapped to action:\n[%s].", menu_controlssettings.items[switchvalue].text, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][switchvalue-FIRST_CONTROL_BIND]));
-			break;
-		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
-			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Save the custom control settings.\nNOTE: This option will not do anything with Control Scheme [New] or [Default].");
-			break;
-		case SETTING_CONTROLS_DEFAULT_ALL:
-			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Set all 'Controls' settings back to their default values.");
+			cellDbgFontPuts(0.5f,	menu_controlssettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	control_binds[currently_selected_controller_menu][switchvalue-(FIRST_CONTROL_BIND)] == default_control_binds[switchvalue-FIRST_CONTROL_BIND] ? GREEN : ORANGE, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][switchvalue-FIRST_CONTROL_BIND]));
 			break;
 		case SETTING_DEFAULT_VIDEO_ALL:
 		case SETTING_SAVE_SHADER_PRESET:
 		case SETTING_DEFAULT_AUDIO_ALL:
+		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
 			cellDbgFontDraw();
 			break;
 	}

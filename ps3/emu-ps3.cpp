@@ -2052,7 +2052,7 @@ int main(int argc, char **argv)
 
 	emulator_implementation_set_texture(Settings.PS3CurrentBorder);
 
-	MenuInit();
+	menu_init();
 
 	do
 	{
@@ -2060,7 +2060,7 @@ int main(int argc, char **argv)
 		{
 			case MODE_MENU:
 				ps3graphics_set_orientation(NORMAL);
-				MenuMainLoop();
+				menu_loop();
 				break;
 			case MODE_EMULATION:
 				if(ingame_menu_item != 0)

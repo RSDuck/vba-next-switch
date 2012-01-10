@@ -89,7 +89,7 @@ static menu menu_controlssettings = {
 	items_generalsettings		// items
 };
 
-static void produce_menubar(uint32_t menu_enum)
+static void display_menubar(uint32_t menu_enum)
 {
 	cellDbgFontPuts		(0.09f,	0.05f,	Emulator_GetFontSize(),	menu_enum == GENERAL_VIDEO_MENU ? RED : GREEN,		menu_generalvideosettings.title);
 	cellDbgFontPuts		(0.19f,	0.05f,  Emulator_GetFontSize(),  menu_enum == GENERAL_AUDIO_MENU ? RED : GREEN,  menu_generalaudiosettings.title);

@@ -12,34 +12,35 @@
 
 typedef struct
 {
-	uint32_t enum_id;		// enum ID of item
-	char text[256];			// item label text
-	float text_xpos;		// text X position item (upper left corner)
-	float text_ypos;		// text Y position item (upper left corner)
-	uint32_t text_selected_color;	// text color if item is selected
-	uint32_t text_unselected_color;	// text color if item is not selected
-	char comment[256];		// item comment - displayed in info bar
-	uint32_t comment_color;		// color of item comment
-	float comment_scalefont;	// font size of item comment
-	float comment_xpos;		// comment X position (upper left corner)
-	float comment_ypos;		// comment Y position (upper left corner)
-	unsigned int * setting_ptr;	// pointer to setting member
-	char comment_yes[256];		// item comment (yes - if setting_ptr true)
-	char comment_no[256];		// item comment (no - if setting_ptr false)
-	uint32_t default_value;		// default value of item
-	uint32_t enabled;		// is the item enabled?
+	uint32_t enum_id;		/* enum ID of item*/
+	char text[256];			/* item label text*/
+	float text_xpos;		/* text X position item (upper left corner)*/
+	float text_ypos;		/* text Y position item (upper left corner)*/
+	uint32_t text_selected_color;	/* text color if item is selected*/
+	uint32_t text_unselected_color;	/* text color if item is not selected*/
+	char comment[256];		/* item comment - displayed in info bar*/
+	uint32_t comment_color;		/* color of item comment*/
+	float comment_scalefont;	/* font size of item comment*/
+	float comment_xpos;		/* comment X position (upper left corner)*/
+	float comment_ypos;		/* comment Y position (upper left corner)*/
+	unsigned int * setting_ptr;	/* pointer to setting member*/
+	char comment_yes[256];		/* item comment (yes - if setting_ptr true)*/
+	char comment_no[256];		/* item comment (no - if setting_ptr false)*/
+	uint32_t default_value;		/* default value of item*/
+	uint32_t enabled;		/* is the item enabled?*/
+	uint32_t page;			/* page						*/
 } item;
 
 typedef struct
 {
-	char title[64];			// menu title
-	uint32_t enum_id;		// enum ID of menu
-	uint8_t selected;		// index of selected item
-	uint8_t page;			// page
-	uint32_t refreshpage;		// bit whether or not to refresh page
-	uint32_t first_setting;		// first setting
-	uint32_t max_settings;		// max no of settings in menu
-	item *items;			// menu items
+	char title[64];			/* menu title*/
+	uint32_t enum_id;		/* enum ID of menu*/
+	uint8_t selected;		/* index of selected item*/
+	uint8_t page;			/* page*/
+	uint32_t refreshpage;		/* bit whether or not to refresh page*/
+	uint32_t first_setting;		/* first setting*/
+	uint32_t max_settings;		/* max no of settings in menu*/
+	item *items;			/* menu items*/
 } menu;
 
 
@@ -63,7 +64,7 @@ typedef struct
 #define PATH_BIOSCHOICE			15
 #define INPUT_PRESET_CHOICE		16
 
-// setting constants
+/* setting constants*/
 enum
 {
 	SETTING_CHANGE_RESOLUTION,
@@ -98,7 +99,7 @@ enum
 	SETTING_PATH_SAVESTATES_DIRECTORY,
 	SETTING_PATH_SRAM_DIRECTORY,
 	SETTING_PATH_DEFAULT_ALL,
-	SETTING_CONTROLS_SCHEME,                  // CONTROLS settings
+	SETTING_CONTROLS_SCHEME,
 	SETTING_CONTROLS_NUMBER,
 	SETTING_CONTROLS_DPAD_UP,
 	SETTING_CONTROLS_DPAD_DOWN,
@@ -153,8 +154,8 @@ enum
 #define MAX_NO_OF_PATH_SETTINGS				SETTING_PATH_DEFAULT_ALL+1
 #define MAX_NO_OF_CONTROLS_SETTINGS			SETTING_CONTROLS_DEFAULT_ALL+1
 
-void MenuInit(void);
-void MenuMainLoop(void);
+void menu_init(void);
+void menu_loop(void);
 
 extern int menu_is_running;
 
