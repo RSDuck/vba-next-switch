@@ -811,7 +811,7 @@ void ps3graphics_draw(uint8_t *XBuf)
 	}
 }
 
-void ps3graphics_draw_menu(int width, int height)
+void ps3graphics_draw_menu(void)
 {
 	frame_count++;
 	GLuint temp_width = gl_width;
@@ -828,11 +828,11 @@ void ps3graphics_draw_menu(int width, int height)
 	cgGLBindProgram(_vertexProgram[MENU_SHADER_NO]);
 	cgGLBindProgram(_fragmentProgram[MENU_SHADER_NO]);
 	cgGLSetStateMatrixParameter(_cgpModelViewProj[MENU_SHADER_NO], CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
-	cgGLSetParameter2f(_cgpVideoSize[MENU_SHADER_NO], width, height);
-	cgGLSetParameter2f(_cgpTextureSize[MENU_SHADER_NO], width, height);
+	cgGLSetParameter2f(_cgpVideoSize[MENU_SHADER_NO], temp_width, temp_height);
+	cgGLSetParameter2f(_cgpTextureSize[MENU_SHADER_NO], temp_width, temp_height);
 	cgGLSetParameter2f(_cgpOutputSize[MENU_SHADER_NO], _cgViewWidth, _cgViewHeight);
-	cgGLSetParameter2f(_cgp_vertex_VideoSize[MENU_SHADER_NO], width, height);
-	cgGLSetParameter2f(_cgp_vertex_TextureSize[MENU_SHADER_NO], width, height);
+	cgGLSetParameter2f(_cgp_vertex_VideoSize[MENU_SHADER_NO], temp_width, temp_height);
+	cgGLSetParameter2f(_cgp_vertex_TextureSize[MENU_SHADER_NO], temp_width, temp_height);
 	cgGLSetParameter2f(_cgp_vertex_OutputSize[MENU_SHADER_NO], _cgViewWidth, _cgViewHeight);
 
 	_cgp_timer[MENU_SHADER_NO] = cgGetNamedParameter(_fragmentProgram[MENU_SHADER_NO], "IN.frame_count");

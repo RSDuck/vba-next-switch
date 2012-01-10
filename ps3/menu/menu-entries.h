@@ -7,22 +7,22 @@
 static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 {
 	{
-		SETTING_CHANGE_RESOLUTION, 						/* enum ID of item					*/
-		"Resolution",								/* item label						*/
-		0.0f,									/* text X position					*/
-		0.0f,									/* text Y position					*/
-		YELLOW,									/* text color if selected				*/
-		WHITE,									/* text color if not selected				*/
-		"INFO - Change the display resolution - press X to confirm.",		/* item comment						*/
-		LIGHTBLUE,								/* color of item comment				*/
-		0.91f,									/* font scale of item comment				*/
-		0.09f,									/* comment X position					*/
-		0.83f,									/* comment Y position					*/
-		&Settings.PS3CurrentResolution,						/* associated pointer to setting			*/
-		{0},									/* item comment (yes if setting_ptr true)		*/
-		{0},									/* item comment (no if setting_ptr false)		*/
-		0,									/* default value of item				*/
-		1									/* is the item enabled?					*/
+		SETTING_CHANGE_RESOLUTION, 		/* enum ID of item */
+		"Resolution",				/* item label */
+		0.0f,					/* text X position */
+		0.0f,					/* text Y position */
+		YELLOW,					/* text color if selected */
+		WHITE,					/* text color if not selected */
+		"INFO - Change the display resolution - press X to confirm.", /* item comment */
+		LIGHTBLUE,				/* color of item comment */
+		0.91f,					/* font scale of item comment */
+		0.09f,					/* comment X position */
+		0.83f,					/* comment Y position */
+		&Settings.PS3CurrentResolution,		/* associated pointer to setting */
+		{0},					/* item comment (yes if setting_ptr true) */
+		{0},					/* item comment (no if setting_ptr false) */
+		0,					/* default value of item */
+		1					/* is the item enabled?	*/
 
 	},
 	{
@@ -446,7 +446,7 @@ static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 		0.0f,
 		YELLOW,
 		GREEN,
-		"INFO - Set all [Genesis Plus Settings] back to their 'DEFAULT' values.",
+		"INFO - Set all [VBA Settings] back to their 'DEFAULT' values.",
 		LIGHTBLUE,
 		0.91f,
 		0.09f,
@@ -482,7 +482,7 @@ static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 		0.0f,
 		YELLOW,
 		GREEN,
-		"INFO - Set all [Genesis Plus Video Settings] back to their 'DEFAULT' values.",
+		"INFO - Set all [VBA Video Settings] back to their 'DEFAULT' values.",
 		LIGHTBLUE,
 		0.86f,
 		0.09f,
@@ -500,7 +500,7 @@ static item items_generalsettings[MAX_NO_OF_CONTROLS_SETTINGS] =
 		0.0f,
 		YELLOW,
 		GREEN,
-		"INFO - Set [all Genesis Plus Audio settings] back to their 'DEFAULT' values.",
+		"INFO - Set [all VBA Audio settings] back to their 'DEFAULT' values.",
 		LIGHTBLUE,
 		0.91f,
 		0.09f,

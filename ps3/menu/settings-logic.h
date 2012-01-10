@@ -1,10 +1,3 @@
-static void apply_scaling(void)
-{
-	ps3graphics_set_fbo_scale(Settings.ScaleEnabled, Settings.ScaleFactor);
-	ps3graphics_set_smooth(Settings.PS3Smooth, 0);
-	ps3graphics_set_smooth(Settings.PS3Smooth2, 1);
-}
-
 static void producesettingentry(uint64_t switchvalue)
 {
 	uint64_t state = cell_pad_input_poll_device(0);
@@ -252,7 +245,7 @@ static void producesettingentry(uint64_t switchvalue)
 				while(OSK_IS_RUNNING(oskutil_handle))
 				{
 					glClear(GL_COLOR_BUFFER_BIT);
-					ps3graphics_draw_menu(1920, 1080);
+					ps3graphics_draw_menu();
 					psglSwap();
 					cellSysutilCheckCallback();
 				}
