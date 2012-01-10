@@ -809,9 +809,8 @@ void Effects_Buffer::apply_config()
 
 void Effects_Buffer::end_frame( int32_t time )
 {
-	bufs_buffer[2].offset_ += time * bufs_buffer[2].factor_;
-	bufs_buffer[1].offset_ += time * bufs_buffer[1].factor_;
-	bufs_buffer[0].offset_ += time * bufs_buffer[0].factor_;
+	for ( int i = bufs_size; --i >= 0; )
+		bufs_buffer[i].offset_ += time * bufs_buffer[i].factor_;
 }
 
 long Effects_Buffer::read_samples( int16_t * out, long out_size )
