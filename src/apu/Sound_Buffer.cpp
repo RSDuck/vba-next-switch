@@ -598,9 +598,9 @@ void Simple_Effects_Buffer::apply_config()
                         ch.echo     = false;
 
                         int const type = (channel_types_ ? channel_types_ [i] : 0);
-                        if ( !(type & noise_type) )
+                        if ( !(type & NOISE_TYPE) )
                         {
-                                int index = (type & type_index_mask) % 6 - 3;
+                                int index = (type & TYPE_INDEX_MASK) % 6 - 3;
                                 if ( index < 0 )
                                 {
                                         index += 3;

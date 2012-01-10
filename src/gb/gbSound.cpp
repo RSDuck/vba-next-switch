@@ -131,8 +131,8 @@ static void remake_stereo_buffer()
 
 	// APU
 	static int const chan_types [CHAN_COUNT] = {
-		wave_type+1, wave_type+2,
-		wave_type+3, mixed_type+1
+		WAVE_TYPE+1, WAVE_TYPE+2,
+		WAVE_TYPE+3, MIXED_TYPE+1
 	};
 	if ( stereo_buffer->set_channel_count( CHAN_COUNT, chan_types ) ) { } // TODO: handle errors
 

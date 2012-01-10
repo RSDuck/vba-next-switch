@@ -113,14 +113,7 @@ class Blip_Synth {
 		// Sets overall volume of waveform
 		void volume( double v ) { impl.volume_unit( v * (1.0 / (range < 0 ? -range : range)) ); }
 
-		void output( Blip_Buffer* b )               { impl.buf = b; impl.last_amp = 0; }
-
-		// Updates amplitude of waveform at given time. Using this requires a separate
-		// Blip_Synth for each waveform.
-		void update( int32_t time, int amplitude );
-
 		// Low-level interface
-
 		// Adds an amplitude transition of specified delta, optionally into specified buffer
 		// rather than the one set with output(). Delta can be positive or negative.
 		// The actual change in amplitude is delta * (volume / range)
@@ -231,14 +224,6 @@ INLINE void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer
         offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
 }
 
-template<int quality,int range>
-INLINE void Blip_Synth<quality,range>::update( int32_t t, int amp)
-{
-	int delta = amp - impl.last_amp;
-	impl.last_amp = amp;
-	offset_resampled( t * impl.buf->factor_ + impl.buf->offset_, delta, impl.buf );
-}
-
 #define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
 
 INLINE long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
@@ -246,10 +231,10 @@ INLINE long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP
 /* 1/4th of a second */
 #define BLIP_DEFAULT_LENGTH 250
 
-#define	wave_type	0x100
-#define noise_type	0x200
-#define mixed_type	wave_type | noise_type
-#define type_index_mask	0xFF
+#define	WAVE_TYPE	0x100
+#define NOISE_TYPE	0x200
+#define MIXED_TYPE	WAVE_TYPE | NOISE_TYPE
+#define TYPE_INDEX_MASK	0xFF
 
 struct channel_t {
 	Blip_Buffer* center;
