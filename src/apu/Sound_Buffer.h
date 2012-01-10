@@ -73,13 +73,13 @@ class Blip_Buffer
 	int bass_freq_;
 };
 
-/* Number of bits in resample ratio fraction. Higher values give a more accurate ratio*/
-/* but reduce maximum buffer size.*/
+/* Number of bits in resample ratio fraction. Higher values give a more accurate 
+   ratio but reduce maximum buffer size.*/
 #define BLIP_BUFFER_ACCURACY 16
 
-/* Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in*/
-/* noticeable broadband noise when synthesizing high frequency square waves.*/
-/* Affects size of Blip_Synth objects since they store the waveform directly.*/
+/* Number bits in phase offset. Fewer than 6 bits (64 phase offsets) results in
+   noticeable broadband noise when synthesizing high frequency square waves.
+   Affects size of Blip_Synth objects since they store the waveform directly. */
 #define BLIP_PHASE_BITS 8
 
 /* Internal*/
@@ -87,6 +87,12 @@ class Blip_Buffer
 #define BLIP_BUFFER_EXTRA_ 18
 #define BLIP_RES 256
 #define BLIP_RES_MIN_ONE 255
+
+#define BLIP_SAMPLE_BITS 30
+
+/* Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
+   code at the cost of having no bass control */
+#define BLIP_READER_DEFAULT_BASS 9
 
 class Blip_Synth_Fast_
 {
@@ -99,19 +105,11 @@ class Blip_Synth_Fast_
 	Blip_Synth_Fast_();
 };
 
-/* Quality level, better = slower. In general, use blip_good_quality.*/
-const int blip_med_quality  = 8;
-const int blip_good_quality = 12;
-const int blip_high_quality = 16;
-
-// Range specifies the greatest expected change in amplitude. Calculate it
-// by finding the difference between the maximum and minimum expected
-// amplitudes (max - min).
-template<int quality,int range>
-class Blip_Synth {
+class Blip_Synth
+{
 	public:
-		// Sets overall volume of waveform
-		void volume( double v ) { impl.volume_unit( v * (1.0 / (range < 0 ? -range : range)) ); }
+		/* Sets overall volume of waveform */
+		void volume( double v ) { impl.volume_unit( v * 1.0); }
 
 		// Low-level interface
 		// Adds an amplitude transition of specified delta, optionally into specified buffer
@@ -119,10 +117,10 @@ class Blip_Synth {
 		// The actual change in amplitude is delta * (volume / range)
 		void offset( int32_t, int delta, Blip_Buffer* ) const;
 
-		// Works directly in terms of fractional output samples. Contact author for more info.
+		/* Works directly in terms of fractional output samples. Contact author for more info.*/
 		void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
 
-		// Same as offset(), except code is inlined for higher performance
+		/* Same as offset(), except code is inlined for higher performance*/
 		void offset_inline( int32_t t, int delta, Blip_Buffer* buf ) const {
 			offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
 		}
@@ -146,25 +144,19 @@ class Blip_Synth {
         const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
-/* Constant value to use instead of BLIP_READER_BASS(), for slightly more optimal
-   code at the cost of having no bass control */
-
-#define BLIP_READER_DEFAULT_BASS 9
-#define BLIP_SAMPLE_BITS 30
 
 /* Current sample */
 #define BLIP_READER_READ( name )        (name##_reader_accum >> 14)
 
-// Advances to next sample
+/* Advances to next sample*/
 #define BLIP_READER_NEXT( name, bass ) \
         (void) (name##_reader_accum += *name##_reader_buf++ - (name##_reader_accum >> (bass)))
 
-// Ends reading samples from buffer. The number of samples read must now be removed
-// using Blip_Buffer::remove_samples().
+/* Ends reading samples from buffer. The number of samples read must now be removed
+   using Blip_Buffer::remove_samples(). */
 #define BLIP_READER_END( name, blip_buffer ) \
         (void) ((blip_buffer).reader_accum_ = name##_reader_accum)
 
-// experimental
 #define BLIP_READER_ADJ_( name, offset ) (name##_reader_buf += offset)
 
 #define BLIP_READER_NEXT_IDX_( name, idx ) {\
@@ -194,8 +186,7 @@ struct blip_buffer_state_t
         int32_t buf [BLIP_BUFFER_EXTRA_];
 };
 
-template<int quality,int range>
-INLINE void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
+INLINE void Blip_Synth::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
 	int32_t left, right, phase;
 	int32_t BLIP_RESTRICT *buf;
@@ -218,8 +209,7 @@ INLINE void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delt
 	buf [1] = right;
 }
 
-template<int quality,int range>
-INLINE void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer* buf ) const
+INLINE void Blip_Synth::offset( int32_t t, int delta, Blip_Buffer* buf ) const
 {
         offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
 }
@@ -412,11 +402,10 @@ class Simple_Effects_Buffer : public Effects_Buffer
 	};
 	config_t& config() { return config_; }
 
-	// Apply any changes made to config()
-	void apply_config();
+	void apply_config();	// Apply any changes made to config()
 	private:
 	config_t config_;
-	void chan_config(); // hide
+	void chan_config();	// hide
 };
 
 #endif

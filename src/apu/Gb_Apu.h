@@ -96,8 +96,8 @@ class Gb_Apu
 	uint8_t  regs [REGS_SIZE];// last values written to registers
 
 	// large objects after everything else
-	Gb_Osc::Good_Synth  good_synth;
-	Gb_Osc::Med_Synth   med_synth;
+	Blip_Synth  good_synth;
+	Blip_Synth   med_synth;
 
 	int calc_output( int osc ) const;
 	void apply_stereo();
