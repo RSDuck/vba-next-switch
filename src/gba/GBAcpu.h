@@ -164,19 +164,18 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr];
 		}
-		else
-			if (busPrefetchCount>0xFF)
-			{
-				busPrefetchCount=0;
-				return memoryWait32[addr];
-			}
+		else if (busPrefetchCount>0xFF)
+		{
+			busPrefetchCount=0;
+			return memoryWait32[addr];
+		}
 	}
 	return memoryWaitSeq32[addr];
 }
 
 
 // Emulates the Cheat System (m) code
-#ifdef USE_CHEATS
+#ifdef HAVE_CHEATS
 static INLINE void cpuMasterCodeCheck()
 {
   if((mastercode) && (mastercode == armNextPC))

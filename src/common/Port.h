@@ -3,11 +3,11 @@
 
 #include "Types.h"
 
-// if a >= 0 return x else y
+/* if a >= 0 return x else y*/
 static INLINE int isel( int a, int x, int y )
 {
-	int mask = (a >> 31); // arithmetic shift right, splat out the sign bit
-	// mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.
+	int mask = (a >> 31); /* arithmetic shift right, splat out the sign bit*/
+	/* mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.*/
 	return (x & (~mask)) + (y & mask);
 }
 
@@ -40,4 +40,4 @@ static INLINE int isel( int a, int x, int y )
 #define WRITE32LE(x,v) *((u32 *)x) = (v)
 #endif
 
-#endif // PORT_H
+#endif

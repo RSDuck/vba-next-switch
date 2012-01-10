@@ -207,7 +207,6 @@ uint32_t busPrefetchCount = 0;
 int cpuDmaTicksToUpdate = 0;
 int cpuDmaCount = 0;
 
-bool cpuBreakLoop = false;
 int cpuNextEvent = 0;
 
 int gbaSaveType = 0; // used to remember the save type on reset
@@ -1339,12 +1338,10 @@ int CPULoadRom(const char *szFile)
 	flashInit();
 	eepromInit();
 
-	// CPU Update Render Buffers set to true
-	CLEAR_ARRAY(line[0]);
-	CLEAR_ARRAY(line[1]);
-	CLEAR_ARRAY(line[2]);
-	CLEAR_ARRAY(line[3]);
-	// Begin of CPU Update Render Buffers set to true
+	memset(line[0], -1, 240 * sizeof(u32));
+	memset(line[1], -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[3], -1, 240 * sizeof(u32));
 
 	return romSize;
 }
@@ -3611,12 +3608,10 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 
 	CPUUpdateRender();
 
-	// CPU Update Render Buffers set to true
-	CLEAR_ARRAY(line[0]);
-	CLEAR_ARRAY(line[1]);
-	CLEAR_ARRAY(line[2]);
-	CLEAR_ARRAY(line[3]);
-	// End of CPU Update Render Buffers set to true
+	memset(line[0], -1, 240 * sizeof(u32));
+	memset(line[1], -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[3], -1, 240 * sizeof(u32));
 
 	CPUUpdateWindow0();
 	CPUUpdateWindow1();
@@ -3794,7 +3789,6 @@ static bool CPUReadState(gzFile gzFile)
 		timer1Ticks = ((0x10000 - TM1D) << timer1ClockReload) - timer1Ticks;
 		timer2Ticks = ((0x10000 - TM2D) << timer2ClockReload) - timer2Ticks;
 		timer3Ticks = ((0x10000 - TM3D) << timer3ClockReload) - timer3Ticks;
-		//interp_rate();
 	}
 
 	// set pointers!
@@ -3802,12 +3796,10 @@ static bool CPUReadState(gzFile gzFile)
 
 	CPUUpdateRender();
 
-	// CPU Update Render Buffers set to true
-	CLEAR_ARRAY(line[0]);
-	CLEAR_ARRAY(line[1]);
-	CLEAR_ARRAY(line[2]);
-	CLEAR_ARRAY(line[3]);
-	// End of CPU Update Render Buffers set to true
+	memset(line[0], -1, 240 * sizeof(u32));
+	memset(line[1], -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[3], -1, 240 * sizeof(u32));
 
 	CPUUpdateWindow0();
 	CPUUpdateWindow1();
@@ -4636,13 +4628,13 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 					// CPU Update Render Buffers set to false
 					//CPUUpdateRenderBuffers(false);
 					if(!(layerEnable & 0x0100))
-						CLEAR_ARRAY(line[0]);
+						memset(line[0], -1, 240 * sizeof(u32));
 					if(!(layerEnable & 0x0200))
-						CLEAR_ARRAY(line[1]);
+						memset(line[1], -1, 240 * sizeof(u32));
 					if(!(layerEnable & 0x0400))
-						CLEAR_ARRAY(line[2]);
+						memset(line[2], -1, 240 * sizeof(u32));
 					if(!(layerEnable & 0x0800))
-						CLEAR_ARRAY(line[3]);
+						memset(line[3], -1, 240 * sizeof(u32));
 				}
 				break;
 			}
@@ -5000,7 +4992,6 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0x100:
 			timer0Reload = value;
-			//interp_rate();
 			break;
 		case 0x102:
 			timer0Value = value;
@@ -5009,7 +5000,6 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0x104:
 			timer1Reload = value;
-			//interp_rate();
 			break;
 		case 0x106:
 			timer1Value = value;
@@ -5411,13 +5401,10 @@ void CPUReset()
 	saveType = 0;
 	layerEnable = DISPCNT & layerSettings;
 
-	// CPU Update Render Buffers set to true
-	CLEAR_ARRAY(line[0]);
-	CLEAR_ARRAY(line[1]);
-	CLEAR_ARRAY(line[2]);
-	CLEAR_ARRAY(line[3]);
-	// End of CPU Update Render Buffers set to true
-
+	memset(line[0], -1, 240 * sizeof(u32));
+	memset(line[1], -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[3], -1, 240 * sizeof(u32));
 
 	for(int i = 0; i < 256; i++) {
 		map[i].address = 0;
@@ -5560,7 +5547,6 @@ void CPULoop(int ticks)
 void CPULoop()
 #endif
 {
-	// emuCount
 #ifdef USE_FRAMESKIP
 	ticks = 250000;
 #else
@@ -5571,8 +5557,6 @@ void CPULoop()
 	// variable used by the CPU core
 	cpuTotalTicks = 0;
 
-
-	cpuBreakLoop = false;
 	cpuNextEvent = CPUUpdateTicks();
 	if(cpuNextEvent > ticks)
 		cpuNextEvent = ticks;
@@ -5684,11 +5668,7 @@ updateLoop:
 								count = 0;
 							}
 #endif
-							//uint32_t joy = 0;
-							// update joystick information
-							//if(systemReadJoypads())
-							// read default joystick
-							//joy = systemReadJoypad(-1);
+							/* update joystick information */
 							P1 = 0x03FF ^ (joy & 0x3FF);
 #if 0
 							if(cpuEEPROMSensorEnabled)
@@ -5967,7 +5947,6 @@ updateLoop:
 					}
 					timer0On = timer0Value & 0x80 ? true : false;
 					TM0CNT = timer0Value & 0xC7;
-					//interp_rate();
 					UPDATE_REG(0x102, TM0CNT);
 					//    CPUUpdateTicks();
 				}
@@ -5982,7 +5961,6 @@ updateLoop:
 					}
 					timer1On = timer1Value & 0x80 ? true : false;
 					TM1CNT = timer1Value & 0xC7;
-					//interp_rate();
 					UPDATE_REG(0x106, TM1CNT);
 				}
 				if (timerOnOffDelay & 4)
@@ -6019,7 +5997,7 @@ updateLoop:
 			if(cpuNextEvent > ticks)
 				cpuNextEvent = ticks;
 
-			if(ticks <= 0 || cpuBreakLoop)
+			if(ticks <= 0)
 				break;
 
 		}

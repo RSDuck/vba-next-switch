@@ -15,7 +15,7 @@ unprefixed names. */
 		if ( blargg_return_err_ ) return blargg_return_err_;    \
 	} while ( 0 )
 
-// If ptr is NULL, returns "Out of memory" error string, otherwise continues normally.
+/* If ptr is NULL, returns "Out of memory" error string, otherwise continues normally.*/
 #undef  CHECK_ALLOC
 #define CHECK_ALLOC( ptr ) do { if ( (ptr) == 0 ) return "Out of memory"; } while ( 0 )
 

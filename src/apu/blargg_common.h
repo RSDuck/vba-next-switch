@@ -7,20 +7,18 @@
 #include <stdlib.h>
 #include <limits.h>
 
-// Uncomment to have Gb_Apu run at 4x normal clock rate (16777216 Hz), useful in
-// a Game Boy Advance emulator.
+/* Uncomment to have Gb_Apu run at 4x normal clock rate (16777216 Hz), useful in
+a Game Boy Advance emulator. */
 #define GB_APU_OVERCLOCK 4
 
 #define GB_APU_CUSTOM_STATE 1
 
-// Uncomment to enable platform-specific (and possibly non-portable) optimizations.
+/* Uncomment to enable platform-specific (and possibly non-portable) optimizations. */
 #define BLARGG_NONPORTABLE 1
 
-// Uncomment if automatic byte-order determination doesn't work
+/* Uncomment if automatic byte-order determination doesn't work */
 //#define BLARGG_BIG_ENDIAN 1
 
-// STATIC_CAST(T,expr): Used in place of static_cast<T> (expr)
-// CONST_CAST( T,expr): Used in place of const_cast<T> (expr)
 #ifndef STATIC_CAST
 	#if __GNUC__ >= 4
 		#define STATIC_CAST(T,expr) static_cast<T> (expr)
@@ -31,7 +29,7 @@
 	#endif
 #endif
 
-// blargg_vector - very lightweight vector of POD types (no constructor/destructor)
+/* blargg_vector - very lightweight vector of POD types (no constructor/destructor) */
 template<class T>
 class blargg_vector {
 	T* begin_;
@@ -82,11 +80,11 @@ public:
 	const bool false = 0;
 #endif
 
-// HAVE_STDINT_H: If defined, use <stdint.h> for int8_t etc.
+/* HAVE_STDINT_H: If defined, use <stdint.h> for int8_t etc.*/
 #if defined (HAVE_STDINT_H)
 	#include <stdint.h>
 
-// HAVE_INTTYPES_H: If defined, use <stdint.h> for int8_t etc.
+/* HAVE_INTTYPES_H: If defined, use <stdint.h> for int8_t etc.*/
 #elif defined (HAVE_INTTYPES_H)
 	#include <inttypes.h>
 #endif
