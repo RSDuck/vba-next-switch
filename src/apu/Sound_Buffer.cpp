@@ -120,18 +120,13 @@ void Blip_Buffer::remove_samples( long count )
 	memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
 
-/* Blip_Synth_*/
+/* Blip_Synth */
 
-Blip_Synth_Fast_::Blip_Synth_Fast_()
+Blip_Synth::Blip_Synth()
 {
         buf          = 0;
         last_amp     = 0;
         delta_factor = 0;
-}
-
-void Blip_Synth_Fast_::volume_unit( double new_unit )
-{
-        delta_factor = int (new_unit * (1L << BLIP_SAMPLE_BITS) + 0.5);
 }
 
 long Blip_Buffer::read_samples( int16_t * out, long count)

@@ -94,41 +94,34 @@ class Blip_Buffer
    code at the cost of having no bass control */
 #define BLIP_READER_DEFAULT_BASS 9
 
-class Blip_Synth_Fast_
+class Blip_Synth
 {
 	public:
 	Blip_Buffer* buf;
 	int last_amp;
 	int delta_factor;
 
-	void volume_unit( double );
-	Blip_Synth_Fast_();
-};
+	Blip_Synth();
 
-class Blip_Synth
-{
-	public:
-		/* Sets overall volume of waveform */
-		void volume( double v ) { impl.volume_unit( v * 1.0); }
+	/* Sets overall volume of waveform */
+	void volume( double v ) { delta_factor = int ((v * 1.0) * (1L << BLIP_SAMPLE_BITS) + 0.5); }
 
-		// Low-level interface
-		// Adds an amplitude transition of specified delta, optionally into specified buffer
-		// rather than the one set with output(). Delta can be positive or negative.
-		// The actual change in amplitude is delta * (volume / range)
-		void offset( int32_t, int delta, Blip_Buffer* ) const;
+	// Low-level interface
+	// Adds an amplitude transition of specified delta, optionally into specified buffer
+	// rather than the one set with output(). Delta can be positive or negative.
+	// The actual change in amplitude is delta * (volume / range)
+	void offset( int32_t, int delta, Blip_Buffer* ) const;
 
-		/* Works directly in terms of fractional output samples. Contact author for more info.*/
-		void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
+	/* Works directly in terms of fractional output samples. Contact author for more info.*/
+	void offset_resampled( uint32_t, int delta, Blip_Buffer* ) const;
 
-		/* Same as offset(), except code is inlined for higher performance*/
-		void offset_inline( int32_t t, int delta, Blip_Buffer* buf ) const {
-			offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
-		}
-		void offset_inline( int32_t t, int delta ) const {
-			offset_resampled( t * impl.buf->factor_ + impl.buf->offset_, delta, impl.buf );
-		}
-	private:
-		Blip_Synth_Fast_ impl;
+	/* Same as offset(), except code is inlined for higher performance*/
+	void offset_inline( int32_t t, int delta, Blip_Buffer* buf ) const {
+		offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
+	}
+	void offset_inline( int32_t t, int delta ) const {
+		offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
+	}
 };
 
 #if __GNUC__ >= 3 || _MSC_VER >= 1100
@@ -191,7 +184,7 @@ INLINE void Blip_Synth::offset_resampled( uint32_t time, int delta, Blip_Buffer*
 	int32_t left, right, phase;
 	int32_t BLIP_RESTRICT *buf;
 
-	delta *= impl.delta_factor;
+	delta *= delta_factor;
 	buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
 	phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & BLIP_RES_MIN_ONE);
 
