@@ -68,8 +68,6 @@ class Gba_Pcm
 		void apply_control( int idx );
 		void update( int dac );
 		void end_frame( int );
-
-	private:
 		Blip_Buffer* output;
 		int last_time;
 		int last_amp;
@@ -92,8 +90,6 @@ class Gba_Pcm_Fifo
 		int  writeIndex;
 		int  dac;
 		uint8_t   fifo [32];
-	private:
-
 		int  timer;
 		bool enabled;
 };
@@ -152,34 +148,16 @@ void Gba_Pcm::end_frame( int time )
 
 void Gba_Pcm::update( int dac )
 {
-	if ( output )
+	int time = SOUND_CLOCK_TICKS -  soundTicks;
+
+	dac = (int8_t) dac >> shift;
+	int delta = dac - last_amp;
+	if ( delta )
 	{
-		int time = SOUND_CLOCK_TICKS -  soundTicks;
-
-		dac = (int8_t) dac >> shift;
-		int delta = dac - last_amp;
-		if ( delta )
-		{
-			last_amp = dac;
-
-			int filter = 0;
-         #ifdef USE_SOUNDINTERPOLATION
-				// base filtering on how long since last sample was output
-				int period = time - last_time;
-
-				int idx = (unsigned) period / 512;
-				if ( idx >= 3 )
-					idx = 3;
-
-				static int const filters [4] = { 0, 0, 1, 2 };
-				filter = filters [idx];
-			//}
-         #endif
-
-			pcm_synth.offset( time, delta, output );
-		}
-		last_time = time;
+		last_amp = dac;
+		pcm_synth.offset( time, delta, output );
 	}
+	last_time = time;
 }
 
 static void soundEvent_u16_parallel(uint32_t address[])
@@ -231,28 +209,27 @@ static void soundEvent_u16_parallel(uint32_t address[])
 
 void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 {
-	if ( which_timer == timer && enabled )
+	if ( count <= 16 )
 	{
+		// Need to fill FIFO
+		CPUCheckDMA( 3, which ? 4 : 2 );
 		if ( count <= 16 )
 		{
-			// Need to fill FIFO
-			CPUCheckDMA( 3, which ? 4 : 2 );
-			if ( count <= 16 )
-			{
-				// Not filled by DMA, so fill with 16 bytes of silence
-				int reg = which ? FIFOB_L : FIFOA_L;
+			// Not filled by DMA, so fill with 16 bytes of silence
+			int reg = which ? FIFOB_L : FIFOA_L;
 
-				uint32_t address_array[8] = {reg, reg+2, reg, reg+2, reg, reg+2, reg, reg+2};
-				soundEvent_u16_parallel(address_array);
-			}
+			uint32_t address_array[8] = {reg, reg+2, reg, reg+2, reg, reg+2, reg, reg+2};
+			soundEvent_u16_parallel(address_array);
 		}
-
-		// Read next sample from FIFO
-		count--;
-		dac = fifo [readIndex];
-		readIndex = (readIndex + 1) & 31;
-		pcm.update( dac );
 	}
+
+	// Read next sample from FIFO
+	count--;
+	dac = fifo [readIndex];
+	readIndex = (readIndex + 1) & 31;
+
+	if(pcm.output)
+		pcm.update( dac );
 }
 
 void Gba_Pcm_Fifo::write_control( int data )
@@ -271,7 +248,9 @@ void Gba_Pcm_Fifo::write_control( int data )
 	}
 
 	pcm.apply_control( which );
-	pcm.update( dac );
+
+	if(pcm.output)
+		pcm.update( dac );
 }
 
 void Gba_Pcm_Fifo::write_fifo( int data )
@@ -343,9 +322,7 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 			pcm [0].write_control( data      );
 			pcm [1].write_control( data >> 4 );
 
-			//Apply Volume
 			gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
-			//End of Apply Volume
 			//End of SGCNT0_H
 			break;
 
@@ -380,8 +357,10 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 
 void soundTimerOverflow(int timer)
 {
-	pcm [0].timer_overflowed( timer );
-	pcm [1].timer_overflowed( timer );
+	if ( timer == pcm[0].timer && pcm[0].enabled )
+		pcm [0].timer_overflowed( timer );
+	if ( timer == pcm[1].timer && pcm[1].enabled )
+		pcm [1].timer_overflowed( timer );
 }
 
 void flush_samples(Simple_Effects_Buffer * buffer)
@@ -395,7 +374,6 @@ void flush_samples(Simple_Effects_Buffer * buffer)
 void psoundTickfn()
 {
 	// Run sound hardware to present
-	//end_frame( SOUND_CLOCK_TICKS );
 	pcm [0].pcm.end_frame( SOUND_CLOCK_TICKS );
 	pcm [1].pcm.end_frame( SOUND_CLOCK_TICKS );
 
@@ -474,19 +452,19 @@ static void remake_stereo_buffer()
 
 void soundShutdown()
 {
-   systemOnSoundShutdown();
+	systemOnSoundShutdown();
 }
 
 void soundPause()
 {
 	soundPaused = true;
-   systemSoundPause();
+	systemSoundPause();
 }
 
 void soundResume()
 {
 	soundPaused = false;
-   systemSoundResume();
+	systemSoundResume();
 }
 
 
@@ -537,6 +515,7 @@ void soundReset()
 bool soundInit()
 {
 	bool sound_driver_ok = systemSoundInit();
+
 	if ( !sound_driver_ok )
 		return false;
 
