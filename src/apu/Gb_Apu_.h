@@ -215,16 +215,10 @@ void Gb_Apu::run_until_( int32_t end_time )
 	}while(1);
 }
 
-INLINE void Gb_Apu::run_until( int32_t time )
-{
-	if ( time > last_time )
-		run_until_( time );
-}
-
 void Gb_Apu::end_frame( int32_t end_time )
 {
 	if ( end_time > last_time )
-		run_until( end_time );
+		run_until_( end_time );
 
 	frame_time -= end_time;
 
@@ -264,7 +258,8 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			data &= 0x3F; /* clear square duty*/
 	}
 
-	run_until( time );
+	if ( time > last_time )
+		run_until_( time );
 
 	if ( addr >= WAVE_RAM )
 	{
@@ -352,7 +347,8 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 {
 	int reg, mask, data;
 
-	run_until( time );
+	if ( time > last_time )
+		run_until_( time );
 
 	reg = addr - START_ADDR;
 	if ( (unsigned) reg >= REGISTER_COUNT )

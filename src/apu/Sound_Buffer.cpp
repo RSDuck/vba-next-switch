@@ -24,8 +24,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 /* BLIP BUFFER */
 
-#define SILENT_BUF_SIZE 1
-
 #define FIXED_SHIFT 12
 #define TO_FIXED( f )   int ((f) * ((int) 1 << FIXED_SHIFT))
 #define FROM_FIXED( f ) ((f) >> FIXED_SHIFT)
@@ -45,8 +43,7 @@ Blip_Buffer::Blip_Buffer()
 
 Blip_Buffer::~Blip_Buffer()
 {
-        if ( buffer_size_ != SILENT_BUF_SIZE )
-                free( buffer_ );
+	free( buffer_ );
 }
 
 void Blip_Buffer::clear( void)
@@ -59,9 +56,6 @@ void Blip_Buffer::clear( void)
 
 const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
 {
-        if ( buffer_size_ == SILENT_BUF_SIZE )
-                return "Internal (tried to resize Silent_Blip_Buffer)";
-
         /* start with maximum length that resampled time can represent*/
         long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
         if ( msec != 0)
@@ -212,8 +206,9 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
 
 void Stereo_Buffer::clock_rate( long rate )
 {
-        for ( int i = BUFS_SIZE; --i >= 0; )
-                bufs_buffer[i].factor_ = bufs_buffer [i].clock_rate_factor( rate );
+	bufs_buffer[2].factor_ = bufs_buffer [2].clock_rate_factor( rate );
+	bufs_buffer[1].factor_ = bufs_buffer [1].clock_rate_factor( rate );
+	bufs_buffer[0].factor_ = bufs_buffer [0].clock_rate_factor( rate );
 }
 
 double Stereo_Buffer::real_ratio()
@@ -223,27 +218,30 @@ double Stereo_Buffer::real_ratio()
 
 void Stereo_Buffer::bass_freq( int bass )
 {
-        for ( int i = BUFS_SIZE; --i >= 0; )
-                bufs_buffer [i].bass_freq( bass );
+	bufs_buffer [2].bass_freq( bass );
+	bufs_buffer [1].bass_freq( bass );
+	bufs_buffer [0].bass_freq( bass );
 }
 
 
 void Stereo_Buffer::clear()
 {
         mixer_samples_read = 0;
-        for ( int i = BUFS_SIZE; --i >= 0; )
-                bufs_buffer [i].clear();
+	bufs_buffer [2].clear();
+	bufs_buffer [1].clear();
+	bufs_buffer [0].clear();
 }
 
 void Stereo_Buffer::end_frame( int32_t time )
 {
-        for ( int i = BUFS_SIZE; --i >= 0; )
-		bufs_buffer[i].offset_ += time * bufs_buffer[i].factor_;
+	bufs_buffer[2].offset_ += time * bufs_buffer[2].factor_;
+	bufs_buffer[1].offset_ += time * bufs_buffer[1].factor_;
+	bufs_buffer[0].offset_ += time * bufs_buffer[0].factor_;
 }
 
 long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 {
-	int i, pair_count;
+	int pair_count;
 
         out_size = min( out_size, STEREO_BUFFER_SAMPLES_AVAILABLE());
 
@@ -252,11 +250,9 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 	{
 		mixer_read_pairs( out, pair_count );
 
-		for ( i = BUFS_SIZE; --i >= 0; )
-		{
-			Blip_Buffer & b = bufs_buffer [i];
-			b.remove_samples( mixer_samples_read );
-		}
+		bufs_buffer[2].remove_samples( mixer_samples_read );
+		bufs_buffer[1].remove_samples( mixer_samples_read );
+		bufs_buffer[0].remove_samples( mixer_samples_read );
 		mixer_samples_read = 0;
 	}
         return out_size;
@@ -813,8 +809,9 @@ void Effects_Buffer::apply_config()
 
 void Effects_Buffer::end_frame( int32_t time )
 {
-        for ( int i = bufs_size; --i >= 0; )
-		bufs_buffer[i].offset_ += time * bufs_buffer[i].factor_;
+	bufs_buffer[2].offset_ += time * bufs_buffer[2].factor_;
+	bufs_buffer[1].offset_ += time * bufs_buffer[1].factor_;
+	bufs_buffer[0].offset_ += time * bufs_buffer[0].factor_;
 }
 
 long Effects_Buffer::read_samples( int16_t * out, long out_size )
@@ -825,9 +822,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
         if ( pair_count )
 	{
 		if ( no_effects )
-		{
 			mixer_read_pairs( out, pair_count );
-		}
 		else
 		{
 			int pairs_remain = pair_count;

@@ -83,15 +83,15 @@ void Gb_Env::clock_envelope()
 
 void Gb_Sweep_Square::calc_sweep( bool update )
 {
-        int const shift = regs [0] & SHIFT_MASK;
-        int const delta = sweep_freq >> shift;
+	int shift, delta, freq;
+
+        shift = regs [0] & SHIFT_MASK;
+        delta = sweep_freq >> shift;
         sweep_neg = (regs [0] & 0x08) != 0;
-        int const freq = sweep_freq + (sweep_neg ? -delta : delta);
+        freq = sweep_freq + (sweep_neg ? -delta : delta);
 
         if ( freq > 0x7FF )
-        {
                 enabled = false;
-        }
         else if ( shift && update )
         {
                 sweep_freq = freq;
@@ -175,9 +175,7 @@ INLINE void Gb_Env::zombie_volume( int old, int data )
                         v = 16 - v;
                 }
                 else if ( (old & 0x0F) == 8 )
-                {
                         v++;
-                }
         }
         else
         {
