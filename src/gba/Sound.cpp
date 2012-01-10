@@ -137,10 +137,7 @@ void Gba_Pcm::apply_control( int idx )
 	if ( output != out )
 	{
 		if ( output )
-		{
-			output->set_modified();
 			pcm_synth.offset( SOUND_CLOCK_TICKS - soundTicks, -last_amp, output );
-		}
 		last_amp = 0;
 		output = out;
 	}
@@ -151,9 +148,6 @@ void Gba_Pcm::end_frame( int time )
 	last_time -= time;
 	if ( last_time < -2048 )
 		last_time = -2048;
-
-	if ( output )
-		output->set_modified();
 }
 
 void Gba_Pcm::update( int dac )

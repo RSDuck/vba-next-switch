@@ -1,4 +1,4 @@
-// Gb_Snd_Emu 0.2.0. http://www.slack.net/~ant/
+/* Gb_Snd_Emu 0.2.0. http://www.slack.net/~ant/ */
 
 #include "Gb_Apu.h"
 
@@ -24,6 +24,9 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 #define TRIGGER_MASK 0x80
 #define LENGTH_ENABLED 0x40
 
+#define VOLUME_SHIFT_PLUS_FOUR	6
+#define SIZE20_MASK 0x20
+
 void Gb_Osc::reset()
 {
         output   = 0;
@@ -35,16 +38,15 @@ void Gb_Osc::reset()
 
 INLINE void Gb_Osc::update_amp( int32_t time, int new_amp )
 {
-        output->set_modified();
-        int delta = new_amp - last_amp;
+	int delta;
+
+        delta = new_amp - last_amp;
         if ( delta )
         {
                 last_amp = new_amp;
                 med_synth->offset( time, delta, output );
         }
 }
-
-// Units
 
 void Gb_Osc::clock_length()
 {
@@ -320,11 +322,11 @@ void Gb_Apu::write_osc( int index, int reg, int old_data, int data )
 	}
 }
 
-// Synthesis
+/* Synthesis*/
 
 void Gb_Square::run( int32_t time, int32_t end_time )
 {
-        // Calc duty and phase
+        /* Calc duty and phase*/
         static unsigned char const duty_offsets [4] = { 1, 1, 3, 7 };
         static unsigned char const duties       [4] = { 1, 2, 4, 6 };
         int const duty_code = regs [1] >> 6;
@@ -332,13 +334,13 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         int32_t duty = duties [duty_code];
         if ( mode == MODE_AGB )
         {
-                // AGB uses inverted duty
+                /* AGB uses inverted duty*/
                 duty_offset -= duty;
                 duty = 8 - duty;
         }
         int ph = (phase + duty_offset) & 7;
 
-        // Determine what will be generated
+        /* Determine what will be generated*/
         int vol = 0;
         Blip_Buffer* const out = output;
         if ( out )
@@ -353,7 +355,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                         if ( mode == MODE_AGB )
                                 amp = -(vol >> 1);
 
-                        // Play inaudible frequencies as constant amplitude
+                        /* Play inaudible frequencies as constant amplitude*/
                         if ( frequency() >= 0x7FA && delay < CLK_MUL_MUL_32 )
                         {
                                 amp += (vol * duty) >> 3;
@@ -369,21 +371,21 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                 update_amp( time, amp );
         }
 
-        // Generate wave
+        /* Generate wave*/
         time += delay;
         if ( time < end_time )
         {
                 int const per = period();
                 if ( !vol )
                 {
-                        // Maintain phase when not playing
+                        /* Maintain phase when not playing*/
                         int count = (end_time - time + per - 1) / per;
-                        ph += count; // will be masked below
+                        ph += count; /* will be masked below*/
                         time += (int32_t) count * per;
                 }
                 else
                 {
-                        // Output amplitude transitions
+                        /* Output amplitude transitions*/
                         int delta = vol;
                         do
                         {
@@ -405,45 +407,45 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         delay = time - end_time;
 }
 
-// Quickly runs LFSR for a large number of clocks. For use when noise is generating
-// no sound.
+/* Quickly runs LFSR for a large number of clocks. For use when noise is generating*/
+/* no sound.*/
 static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 {
-	// optimization used in several places:
-	// ((s & (1 << b)) << n) ^ ((s & (1 << b)) << (n + 1)) = (s & (1 << b)) * (3 << n)
+	/* optimization used in several places:*/
+	/* ((s & (1 << b)) << n) ^ ((s & (1 << b)) << (n + 1)) = (s & (1 << b)) * (3 << n)*/
 
 	if ( mask == 0x4000 )
 	{
 		if ( count >= 32767 )
 			count %= 32767;
 
-		// Convert from Fibonacci to Galois configuration,
-		// shifted left 1 bit
+		/* Convert from Fibonacci to Galois configuration,*/
+		/* shifted left 1 bit*/
 		s ^= (s & 1) * 0x8000;
 
-		// Each iteration is equivalent to clocking LFSR 255 times
+		/* Each iteration is equivalent to clocking LFSR 255 times*/
 		while ( (count -= 255) > 0 )
 			s ^= ((s & 0xE) << 12) ^ ((s & 0xE) << 11) ^ (s >> 3);
 		count += 255;
 
-		// Each iteration is equivalent to clocking LFSR 15 times
-		// (interesting similarity to single clocking below)
+		/* Each iteration is equivalent to clocking LFSR 15 times*/
+		/* (interesting similarity to single clocking below)*/
 		while ( (count -= 15) > 0 )
 			s ^= ((s & 2) * (3 << 13)) ^ (s >> 1);
 		count += 15;
 
-		// Remaining singles
+		/* Remaining singles*/
 		do{
 			--count;
 			s = ((s & 2) * (3 << 13)) ^ (s >> 1);
 		}while(count >= 0);
 
-		// Convert back to Fibonacci configuration
+		/* Convert back to Fibonacci configuration*/
 		s &= 0x7FFF;
 	}
 	else if ( count < 8)
 	{
-		// won't fully replace upper 8 bits, so have to do the unoptimized way
+		/* won't fully replace upper 8 bits, so have to do the unoptimized way*/
 		do{
 			--count;
 			s = (s >> 1 | mask) ^ (mask & -((s - 1) & 2));
@@ -455,28 +457,28 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 		{
 			count %= 127;
 			if ( !count )
-				count = 127; // must run at least once
+				count = 127; /* must run at least once*/
 		}
 
-		// Need to keep one extra bit of history
+		/* Need to keep one extra bit of history*/
 		s = s << 1 & 0xFF;
 
-		// Convert from Fibonacci to Galois configuration,
-		// shifted left 2 bits
+		/* Convert from Fibonacci to Galois configuration,*/
+		/* shifted left 2 bits*/
 		s ^= (s & 2) * 0x80;
 
-		// Each iteration is equivalent to clocking LFSR 7 times
-		// (interesting similarity to single clocking below)
+		/* Each iteration is equivalent to clocking LFSR 7 times*/
+		/* (interesting similarity to single clocking below)*/
 		while ( (count -= 7) > 0 )
 			s ^= ((s & 4) * (3 << 5)) ^ (s >> 1);
 		count += 7;
 
-		// Remaining singles
+		/* Remaining singles*/
 		while ( --count >= 0 )
 			s = ((s & 4) * (3 << 5)) ^ (s >> 1);
 
-		// Convert back to Fibonacci configuration and
-		// repeat last 8 bits above significant 7
+		/* Convert back to Fibonacci configuration and*/
+		/* repeat last 8 bits above significant 7*/
 		s = (s << 7 & 0x7F80) | (s >> 1 & 0x7F);
 	}
 
@@ -485,7 +487,7 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 
 void Gb_Noise::run( int32_t time, int32_t end_time )
 {
-        // Determine what will be generated
+        /* Determine what will be generated*/
         int vol = 0;
         Blip_Buffer* const out = output;
         if ( out )
@@ -507,7 +509,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         }
                 }
 
-                // AGB negates final output
+                /* AGB negates final output*/
                 if ( mode == MODE_AGB )
                 {
                         vol = -vol;
@@ -517,7 +519,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 update_amp( time, amp );
         }
 
-        // Run timer and calculate time of next LFSR clock
+        /* Run timer and calculate time of next LFSR clock*/
         static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
         int const period1 = period1s [regs [3] & 7] * CLK_MUL;
         {
@@ -530,7 +532,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 delay = count * period1 - extra;
         }
 
-        // Generate wave
+        /* Generate wave*/
         if ( time < end_time )
         {
                 unsigned const mask = lfsr_mask();
@@ -543,14 +545,14 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
                 else if ( !vol )
                 {
-                        // Maintain phase when not playing
+                        /* Maintain phase when not playing*/
                         int count = (end_time - time + per - 1) / per;
                         time += (int32_t) count * per;
                         bits = run_lfsr( bits, ~mask, count );
                 }
                 else
                 {
-                        // Output amplitude transitions
+                        /* Output amplitude transitions*/
                         int delta = -vol;
                         do
                         {
@@ -573,18 +575,15 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         }
 }
 
-#define volume_shift	2
-#define volume_shift_plus_four	6
-#define size20_mask 0x20
 
 void Gb_Wave::run( int32_t time, int32_t end_time )
 {
-        // Calc volume
+        /* Calc volume*/
         static unsigned char const volumes [8] = { 0, 4, 2, 1, 3, 3, 3, 3 };
-        int const volume_idx = regs [2] >> 5 & (agb_mask | 3); // 2 bits on DMG/CGB, 3 on AGB
+        int const volume_idx = regs [2] >> 5 & (agb_mask | 3); /* 2 bits on DMG/CGB, 3 on AGB*/
         int const volume_mul = volumes [volume_idx];
 
-        // Determine what will be generated
+        /* Determine what will be generated*/
         int playing = false;
         Blip_Buffer* const out = output;
         if ( out )
@@ -592,10 +591,10 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                 int amp = dac_off_amp;
                 if ( dac_enabled() )
                 {
-                        // Play inaudible frequencies as constant amplitude
-                        amp = 128; // really depends on average of all samples in wave
+                        /* Play inaudible frequencies as constant amplitude*/
+                        amp = 128; /* really depends on average of all samples in wave*/
 
-                        // if delay is larger, constant amplitude won't start yet
+                        /* if delay is larger, constant amplitude won't start yet*/
                         if ( frequency() <= 0x7FB || delay > CLK_MUL_MUL_15 )
                         {
                                 if ( volume_mul )
@@ -604,50 +603,50 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                                 amp = (sample_buf << (phase << 2 & 4) & 0xF0) * playing;
                         }
 
-                        amp = ((amp * volume_mul) >> (volume_shift_plus_four)) - DAC_BIAS;
+                        amp = ((amp * volume_mul) >> VOLUME_SHIFT_PLUS_FOUR) - DAC_BIAS;
                 }
                 update_amp( time, amp );
         }
 
-        // Generate wave
+        /* Generate wave*/
         time += delay;
         if ( time < end_time )
         {
                 unsigned char const* wave = wave_ram;
 
-                // wave size and bank
+                /* wave size and bank*/
                 int const flags = regs [0] & agb_mask;
-                int const wave_mask = (flags & size20_mask) | 0x1F;
+                int const wave_mask = (flags & SIZE20_MASK) | 0x1F;
                 int swap_banks = 0;
                 if ( flags & BANK40_MASK)
                 {
-                        swap_banks = flags & size20_mask;
+                        swap_banks = flags & SIZE20_MASK;
                         wave += BANK_SIZE_DIV_TWO - (swap_banks >> 1);
                 }
 
                 int ph = phase ^ swap_banks;
-                ph = (ph + 1) & wave_mask; // pre-advance
+                ph = (ph + 1) & wave_mask; /* pre-advance*/
 
                 int const per = period();
                 if ( !playing )
                 {
-                        // Maintain phase when not playing
+                        /* Maintain phase when not playing*/
                         int count = (end_time - time + per - 1) / per;
-                        ph += count; // will be masked below
+                        ph += count; /* will be masked below*/
                         time += (int32_t) count * per;
                 }
                 else
                 {
-                        // Output amplitude transitions
+                        /* Output amplitude transitions*/
                         int lamp = last_amp + DAC_BIAS;
                         do
                         {
-                                // Extract nybble
+                                /* Extract nybble*/
                                 int nybble = wave [ph >> 1] << (ph << 2 & 4) & 0xF0;
                                 ph = (ph + 1) & wave_mask;
 
-                                // Scale by volume
-                                int amp = (nybble * volume_mul) >> (volume_shift_plus_four);
+                                /* Scale by volume*/
+                                int amp = (nybble * volume_mul) >> VOLUME_SHIFT_PLUS_FOUR;
 
                                 int delta = amp - lamp;
                                 if ( delta )
@@ -660,13 +659,13 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
                         while ( time < end_time );
                         last_amp = lamp - DAC_BIAS;
                 }
-                ph = (ph - 1) & wave_mask; // undo pre-advance and mask position
+                ph = (ph - 1) & wave_mask; /* undo pre-advance and mask position*/
 
-                // Keep track of last byte read
+                /* Keep track of last byte read*/
                 if ( enabled )
                         sample_buf = wave [ph >> 1];
 
-                phase = ph ^ swap_banks; // undo swapped banks
+                phase = ph ^ swap_banks; /* undo swapped banks*/
         }
         delay = time - end_time;
 }

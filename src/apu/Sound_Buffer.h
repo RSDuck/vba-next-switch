@@ -1,6 +1,5 @@
-// Multi-channel sound buffer interface, and basic mono and stereo buffers
+/* Multi-channel sound buffer interface, and basic mono and stereo buffers */
 
-// Blip_Buffer 0.4.1
 #ifndef MULTI_BUFFER_H
 #define MULTI_BUFFER_H
 
@@ -19,18 +18,10 @@ struct blip_buffer_state_t;
 class Blip_Buffer
 {
 	public:
-	uint32_t non_silent() const;
-
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
 	// to 1/4 second) and clears buffer. If there isn't enough memory, leaves buffer
 	// untouched and returns "Out of memory", otherwise returns NULL.
 	const char * set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
-
-
-	// Ends current time frame of specified duration and makes its samples available
-	// (along with any still-unread samples) for reading with read_samples(). Begins
-	// a new time frame at the end of the current frame.
-	void end_frame( int32_t time );
 
 	// Reads at most 'max_samples' out of buffer into 'dest', removing them from
 	// the buffer. Returns number of samples actually read and removed. If stereo is
@@ -38,25 +29,24 @@ class Blip_Buffer
 	// easy interleving of two channels into a stereo output buffer.
 	long read_samples( int16_t* dest, long count);
 
-	// Additional features
+	/* Additional features*/
 
-	// Removes all available samples and clear buffer to silence. If 'entire_buffer' is
-	// false, just clears out any samples waiting rather than the entire buffer.
-	void clear( int entire_buffer = 1 );
+	/* Removes all available samples and clear buffer to silence.*/
+	void clear( void);
 
-	// Number of samples available for reading with read_samples()
+	/* Number of samples available for reading with read_samples()*/
 	long samples_avail() const;
 
-	// Removes 'count' samples from those waiting to be read
+	/* Removes 'count' samples from those waiting to be read*/
 	void remove_samples( long count );
 
-	// Sets frequency high-pass filter frequency, where higher values reduce bass more
+	/* Sets frequency high-pass filter frequency, where higher values reduce bass more*/
 	void bass_freq( int frequency );
 
-	// Experimental features
+	/* Experimental features*/
 
-	// Saves state, including high-pass filter and tails of last deltas.
-	// All samples must have been read from buffer before calling this.
+	/* Saves state, including high-pass filter and tails of last deltas.*/
+	/* All samples must have been read from buffer before calling this.*/
 	void save_state( blip_buffer_state_t* out );
 
 	// Loads state. State must have been saved from Blip_Buffer with same
@@ -64,15 +54,7 @@ class Blip_Buffer
 	// Clears buffer before loading state.
 	void load_state( blip_buffer_state_t const& in );
 
-	// Signals that sound has been added to buffer. Could be done automatically in
-	// Blip_Synth, but that would affect performance more, as you can arrange that
-	// this is called only once per time frame rather than for every delta.
-	void set_modified() { modified_ = this; }
-
-	// not documented yet
-	Blip_Buffer* clear_modified() { Blip_Buffer* b = modified_; modified_ = 0; return b; }
-	void remove_silence( long count );
-	uint32_t resampled_time( int32_t t ) const { return t * factor_ + offset_; }
+	/* not documented yet*/
 	uint32_t clock_rate_factor( long clock_rate ) const;
 	long clock_rate_;
 
@@ -83,13 +65,9 @@ class Blip_Buffer
 	int32_t * buffer_;
 	int32_t buffer_size_;
 	int32_t reader_accum_;
-	int bass_shift_;
-	Blip_Buffer* modified_; /* non-zero = true (more optimal than using bool, heh)*/
-	int32_t last_non_silence;
 	Blip_Buffer();
 	~Blip_Buffer();
 	private:
-	// noncopyable
 	Blip_Buffer( const Blip_Buffer& );
 	Blip_Buffer& operator = ( const Blip_Buffer& );
 	int bass_freq_;
@@ -121,7 +99,7 @@ class Blip_Synth_Fast_
 	Blip_Synth_Fast_();
 };
 
-// Quality level, better = slower. In general, use blip_good_quality.
+/* Quality level, better = slower. In general, use blip_good_quality.*/
 const int blip_med_quality  = 8;
 const int blip_good_quality = 12;
 const int blip_high_quality = 16;
@@ -168,9 +146,9 @@ class Blip_Synth {
 #define BLIP_RESTRICT
 #endif
 
-// Optimized reading from Blip_Buffer, for use in custom sample output
+/* Optimized reading from Blip_Buffer, for use in custom sample output*/
 
-// Begins reading from buffer. Name should be unique to the current block.
+/* Begins reading from buffer. Name should be unique to the current block.*/
 #define BLIP_READER_BEGIN( name, blip_buffer ) \
         const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
@@ -196,8 +174,6 @@ class Blip_Synth {
 // experimental
 #define BLIP_READER_ADJ_( name, offset ) (name##_reader_buf += offset)
 
-int32_t const blip_reader_idx_factor = sizeof (int32_t);
-
 #define BLIP_READER_NEXT_IDX_( name, idx ) {\
         name##_reader_accum -= name##_reader_accum >> BLIP_READER_DEFAULT_BASS;\
         name##_reader_accum += name##_reader_buf [(idx)];\
@@ -215,9 +191,8 @@ int32_t const blip_reader_idx_factor = sizeof (int32_t);
         #define BLIP_CLAMP_( in ) (int16_t) in != in
 #endif
 
-// Clamp sample to int16_t range
-#define BLIP_CLAMP( sample, out )\
-        { if ( BLIP_CLAMP_( (sample) ) ) (out) = ((sample) >> 24) ^ 0x7FFF; }
+/* Clamp sample to int16_t range */
+#define BLIP_CLAMP( sample, out ) { if ( BLIP_CLAMP_( (sample) ) ) (out) = ((sample) >> 24) ^ 0x7FFF; }
 
 struct blip_buffer_state_t
 {
@@ -226,35 +201,29 @@ struct blip_buffer_state_t
         int32_t buf [BLIP_BUFFER_EXTRA_];
 };
 
-// End of public interface
-
-
 template<int quality,int range>
 INLINE void Blip_Synth<quality,range>::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
-	// If this assertion fails, it means that an attempt was made to add a delta
-	// at a negative time or past the end of the buffer.
-	//assert( (int32_t) (time >> BLIP_BUFFER_ACCURACY) < blip_buf->buffer_size_ );
+	int32_t left, right, phase;
+	int32_t BLIP_RESTRICT *buf;
 
 	delta *= impl.delta_factor;
-	int32_t* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
-	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & BLIP_RES_MIN_ONE);
+	buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
+	phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & BLIP_RES_MIN_ONE);
 
-	int32_t left = buf [0] + delta;
+	left = buf [0] + delta;
 
-	// Kind of crappy, but doing shift after multiply results in overflow.
-	// Alternate way of delaying multiply by delta_factor results in worse
-	// sub-sample resolution.
-	int32_t right = (delta >> BLIP_PHASE_BITS) * phase;
+	/* Kind of crappy, but doing shift after multiply results in overflow.
+	Alternate way of delaying multiply by delta_factor results in worse
+	sub-sample resolution.*/
+	right = (delta >> BLIP_PHASE_BITS) * phase;
+
 	left  -= right;
 	right += buf [1];
 
 	buf [0] = left;
 	buf [1] = right;
 }
-
-#undef BLIP_FWD
-#undef BLIP_REV
 
 template<int quality,int range>
 INLINE void Blip_Synth<quality,range>::offset( int32_t t, int delta, Blip_Buffer* buf ) const
@@ -311,7 +280,6 @@ class Stereo_Buffer
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer [BUFS_SIZE];
-		bool immediate_removal_;
 	private:
 		Blip_Buffer* mixer_bufs [3];
 		int mixer_samples_read;
@@ -388,7 +356,6 @@ class Effects_Buffer {
 		long read_samples( int16_t*, long );
 		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
 		void mixer_read_pairs( int16_t* out, int count );
-		bool immediate_removal_;
 		long sample_rate_;
 		int length_;
 		int channel_count_;

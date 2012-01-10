@@ -1,6 +1,6 @@
-// Private oscillators used by Gb_Apu
+/* Private oscillators used by Gb_Apu*/
 
-// Gb_Snd_Emu 0.2.0
+/* Gb_Snd_Emu 0.2.0*/
 #ifndef GB_OSCS_H
 #define GB_OSCS_H
 
@@ -17,30 +17,40 @@
 #define CLK_MUL_MUL_32 128
 #define DAC_BIAS 7
 
+#define PERIOD_MASK 0x70
+#define SHIFT_MASK 0x07
+
+#define PERIOD2_MASK 0x1FFFF
+
+#define BANK40_MASK 0x40
+#define BANK_SIZE 32
+#define BANK_SIZE_MIN_ONE 31
+#define BANK_SIZE_DIV_TWO 16
+
 class Gb_Osc
 {
 	public:
-	Blip_Buffer* outputs [4];	// NULL, right, left, center
-	Blip_Buffer* output;		// where to output sound
-	uint8_t * regs;			// osc's 5 registers
-	int mode;			// mode_dmg, mode_cgb, mode_agb
-	int dac_off_amp;		// amplitude when DAC is off
-	int last_amp;			// current amplitude in Blip_Buffer
+	Blip_Buffer* outputs [4];	/* NULL, right, left, center*/
+	Blip_Buffer* output;		/* where to output sound*/
+	uint8_t * regs;			/* osc's 5 registers*/
+	int mode;			/* mode_dmg, mode_cgb, mode_agb*/
+	int dac_off_amp;		/* amplitude when DAC is off*/
+	int last_amp;			/* current amplitude in Blip_Buffer*/
 	typedef Blip_Synth<blip_good_quality,1> Good_Synth;
 	typedef Blip_Synth<blip_med_quality ,1> Med_Synth;
 	Good_Synth const* good_synth;
 	Med_Synth  const* med_synth;
 
-	int delay;			// clocks until frequency timer expires
-	int length_ctr;			// length counter
-	unsigned phase;			// waveform phase (or equivalent)
-	bool enabled;			// internal enabled flag
+	int delay;			/* clocks until frequency timer expires*/
+	int length_ctr;			/* length counter*/
+	unsigned phase;			/* waveform phase (or equivalent)*/
+	bool enabled;			/* internal enabled flag*/
 
 	void clock_length();
 	void reset();
 	protected:
 
-	// 11-bit frequency in NRx3 and NRx4
+	/* 11-bit frequency in NRx3 and NRx4*/
 	int frequency() const { return (regs [4] & 7) * 0x100 + regs [3]; }
 
 	void update_amp( int32_t, int new_amp );
@@ -64,7 +74,7 @@ class Gb_Env : public Gb_Osc
 		Gb_Osc::reset();
 	}
 	protected:
-	// Non-zero if DAC is enabled
+	/* Non-zero if DAC is enabled*/
 	int dac_enabled() const { return regs [2] & 0xF8; }
 	private:
 	void zombie_volume( int old, int data );
@@ -80,15 +90,13 @@ class Gb_Square : public Gb_Env
 	void reset()
 	{
 		Gb_Env::reset();
-		delay = 0x40000000; // TODO: something less hacky (never clocked until first trigger)
+		delay = 0x40000000; /* TODO: something less hacky (never clocked until first trigger)*/
 	}
 	private:
-	// Frequency timer period
+	/* Frequency timer period*/
 	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_4); }
 };
 
-#define PERIOD_MASK 0x70
-#define SHIFT_MASK 0x07
 
 class Gb_Sweep_Square : public Gb_Square
 {
@@ -114,12 +122,11 @@ class Gb_Sweep_Square : public Gb_Square
 	void reload_sweep_timer();
 };
 
-#define PERIOD2_MASK 0x1FFFF
 
 class Gb_Noise : public Gb_Env
 {
 	public:
-	int divider; // noise has more complex frequency divider setup
+	int divider; /* noise has more complex frequency divider setup*/
 
 	void run( int32_t, int32_t );
 	void write_register( int frame_phase, int reg, int old_data, int data );
@@ -128,7 +135,7 @@ class Gb_Noise : public Gb_Env
 	{
 		divider = 0;
 		Gb_Env::reset();
-		delay = CLK_MUL_MUL_4; // TODO: remove?
+		delay = CLK_MUL_MUL_4; /* TODO: remove?*/
 	}
 	private:
 	int period2_index() const { return regs [3] >> 4; }
@@ -136,22 +143,18 @@ class Gb_Noise : public Gb_Env
 	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
 };
 
-#define BANK40_MASK 0x40
-#define BANK_SIZE 32
-#define BANK_SIZE_MIN_ONE 31
-#define BANK_SIZE_DIV_TWO 16
 
 class Gb_Wave : public Gb_Osc
 {
 	public:
-	int sample_buf;		// last wave RAM byte read (hardware has this as well)
-	int agb_mask;		// 0xFF if AGB features enabled, 0 otherwise
-	uint8_t* wave_ram;	// 32 bytes (64 nybbles), stored in APU
+	int sample_buf;		/* last wave RAM byte read (hardware has this as well)*/
+	int agb_mask;		/* 0xFF if AGB features enabled, 0 otherwise*/
+	uint8_t* wave_ram;	/* 32 bytes (64 nybbles), stored in APU*/
 
 	void write_register( int frame_phase, int reg, int old_data, int data );
 	void run( int32_t, int32_t );
 
-	// Reads/writes wave RAM
+	/* Reads/writes wave RAM*/
 	int read( unsigned addr ) const;
 	void write( unsigned addr, int data );
 
@@ -164,15 +167,15 @@ class Gb_Wave : public Gb_Osc
 	private:
 	friend class Gb_Apu;
 
-	// Frequency timer period
+	/* Frequency timer period*/
 	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_2); }
 
-	// Non-zero if DAC is enabled
+	/* Non-zero if DAC is enabled*/
 	int dac_enabled() const { return regs [0] & 0x80; }
 
 	void corrupt_wave();
 
-	// Wave index that would be accessed, or -1 if no access would occur
+	/* Wave index that would be accessed, or -1 if no access would occur*/
 	int access( unsigned addr ) const;
 };
 
