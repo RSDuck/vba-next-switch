@@ -124,17 +124,11 @@ class Blip_Synth
 	}
 };
 
-#if __GNUC__ >= 3 || _MSC_VER >= 1100
-#define BLIP_RESTRICT __restrict
-#else
-#define BLIP_RESTRICT
-#endif
-
 /* Optimized reading from Blip_Buffer, for use in custom sample output*/
 
 /* Begins reading from buffer. Name should be unique to the current block.*/
 #define BLIP_READER_BEGIN( name, blip_buffer ) \
-        const int32_t * BLIP_RESTRICT name##_reader_buf = (blip_buffer).buffer_;\
+        const int32_t * name##_reader_buf = (blip_buffer).buffer_;\
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
 
@@ -182,7 +176,7 @@ struct blip_buffer_state_t
 INLINE void Blip_Synth::offset_resampled( uint32_t time, int delta, Blip_Buffer* blip_buf ) const
 {
 	int32_t left, right, phase;
-	int32_t BLIP_RESTRICT *buf;
+	int32_t *buf;
 
 	delta *= delta_factor;
 	buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);

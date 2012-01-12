@@ -131,11 +131,11 @@ Blip_Synth::Blip_Synth()
 
 long Blip_Buffer::read_samples( int16_t * out, long count)
 {
-	const int32_t * BLIP_RESTRICT reader_reader_buf = buffer_;
+	const int32_t * reader_reader_buf = buffer_;
 	int32_t reader_reader_accum = reader_accum_;
 
 	BLIP_READER_ADJ_( reader, count );
-	int16_t * BLIP_RESTRICT out_tmp = out + count;
+	int16_t * out_tmp = out + count;
 	int32_t offset = (int32_t) -count;
 
 	do
@@ -266,7 +266,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	/* except that buffer isn't cleared, so caller can encounter*/
 	/* subtle problems and not realize the cause.*/
 	mixer_samples_read += count;
-	int16_t* BLIP_RESTRICT outtemp = out + count * STEREO;
+	int16_t* outtemp = out + count * STEREO;
 
 	/* do left + center and right + center separately to reduce register load*/
 	Blip_Buffer* const* buf = &mixer_bufs [2];
@@ -335,7 +335,7 @@ void Effects_Buffer::clear()
 void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 {
 	int offset, s_tmp;
-	int16_t * BLIP_RESTRICT outtemp;
+	int16_t * outtemp;
 
 	/* TODO: if caller never marks buffers as modified, uses mono
 	   except that buffer isn't cleared, so caller can encounter
@@ -875,7 +875,7 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                         {
                                 if ( ( buf->echo == !!echo_phase ) )
                                 {
-                                        stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
+                                        stereo_fixed_t* out = (stereo_fixed_t*) &echo [echo_pos];
                                         BLIP_READER_BEGIN( in, *buf );
                                         BLIP_READER_ADJ_( in, mixer_samples_read );
                                         int const vol_0 = buf->vol [0];
@@ -926,11 +926,11 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
                                 int low_pass = s.low_pass [i];
 
                                 int * echo_end = &echo [echo_size + i];
-                                int const* BLIP_RESTRICT in_pos = &echo [echo_pos + i];
+                                int const* in_pos = &echo [echo_pos + i];
                                 int out_offset = echo_pos + i + s.delay [i];
                                 if ( out_offset >= echo_size )
                                         out_offset -= echo_size;
-                                int * BLIP_RESTRICT out_pos = &echo [out_offset];
+                                int * out_pos = &echo [out_offset];
 
                                 /* break into up to three chunks to avoid having to handle wrap-around*/
                                 /* in middle of core loop*/
@@ -970,9 +970,9 @@ void Effects_Buffer::mix_effects( int16_t * out_, int pair_count )
 
         /* clamp to 16 bits*/
         {
-                stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
+                stereo_fixed_t const* in = (stereo_fixed_t*) &echo [echo_pos];
                 typedef int16_t stereo_blip_sample_t [STEREO];
-                stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
+                stereo_blip_sample_t* out = (stereo_blip_sample_t*) out_;
                 int count = unsigned (echo_size - echo_pos) / (unsigned) STEREO;
                 int remain = pair_count;
                 if ( count > remain )

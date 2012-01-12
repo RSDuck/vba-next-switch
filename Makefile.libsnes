@@ -30,6 +30,13 @@ else ifeq ($(platform), ps3)
    AR = ppu-lv2-ar
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__
+else ifeq ($(platform), snc-ps3)
+   TARGET := libsnes.a
+   CC = ps3ppusnc
+   CXX = ps3ppusnc
+   AR = ps3snarl
+   ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
+   PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), xenon)
    TARGET := libsnes.a
    CC = xenon-gcc
@@ -87,15 +94,25 @@ OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS)
 
 VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
-CFLAGS += -std=gnu99 $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
+ifeq ($(platform), snc-ps3)
+WARNING_DEFINES =
+CODE_DEFINES =
+else
+WARNING_DEFINES = -Wl, no-undefined -Wl,
+CODE_DEFINES = -std=gnu99
+endif
+
+CFLAGS += $(CODE_DEFINES) $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
 CXXFLAGS += $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
-LDFLAGS += -Wl,-no-undefined -Wl,--version-script=$(LIBSNES_DIR)/link.T
+LDFLAGS += -$(WARNING_DEFINES) --version-script=$(LIBSNES_DIR)/link.T
 
 INCDIRS := -I$(VBA_DIR)
 LIBS :=
 
 $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
+	$(AR) rcs $@ $(OBJECTS)
+else ifeq ($(platform), snc-ps3)
 	$(AR) rcs $@ $(OBJECTS)
 else ifeq ($(platform), xenon)
 	$(AR) rcs $@ $(OBJECTS)

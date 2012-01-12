@@ -17,7 +17,13 @@ static INLINE int isel( int a, int x, int y )
 #endif
 
 #ifndef LSB_FIRST
-#if defined(__GNUC__) && defined(__ppc__)
+#if defined(__SNC__)
+#include <ppu_intrinsics.h>
+#define READ16LE( base )        (__builtin_lhbrx(base, 0))
+#define READ32LE( base )        (__builtin_lwbrx(base, 0))
+#define WRITE16LE( base, value )    (__builtin_sthbrx(value, base, 0))
+#define WRITE32LE( base, value )    (__builtin_stwbrx(value, base, 0))
+#elif defined(__GNUC__) && defined(__ppc__)
 #define READ16LE( base )        ({unsigned ppc_lhbrx_; asm( "lhbrx %0,0,%1" : "=r" (ppc_lhbrx_) : "r" (base), "0" (ppc_lhbrx_) ); ppc_lhbrx_;})
 #define READ32LE( base )        ({unsigned ppc_lwbrx_; asm( "lwbrx %0,0,%1" : "=r" (ppc_lwbrx_) : "r" (base), "0" (ppc_lwbrx_) ); ppc_lwbrx_;})
 #define WRITE16LE( base, value )    ({asm( "sthbrx %0,0,%1" : : "r" (value), "r" (base) );})

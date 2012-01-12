@@ -12,13 +12,13 @@ typedef off_t __off64_t; /* off_t is 64 bits on BSD. */
 #define	fseeko64 fseeko
 #define	ftello64 ftello
 #else
-#ifdef GEKKO
+#if defined(GEKKO) || defined(__SNC__)
 #define	fseeko64 fseek
 #define	ftello64 ftell
 typedef off_t __off64_t;
 #else
 typedef off64_t __off64_t;
-#endif /* GEKKO */
+#endif /* GEKKO || __SNC__ */
 #endif /* __APPLE__ || BSD */
 #endif /* __GNUC__ */
 
