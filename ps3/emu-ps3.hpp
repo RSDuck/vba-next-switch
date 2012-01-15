@@ -82,7 +82,6 @@ enum {
 float Emulator_GetFontSize();
 void Emulator_StopROMRunning();
 void Emulator_StartROMRunning(uint32_t set_is_running = 1);
-void Emulator_RequestLoadROM(const char * filename);
 bool Emulator_IsROMLoaded();
 void vba_toggle_sgb_border(bool set_border);
 void emulator_save_settings(uint64_t filetosave);
@@ -91,9 +90,15 @@ void emulator_toggle_sound(uint64_t soundmode);
 void emulator_set_controls(const char * config_file, int mapping_enum, const char * title);
 void emulator_implementation_set_texture(const char * fname);
 void set_text_message(const char * message, uint32_t speed);
+void vba_init_rom (void);
 
 extern int				srcWidth, srcHeight;
+extern char 				current_rom[MAX_PATH_LENGTH];
+extern bool 				sgb_border_change;
 extern oskutil_params			oskutil_handle;
+extern uint32_t				is_running;
+extern uint32_t				emulator_initialized;
+extern int				mode_switch;
 
 extern char contentInfoPath[MAX_PATH_LENGTH];
 extern char usrDirPath[MAX_PATH_LENGTH];

@@ -1,33 +1,42 @@
 /******************************************************************************* 
- * menu.cpp - VBANext PS3
+ * menu.c - VBA Next PS3
  *
- *  Created on: August 20, 2010
+ *  Created on: Oct 10, 2010
 ********************************************************************************/
 
-#include  <string.h>
+#include <cell/sysmodule.h>
+#include <sysutil/sysutil_screenshot.h>
 
 #include "cellframework2/input/pad_input.h"
 #include "cellframework2/fileio/file_browser.h"
 
-#include "emu-ps3.hpp"
-#include "menu.hpp"
-#include "ps3video.hpp"
-#include "ps3input.h"
 #include "conf/settings.h"
+
+#include "../src/gba/GBA.h"
+#include "../src/gba/Sound.h"
+#include "../src/gba/RTC.h"
+#ifdef USE_AGBPRINT
+#include "../src/gba/agbprint.h"
+#endif
+#include "../src/gb/gb.h"
+#include "../src/gb/gbSound.h"
+#include "../src/gb/gbGlobals.h"
+#include "../src/gba/Globals.h"
+#include "emu-ps3.hpp"
+#include "menu/menu-port-defines.h"
+#include "menu.hpp"
 
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
 #define NUM_ENTRY_PER_PAGE 19
-#define NUM_ENTRY_PER_SETTINGS_PAGE 18
 
-static menu menuStack[25];
-int menu_is_running = 0;			/* is the menu running*/
-static int menuStackindex = 0;
+menu menuStack[25];
+int menuStackindex = 0;
+uint32_t menu_is_running = false;		/* is the menu running?*/
 static bool set_initial_dir_tmpbrowser;
 filebrowser_t browser;				/* main file browser->for rom browser*/
 filebrowser_t tmpBrowser;			/* tmp file browser->for everything else*/
-
 uint32_t set_shader = 0;
 static uint32_t currently_selected_controller_menu = 0;
 
@@ -38,110 +47,115 @@ static menu menu_filebrowser = {
 	FILE_BROWSER_MENU,		/* enum*/
 	0,				/* selected item*/
 	0,				/* page*/
+	1,				/* maxpages */
 	1,				/* refreshpage*/
 	NULL				/* items*/
 };
 
 static menu menu_generalvideosettings = {
-"VIDEO |",			/* title*/
-GENERAL_VIDEO_MENU,		/* enum*/
-FIRST_VIDEO_SETTING,		/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_VIDEO_SETTING,		/* first setting*/
-MAX_NO_OF_VIDEO_SETTINGS,	/* max no of settings*/
-items_generalsettings		/* items*/
+	"VIDEO |",			/* title*/
+	GENERAL_VIDEO_MENU,		/* enum*/
+	FIRST_VIDEO_SETTING,		/* selected item*/
+	0,				/* page*/
+	MAX_NO_OF_VIDEO_SETTINGS/NUM_ENTRY_PER_PAGE,	/* max pages */
+	1,				/* refreshpage*/
+	FIRST_VIDEO_SETTING,		/* first setting*/
+	MAX_NO_OF_VIDEO_SETTINGS,	/* max no of path settings*/
+	items_generalsettings		/* items*/
 };
 
 static menu menu_generalaudiosettings = {
-"AUDIO |",			/* title*/
-GENERAL_AUDIO_MENU,		/* enum*/
-FIRST_AUDIO_SETTING,		/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_AUDIO_SETTING,		/* first setting*/
-MAX_NO_OF_AUDIO_SETTINGS,	/* max no of settings*/
-items_generalsettings		/* items*/
+	"AUDIO |",			/* title*/
+	GENERAL_AUDIO_MENU,		/* enum*/
+	FIRST_AUDIO_SETTING,		/* selected item*/
+	0,				/* page*/
+	MAX_NO_OF_AUDIO_SETTINGS/NUM_ENTRY_PER_PAGE,	/* max pages */
+	1,				/* refreshpage*/
+	FIRST_AUDIO_SETTING,		/* first setting*/
+	MAX_NO_OF_AUDIO_SETTINGS,	/* max no of path settings*/
+	items_generalsettings		/* items*/
 };
 
 static menu menu_emu_settings = {
-"VBA |",			/* title*/
-EMU_GENERAL_MENU,		/* enum*/
-FIRST_EMU_SETTING,		/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_EMU_SETTING,		/* first setting*/
-MAX_NO_OF_EMU_SETTINGS,		/* max no of settings*/
-items_generalsettings		/* items*/
+	EMU_MENU_TITLE,						/* title*/
+	EMU_GENERAL_MENU,					/* enum*/
+	FIRST_EMU_SETTING,					/* selected item*/
+	0,							/* page*/
+	MAX_NO_OF_EMU_SETTINGS/NUM_ENTRY_PER_PAGE,		/* max pages*/
+	1,                      				/* refreshpage*/
+	FIRST_EMU_SETTING,					/* first setting*/
+	MAX_NO_OF_EMU_SETTINGS,					/* max no of path settings*/
+	items_generalsettings					/* items*/
 };
 
 static menu menu_emu_videosettings = {
-"VBA VIDEO |",			/* title*/
-EMU_VIDEO_MENU,			/* enum*/
-FIRST_EMU_VIDEO_SETTING,	/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_EMU_VIDEO_SETTING,	/* first setting*/
-MAX_NO_OF_EMU_VIDEO_SETTINGS,	/* max no of settings*/
-items_generalsettings		/* items*/
+	VIDEO_MENU_TITLE,					/* title*/
+	EMU_VIDEO_MENU,						/* enum */
+	FIRST_EMU_VIDEO_SETTING,				/* selected item*/
+	0,							/* page*/
+	MAX_NO_OF_EMU_VIDEO_SETTINGS/NUM_ENTRY_PER_PAGE,	/* max pages */
+	1,							/* refreshpage*/
+	FIRST_EMU_VIDEO_SETTING,				/* first setting*/
+	MAX_NO_OF_EMU_VIDEO_SETTINGS,				/* max no of settings*/
+	items_generalsettings					/* items*/
 };
 
 static menu menu_emu_audiosettings = {
-"VBA AUDIO |",			/* title*/
-EMU_AUDIO_MENU,			/* enum*/
-FIRST_EMU_AUDIO_SETTING,	/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_EMU_AUDIO_SETTING,	/* first setting*/
-MAX_NO_OF_EMU_AUDIO_SETTINGS,	/* max no of settings*/
-items_generalsettings		/* items*/
+	AUDIO_MENU_TITLE,					/* title*/
+	EMU_AUDIO_MENU,						/* enum*/
+	FIRST_EMU_AUDIO_SETTING,				/* selected item*/
+	0,							/* page*/
+	MAX_NO_OF_EMU_AUDIO_SETTINGS/NUM_ENTRY_PER_PAGE,	/* max pages*/
+	1,							/* refreshpage*/
+	FIRST_EMU_AUDIO_SETTING,				/* first setting*/
+	MAX_NO_OF_EMU_AUDIO_SETTINGS,				/* max no of path settings*/
+	items_generalsettings					/* items*/
 };
 
 static menu menu_pathsettings = {
-"PATH |",			/* title*/
-PATH_MENU,			/* enum*/
-FIRST_PATH_SETTING,		/* selected item*/
-0,				/* page*/
-1,				/* refreshpage*/
-FIRST_PATH_SETTING,		/* first setting*/
-MAX_NO_OF_PATH_SETTINGS,	/* max no of settings*/
-items_generalsettings		/* items*/
+	"PATH |",						/* title*/
+	PATH_MENU,						/* enum*/
+	FIRST_PATH_SETTING,					/* selected item*/
+	0,							/* page*/
+	MAX_NO_OF_PATH_SETTINGS/NUM_ENTRY_PER_PAGE,		/* max pages*/
+	1,							/* refreshpage*/
+	FIRST_PATH_SETTING,					/* first setting*/
+	MAX_NO_OF_PATH_SETTINGS,				/* max no of path settings*/
+	items_generalsettings					/* items*/
 };
 
 static menu menu_controlssettings = {
-	"CONTROLS |",			/* title*/
-	CONTROLS_MENU,			/* enum*/
-	FIRST_CONTROLS_SETTING_PAGE_1,	/* selected item*/
-	0,				/* page*/
-	1,				/* refreshpage*/
-	FIRST_CONTROLS_SETTING_PAGE_1,	/* first setting*/
-	MAX_NO_OF_CONTROLS_SETTINGS,	/* max no of path settings*/
-	items_generalsettings		/* items*/
+	"CONTROLS |",						/* title */
+	CONTROLS_MENU,						/* enum */
+	FIRST_CONTROLS_SETTING_PAGE_1,				/* selected item */
+	0,							/* page */
+	MAX_NO_OF_CONTROLS_SETTINGS/NUM_ENTRY_PER_PAGE,		/* max pages */
+	1,							/* refreshpage */
+	FIRST_CONTROLS_SETTING_PAGE_1,				/* first setting */
+	MAX_NO_OF_CONTROLS_SETTINGS,				/* max no of path settings*/
+	items_generalsettings					/* items */
 };
 
 static void display_menubar(uint32_t menu_enum)
 {
-	cellDbgFontPuts		(0.09f,	0.05f,	Emulator_GetFontSize(),	menu_enum == GENERAL_VIDEO_MENU ? RED : GREEN,		menu_generalvideosettings.title);
-	cellDbgFontPuts		(0.19f,	0.05f,  Emulator_GetFontSize(),  menu_enum == GENERAL_AUDIO_MENU ? RED : GREEN,  menu_generalaudiosettings.title);
-	cellDbgFontPuts		(0.29f,	0.05f,	Emulator_GetFontSize(),	menu_enum == EMU_GENERAL_MENU ? RED : GREEN,	menu_emu_settings.title);
-	cellDbgFontPuts		(0.38f,  0.05f,  Emulator_GetFontSize(),  menu_enum == EMU_VIDEO_MENU ? RED : GREEN,   menu_emu_videosettings.title);
-	cellDbgFontPuts		(0.54f,  0.05f,  Emulator_GetFontSize(),  menu_enum == EMU_AUDIO_MENU ? RED : GREEN,   menu_emu_audiosettings.title);
-	cellDbgFontPuts		(0.70f,	0.05f,	Emulator_GetFontSize(),	menu_enum == PATH_MENU ? RED : GREEN,			menu_pathsettings.title);
-	cellDbgFontPuts		(0.80f, 0.05f,	Emulator_GetFontSize(), menu_enum == CONTROLS_MENU ? RED : GREEN,		menu_controlssettings.title); 
+	cellDbgFontPuts    (0.09f,  0.05f,  Emulator_GetFontSize(),  menu_enum == GENERAL_VIDEO_MENU ? RED : GREEN,   menu_generalvideosettings.title);
+	cellDbgFontPuts    (0.19f,  0.05f,  Emulator_GetFontSize(),  menu_enum == GENERAL_AUDIO_MENU ? RED : GREEN,  menu_generalaudiosettings.title);
+	cellDbgFontPuts    (0.29f,  0.05f,  Emulator_GetFontSize(),  menu_enum == EMU_GENERAL_MENU ? RED : GREEN,  menu_emu_settings.title);
+	cellDbgFontPuts    (0.39f,  0.05f,  Emulator_GetFontSize(),  menu_enum == EMU_VIDEO_MENU ? RED : GREEN,   menu_emu_videosettings.title);
+	cellDbgFontPuts    (0.57f,  0.05f,  Emulator_GetFontSize(),  menu_enum == EMU_AUDIO_MENU ? RED : GREEN,   menu_emu_audiosettings.title);
+	cellDbgFontPuts    (0.75f,  0.05f,  Emulator_GetFontSize(),  menu_enum == PATH_MENU ? RED : GREEN,  menu_pathsettings.title);
+	cellDbgFontPuts    (0.84f,  0.05f,  Emulator_GetFontSize(), menu_enum == CONTROLS_MENU ? RED : GREEN,  menu_controlssettings.title); 
 	cellDbgFontDraw();
 }
 
-#define FILEBROWSER_DELAY	100000
-#define SETTINGS_DELAY		150000	
-
-#define ROM_EXTENSIONS "gb|gbc|gba|GBA|GB|GBC|zip|ZIP"
-
-static void UpdateBrowser(filebrowser_t * b)
+static void browser_update(filebrowser_t * b)
 {
 	static uint64_t old_state = 0;
-	uint64_t state = cell_pad_input_poll_device(0);
-	uint64_t diff_state = old_state ^ state;
-	uint64_t button_was_pressed = old_state & diff_state;
+	uint64_t state, diff_state, button_was_pressed;
+
+	state = cell_pad_input_poll_device(0);
+	diff_state = old_state ^ state;
+	button_was_pressed = old_state & diff_state;
 
 	if(frame_count < special_action_msg_expired)
 	{
@@ -222,6 +236,22 @@ static void UpdateBrowser(filebrowser_t * b)
 			set_text_message("", 7);
 		}
 
+		if (CTRL_R2(state))
+		{
+			b->currently_selected = (MIN(b->currently_selected + 50, b->file_count-1));
+			set_text_message("", 7);
+		}
+
+		if (CTRL_L2(state))
+		{
+			if (b->currently_selected <= NUM_ENTRY_PER_PAGE)
+				b->currently_selected= 0;
+			else
+				b->currently_selected -= 50;
+
+			set_text_message("", 7);
+		}
+
 		if (CTRL_L1(state))
 		{
 			if (b->currently_selected <= NUM_ENTRY_PER_PAGE)
@@ -241,11 +271,12 @@ static void UpdateBrowser(filebrowser_t * b)
 
 		if (CTRL_L3(state) && CTRL_R3(state))
 		{
-			// if a rom is loaded then resume it
-			if (Emulator_IsROMLoaded())
+			/* if a rom is loaded then resume it */
+			if (emulator_initialized)
 			{
 				menu_is_running = 0;
-				Emulator_StartROMRunning(1);
+				is_running = 1;
+				mode_switch = MODE_EMULATION;
 				set_text_message("", 15);
 			}
 		}
@@ -254,18 +285,21 @@ static void UpdateBrowser(filebrowser_t * b)
 	}
 }
 
-static void RenderBrowser(filebrowser_t * b)
+static void browser_render(filebrowser_t * b)
 {
 	uint32_t file_count = b->file_count;
-	int current_index = b->currently_selected;
+	int current_index, page_number, page_base, i;
+	float currentX, currentY, ySpacing;
 
-	int page_number = current_index / NUM_ENTRY_PER_PAGE;
-	int page_base = page_number * NUM_ENTRY_PER_PAGE;
-	float currentX = 0.09f;
-	float currentY = 0.09f;
-	float ySpacing = 0.035f;
+	current_index = b->currently_selected;
+	page_number = current_index / NUM_ENTRY_PER_PAGE;
+	page_base = page_number * NUM_ENTRY_PER_PAGE;
 
-	for (int i = page_base; i < file_count && i < page_base + NUM_ENTRY_PER_PAGE; ++i)
+	currentX = 0.09f;
+	currentY = 0.09f;
+	ySpacing = 0.035f;
+
+	for ( i = page_base; i < file_count && i < page_base + NUM_ENTRY_PER_PAGE; ++i)
 	{
 		currentY = currentY + ySpacing;
 		cellDbgFontPuts(currentX, currentY, Emulator_GetFontSize(), i == current_index ? RED : b->cur[i].d_type == CELL_FS_TYPE_DIRECTORY ? GREEN : WHITE, b->cur[i].d_name);
@@ -274,12 +308,20 @@ static void RenderBrowser(filebrowser_t * b)
 	cellDbgFontDraw();
 }
 
-static void do_select_file(uint32_t menu_id)
+static void select_file(uint32_t menu_id)
 {
-	char extensions[256], title[256], object[256], comment[256], dir_path[MAX_PATH_LENGTH];
+	char extensions[256], title[256], object[256], comment[256], dir_path[MAX_PATH_LENGTH],
+	path[MAX_PATH_LENGTH];
+	uint64_t state, diff_state, button_was_pressed;
+	static uint64_t old_state = 0;
+
+	state = cell_pad_input_poll_device(0);
+	diff_state = old_state ^ state;
+	button_was_pressed = old_state & diff_state;
 
 	switch(menu_id)
 	{
+#ifdef HAVE_GAMEAWARE
 		case GAME_AWARE_SHADER_CHOICE:
 			strncpy(dir_path, GAME_AWARE_SHADER_DIR_PATH, sizeof(dir_path));
 			strncpy(extensions, "cfg|CFG", sizeof(extensions));
@@ -287,6 +329,7 @@ static void do_select_file(uint32_t menu_id)
 			strncpy(object, "Game Aware Shader", sizeof(object));
 			strncpy(comment, "INFO - Select a 'Game Aware Shader' script from the menu by pressing X.", sizeof(comment));
 			break;
+#endif
 		case SHADER_CHOICE:
 			strncpy(dir_path, SHADERS_DIR_PATH, sizeof(dir_path));
 			strncpy(extensions, "cg|CG", sizeof(extensions));
@@ -318,13 +361,7 @@ static void do_select_file(uint32_t menu_id)
 			strncpy(object, "Border image file", sizeof(object));
 			strncpy(comment, "INFO - Select a border image file from the menu by pressing the X button. ", sizeof(comment));
 			break;
-		case PATH_BIOSCHOICE:
-			strncpy(dir_path, "/\0", sizeof(dir_path));
-			strncpy(extensions, "bin|BIN|gba|GBA", sizeof(extensions));
-			strncpy(title, "GBA BIOS SELECTION", sizeof(title));
-			strncpy(object, "GBA BIOS file", sizeof(object));
-			strncpy(comment, "INFO - Select a GBA BIOS file from the menu by pressing the X button. ", sizeof(comment));
-			break;
+		EXTRA_SELECT_FILE_PART1();
 	}
 
 	if(set_initial_dir_tmpbrowser)
@@ -333,14 +370,7 @@ static void do_select_file(uint32_t menu_id)
 		set_initial_dir_tmpbrowser = false;
 	}
 
-	char path[MAX_PATH_LENGTH];
-
-	uint64_t state = cell_pad_input_poll_device(0);
-	static uint64_t old_state = 0;
-	uint64_t diff_state = old_state ^ state;
-	uint64_t button_was_pressed = old_state & diff_state;
-
-	UpdateBrowser(&tmpBrowser);
+	browser_update(&tmpBrowser);
 
 	if (CTRL_START(button_was_pressed))
 		filebrowser_reset_start_directory(&tmpBrowser, "/", extensions);
@@ -349,7 +379,8 @@ static void do_select_file(uint32_t menu_id)
 	{
 		if(FILEBROWSER_IS_CURRENT_A_DIRECTORY(tmpBrowser))
 		{
-			//if 'filename' is in fact '..' - then pop back directory instead of adding '..' to filename path
+			/*if 'filename' is in fact '..' - then pop back directory instead of 
+			adding '..' to filename path */
 			if(tmpBrowser.currently_selected == 0)
 			{
 				old_state = state;
@@ -357,7 +388,7 @@ static void do_select_file(uint32_t menu_id)
 			}
 			else
 			{
-                                const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser),"/") == 0) ? "" : "/";
+				const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser),"/") == 0) ? "" : "/";
 				snprintf(path, sizeof(path), "%s%s%s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser), separatorslash, FILEBROWSER_GET_CURRENT_FILENAME(tmpBrowser));
 				filebrowser_push_directory(&tmpBrowser, path, true);
 			}
@@ -369,10 +400,12 @@ static void do_select_file(uint32_t menu_id)
 
 			switch(menu_id)
 			{
+#ifdef HAVE_GAMEAWARE
 				case GAME_AWARE_SHADER_CHOICE:
-					//emulator_implementation_set_gameaware(path);
+					emulator_implementation_set_gameaware(path);
 					strncpy(Settings.GameAwareShaderPath, path, sizeof(Settings.GameAwareShaderPath));
 					break;
+#endif
 				case SHADER_CHOICE:
 					if(set_shader)
 						strncpy(Settings.PS3CurrentShader2, path, sizeof(Settings.PS3CurrentShader2));
@@ -390,11 +423,8 @@ static void do_select_file(uint32_t menu_id)
 					strncpy(Settings.PS3CurrentBorder, path, sizeof(Settings.PS3CurrentBorder));
 					emulator_implementation_set_texture(path);
 					break;
-				case PATH_BIOSCHOICE:
-					strncpy(Settings.GBABIOS, path, sizeof(Settings.GBABIOS));
-					menuStackindex--;
-					break;
-			}	
+				EXTRA_SELECT_FILE_PART2();
+			}
 
 			menuStackindex--;
 		}
@@ -409,27 +439,27 @@ static void do_select_file(uint32_t menu_id)
 	cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "%s", comment);
 	cellDbgFontDraw();
 
-	RenderBrowser(&tmpBrowser);
+	browser_render(&tmpBrowser);
 	old_state = state;
 }
 
-static void do_pathChoice(uint32_t menu_id)
+static void select_directory(uint32_t menu_id)
 {
+        char path[1024], newpath[1024];
+	uint64_t state, diff_state, button_was_pressed;
+        static uint64_t old_state = 0;
+
+        state = cell_pad_input_poll_device(0);
+        diff_state = old_state ^ state;
+        button_was_pressed = old_state & diff_state;
+
 	if(set_initial_dir_tmpbrowser)
 	{
 		filebrowser_new(&tmpBrowser, "/\0", "empty");
 		set_initial_dir_tmpbrowser = false;
 	}
 
-        char path[1024];
-        char newpath[1024];
-
-        uint64_t state = cell_pad_input_poll_device(0);
-        static uint64_t old_state = 0;
-        uint64_t diff_state = old_state ^ state;
-        uint64_t button_was_pressed = old_state & diff_state;
-
-        UpdateBrowser(&tmpBrowser);
+        browser_update(&tmpBrowser);
 
         if (CTRL_START(button_was_pressed))
 		filebrowser_reset_start_directory(&tmpBrowser, "/","empty");
@@ -475,7 +505,9 @@ static void do_pathChoice(uint32_t menu_id)
         {
                 if(FILEBROWSER_IS_CURRENT_A_DIRECTORY(tmpBrowser))
                 {
-                        //if 'filename' is in fact '..' - then pop back directory instead of adding '..' to filename path
+                        /* if 'filename' is in fact '..' - then pop back 
+			directory instead of adding '..' to filename path */
+
                         if(tmpBrowser.currently_selected == 0)
                         {
                                 old_state = state;
@@ -483,237 +515,336 @@ static void do_pathChoice(uint32_t menu_id)
                         }
                         else
                         {
-                                const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser),"/") == 0) ? "" : "/";
+				const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser),"/") == 0) ? "" : "/";
                                 snprintf(newpath, sizeof(newpath), "%s%s%s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser), separatorslash, FILEBROWSER_GET_CURRENT_FILENAME(tmpBrowser));
                                 filebrowser_push_directory(&tmpBrowser, newpath, false);
                         }
                 }
         }
 
-        cellDbgFontPrintf (0.09f,  0.09f, Emulator_GetFontSize(), YELLOW,  "PATH: %s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser));
+        cellDbgFontPrintf (0.09f,  0.09f, Emulator_GetFontSize(), YELLOW, 
+	"PATH: %s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser));
         cellDbgFontPuts (0.09f, 0.05f,  Emulator_GetFontSize(), RED,    "DIRECTORY SELECTION");
-        cellDbgFontPuts(0.09f, 0.93f, 0.92f, YELLOW,"X - Enter dir  /\\ - return to settings  START - Reset Startdir");
+        cellDbgFontPuts(0.09f, 0.93f, 0.92f, YELLOW,
+	"X - Enter dir  /\\ - return to settings  START - Reset Startdir");
         cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "%s",
-                        "INFO - Browse to a directory and assign it as the path by\npressing SQUARE button.");
+	"INFO - Browse to a directory and assign it as the path by\npressing SQUARE button.");
         cellDbgFontDraw();
 
-        RenderBrowser(&tmpBrowser);
+        browser_render(&tmpBrowser);
         old_state = state;
 }
 
-#define CREATE_HELP_MESSAGE_ITEM(text) \
-	cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, text);
-
-#define print_help_message(menu, currentsetting) \
-			cellDbgFontPrintf(menu.items[currentsetting].comment_xpos, menu.items[currentsetting].comment_ypos, menu.items[currentsetting].comment_scalefont, menu.items[currentsetting].comment_color, menu.items[currentsetting].comment);
-
-#define print_help_message_yesno(menu, currentsetting) \
-			snprintf(menu.items[currentsetting].comment, sizeof(menu.items[currentsetting].comment), *(menu.items[currentsetting].setting_ptr) ? menu.items[currentsetting].comment_yes : menu.items[currentsetting].comment_no); \
-			print_help_message(menu, currentsetting);
-
-static void display_help_text(int currentsetting)
+static void set_setting_label(menu * menu_obj, int currentsetting)
 {
 	switch(currentsetting)
 	{
-		case SETTING_PATH_SAVESTATES_DIRECTORY:
-		case SETTING_PATH_DEFAULT_ROM_DIRECTORY:
-		case SETTING_PATH_SRAM_DIRECTORY:
-		case SETTING_PATH_DEFAULT_ALL:
-			print_help_message(menu_pathsettings, currentsetting);
-			break;
-		case SETTING_EMU_CURRENT_SAVE_STATE_SLOT:
-		case SETTING_EMU_DEFAULT_ALL:
-			print_help_message(menu_emu_settings, currentsetting);
-			break;
-		case SETTING_SHADER:
-		case SETTING_SHADER_2:
 		case SETTING_CHANGE_RESOLUTION:
-		case SETTING_HW_OVERSCAN_AMOUNT:
-		case SETTING_DEFAULT_VIDEO_ALL:
-		case SETTING_SAVE_SHADER_PRESET:
-			print_help_message(menu_generalvideosettings, currentsetting);
-			break;
-		case SETTING_HW_TEXTURE_FILTER:
-		case SETTING_HW_TEXTURE_FILTER_2:
-		case SETTING_SCALE_ENABLED:
-		case SETTING_ENABLE_SCREENSHOTS:
-		case SETTING_TRIPLE_BUFFERING:
-		case SETTING_APPLY_SHADER_PRESET_ON_STARTUP:
-			print_help_message_yesno(menu_generalvideosettings, currentsetting);
-			break;
-		case SETTING_SCALE_FACTOR:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - [Custom Scaling Factor] is set to: '%dx'.", Settings.ScaleFactor);
-			break;
-		case SETTING_VBA_GBABIOS:
-			CREATE_HELP_MESSAGE_ITEM((strcmp(Settings.GBABIOS,"\0") == 0) ? "INFO - GBA BIOS has been disabled. If a game doesn't work, try selecting a BIOS\nwith this option (press X to select)" : "INFO - GBA BIOS has been selected. Some games might require this.\nNOTE: GB Classic games will not work with a GBA BIOS enabled.");
-			break;
-		case SETTING_VBA_SGB_BORDERS:
-			print_help_message_yesno(menu_emu_videosettings, currentsetting);
-			break;
-		case SETTING_EMU_CONTROL_STYLE:
-			print_help_message(menu_emu_settings, currentsetting);
-			break;
-			/*
-			   case SETTING_PAL60_MODE:
-			   CREATE_HELP_MESSAGE_ITEM(Settings.PS3PALTemporalMode60Hz ? "INFO - PAL 60Hz mode is enabled - 60Hz NTSC games will run correctly at 576p PAL\nresolution. NOTE: This is configured on-the-fly." : "INFO - PAL 60Hz mode disabled - 50Hz PAL games will run correctly at 576p PAL\nresolution. NOTE: This is configured on-the-fly.");
-			   break;
-			 */
-		case SETTING_KEEP_ASPECT_RATIO:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.91f, LIGHTBLUE, "INFO - [Aspect ratio] is set to '%d:%d'.", ps3graphics_get_aspect_ratio_int(0), ps3graphics_get_aspect_ratio_int(1));
-			break;
-		case SETTING_RSOUND_SERVER_IP_ADDRESS:
-			print_help_message(menu_generalaudiosettings, currentsetting);
-			break;
-		case SETTING_SOUND_MODE:
-			snprintf(menu_generalaudiosettings.items[currentsetting].comment, sizeof(menu_generalaudiosettings.items[currentsetting].comment), Settings.SoundMode == SOUND_MODE_RSOUND ? "INFO - [Sound Output] is set to 'RSound' - the sound will be streamed over the\n network to the RSound audio server." : Settings.SoundMode == SOUND_MODE_HEADSET ? "INFO - [Sound Output] is set to 'USB/Bluetooth Headset' - sound will\n be output through the headset" : "INFO - [Sound Output] is set to 'Normal' - normal audio output will be\nused.");
-			print_help_message(menu_generalaudiosettings, currentsetting);
-			break;
-		case SETTING_CONTROLS_SCHEME:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Input Control scheme preset [%s] is selected.\n", Settings.PS3CurrentInputPresetTitle);
-			break;
-		case SETTING_CONTROLS_DPAD_UP:
-		case SETTING_CONTROLS_DPAD_DOWN:
-		case SETTING_CONTROLS_DPAD_LEFT:
-		case SETTING_CONTROLS_DPAD_RIGHT:
-		case SETTING_CONTROLS_BUTTON_CIRCLE:
-		case SETTING_CONTROLS_BUTTON_CROSS:
-		case SETTING_CONTROLS_BUTTON_TRIANGLE:
-		case SETTING_CONTROLS_BUTTON_SQUARE:
-		case SETTING_CONTROLS_BUTTON_SELECT:
-		case SETTING_CONTROLS_BUTTON_START:
-		case SETTING_CONTROLS_BUTTON_L1:
-		case SETTING_CONTROLS_BUTTON_R1:
-		case SETTING_CONTROLS_BUTTON_L2:
-		case SETTING_CONTROLS_BUTTON_R2:
-		case SETTING_CONTROLS_BUTTON_L3:
-		case SETTING_CONTROLS_BUTTON_R3:
-		case SETTING_CONTROLS_BUTTON_L2_BUTTON_L3:
-		case SETTING_CONTROLS_BUTTON_L2_BUTTON_R3:
-		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_RIGHT:
-		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_LEFT:
-		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_UP:
-		case SETTING_CONTROLS_BUTTON_L2_ANALOG_R_DOWN:
-		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_RIGHT:
-		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_LEFT:
-		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_UP:
-		case SETTING_CONTROLS_BUTTON_R2_ANALOG_R_DOWN:
-		case SETTING_CONTROLS_BUTTON_R2_BUTTON_R3:
-		case SETTING_CONTROLS_BUTTON_R3_BUTTON_L3:
-		case SETTING_CONTROLS_ANALOG_R_UP:
-		case SETTING_CONTROLS_ANALOG_R_DOWN:
-		case SETTING_CONTROLS_ANALOG_R_LEFT:
-		case SETTING_CONTROLS_ANALOG_R_RIGHT:
-			cellDbgFontPrintf(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - [%s] on the PS3 controller is mapped to action:\n[%s].", menu_controlssettings.items[currentsetting].text, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][currentsetting-FIRST_CONTROL_BIND]));
-			break;
-		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
-			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Save the custom control settings.\nNOTE: This option will not do anything with Control Scheme [New] or [Default].");
-			break;
-		case SETTING_CONTROLS_DEFAULT_ALL:
-			cellDbgFontPuts(0.09f, 0.83f, 0.86f, LIGHTBLUE, "INFO - Set all 'Controls' settings back to their default values.");
-			break;
-	}
-}
 
-static void display_label_value(uint64_t switchvalue)
-{
-	switch(switchvalue)
-	{
-		case SETTING_CHANGE_RESOLUTION:
-			{
-				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), ps3graphics_get_initial_resolution() == ps3graphics_get_current_resolution() ? GREEN : ORANGE, ps3graphics_get_resolution_label(ps3graphics_get_current_resolution()));
-				cellDbgFontDraw();
-				break;
-			}
-#if 0
-		case SETTING_PAL60_MODE: 
-			cellDbgFontPuts		(menu_generalvideosettings.items[switchvalue].text_xpos,	menu_generalvideosettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	currently_selected_setting == menu_generalvideosettings.items[switchvalue].enum_id ? YELLOW : WHITE,	"PAL60 Mode (576p only)");
-			cellDbgFontPrintf	(0.5f,	menu_generalvideosettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	Settings.PS3PALTemporalMode60Hz ? ORANGE : GREEN, Settings.PS3PALTemporalMode60Hz ? "ON" : "OFF");
+			if(ps3graphics_get_initial_resolution() == ps3graphics_get_current_resolution())
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), ps3graphics_get_resolution_label(ps3graphics_get_current_resolution()));
 			break;
-#endif
-#if 0
-		case SETTING_GAME_AWARE_SHADER:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), 
-					Settings.GameAwareShaderPath == "" ? GREEN : ORANGE, 
-					"%s", Settings.GameAwareShaderPath);
-			break;
-#endif
 		case SETTING_SHADER_PRESETS:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), (menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].enabled == 0) ? SILVER : strcmp(Settings.ShaderPresetPath, DEFAULT_PRESET_FILE) == 0 ? GREEN : ORANGE, "%s", Settings.ShaderPresetTitle);
+			if(Settings.ShaderPresetPath == DEFAULT_PRESET_FILE)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.ShaderPresetTitle);
+			/* add a comment */
 			break;
 		case SETTING_BORDER:
 			{
 				extract_filename_only(Settings.PS3CurrentBorder);
-				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), GREEN, "%s", fname_without_path_extension);
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%s", fname_without_path_extension);
+				
+				if(strcmp(Settings.PS3CurrentBorder,DEFAULT_BORDER_FILE))
+					menu_obj->items[currentsetting].text_color = GREEN;
+				else
+					menu_obj->items[currentsetting].text_color = ORANGE;
 			}
 			break;
 		case SETTING_SHADER:
 			{
 				extract_filename_only(ps3graphics_get_fragment_shader_path(0));
-				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), GREEN, "%s", fname_without_path_extension);
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%s", fname_without_path_extension);
+
+				if(strcmp(Settings.PS3CurrentShader,DEFAULT_SHADER_FILE) == 0)
+					menu_obj->items[currentsetting].text_color = GREEN;
+				else
+					menu_obj->items[currentsetting].text_color = ORANGE;
 			}
 			break;
 		case SETTING_SHADER_2:
 			{
 				extract_filename_only(ps3graphics_get_fragment_shader_path(1));
-				cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), !(Settings.ScaleEnabled) ? SILVER : GREEN, "%s", fname_without_path_extension);
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%s", fname_without_path_extension);
+
+				if(strcmp(Settings.PS3CurrentShader2,DEFAULT_SHADER_FILE) == 0)
+					menu_obj->items[currentsetting].text_color = GREEN;
+				else
+					menu_obj->items[currentsetting].text_color = ORANGE;
 			}
 			break;
+#ifdef HAVE_GAMEAWARE
+		case SETTING_GAME_AWARE_SHADER:
+
+			if(strcmp(Settings.GameAwareShaderPath, "") == 0)
+			{
+				menu_obj->items[currentsetting].text_color = GREEN;
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "None");
+			}
+			else
+			{
+				menu_obj->items[currentsetting].text_color = ORANGE;
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.GameAwareShaderPath);
+			}
+			break;
+#endif
 		case SETTING_FONT_SIZE:
-			cellDbgFontPrintf(0.5f,	menu_generalvideosettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	Settings.PS3FontSize == 100 ? GREEN : ORANGE, "%f", Emulator_GetFontSize());
-			break;
-			//emulator-specific
-		case SETTING_VBA_SGB_BORDERS:
-			cellDbgFontPuts(0.5f, menu_emu_videosettings.items[menu_emu_videosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), *(menu_emu_videosettings.items[switchvalue].setting_ptr) ? ORANGE : GREEN, *(menu_emu_videosettings.items[switchvalue].setting_ptr) ? "ON" : "OFF");
-			break;
-		case SETTING_EMU_CONTROL_STYLE:
-			cellDbgFontPuts(0.5f, menu_emu_settings.items[menu_emu_settings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), *(menu_emu_settings.items[switchvalue].setting_ptr) ? GREEN : ORANGE, *(menu_emu_settings.items[switchvalue].setting_ptr) ? "Original (X->B, O->A)" : "Better (X->A, []->B)");
+			if(Settings.PS3FontSize == 100)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%f", Emulator_GetFontSize());
 			break;
 		case SETTING_KEEP_ASPECT_RATIO:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, 0.91f, ps3graphics_get_aspect_ratio_float(Settings.PS3KeepAspect) == SCREEN_4_3_ASPECT_RATIO ? GREEN : ORANGE, "%s%d:%d", ps3graphics_calculate_aspect_ratio_before_game_load() ? "(Auto)" : "", (int)ps3graphics_get_aspect_ratio_int(0), (int)ps3graphics_get_aspect_ratio_int(1));
-			cellDbgFontDraw();
+			if(ps3graphics_get_aspect_ratio_float(Settings.PS3KeepAspect) == SCREEN_4_3_ASPECT_RATIO)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%s%d:%d", ps3graphics_calculate_aspect_ratio_before_game_load() ? "(Auto)" : "", (int)ps3graphics_get_aspect_ratio_int(0), (int)ps3graphics_get_aspect_ratio_int(1));
+			snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [Aspect ratio] is set to '%d:%d'.", ps3graphics_get_aspect_ratio_int(0), ps3graphics_get_aspect_ratio_int(1));
 			break;
 		case SETTING_HW_TEXTURE_FILTER:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), Settings.PS3Smooth ? GREEN : ORANGE, Settings.PS3Smooth ? "Linear interpolation" : "Point filtering");
+
+			if(Settings.PS3Smooth)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "Linear interpolation");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "Point filtering");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
 			break;
 		case SETTING_HW_TEXTURE_FILTER_2:
-			cellDbgFontPrintf(0.5f, menu_generalvideosettings.items[switchvalue].text_ypos, Emulator_GetFontSize(), !(menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].enabled) ? SILVER : Settings.PS3Smooth2 ? GREEN : ORANGE, Settings.PS3Smooth2 ? "Linear interpolation" : "Point filtering");
+
+			if(Settings.PS3Smooth2)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "Linear interpolation");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "Point filtering");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
+			break;
+		case SETTING_SCALE_ENABLED:
+			if(Settings.ScaleEnabled)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "ON");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "OFF");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
 			break;
 		case SETTING_SCALE_FACTOR:
-			cellDbgFontPrintf	(0.5f,	menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos,	Emulator_GetFontSize(),	(menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].enabled == 0) ? SILVER : Settings.ScaleFactor == 2 ? GREEN : ORANGE, "%dx", Settings.ScaleFactor);
+
+			if(Settings.ScaleFactor == 2)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%dx", Settings.ScaleFactor);
+			snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [Custom Scaling Factor] is set to: '%dx'.", Settings.ScaleFactor);
 			break;
 		case SETTING_HW_OVERSCAN_AMOUNT:
-			cellDbgFontPrintf	(0.5f,	menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos,	Emulator_GetFontSize(),	Settings.PS3OverscanAmount == 0 ? GREEN : ORANGE, "%f", (float)Settings.PS3OverscanAmount/100);
-			break;
-		case SETTING_SOUND_MODE:
-			cellDbgFontPuts(0.5f, menu_generalaudiosettings.items[menu_generalaudiosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), Settings.SoundMode == SOUND_MODE_NORMAL ? GREEN : ORANGE, Settings.SoundMode == SOUND_MODE_RSOUND ? "RSound" : Settings.SoundMode == SOUND_MODE_HEADSET ? "USB/Bluetooth Headset" : "Normal");
-			break;
-		case SETTING_RSOUND_SERVER_IP_ADDRESS:
-			cellDbgFontPuts(0.5f, menu_generalaudiosettings.items[menu_generalaudiosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), strcmp(Settings.RSoundServerIPAddress,"0.0.0.0") ? ORANGE : GREEN, Settings.RSoundServerIPAddress);
+
+			if(Settings.PS3OverscanAmount == 0)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%f", (float)Settings.PS3OverscanAmount/100);
 			break;
 		case SETTING_THROTTLE_MODE:
-		case SETTING_ENABLE_SCREENSHOTS:
+			if(Settings.Throttled)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "ON");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "OFF");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
+			break;
 		case SETTING_TRIPLE_BUFFERING:
-		case SETTING_SCALE_ENABLED:
+			if(Settings.TripleBuffering)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "ON");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "OFF");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
+			break;
+		case SETTING_ENABLE_SCREENSHOTS:
+			if(Settings.ScreenshotsEnabled)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "ON");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "OFF");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
+			break;
+		case SETTING_SAVE_SHADER_PRESET:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
 		case SETTING_APPLY_SHADER_PRESET_ON_STARTUP:
-			cellDbgFontPuts(0.5f, menu_generalvideosettings.items[menu_generalvideosettings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), *(menu_generalvideosettings.items[switchvalue].setting_ptr) ? GREEN : ORANGE, *(menu_generalvideosettings.items[switchvalue].setting_ptr) ? "ON" : "OFF");
+			if(Settings.ApplyShaderPresetOnStartup)
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "ON");
+				menu_obj->items[currentsetting].text_color = GREEN;
+			}
+			else
+			{
+				snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "OFF");
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			}
+			break;
+		case SETTING_DEFAULT_VIDEO_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
+		case SETTING_SOUND_MODE:
+			switch(Settings.SoundMode)
+			{
+				case SOUND_MODE_NORMAL:
+					snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [Sound Output] is set to 'Normal' - normal audio output will be\nused.");
+					snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "Normal");
+					break;
+				case SOUND_MODE_RSOUND:
+					snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [Sound Output] is set to 'RSound' - the sound will be streamed over the\n network to the RSound audio server." );
+					snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "RSound");
+					break;
+				case SOUND_MODE_HEADSET:
+					snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [Sound Output] is set to 'USB/Bluetooth Headset' - sound will\n be output through the headset");
+					snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "USB/Bluetooth Headset");
+					break;
+			}
+			break;
+		case SETTING_RSOUND_SERVER_IP_ADDRESS:
+			if(strcmp(Settings.RSoundServerIPAddress,"0.0.0.0"))
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.RSoundServerIPAddress);
+			break;
+		case SETTING_DEFAULT_AUDIO_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
 			break;
 		case SETTING_EMU_CURRENT_SAVE_STATE_SLOT:
-			cellDbgFontPrintf(0.5f, menu_emu_settings.items[menu_emu_settings.items[switchvalue].enum_id].text_ypos, Emulator_GetFontSize(), Settings.CurrentSaveStateSlot == MIN_SAVE_STATE_SLOT ? GREEN : ORANGE, "%d", Settings.CurrentSaveStateSlot);
+			if(Settings.CurrentSaveStateSlot == 0)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%d", Settings.CurrentSaveStateSlot);
+			break;
+		/* emu-specific */
+		case SETTING_EMU_DEFAULT_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
+		case SETTING_EMU_VIDEO_DEFAULT_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
+		case SETTING_EMU_AUDIO_DEFAULT_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
 			break;
 		case SETTING_PATH_DEFAULT_ROM_DIRECTORY:
-			cellDbgFontPuts		(0.5f,	menu_pathsettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	!(strcmp(Settings.PS3PathROMDirectory,"/")) ? GREEN : ORANGE, Settings.PS3PathROMDirectory);
+			if(!(strcmp(Settings.PS3PathROMDirectory, "/")))
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.PS3PathROMDirectory);
 			break;
 		case SETTING_PATH_SAVESTATES_DIRECTORY:
-			cellDbgFontPuts		(0.5f,	menu_pathsettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	!(strcmp(Settings.PS3PathSaveStates,usrDirPath)) ? GREEN : ORANGE, Settings.PS3PathSaveStates);
+			if(!(strcmp(Settings.PS3PathSaveStates, usrDirPath)))
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.PS3PathSaveStates);
 			break;
 		case SETTING_PATH_SRAM_DIRECTORY:
-			cellDbgFontPuts		(0.5f,	menu_pathsettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	!(strcmp(Settings.PS3PathSRAM,"")) ? GREEN : ORANGE, !(strcmp(Settings.PS3PathSRAM,"")) ? "Same dir as ROM" : Settings.PS3PathSRAM);
+			if(!(strcmp(Settings.PS3PathSRAM, usrDirPath)))
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.PS3PathSRAM);
+			break;
+		case SETTING_PATH_DEFAULT_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
 			break;
 		case SETTING_CONTROLS_SCHEME:
-			cellDbgFontPrintf(0.5f,   menu_controlssettings.items[switchvalue].text_ypos,   Emulator_GetFontSize(), Settings.ControlScheme == CONTROL_SCHEME_DEFAULT ? GREEN : ORANGE, Settings.PS3CurrentInputPresetTitle);
+
+			if(Settings.ControlScheme == CONTROL_SCHEME_DEFAULT)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - Input Control scheme preset [%s] is selected.", Settings.PS3CurrentInputPresetTitle);
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Settings.PS3CurrentInputPresetTitle);
 			break;
 		case SETTING_CONTROLS_NUMBER:
-			cellDbgFontPrintf(0.5f,	menu_controlssettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	currently_selected_controller_menu == 0 ? GREEN : ORANGE, "%d", currently_selected_controller_menu+1);
+
+			if(currently_selected_controller_menu == 0)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "%d", currently_selected_controller_menu+1);
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), "%d", currently_selected_controller_menu+1);
 			break;
 		case SETTING_CONTROLS_DPAD_UP:
 		case SETTING_CONTROLS_DPAD_DOWN:
@@ -747,15 +878,69 @@ static void display_label_value(uint64_t switchvalue)
 		case SETTING_CONTROLS_ANALOG_R_DOWN:
 		case SETTING_CONTROLS_ANALOG_R_LEFT:
 		case SETTING_CONTROLS_ANALOG_R_RIGHT:
-			cellDbgFontPuts(0.5f,	menu_controlssettings.items[switchvalue].text_ypos,	Emulator_GetFontSize(),	control_binds[currently_selected_controller_menu][switchvalue-(FIRST_CONTROL_BIND)] == default_control_binds[switchvalue-FIRST_CONTROL_BIND] ? GREEN : ORANGE, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][switchvalue-FIRST_CONTROL_BIND]));
+
+			if(control_binds[currently_selected_controller_menu][currentsetting-(FIRST_CONTROL_BIND)] == default_control_binds[currentsetting-FIRST_CONTROL_BIND])
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+
+			snprintf(menu_obj->items[currentsetting].comment, sizeof(menu_obj->items[currentsetting].comment), "INFO - [%s] on the PS3 controller is mapped to action:\n[%s].", menu_obj->items[currentsetting].text, Input_PrintMappedButton(control_binds[currently_selected_controller_menu][currentsetting-FIRST_CONTROL_BIND]));
+			snprintf(menu_obj->items[currentsetting].setting_text, sizeof(menu_obj->items[currentsetting].setting_text), Input_PrintMappedButton(control_binds[currently_selected_controller_menu][currentsetting-FIRST_CONTROL_BIND]));
 			break;
-		case SETTING_DEFAULT_VIDEO_ALL:
-		case SETTING_SAVE_SHADER_PRESET:
-		case SETTING_DEFAULT_AUDIO_ALL:
 		case SETTING_CONTROLS_SAVE_CUSTOM_CONTROLS:
-			cellDbgFontDraw();
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
+		case SETTING_CONTROLS_DEFAULT_ALL:
+			if(menu_obj->selected == currentsetting)
+				menu_obj->items[currentsetting].text_color = GREEN;
+			else
+				menu_obj->items[currentsetting].text_color = ORANGE;
+			break;
+		default:
 			break;
 	}
+}
+
+static void menu_init_settings_pages(menu * menu_obj)
+{
+	int page, i, j;
+	float increment;
+
+	page = 0;
+	j = 0;
+	increment = 0.13f;
+
+	for(i = menu_obj->first_setting; i < menu_obj->max_settings; i++)
+	{
+		if(!(j < (NUM_ENTRY_PER_PAGE)))
+		{
+			j = 0;
+			increment = 0.13f;
+			page++;
+		}
+
+		menu_obj->items[i].text_xpos = 0.09f;
+		menu_obj->items[i].text_ypos = increment; 
+		menu_obj->items[i].page = page;
+		set_setting_label(menu_obj, i);
+		increment += 0.03f;
+		j++;
+	}
+	menu_obj->refreshpage = 0;
+}
+
+static void menu_reinit_settings (void)
+{
+	menu_init_settings_pages(&menu_generalvideosettings);
+	menu_init_settings_pages(&menu_generalaudiosettings);
+	menu_init_settings_pages(&menu_emu_settings);
+	menu_init_settings_pages(&menu_emu_videosettings);
+	menu_init_settings_pages(&menu_emu_audiosettings);
+	menu_init_settings_pages(&menu_pathsettings);
+	menu_init_settings_pages(&menu_controlssettings);
 }
 
 static void apply_scaling(void)
@@ -863,10 +1048,11 @@ static void select_setting(menu * menu_obj)
 
 		if (CTRL_L3(state) && CTRL_R3(state))
 		{
-			if (Emulator_IsROMLoaded())
+			if (emulator_initialized)
 			{
 				menu_is_running = 0;
-				Emulator_StartROMRunning(1);
+				is_running = 1;
+				mode_switch = MODE_EMULATION;
 				set_text_message("", 15);
 			}
 			old_state = state;
@@ -874,7 +1060,7 @@ static void select_setting(menu * menu_obj)
 		}
 
 
-		producesettingentry(menu_obj->selected);
+		producesettingentry(menu_obj, menu_obj->selected);
 	}
 
 	display_menubar(menu_obj->enum_id);
@@ -884,13 +1070,13 @@ static void select_setting(menu * menu_obj)
 	{
 		if(menu_obj->items[i].page == menu_obj->page)
 		{
-			cellDbgFontPuts(menu_obj->items[i].text_xpos, menu_obj->items[i].text_ypos, Emulator_GetFontSize(), menu_obj->selected == menu_obj->items[i].enum_id ? menu_obj->items[i].text_selected_color : menu_obj->items[i].text_unselected_color, menu_obj->items[i].text);
-			display_label_value(i);
+			cellDbgFontPuts(menu_obj->items[i].text_xpos, menu_obj->items[i].text_ypos, Emulator_GetFontSize(), menu_obj->selected == menu_obj->items[i].enum_id ? YELLOW : menu_obj->items[i].item_color, menu_obj->items[i].text);
+			cellDbgFontPuts(0.5f, menu_obj->items[i].text_ypos, Emulator_GetFontSize(), menu_obj->items[i].text_color, menu_obj->items[i].setting_text);
 			cellDbgFontDraw();
 		}
 	}
 
-	display_help_text(menu_obj->selected);
+	cellDbgFontPuts(0.09f, menu_obj->items[menu_obj->selected].comment_ypos, 0.86f, LIGHTBLUE, menu_obj->items[menu_obj->selected].comment);
 
 	cellDbgFontPuts(0.09f, 0.91f, Emulator_GetFontSize(), YELLOW, "UP/DOWN - select  L3+R3 - resume game   X/LEFT/RIGHT - change");
 	cellDbgFontPuts(0.09f, 0.95f, Emulator_GetFontSize(), YELLOW, "START - default   L1/CIRCLE - go back   R1 - go forward");
@@ -898,17 +1084,17 @@ static void select_setting(menu * menu_obj)
 	old_state = state;
 }
 
-static void do_ROMMenu(void)
+static void select_rom(void)
 {
-	char rom_path[MAX_PATH_LENGTH];
 	char newpath[1024];
-
-	uint64_t state = cell_pad_input_poll_device(0);
+	uint64_t state, diff_state, button_was_pressed;
 	static uint64_t old_state = 0;
-	uint64_t diff_state = old_state ^ state;
-	uint64_t button_was_pressed = old_state & diff_state;
 
-	UpdateBrowser(&browser);
+	state = cell_pad_input_poll_device(0);
+	diff_state = old_state ^ state;
+	button_was_pressed = old_state & diff_state;
+
+	browser_update(&browser);
 
 	if (CTRL_SELECT(button_was_pressed))
 	{
@@ -923,7 +1109,9 @@ static void do_ROMMenu(void)
 	{
 		if(FILEBROWSER_IS_CURRENT_A_DIRECTORY(browser))
 		{
-			/*if 'filename' is in fact '..' - then pop back directory instead of adding '..' to filename path*/
+			/*if 'filename' is in fact '..' - then pop back directory 
+			instead of adding '..' to filename path */
+
 			if(browser.currently_selected == 0)
 			{
 				old_state = state;
@@ -931,21 +1119,34 @@ static void do_ROMMenu(void)
 			}
 			else
 			{
-				const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser),"/") == 0) ? "" : "/";
+				const char * separatorslash = (strcmp(FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(tmpBrowser),"/") == 0) ? "" : "/";
 				snprintf(newpath, sizeof(newpath), "%s%s%s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser), separatorslash, FILEBROWSER_GET_CURRENT_FILENAME(browser));
 				filebrowser_push_directory(&browser, newpath, true);
 			}
 		}
 		else if (FILEBROWSER_IS_CURRENT_A_FILE(browser))
 		{
-			snprintf(rom_path, sizeof(rom_path), "%s/%s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser), FILEBROWSER_GET_CURRENT_FILENAME(browser));
+			char rom_path_temp[MAX_PATH_LENGTH];
+
+			snprintf(rom_path_temp, sizeof(rom_path_temp), "%s/%s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser), FILEBROWSER_GET_CURRENT_FILENAME(browser));
+
+
+			if (strcmp(rom_path_temp, current_rom) != 0 || sgb_border_change)
+			{
+				snprintf(current_rom, sizeof(current_rom), rom_path_temp);
+				vba_init_rom();
+			}
+			else
+			{
+				if(Settings.EmulatedSystem == IMAGE_GBA)
+					CPUReset();
+				else
+					gbReset();
+			}
 
 			menu_is_running = 0;
-
-			/* switch emulator to emulate mode*/
-			Emulator_StartROMRunning(1);
-
-			Emulator_RequestLoadROM(rom_path);
+			is_running =1;
+			mode_switch = MODE_EMULATION;
 
 			old_state = state;
 			return;
@@ -968,53 +1169,19 @@ static void do_ROMMenu(void)
 
 	cellDbgFontPuts	(0.09f,	0.05f,	Emulator_GetFontSize(),	RED,	"FILE BROWSER");
 	cellDbgFontPrintf (0.7f, 0.05f, 0.82f, WHITE, "%s v%s", EMULATOR_NAME, EMULATOR_VERSION);
-	cellDbgFontPrintf (0.09f, 0.09f, Emulator_GetFontSize(), YELLOW, "PATH: %s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser));
+	cellDbgFontPrintf (0.09f, 0.09f, Emulator_GetFontSize(), YELLOW,
+	"PATH: %s", FILEBROWSER_GET_CURRENT_DIRECTORY_NAME(browser));
 	cellDbgFontPuts   (0.09f, 0.93f, Emulator_GetFontSize(), YELLOW,
 	"L3 + R3 - resume game           SELECT - Settings screen");
 	cellDbgFontDraw();
 
-	RenderBrowser(&browser);
+	browser_render(&browser);
 	old_state = state;
 }
 
-static void menu_init_settings_pages(menu * menu_obj)
-{
-	int page, i, j;
-	float increment;
-
-	page = 0;
-	j = 0;
-	increment = 0.13f;
-
-	for(i = menu_obj->first_setting; i < menu_obj->max_settings; i++)
-	{
-		if(!(j < (NUM_ENTRY_PER_PAGE)))
-		{
-			j = 0;
-			increment = 0.13f;
-			page++;
-		}
-
-		menu_obj->items[i].text_xpos = 0.09f;
-		menu_obj->items[i].text_ypos = increment; 
-		menu_obj->items[i].page = page;
-		increment += 0.03f;
-		j++;
-	}
-	menu_obj->refreshpage = 0;
-}
-
-void menu_init(void)
+void menu_init (void)
 {
 	filebrowser_new(&browser, Settings.PS3PathROMDirectory, ROM_EXTENSIONS);
-
-	menu_init_settings_pages(&menu_generalvideosettings);
-	menu_init_settings_pages(&menu_generalaudiosettings);
-	menu_init_settings_pages(&menu_emu_settings);
-	menu_init_settings_pages(&menu_emu_videosettings);
-	menu_init_settings_pages(&menu_emu_audiosettings);
-	menu_init_settings_pages(&menu_pathsettings);
-	menu_init_settings_pages(&menu_controlssettings);
 }
 
 void menu_loop(void)
@@ -1024,6 +1191,8 @@ void menu_loop(void)
 
 	menu_is_running = true;
 
+	menu_reinit_settings();
+
 	do
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1032,7 +1201,7 @@ void menu_loop(void)
 		switch(menuStack[menuStackindex].enum_id)
 		{
 			case FILE_BROWSER_MENU:
-				do_ROMMenu();
+				select_rom();
 				break;
 			case GENERAL_VIDEO_MENU:
 			case GENERAL_AUDIO_MENU:
@@ -1043,24 +1212,25 @@ void menu_loop(void)
 			case CONTROLS_MENU:
 				select_setting(&menuStack[menuStackindex]);
 				break;
+#ifdef HAVE_GAMEAWARE
+			case GAME_AWARE_SHADER_CHOICE:
+#endif
 			case SHADER_CHOICE:
 			case PRESET_CHOICE:
 			case BORDER_CHOICE:
-			case PATH_BIOSCHOICE:
 			case INPUT_PRESET_CHOICE:
-				do_select_file(menuStack[menuStackindex].enum_id);
+				select_file(menuStack[menuStackindex].enum_id);
 				break;
 			case PATH_SAVESTATES_DIR_CHOICE:
 			case PATH_DEFAULT_ROM_DIR_CHOICE:
+			case PATH_CHEATS_DIR_CHOICE:
 			case PATH_SRAM_DIR_CHOICE:
-				do_pathChoice(menuStack[menuStackindex].enum_id);
+				select_directory(menuStack[menuStackindex].enum_id);
 				break;
 		}
 
 		psglSwap();
+		cell_console_poll();
 		cellSysutilCheckCallback();
-#ifdef CELL_DEBUG_CONSOLE
-		cellConsolePoll();
-#endif
 	}while (menu_is_running);
 }

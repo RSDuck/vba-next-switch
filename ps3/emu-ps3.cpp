@@ -70,18 +70,19 @@ struct SSettings Settings;
 
 int mode_switch = MODE_MENU;
 
-static uint32_t is_running;			// is the ROM currently running in the emulator?
+uint32_t is_running;				// is the ROM currently running in the emulator?
 static bool is_ingame_menu_running;		// is the ingame menu currently running?
 static bool return_to_MM = false;		// launch multiMAN on exit if ROM is passed
-static bool need_load_rom = false;		// need to load the current ROM
-static char * current_rom;			// filename of the current ROM being emulated
+uint32_t emulator_initialized = 0;
+char current_rom[MAX_PATH_LENGTH];		// filename of the current ROM being emulated
 bool dialog_is_running;
 static uint64_t ingame_menu_item = 0;
 
 /* Emulator-specific variables */
 
-int srcWidth, srcHeight;
-static bool sgb_border_change = false;
+int srcWidth = 240;
+int srcHeight = 160;
+bool sgb_border_change = false;
 uint32_t reinit_video = 0;
 static int gbaRomSize = 0;
 
@@ -622,14 +623,9 @@ float Emulator_GetFontSize()
 }
 
 
-bool Emulator_IsROMLoaded()
-{
-	return current_rom != NULL && need_load_rom == false;
-}
-
 static void emulator_shutdown()
 {
-	if (Emulator_IsROMLoaded())
+	if (emulator_initialized)
 	{
 		if(Settings.EmulatedSystem == IMAGE_GBA)
 			CPUWriteBatteryFile(MakeFName(FILETYPE_BATTERY));
@@ -1201,44 +1197,31 @@ void vba_toggle_sgb_border(bool set_border)
 	sgb_border_change = true;
 }
 
-#define sgb_settings() \
-	srcWidth = 256; \
-	srcHeight = 224; \
-	gbBorderLineSkip = 256; \
-	gbBorderColumnSkip = 48; \
-	gbBorderRowSkip = 40;
-
-#define gb_settings() \
-	srcWidth = 160; \
-	srcHeight = 144; \
-	gbBorderLineSkip = 160; \
-	gbBorderColumnSkip = 0; \
-	gbBorderRowSkip = 0;
-
-#define gba_settings() \
-	srcWidth = 240; \
-	srcHeight = 160;
-
-#define sound_init() \
-   soundInit(); \
-   soundSetSampleRate(48000);
-
 static void vba_set_screen_dimensions()
 {
 	if (Settings.EmulatedSystem == IMAGE_GB)
 	{
 		if(gbBorderOn)
 		{
-			sgb_settings();
+			srcWidth = 256;
+			srcHeight = 224;
+			gbBorderLineSkip = 256;
+			gbBorderColumnSkip = 48;
+			gbBorderRowSkip = 40;
 		}
 		else
 		{
-			gb_settings();
+			srcWidth = 160;
+			srcHeight = 144;
+			gbBorderLineSkip = 160;
+			gbBorderColumnSkip = 0;
+			gbBorderRowSkip = 0;
 		}
 	}
 	else if (Settings.EmulatedSystem == IMAGE_GBA)
 	{
-		gba_settings();
+		srcWidth = 240;
+		srcHeight = 160;
 	}
 }
 
@@ -1250,14 +1233,23 @@ static void vba_init()
 	{
 		if(gbBorderOn)
 		{
-			sgb_settings();
+			srcWidth = 256;
+			srcHeight = 224;
+			gbBorderLineSkip = 256;
+			gbBorderColumnSkip = 48;
+			gbBorderRowSkip = 40;
 		}
 		else
 		{
-			gb_settings();
+			srcWidth = 160;
+			srcHeight = 144;
+			gbBorderLineSkip = 160;
+			gbBorderColumnSkip = 0;
+			gbBorderRowSkip = 0;
 		}
 
-		sound_init();
+		soundInit();
+		soundSetSampleRate(48000);
 		gbGetHardwareType();
 
 		// support for
@@ -1270,7 +1262,8 @@ static void vba_init()
 	}
 	else if (Settings.EmulatedSystem == IMAGE_GBA)
 	{
-		gba_settings();
+		srcWidth = 240;
+		srcHeight = 160;
 
 		// VBA - set all the defaults
 		cpuSaveType = 0;			//automatic
@@ -1289,7 +1282,8 @@ static void vba_init()
 		rtcEnable(enableRtc);		
 		doMirroring(mirroringEnable);
 
-		sound_init();
+		soundInit();
+		soundSetSampleRate(48000);
 
 		//Loading of the BIOS
 		CPUInit((strcmp(Settings.GBABIOS,"\0") == 0) ? NULL : Settings.GBABIOS, (strcmp(Settings.GBABIOS,"\0") == 0) ? false : true);
@@ -1297,13 +1291,7 @@ static void vba_init()
 		CPUReset();
 		soundReset();
 	}
-	else
-		emulator_shutdown(); //FIXME: be more graceful
 }
-
-#define set_game_system(system) \
-   Settings.EmulatedSystem = system; \
-   vba_init();
 
 static int emulator_detect_game_system(char * filename)
 {
@@ -1319,96 +1307,60 @@ static int emulator_detect_game_system(char * filename)
 		get_zipfilename(filename, file_to_check);
 	}
 	else
-	{
 		strncpy(file_to_check, filename, sizeof(file_to_check));
-	}
 
 	if (utilIsGBImage(file_to_check))
-	{
 		return IMAGE_GB;
-	}
 	else if(utilIsGBAImage(file_to_check))
-	{
 		return IMAGE_GBA;
-	}
 	else
-	{
 		return IMAGE_UNKNOWN;
-	}
 }
 
-static void vba_init_rom()
+void vba_init_rom()
 {
-	if(need_load_rom)
+	emulator_initialized = 1;
+	int whichsystem = emulator_detect_game_system(current_rom);
+	Settings.EmulatedSystem = whichsystem;
+
+	switch(Settings.EmulatedSystem)
 	{
-		int whichsystem = emulator_detect_game_system(current_rom);
-		Settings.EmulatedSystem = whichsystem;
-
-		switch(Settings.EmulatedSystem)
-		{
-			case IMAGE_GB:
-				if (!gbLoadRom(current_rom))
-					emulator_shutdown();
-
-				set_game_system(IMAGE_GB);
-
-				gbReadBatteryFile(MakeFName(FILETYPE_BATTERY));
-
-				need_load_rom = false;
-
-				if(Settings.LastEmulatedSystem != IMAGE_GB || sgb_border_change)
-					reinit_video = 1;
-
-				Settings.LastEmulatedSystem = IMAGE_GB;
-				break;
-			case IMAGE_GBA:
-				gbaRomSize = CPULoadRom(current_rom);
-
-				if (!gbaRomSize)
-					emulator_shutdown();
-
-				set_game_system(IMAGE_GBA);
-
-				CPUReadBatteryFile(MakeFName(FILETYPE_BATTERY));
-
-				need_load_rom = false;
-
-				if(Settings.LastEmulatedSystem != IMAGE_GBA)
-					reinit_video = 1;
-
-				Settings.LastEmulatedSystem = IMAGE_GBA;
-				break;
-			case IMAGE_UNKNOWN:
-				Settings.EmulatedSystem = IMAGE_UNKNOWN;
+		case IMAGE_GB:
+			if (!gbLoadRom(current_rom))
 				emulator_shutdown();
-		}
+
+			Settings.EmulatedSystem = IMAGE_GB;
+			vba_init();
+
+			gbReadBatteryFile(MakeFName(FILETYPE_BATTERY));
+
+
+			if(Settings.LastEmulatedSystem != IMAGE_GB || sgb_border_change)
+				reinit_video = 1;
+
+			Settings.LastEmulatedSystem = IMAGE_GB;
+			break;
+		case IMAGE_GBA:
+			gbaRomSize = CPULoadRom(current_rom);
+
+			if (!gbaRomSize)
+				emulator_shutdown();
+
+			Settings.EmulatedSystem = IMAGE_GBA;
+			vba_init();
+
+			CPUReadBatteryFile(MakeFName(FILETYPE_BATTERY));
+
+			if(Settings.LastEmulatedSystem != IMAGE_GBA)
+				reinit_video = 1;
+
+			Settings.LastEmulatedSystem = IMAGE_GBA;
+			break;
+		case IMAGE_UNKNOWN:
+			Settings.EmulatedSystem = IMAGE_UNKNOWN;
+			emulator_shutdown();
 	}
 }
-
-void Emulator_RequestLoadROM(const char * filename)
-{
-	if (current_rom == NULL || strcmp(filename, current_rom) != 0 || sgb_border_change)
-	{
-		if (current_rom != NULL)
-			free(current_rom);
-
-		current_rom = strdup(filename);
-		need_load_rom = true;
-	}
-	else
-	{
-		need_load_rom = false;
-
-		//reset rom instead of loading it again
-		if(Settings.EmulatedSystem == IMAGE_GBA)
-			CPUReset();
-		else
-			gbReset();
-	}
-	vba_init_rom();
-}
-
-
 
 static void sysutil_exit_callback (uint64_t status, uint64_t param, void *userdata)
 {
@@ -1441,7 +1393,6 @@ static void sysutil_exit_callback (uint64_t status, uint64_t param, void *userda
 			break;
 	}
 }
-
 
 //FIXME: Turn GREEN into WHITE and RED into LIGHTBLUE once the overlay is in
 #define ingame_menu_reset_entry_colors(ingame_menu_item) \
@@ -2074,7 +2025,8 @@ int main(int argc, char **argv)
 				break;
 			case MODE_MULTIMAN_STARTUP:
 				Emulator_StartROMRunning();
-				Emulator_RequestLoadROM(MULTIMAN_GAME_TO_BOOT);
+				snprintf(current_rom, sizeof(current_rom), MULTIMAN_GAME_TO_BOOT);
+				vba_init_rom();
 				break;
 			case MODE_EXIT:
 				emulator_shutdown();
