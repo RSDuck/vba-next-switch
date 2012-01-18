@@ -622,60 +622,6 @@ float Emulator_GetFontSize()
 	return Settings.PS3FontSize/100.0;
 }
 
-
-static void emulator_shutdown()
-{
-	if (emulator_initialized)
-	{
-		if(Settings.EmulatedSystem == IMAGE_GBA)
-			CPUWriteBatteryFile(MakeFName(FILETYPE_BATTERY));
-		else
-			gbWriteBatteryFile(MakeFName(FILETYPE_BATTERY));
-	}
-
-	//add saving back of conf file
-	emulator_save_settings(CONFIG_FILE);
-#ifdef PS3_PROFILING
-	// do any clean up... save stuff etc
-	// ...
-
-	// VBA - shutdown sound, release CEllAudio thread
-	soundShutdown();
-
-	cellSysmoduleUnloadModule(CELL_SYSMODULE_FS);
-	cellSysmoduleUnloadModule(CELL_SYSMODULE_IO);
-	cellSysmoduleUnloadModule(CELL_SYSMODULE_PNGDEC);
-	cellSysutilUnregisterCallback(0);
-
-	// ENABLE NET IO
-	net_stdio_enable(1);
-	// force exit --
-	exit(0);
-#else
-	//Cleaner way to exit without graphics corruption when it returns to XMB
-#ifdef MULTIMAN_SUPPORT
-	if(return_to_MM)
-	{
-		if(audio_handle)
-		{
-			audio_driver->free(audio_handle);
-			audio_handle = NULL; 
-		}
-
-		cellSysmoduleUnloadModule(CELL_SYSMODULE_AVCONF_EXT);
-		sys_spu_initialize(6, 0);
-		char multiMAN[512];
-		snprintf(multiMAN, sizeof(multiMAN), "%s", "/dev_hdd0/game/BLES80608/USRDIR/RELOAD.SELF");
-		sys_game_process_exitspawn2((char*) multiMAN, NULL, NULL, NULL, 0, 2048, SYS_PROCESS_PRIMARY_STACK_SIZE_64K);		
-		sys_process_exit(0);
-	}
-	else
-#endif
-		sys_process_exit(0);
-#endif
-}
-
-
 /* PS3 frontend - controls related macros */
 
 #define init_setting_uint(charstring, setting, defaultvalue) \
@@ -1094,19 +1040,6 @@ void emulator_save_settings(uint64_t filetosave)
 	}
 }
 
-void Emulator_StopROMRunning()
-{
-	is_running = false;
-}
-
-void Emulator_StartROMRunning(uint32_t set_is_running)
-{
-	if(set_is_running)
-		is_running = 1;
-	mode_switch = MODE_EMULATION;
-}
-
-
 void LoadImagePreferences()
 {
 	FILE *f = fopen(MakeFName(FILETYPE_IMAGE_PREFS), "r");
@@ -1327,7 +1260,7 @@ void vba_init_rom()
 	{
 		case IMAGE_GB:
 			if (!gbLoadRom(current_rom))
-				emulator_shutdown();
+				mode_switch = MODE_EXIT;
 
 			Settings.EmulatedSystem = IMAGE_GB;
 			vba_init();
@@ -1344,7 +1277,7 @@ void vba_init_rom()
 			gbaRomSize = CPULoadRom(current_rom);
 
 			if (!gbaRomSize)
-				emulator_shutdown();
+				mode_switch = MODE_EXIT;
 
 			Settings.EmulatedSystem = IMAGE_GBA;
 			vba_init();
@@ -1358,7 +1291,7 @@ void vba_init_rom()
 			break;
 		case IMAGE_UNKNOWN:
 			Settings.EmulatedSystem = IMAGE_UNKNOWN;
-			emulator_shutdown();
+			mode_switch = MODE_EXIT;
 	}
 }
 
@@ -1425,7 +1358,7 @@ static void ingame_menu(void)
 				is_running = 1;
 				ingame_menu_item = 0;
 				is_ingame_menu_running = 0;
-				Emulator_StartROMRunning(0);
+				mode_switch = MODE_EMULATION;
 			}
 
 			switch(ingame_menu_item)
@@ -1445,7 +1378,7 @@ static void ingame_menu(void)
 						is_running = 1;
 						ingame_menu_item = 0;
 						is_ingame_menu_running = 0;
-						Emulator_StartROMRunning(0);
+						mode_switch = MODE_EMULATION;
 					}
 
 					if(CTRL_LEFT(button_was_pressed) || CTRL_LSTICK_LEFT(button_was_pressed))
@@ -1478,7 +1411,7 @@ static void ingame_menu(void)
 						is_running = 1;
 						ingame_menu_item = 0;
 						is_ingame_menu_running = 0;
-						Emulator_StartROMRunning(0);
+						mode_switch = MODE_EMULATION;
 					}
 
 					if(CTRL_LEFT(button_was_pressed) || CTRL_LSTICK_LEFT(button_was_pressed))
@@ -1592,7 +1525,7 @@ static void ingame_menu(void)
 						is_running = 0;
 						ingame_menu_item = MENU_ITEM_FRAME_ADVANCE;
 						is_ingame_menu_running = 0;
-						Emulator_StartROMRunning(0);
+						mode_switch = MODE_EMULATION;
 					}
 					ingame_menu_reset_entry_colors (ingame_menu_item);
 					strcpy(comment, "Press 'CROSS', 'L2' or 'R2' button to step one frame.\nNOTE: Pressing the button rapidly will advance the frame more slowly\nand prevent buttons from being input.");
@@ -1650,7 +1583,7 @@ static void ingame_menu(void)
 						is_running = 1;
 						ingame_menu_item = 0;
 						is_ingame_menu_running = 0;
-						Emulator_StartROMRunning(0);
+						mode_switch = MODE_EMULATION;
 					} 
 					ingame_menu_reset_entry_colors (ingame_menu_item);
 					strcpy(comment, "Press 'CROSS' to return back to the game.");
@@ -1666,7 +1599,7 @@ static void ingame_menu(void)
 						is_running = 1;
 						ingame_menu_item = 0;
 						is_ingame_menu_running = 0;
-						Emulator_StartROMRunning(0);
+						mode_switch = MODE_EMULATION;
 					} 
 					ingame_menu_reset_entry_colors (ingame_menu_item);
 					strcpy(comment, "Press 'CROSS' to reset the game.");
@@ -1814,70 +1747,6 @@ static void ingame_menu(void)
 	}while(is_ingame_menu_running);
 }
 
-static void emulator_start()
-{
-	ps3graphics_set_orientation(Settings.Orientation);
-	if (ps3graphics_get_current_resolution() == CELL_VIDEO_OUT_RESOLUTION_576)
-	{
-		if(ps3graphics_check_resolution(CELL_VIDEO_OUT_RESOLUTION_576))
-		{
-			if(!ps3graphics_get_pal60hz())
-			{
-				//PAL60 is OFF
-				Settings.PS3PALTemporalMode60Hz = true;
-				ps3graphics_set_pal60hz(Settings.PS3PALTemporalMode60Hz);
-				ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, NULL, NULL);
-			}
-		}
-	}
-
-	if (reinit_video || ps3graphics_calculate_aspect_ratio_before_game_load())
-	{
-		if(ps3graphics_calculate_aspect_ratio_before_game_load())
-			ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
-
-		if(sgb_border_change)
-		{
-			vba_set_screen_dimensions();
-			sgb_border_change = false;
-		}
-
-		ps3graphics_set_dimensions(srcWidth, srcHeight, (srcWidth * 4) + 4);
-		reinit_video = false;
-	}
-
-	soundResume();
-
-	if(Settings.EmulatedSystem == IMAGE_GBA)
-	{
-		do
-		{
-			CPULoop();
-			systemReadJoypadGBA(0);
-
-#ifdef CELL_DEBUG_CONSOLE
-			cellConsolePoll();
-#endif
-
-			cellSysutilCheckCallback();
-		}while(is_running);
-	}
-	else
-	{
-		do
-		{
-			gbEmulate();
-#ifdef CELL_DEBUG_CONSOLE
-			cellConsolePoll();
-#endif
-
-			cellSysutilCheckCallback();
-		}while(is_running);
-	}
-
-	soundPause();
-}
-
 void emulator_implementation_set_texture(const char * fname)
 {
 	strcpy(Settings.PS3CurrentBorder,fname);
@@ -2005,33 +1874,144 @@ int main(int argc, char **argv)
 
 	menu_init();
 
-	do
+begin_loop:
+	if(mode_switch == MODE_EMULATION)
 	{
-		switch(mode_switch)
+		if(ingame_menu_item != 0)
+			is_ingame_menu_running = 1;
+
+		/* EMULATOR START - BOF */
+		ps3graphics_set_orientation(Settings.Orientation);
+		if (ps3graphics_get_current_resolution() == CELL_VIDEO_OUT_RESOLUTION_576)
 		{
-			case MODE_MENU:
-				ps3graphics_set_orientation(NORMAL);
-				menu_loop();
-				break;
-			case MODE_EMULATION:
-				if(ingame_menu_item != 0)
-					is_ingame_menu_running = 1;
-
-				emulator_start();
-
-				if(is_ingame_menu_running)
-					ingame_menu();
-
-				break;
-			case MODE_MULTIMAN_STARTUP:
-				Emulator_StartROMRunning();
-				snprintf(current_rom, sizeof(current_rom), MULTIMAN_GAME_TO_BOOT);
-				vba_init_rom();
-				break;
-			case MODE_EXIT:
-				emulator_shutdown();
+			if(ps3graphics_check_resolution(CELL_VIDEO_OUT_RESOLUTION_576))
+			{
+				if(!ps3graphics_get_pal60hz())
+				{
+					//PAL60 is OFF
+					Settings.PS3PALTemporalMode60Hz = true;
+					ps3graphics_set_pal60hz(Settings.PS3PALTemporalMode60Hz);
+					ps3graphics_switch_resolution(ps3graphics_get_current_resolution(), Settings.PS3PALTemporalMode60Hz, Settings.TripleBuffering, NULL, NULL);
+				}
+			}
 		}
-	}while(1);
+
+		if (reinit_video || ps3graphics_calculate_aspect_ratio_before_game_load())
+		{
+			if(ps3graphics_calculate_aspect_ratio_before_game_load())
+				ps3graphics_set_aspect_ratio(Settings.PS3KeepAspect, srcWidth, srcHeight, 1);
+
+			if(sgb_border_change)
+			{
+				vba_set_screen_dimensions();
+				sgb_border_change = false;
+			}
+
+			ps3graphics_set_dimensions(srcWidth, srcHeight, (srcWidth * 4) + 4);
+			reinit_video = false;
+		}
+
+		soundResume();
+
+		if(Settings.EmulatedSystem == IMAGE_GBA)
+		{
+			do
+			{
+				CPULoop();
+				systemReadJoypadGBA(0);
+
+#ifdef CELL_DEBUG_CONSOLE
+				cellConsolePoll();
+#endif
+
+				cellSysutilCheckCallback();
+			}while(is_running);
+		}
+		else
+		{
+			do
+			{
+				gbEmulate();
+#ifdef CELL_DEBUG_CONSOLE
+				cellConsolePoll();
+#endif
+
+				cellSysutilCheckCallback();
+			}while(is_running);
+		}
+
+		soundPause();
+		/* EMULATOR START - EOF */
+
+		if(is_ingame_menu_running)
+			ingame_menu();
+	}
+	else if(mode_switch == MODE_MENU)
+	{
+		ps3graphics_set_orientation(NORMAL);
+		menu_loop();
+	}
+#ifdef MULTIMAN_SUPPORT
+	else if(mode_switch == MODE_MULTIMAN_STARTUP)
+	{
+		snprintf(current_rom, sizeof(current_rom), MULTIMAN_GAME_TO_BOOT);
+		is_running = 1;
+		mode_switch = MODE_EMULATION;
+		vba_init_rom();
+	}
+#endif
+	else
+		goto begin_shutdown;
+	
+	goto begin_loop;
+
+begin_shutdown:
+	if (emulator_initialized)
+	{
+		if(Settings.EmulatedSystem == IMAGE_GBA)
+			CPUWriteBatteryFile(MakeFName(FILETYPE_BATTERY));
+		else
+			gbWriteBatteryFile(MakeFName(FILETYPE_BATTERY));
+	}
+
+	//add saving back of conf file
+	emulator_save_settings(CONFIG_FILE);
+#ifdef PS3_PROFILING
+	// do any clean up... save stuff etc
+	// ...
+
+	// VBA - shutdown sound, release CEllAudio thread
+	soundShutdown();
+
+	cellSysmoduleUnloadModule(CELL_SYSMODULE_FS);
+	cellSysmoduleUnloadModule(CELL_SYSMODULE_IO);
+	cellSysmoduleUnloadModule(CELL_SYSMODULE_PNGDEC);
+	cellSysutilUnregisterCallback(0);
+
+	// ENABLE NET IO
+	net_stdio_enable(1);
+	// force exit --
+	exit(0);
+#else
+	//Cleaner way to exit without graphics corruption when it returns to XMB
+#ifdef MULTIMAN_SUPPORT
+	if(return_to_MM)
+	{
+		if(audio_handle)
+		{
+			audio_driver->free(audio_handle);
+			audio_handle = NULL; 
+		}
+
+		cellSysmoduleUnloadModule(CELL_SYSMODULE_AVCONF_EXT);
+		sys_spu_initialize(6, 0);
+		char multiMAN[512];
+		snprintf(multiMAN, sizeof(multiMAN), "%s", "/dev_hdd0/game/BLES80608/USRDIR/RELOAD.SELF");
+		sys_game_process_exitspawn2((char*) multiMAN, NULL, NULL, NULL, 0, 2048, SYS_PROCESS_PRIMARY_STACK_SIZE_64K);		
+	}
+#endif
+		sys_process_exit(0);
+#endif
 }
 
 

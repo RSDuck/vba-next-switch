@@ -80,9 +80,6 @@ enum {
 #define MENU_ITEM_LAST           MENU_ITEM_RETURN_TO_XMB
 
 float Emulator_GetFontSize();
-void Emulator_StopROMRunning();
-void Emulator_StartROMRunning(uint32_t set_is_running = 1);
-bool Emulator_IsROMLoaded();
 void vba_toggle_sgb_border(bool set_border);
 void emulator_save_settings(uint64_t filetosave);
 extern void emulator_implementation_set_shader_preset(const char * fname);
