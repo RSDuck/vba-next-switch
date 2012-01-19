@@ -240,20 +240,7 @@ class Stereo_Buffer
 		Blip_Buffer bufs_buffer [BUFS_SIZE];
 	private:
 		int mixer_samples_read;
-		channel_t chan;
 		long samples_avail_;
-
-		/* Count of changes to channel configuration. Incremented whenever
-		   a change is made to any of the Blip_Buffers for any channel. */
-
-		unsigned channels_changed_count_;
-		long sample_rate_;
-		/* Length of buffer, in milliseconds */
-		int length_;
-		int channel_count_;
-		/* Number of samples per output frame (1 = mono, 2 = stereo) */
-		int samples_per_frame_;
-		int const* channel_types_;
 };
 
 

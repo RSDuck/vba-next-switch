@@ -174,16 +174,6 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
 Stereo_Buffer::Stereo_Buffer()
 {
-	samples_per_frame_      = 2;
-	length_                 = 0;
-	sample_rate_            = 0;
-	channels_changed_count_ = 1;
-	channel_types_          = 0;
-	channel_count_          = 0;
-
-        chan.center = &bufs_buffer [2];
-        chan.left   = &bufs_buffer [0];
-        chan.right  = &bufs_buffer [1];
         mixer_samples_read = 0;
 }
 
@@ -194,8 +184,6 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
         mixer_samples_read = 0;
         for ( int i = BUFS_SIZE; --i >= 0; )
                 RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
-	sample_rate_ = bufs_buffer[0].sample_rate_;
-	length_ = bufs_buffer[0].length_;
         return 0; 
 }
 
