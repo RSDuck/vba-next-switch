@@ -57,11 +57,12 @@ void Gb_Apu::synth_volume( int iv )
 
 void Gb_Apu::apply_volume()
 {
-	int data, left, right;
+	int data, left, right, vol_tmp;
 	data  = regs [VOL_REG - START_ADDR];
 	left  = data >> 4 & 7;
 	right = data & 7;
-	synth_volume( max( left, right ) + 1 );
+	vol_tmp = left < right ? right : left;
+	synth_volume( vol_tmp + 1 );
 }
 
 void Gb_Apu::volume( double v )
@@ -437,7 +438,7 @@ INLINE void Gb_Apu::save_load2( gb_apu_state_t* io, bool save )
 
 		if ( i != 2 )
 		{
-			int j = min( i, 2 );
+			int j = 2 < i ? 2 : i;
 			Gb_Env& env = STATIC_CAST(Gb_Env&,osc);
 			REFLECT( env.env_delay,   env_delay   [j] );
 			REFLECT( env.volume,      env_volume  [j] );

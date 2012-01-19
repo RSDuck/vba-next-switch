@@ -4,12 +4,7 @@
 #include "Types.h"
 
 /* if a >= 0 return x else y*/
-static INLINE int isel( int a, int x, int y )
-{
-	int mask = (a >> 31); /* arithmetic shift right, splat out the sign bit*/
-	/* mask is 0xFFFFFFFF if (a < 0) and 0x00 otherwise.*/
-	return (x & (~mask)) + (y & mask);
-}
+#define isel(a, x, y) ((x & (~(a >> 31))) + (y & (a >> 31)))
 
 #ifdef _MSC_VER
 #include <stdlib.h>

@@ -21,10 +21,6 @@
 
 #include "memgzio.h"
 
-#ifndef local
-#define local static
-#endif
-
 #ifndef DEF_MEM_LEVEL
 #  define DEF_MEM_LEVEL 8
 #endif
@@ -87,15 +83,15 @@ typedef struct mem_stream {
 } mem_stream;
 
 
-local gzFile gz_open      OF((char *memory, const int available, const char *mode));
-local int do_flush        OF((gzFile file, int flush));
-local int    get_byte     OF((mem_stream *s));
-local void   check_header OF((mem_stream *s));
-local int    destroy      OF((mem_stream *s));
-local void   putLong      OF((MEMFILE *file, uLong x));
-local uLong  getLong      OF((mem_stream *s));
+static gzFile gz_open      OF((char *memory, const int available, const char *mode));
+static int do_flush        OF((gzFile file, int flush));
+static int    get_byte     OF((mem_stream *s));
+static void   check_header OF((mem_stream *s));
+static int    destroy      OF((mem_stream *s));
+static void   putLong      OF((MEMFILE *file, uLong x));
+static uLong  getLong      OF((mem_stream *s));
 
-local MEMFILE *memOpen(char *memory, int available, char mode)
+static MEMFILE *memOpen(char *memory, int available, char mode)
 {
   MEMFILE *f;
 
@@ -132,7 +128,7 @@ local MEMFILE *memOpen(char *memory, int available, char mode)
   return f;
 }
 
-local size_t memWrite(const void *buffer, size_t size, size_t count,
+static size_t memWrite(const void *buffer, size_t size, size_t count,
                       MEMFILE *file)
 {
   size_t total = size*count;
@@ -151,7 +147,7 @@ local size_t memWrite(const void *buffer, size_t size, size_t count,
   return total;
 }
 
-local size_t memRead(void *buffer, size_t size, size_t count,
+static size_t memRead(void *buffer, size_t size, size_t count,
                      MEMFILE *file)
 {
   size_t total = size*count;
@@ -173,7 +169,7 @@ local size_t memRead(void *buffer, size_t size, size_t count,
   return total;
 }
 
-local int memPutc(int c, MEMFILE *file)
+static int memPutc(int c, MEMFILE *file)
 {
   if(file->mode != 'w') {
     file->error = 1;
@@ -189,17 +185,17 @@ local int memPutc(int c, MEMFILE *file)
   return c;
 }
 
-local long memTell(MEMFILE *f)
+static long memTell(MEMFILE *f)
 {
   return (long)(f->next - f->memory) - 8;
 }
 
-local int memError(MEMFILE *f)
+static int memError(MEMFILE *f)
 {
   return f->error;
 }
 
-local int memClose(MEMFILE *f)
+static int memClose(MEMFILE *f)
 {
   if(f->mode == 'w') {
     *((int *)(f->memory+4)) = memTell(f);
@@ -208,7 +204,7 @@ local int memClose(MEMFILE *f)
   return 0;
 }
 
-local int memPrintf(MEMFILE *f, const char *format, ...)
+static int memPrintf(MEMFILE *f, const char *format, ...)
 {
   char buffer[80];
   va_list list;
@@ -230,7 +226,7 @@ local int memPrintf(MEMFILE *f, const char *format, ...)
    can be checked to distinguish the two cases (if errno is zero, the
    zlib error is Z_MEM_ERROR).
 */
-local gzFile gz_open (memory, available, mode)
+static gzFile gz_open (memory, available, mode)
     char *memory;
     const int available;
     const char *mode;
@@ -346,7 +342,7 @@ gzFile ZEXPORT memgzopen (memory, available, mode)
    for end of file.
    IN assertion: the stream s has been sucessfully opened for reading.
 */
-local int get_byte(s)
+static int get_byte(s)
     mem_stream *s;
 {
     if (s->z_eof) return EOF;
@@ -373,7 +369,7 @@ local int get_byte(s)
        s->stream.avail_in is zero for the first time, but may be non-zero
        for concatenated .gz files.
 */
-local void check_header(s)
+static void check_header(s)
     mem_stream *s;
 {
     int method; /* method byte */
@@ -426,7 +422,7 @@ local void check_header(s)
  * Cleanup then free the given mem_stream. Return a zlib error code.
    Try freeing in the reverse order of allocations.
  */
-local int destroy (s)
+static int destroy (s)
     mem_stream *s;
 {
     int err = Z_OK;
@@ -593,7 +589,7 @@ int ZEXPORT memgzwrite (file, buf, len)
      Flushes all pending output into the compressed file. The parameter
    flush is as in the deflate() function.
 */
-local int do_flush (file, flush)
+static int do_flush (file, flush)
     gzFile file;
     int flush;
 {
@@ -635,7 +631,7 @@ local int do_flush (file, flush)
 /* ===========================================================================
    Outputs a long in LSB order to the given file
 */
-local void putLong (file, x)
+static void putLong (file, x)
     MEMFILE *file;
     uLong x;
 {
@@ -650,7 +646,7 @@ local void putLong (file, x)
    Reads a long in LSB order from the given mem_stream. Sets z_err in case
    of error.
 */
-local uLong getLong (s)
+static uLong getLong (s)
     mem_stream *s;
 {
     uLong x = (uLong)get_byte(s);
@@ -815,7 +811,7 @@ int UnZipBuffer (unsigned char * outbuffer, FILE * fd)
 	/*** Read Zip Header ***/
 	fread(readbuffer, ZIPCHUNK,  1, fd);
 
-	/*** Copy PKZip header to local, used as info ***/
+	/*** Copy PKZip header to static, used as info ***/
 	memcpy (&pkzip, &readbuffer, sizeof (PKZIPHEADER));
 
 	if (FLIP32 (pkzip.uncompressedSize) > MAXROMSIZE)

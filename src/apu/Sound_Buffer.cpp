@@ -238,7 +238,7 @@ long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 {
 	int pair_count;
 
-        out_size = min( out_size, STEREO_BUFFER_SAMPLES_AVAILABLE());
+        out_size = (STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size) ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
 
         pair_count = int (out_size >> 1);
         if ( pair_count )
@@ -325,8 +325,8 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	}
 }
 
-
-int const max_read = 2560; /* determines minimum delay*/
+#define MAX_READ 2560		/* determines minimum delay */
+#define MAX_READ_TIMES_STEREO 5120
 
 void Effects_Buffer::clear()
 {
@@ -411,12 +411,12 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 	channel_types_          = 0;
 	channel_count_          = 0;
 
-        echo_size   = max( max_read * (long) STEREO, echo_size_ & ~1 );
+        echo_size   = (MAX_READ_TIMES_STEREO) < (echo_size_ & ~1) ? (echo_size_ & ~1) : MAX_READ_TIMES_STEREO;
         clock_rate_ = 0;
         bass_freq_  = 90;
         bufs_buffer       = 0;
         bufs_size   = 0;
-        bufs_max    = max( max_bufs, (int) EXTRA_CHANS );
+        bufs_max    = max_bufs < EXTRA_CHANS ? EXTRA_CHANS : max_bufs;
         no_echo     = true;
         no_effects  = true;
 
@@ -510,7 +510,7 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
 
         RETURN_ERR( chans.resize( count + EXTRA_CHANS ) );
 
-        RETURN_ERR( new_bufs( min( bufs_max, count + EXTRA_CHANS ) ) );
+        RETURN_ERR( new_bufs( (count + EXTRA_CHANS) < bufs_max ? (count + EXTRA_CHANS) : bufs_max));
 
         for ( int i = bufs_size; --i >= 0; )
                 RETURN_ERR( bufs_buffer [i].set_sample_rate( sample_rate_, length_ ));
@@ -639,8 +639,8 @@ void Effects_Buffer::apply_config()
 	for ( i = STEREO; --i >= 0; )
 	{
 		long delay = config_.delay [i] * sample_rate_ / 1000 * STEREO;
-		delay = max( delay, long (max_read * STEREO) );
-		delay = min( delay, long (echo_size - max_read * STEREO) );
+		delay = delay < MAX_READ_TIMES_STEREO ? MAX_READ_TIMES_STEREO : delay;
+		delay = (echo_size - MAX_READ_TIMES_STEREO) < delay ? (echo_size - MAX_READ_TIMES_STEREO) : delay;
 		if ( s.delay [i] != delay )
 		{
 			s.delay [i] = delay;
@@ -810,7 +810,7 @@ void Effects_Buffer::end_frame( int32_t time )
 
 long Effects_Buffer::read_samples( int16_t * out, long out_size )
 {
-        out_size = min( out_size, STEREO_BUFFER_SAMPLES_AVAILABLE());
+        out_size = STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
 
         int pair_count = int (out_size >> 1);
         if ( pair_count )
@@ -823,7 +823,7 @@ long Effects_Buffer::read_samples( int16_t * out, long out_size )
 			do
 			{
 				/* mix at most max_read pairs at a time*/
-				int count = max_read;
+				int count = MAX_READ;
 				if ( count > pairs_remain )
 					count = pairs_remain;
 
