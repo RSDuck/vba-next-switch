@@ -40,9 +40,6 @@ class Blip_Buffer
 	/* Removes 'count' samples from those waiting to be read*/
 	void remove_samples( long count );
 
-	/* Sets frequency high-pass filter frequency, where higher values reduce bass more*/
-	void bass_freq( int frequency );
-
 	/* Experimental features*/
 
 	/* Saves state, including high-pass filter and tails of last deltas.*/
@@ -70,7 +67,6 @@ class Blip_Buffer
 	private:
 	Blip_Buffer( const Blip_Buffer& );
 	Blip_Buffer& operator = ( const Blip_Buffer& );
-	int bass_freq_;
 };
 
 /* Number of bits in resample ratio fraction. Higher values give a more accurate 
@@ -240,7 +236,6 @@ class Stereo_Buffer
 		Blip_Buffer bufs_buffer [BUFS_SIZE];
 	private:
 		int mixer_samples_read;
-		long samples_avail_;
 };
 
 
@@ -292,7 +287,6 @@ class Effects_Buffer {
 
 		const char * set_channel_count( int, int const* = 0 );
 		void clock_rate( long );
-		void bass_freq( int );
 
 		// Gets indexed channel, from 0 to channel count - 1
 		channel_t channel( int i) { return chans[i + EXTRA_CHANS].channel; }
@@ -309,7 +303,6 @@ class Effects_Buffer {
 	private:
 		config_t config_;
 		long clock_rate_;
-		int bass_freq_;
 
 		int echo_size;
 

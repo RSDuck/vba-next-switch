@@ -35,7 +35,6 @@ Blip_Buffer::Blip_Buffer()
         buffer_size_  = 0;
         sample_rate_  = 0;
         clock_rate_   = 0;
-        bass_freq_    = 16;
         length_       = 0;
 
         clear();
@@ -82,7 +81,6 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
         /* update these since they depend on sample rate*/
         if ( clock_rate_ )
                 factor_ = clock_rate_factor( clock_rate_);
-        bass_freq( bass_freq_ );
 
         clear();
 
@@ -96,18 +94,6 @@ uint32_t Blip_Buffer::clock_rate_factor( long rate ) const
         double ratio = (double) sample_rate_ / rate;
         int32_t factor = (int32_t) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5 );
         return (uint32_t) factor;
-}
-
-void Blip_Buffer::bass_freq( int freq )
-{
-        bass_freq_ = freq;
-        int shift = 31;
-        if ( freq > 0 )
-        {
-                shift = 13;
-                long f = (freq << 16) / sample_rate_;
-                while ( (f >>= 1) && --shift ) { }
-        }
 }
 
 void Blip_Buffer::remove_samples( long count )
@@ -388,7 +374,6 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
 
         echo_size   = (MAX_READ_TIMES_STEREO) < (echo_size_ & ~1) ? (echo_size_ & ~1) : MAX_READ_TIMES_STEREO;
         clock_rate_ = 0;
-        bass_freq_  = 90;
         bufs_buffer = 0;
         bufs_size   = 0;
         bufs_max    = max_bufs < EXTRA_CHANS ? EXTRA_CHANS : max_bufs;
@@ -460,13 +445,6 @@ void Effects_Buffer::clock_rate( long rate )
                 bufs_buffer[i].factor_ = bufs_buffer [i].clock_rate_factor( clock_rate_ );
 }
 
-void Effects_Buffer::bass_freq( int freq )
-{
-        bass_freq_ = freq;
-        for ( int i = bufs_size; --i >= 0; )
-                bufs_buffer [i].bass_freq( bass_freq_ );
-}
-
 const char * Effects_Buffer::set_channel_count( int count, int const* types )
 {
 	channel_count_ = count;
@@ -504,7 +482,6 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
         chans [3].cfg.echo = true;
 
         clock_rate( clock_rate_ );
-        bass_freq( bass_freq_ );
         apply_config();
         echo_pos       = 0;
         s.low_pass [0] = 0;
