@@ -47,7 +47,7 @@ int   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
 int   soundTicks         = SOUND_CLOCK_TICKS_;
 
 static int soundEnableFlag   = 0x3ff; /* emulator channels enabled*/
-static float const apu_vols [4] = { 0.25, 0.5, 1, 0.25 };
+static float const apu_vols [4] = { -0.25f, -0.5f, -1.0f, -0.25f };
 
 static const int table [0x40] =
 {
@@ -160,6 +160,14 @@ void Gba_Pcm::update( int dac )
 	last_time = time;
 }
 
+static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
+{
+	uint32_t addr1_table = *addr - 0x60;
+	uint32_t addr2_table = *addr2 - 0x60;
+	*addr = table [addr1_table];
+	*addr2 = table [addr2_table];
+}
+
 static void soundEvent_u16_parallel(uint32_t address[])
 {
 	for(int i = 0; i < 8; i++)
@@ -172,9 +180,7 @@ static void soundEvent_u16_parallel(uint32_t address[])
 				pcm [0].write_control( 0      );
 				pcm [1].write_control( 0);
 
-				//Apply Volume
-				gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
-				//End of Apply Volume
+				gb_apu->volume( apu_vols [ioMem [SGCNT0_H] & 3] );
 				//End of SGCNT0_H
 				break;
 
@@ -261,26 +267,13 @@ void Gba_Pcm_Fifo::write_fifo( int data )
 	writeIndex = (writeIndex + 2) & 31;
 }
 
-int gba_to_gb_sound( int addr )
+static int gba_to_gb_sound( int addr )
 {
 	if ( addr >= 0x60 && addr < 0xA0 )
 		return table [addr - 0x60];
 	return 0;
 }
 
-void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
-{
-	uint32_t addr1_table = *addr - 0x60;
-	uint32_t addr2_table = *addr2 - 0x60;
-	if ( *addr >= 0x60 && *addr < 0xA0 )
-		*addr = table [addr1_table];
-	else
-		*addr = 0;
-	if ( *addr2 >= 0x60 && *addr2 < 0xA0 )
-		*addr2 = table [addr2_table];
-	else
-		*addr2 = 0;
-}
 
 void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 {
@@ -322,7 +315,7 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 			pcm [0].write_control( data      );
 			pcm [1].write_control( data >> 4 );
 
-			gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
+			gb_apu->volume( apu_vols [ioMem [SGCNT0_H] & 3] );
 			//End of SGCNT0_H
 			break;
 
@@ -445,7 +438,7 @@ static void remake_stereo_buffer()
 		apply_muting();
 	}
 
-	gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
+	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 
 	pcm_synth.volume( 0.66 / 256 * SOUNDVOLUME_ );
 }
@@ -498,7 +491,7 @@ void soundReset()
 	soundTicks        = SOUND_CLOCK_TICKS_;
 
 	// Sound Event (NR52)
-	int gb_addr = gba_to_gb_sound( NR52 );
+	int gb_addr = table[NR52 - 0x60];
 	if ( gb_addr )
 	{
 		ioMem[NR52] = 0x80;
@@ -811,12 +804,8 @@ void soundReadGame( gzFile in, int version )
 	pcm [0].write_control( data      );
 	pcm [1].write_control( data >> 4 );
 
-	//Apply Volume
-	gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
-	//End of Apply Volume
+	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 	//End of SGCNT0_H
-
-	//apply_muting();
 }
 
 #ifdef __LIBSNES__
@@ -844,11 +833,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	pcm [0].write_control( data      );
 	pcm [1].write_control( data >> 4 );
 
-	//Apply Volume
-	gb_apu->volume( SOUNDVOLUME_ * apu_vols [ioMem [SGCNT0_H] & 3] );
-	//End of Apply Volume
+	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 	//End of SGCNT0_H
-
-	//apply_muting();
 }
 #endif

@@ -448,7 +448,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 					case 0x9e:
 					case 0x9f:
 						{
-							int gb_addr = gba_to_gb_sound(address & 0xFF);
+							int gb_addr = table[(address & 0xFF) - 0x60];
 							soundEvent_u8(gb_addr, address&0xFF, b);
 						}
 						break;

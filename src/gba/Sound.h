@@ -60,9 +60,6 @@ void soundEvent_u8( int gb_addr, uint32_t addr, uint8_t  data );
 void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[]);
 void soundEvent_u16( uint32_t addr, uint16_t data );
 
-void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 );
-int gba_to_gb_sound( int addr );
-
 // Notifies emulator that a timer has overflowed
 void soundTimerOverflow( int which );
 

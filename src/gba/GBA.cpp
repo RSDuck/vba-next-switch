@@ -6,6 +6,18 @@
 #include <stddef.h>
 #endif
 
+static const int table [0x40] =
+{
+		0xFF10,     0,0xFF11,0xFF12,0xFF13,0xFF14,     0,     0,
+		0xFF16,0xFF17,     0,     0,0xFF18,0xFF19,     0,     0,
+		0xFF1A,     0,0xFF1B,0xFF1C,0xFF1D,0xFF1E,     0,     0,
+		0xFF20,0xFF21,     0,     0,0xFF22,0xFF23,     0,     0,
+		0xFF24,0xFF25,     0,     0,0xFF26,     0,     0,     0,
+		     0,     0,     0,     0,     0,     0,     0,     0,
+		0xFF30,0xFF31,0xFF32,0xFF33,0xFF34,0xFF35,0xFF36,0xFF37,
+		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
+};
+
 #define CPU_UPDATE_CPSR() \
 { \
 	uint32_t CPSR; \
@@ -4825,7 +4837,8 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				int gb_addr[2] = {address & 0xFF, (address & 0xFF) + 1};
 				uint32_t address_array[2] = {address & 0xFF, (address&0xFF)+1};
 				uint8_t data_array[2] = {(uint8_t)(value & 0xFF), (uint8_t)(value>>8)};
-				gba_to_gb_sound_parallel(&gb_addr[0], &gb_addr[1]);
+				gb_addr[0] = table[gb_addr[0] - 0x60];
+				gb_addr[1] = table[gb_addr[1] - 0x60];
 				soundEvent_u8_parallel(gb_addr, address_array, data_array);
 				break;
 			}
