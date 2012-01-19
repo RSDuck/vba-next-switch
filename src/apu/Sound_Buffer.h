@@ -230,12 +230,8 @@ class Stereo_Buffer
 		~Stereo_Buffer();
 		const char * set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
 		void clock_rate( long );
-		void bass_freq( int );
 		void clear();
 
-		double real_ratio();
-
-		channel_t channel( int ) { return chan; }
 		void end_frame( int32_t );
 
 		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
@@ -243,7 +239,6 @@ class Stereo_Buffer
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer [BUFS_SIZE];
 	private:
-		Blip_Buffer* mixer_bufs [3];
 		int mixer_samples_read;
 		channel_t chan;
 		long samples_avail_;
@@ -313,7 +308,7 @@ class Effects_Buffer {
 		void bass_freq( int );
 
 		// Gets indexed channel, from 0 to channel count - 1
-		channel_t channel( int i);
+		channel_t channel( int i) { return chans[i + EXTRA_CHANS].channel; }
 		void end_frame( int32_t );
 		long read_samples( int16_t*, long );
 		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
@@ -352,7 +347,6 @@ class Effects_Buffer {
 		buf_t* bufs_buffer;
 		int bufs_size;
 		int bufs_max; // bufs_size <= bufs_max, to limit memory usage
-		Blip_Buffer* mixer_bufs [3];
 		int mixer_samples_read;
 
 		struct {

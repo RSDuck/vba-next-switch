@@ -181,9 +181,9 @@ Stereo_Buffer::Stereo_Buffer()
 	channel_types_          = 0;
 	channel_count_          = 0;
 
-        chan.center = mixer_bufs [2] = &bufs_buffer [2];
-        chan.left   = mixer_bufs [0] = &bufs_buffer [0];
-        chan.right  = mixer_bufs [1] = &bufs_buffer [1];
+        chan.center = &bufs_buffer [2];
+        chan.left   = &bufs_buffer [0];
+        chan.right  = &bufs_buffer [1];
         mixer_samples_read = 0;
 }
 
@@ -205,19 +205,6 @@ void Stereo_Buffer::clock_rate( long rate )
 	bufs_buffer[1].factor_ = bufs_buffer [1].clock_rate_factor( rate );
 	bufs_buffer[0].factor_ = bufs_buffer [0].clock_rate_factor( rate );
 }
-
-double Stereo_Buffer::real_ratio()
-{
-   return (double)bufs_buffer[0].clock_rate_ * (double)bufs_buffer[0].clock_rate_factor(bufs_buffer[0].clock_rate_) / (1 << BLIP_BUFFER_ACCURACY);
-}
-
-void Stereo_Buffer::bass_freq( int bass )
-{
-	bufs_buffer [2].bass_freq( bass );
-	bufs_buffer [1].bass_freq( bass );
-	bufs_buffer [0].bass_freq( bass );
-}
-
 
 void Stereo_Buffer::clear()
 {
@@ -269,13 +256,13 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 	int16_t* outtemp = out + count * STEREO;
 
 	/* do left + center and right + center separately to reduce register load*/
-	Blip_Buffer* const* buf = &mixer_bufs [2];
+	Blip_Buffer* buf = &bufs_buffer [2];
 	{
 		--buf;
 		--outtemp;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
 
 		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
@@ -293,14 +280,14 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			outtemp [offset * STEREO] = (int16_t) s;
 		}while ( offset );
 
-		BLIP_READER_END( side,   **buf );
+		BLIP_READER_END( side,   *buf );
 	}
 	{
 		--buf;
 		--outtemp;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
 
 		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
@@ -318,10 +305,10 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 			outtemp [offset * STEREO] = (int16_t) s;
 		}while ( offset );
 
-		BLIP_READER_END( side,   **buf );
+		BLIP_READER_END( side,   *buf );
 
 		/* only end center once*/
-		BLIP_READER_END( center, *mixer_bufs [2] );
+		BLIP_READER_END( center, bufs_buffer[2] );
 	}
 }
 
@@ -345,13 +332,13 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 	outtemp = out + count * STEREO;
 
 	/* do left + center and right + center separately to reduce register load*/
-	Blip_Buffer* const* buf = &mixer_bufs [2];
+	Blip_Buffer* buf = &bufs_buffer[2];
 	{
 		--buf;
 		--outtemp;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
 
 		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
@@ -369,14 +356,14 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			outtemp [offset * STEREO] = (int16_t) s_tmp;
 		}while ( offset );
 
-		BLIP_READER_END( side,   **buf );
+		BLIP_READER_END( side,   *buf );
 	}
 	{
 		--buf;
 		--outtemp;
 
-		BLIP_READER_BEGIN( side,   **buf );
-		BLIP_READER_BEGIN( center, *mixer_bufs [2] );
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
 
 		BLIP_READER_ADJ_( side,   mixer_samples_read );
 		BLIP_READER_ADJ_( center, mixer_samples_read );
@@ -394,10 +381,10 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 			outtemp [offset * STEREO] = (int16_t) s_tmp;
 		}while ( offset );
 
-		BLIP_READER_END( side,   **buf );
+		BLIP_READER_END( side,   *buf );
 
 		/* only end center once*/
-		BLIP_READER_END( center, *mixer_bufs [2] );
+		BLIP_READER_END( center, bufs_buffer [2] );
 	}
 }
 
@@ -414,7 +401,7 @@ Effects_Buffer::Effects_Buffer( int max_bufs, long echo_size_ )
         echo_size   = (MAX_READ_TIMES_STEREO) < (echo_size_ & ~1) ? (echo_size_ & ~1) : MAX_READ_TIMES_STEREO;
         clock_rate_ = 0;
         bass_freq_  = 90;
-        bufs_buffer       = 0;
+        bufs_buffer = 0;
         bufs_size   = 0;
         bufs_max    = max_bufs < EXTRA_CHANS ? EXTRA_CHANS : max_bufs;
         no_echo     = true;
@@ -543,13 +530,6 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
 
         return 0;
 }
-
-channel_t Effects_Buffer::channel( int i )
-{
-        i += EXTRA_CHANS;
-        return chans [i].channel;
-}
-
 
 /* Configuration*/
 
@@ -786,10 +766,6 @@ void Effects_Buffer::apply_config()
 			ch.channel.right  = &bufs_buffer [1];
 		}
 	}
-
-	mixer_bufs [0] = &bufs_buffer [0];
-	mixer_bufs [1] = &bufs_buffer [1];
-	mixer_bufs [2] = &bufs_buffer [2];
 
 	if ( echo_dirty || (!old_echo && (!no_echo && !no_effects)) )
 	{
