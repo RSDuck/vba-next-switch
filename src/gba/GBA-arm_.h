@@ -598,9 +598,7 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
     SETCOND;                                            \
     if ((s32)rs < 0)                                    \
         rs = ~rs;                                       \
-    if ((rs & 0xFFFFFF00) == 0)                         \
-        clockTicks += 0;                                \
-    else if ((rs & 0xFFFF0000) == 0)                    \
+    if ((rs & 0xFFFF0000) == 0)                         \
         clockTicks += 1;                                \
     else if ((rs & 0xFF000000) == 0)                    \
         clockTicks += 2;                                \
@@ -928,8 +926,7 @@ static  void arm121(u32 opcode)
         armNextPC = reg[15].I;                          \
         reg[15].I += 4;                                 \
         ARM_PREFETCH;                                   \
-        clockTicks += 2 + dataTicksAccessSeq(address, BITS_32) \
-                        + dataTicksAccessSeq(address, BITS_32);\
+        clockTicks += 2 + ((dataTicksAccessSeq(address, BITS_32)) << 1);\
     }                                                   \
     clockTicks += 3 + dataTicksAccess(address, BITS_##SIZE)    \
                     + codeTicksAccess(armNextPC, BITS_32);
@@ -2227,7 +2224,7 @@ static insnfunc_t armInsnTable[4096] = {
 int armExecute()
 {
 #ifdef USE_CACHE_PREFETCH
-	// cache the clockTicks, its used during operations and generates LHS without it
+	// cache the clockTicks, it's used during operations and generates LHS without it
 	#ifdef __ANDROID__
 		prefetch(&clockTicks);
 	#else

@@ -5764,11 +5764,11 @@ updateLoop:
 				}
 			}
 
-			// we shouldn't be doing sound in stop state, but we loose synchronization
+			// we shouldn't be doing sound in stop state, but we lose synchronization
 			// if sound is disabled, so in stop state, soundTick will just produce
 			// mute sound
 			soundTicks -= clockTicks;
-			if(soundTicks <= 0) {
+			if(!soundTicks) {
 				psoundTickfn();
 				soundTicks += SOUND_CLOCK_TICKS;
 			}

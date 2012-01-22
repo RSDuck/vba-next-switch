@@ -1599,7 +1599,7 @@ static insnfunc_t thumbInsnTable[1024] = {
 int thumbExecute()
 {
 	#ifdef USE_CACHE_PREFETCH
-		// cache the clockTicks, its used during operations and generates LHS without it
+		// cache the clockTicks, it's used during operations and generates LHS without it
 		#ifdef __ANDROID__
 			prefetch(&clockTicks);
 		#else
