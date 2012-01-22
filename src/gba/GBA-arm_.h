@@ -484,8 +484,7 @@ static  void armUnknownInsn(u32 opcode)
         }                                                       \
         clockTicks = 3 + ISREGSHIFT                             \
                        + codeTicksAccess(armNextPC, BITS_32)           \
-                       + codeTicksAccessSeq32(armNextPC)        \
-                       + codeTicksAccessSeq32(armNextPC);       \
+                       + ((codeTicksAccessSeq32(armNextPC)) << 1);       \
     }
 
 #define MODECHANGE_NO  /*nothing*/
