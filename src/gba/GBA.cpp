@@ -3913,12 +3913,9 @@ void CPUUpdateFlags()
 }
 
 #define CPUSwap(a, b) \
-{ \
-volatile uint32_t c = *b; \
-*b = *a; \
-*a = c; \
-}
-
+a ^= b; \
+b ^= a; \
+a ^= b;
 
 void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 {
@@ -3935,11 +3932,11 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 			reg[17].I = reg[16].I;
 			break;
 		case 0x11:
-			CPUSwap(&reg[R8_FIQ].I, &reg[8].I);
-			CPUSwap(&reg[R9_FIQ].I, &reg[9].I);
-			CPUSwap(&reg[R10_FIQ].I, &reg[10].I);
-			CPUSwap(&reg[R11_FIQ].I, &reg[11].I);
-			CPUSwap(&reg[R12_FIQ].I, &reg[12].I);
+			CPUSwap(reg[R8_FIQ].I, reg[8].I);
+			CPUSwap(reg[R9_FIQ].I, reg[9].I);
+			CPUSwap(reg[R10_FIQ].I, reg[10].I);
+			CPUSwap(reg[R11_FIQ].I, reg[11].I);
+			CPUSwap(reg[R12_FIQ].I, reg[12].I);
 			reg[R13_FIQ].I = reg[13].I;
 			reg[R14_FIQ].I = reg[14].I;
 			reg[SPSR_FIQ].I = reg[17].I;
@@ -3977,11 +3974,11 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 			reg[16].I = SPSR;
 			break;
 		case 0x11:
-			CPUSwap(&reg[8].I, &reg[R8_FIQ].I);
-			CPUSwap(&reg[9].I, &reg[R9_FIQ].I);
-			CPUSwap(&reg[10].I, &reg[R10_FIQ].I);
-			CPUSwap(&reg[11].I, &reg[R11_FIQ].I);
-			CPUSwap(&reg[12].I, &reg[R12_FIQ].I);
+			CPUSwap(reg[8].I, reg[R8_FIQ].I);
+			CPUSwap(reg[9].I, reg[R9_FIQ].I);
+			CPUSwap(reg[10].I, reg[R10_FIQ].I);
+			CPUSwap(reg[11].I, reg[R11_FIQ].I);
+			CPUSwap(reg[12].I, reg[R12_FIQ].I);
 			reg[13].I = reg[R13_FIQ].I;
 			reg[14].I = reg[R14_FIQ].I;
 			if(saveState)
