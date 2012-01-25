@@ -1,26 +1,3 @@
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-#include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sound.h"
-#include "Sram.h"
-#include "bios.h"
-#ifdef USE_CHEATS
-#include "Cheats.h"
-#endif
-#include "../NLS.h"
-#ifdef ELF
-#include "elf.h"
-#endif
-#include "../Util.h"
-#include "../System.h"
-
-#ifdef __CELLOS_LV2__
-#include <ppu_intrinsics.h>
-#endif
-
 static  void thumbUnknownInsn(u32 opcode)
 {
 	u32 PC = reg[15].I;

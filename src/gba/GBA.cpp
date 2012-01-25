@@ -6,6 +6,10 @@
 #include <stddef.h>
 #endif
 
+#ifdef __CELLOS_LV2__
+#include <ppu_intrinsics.h>
+#endif
+
 static const int table [0x40] =
 {
 		0xFF10,     0,0xFF11,0xFF12,0xFF13,0xFF14,     0,     0,
@@ -17,6 +21,31 @@ static const int table [0x40] =
 		0xFF30,0xFF31,0xFF32,0xFF33,0xFF34,0xFF35,0xFF36,0xFF37,
 		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
 };
+
+#include "GBA.h"
+#include "GBAcpu.h"
+#include "GBAinline.h"
+#include "Globals.h"
+#include "EEprom.h"
+#include "Flash.h"
+#include "Sound.h"
+#include "Sram.h"
+#include "bios.h"
+#include "../NLS.h"
+#ifdef USE_CHEATS
+#include "Cheats.h"
+#endif
+#ifdef ELF
+#include "elf.h"
+#endif
+#include "../Util.h"
+#include "../common/Port.h"
+#include "../System.h"
+
+#define lineOBJ 4
+#define lineOBJWin 5
+
+static int clockTicks;
 
 #define CPU_UPDATE_CPSR() \
 { \
@@ -38,36 +67,19 @@ static const int table [0x40] =
 	reg[16].I = CPSR; \
 }
 
+bool N_FLAG = 0;
+bool C_FLAG = 0;
+bool Z_FLAG = 0;
+bool V_FLAG = 0;
+
 #include "GBA-arm_.h"
 #include "GBA-thumb_.h"
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-
-#define lineOBJ 4
-#define lineOBJWin 5
 
 static int romSize = 0x2000000;
 uint32_t line[6][240];
 bool gfxInWin[2][240];
 int lineOBJpixleft[128];
 uint64_t joy = 0;
-
-#include "GBAGfx.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sound.h"
-#include "Sram.h"
-#include "bios.h"
-#include "../NLS.h"
-#ifdef ELF
-#include "elf.h"
-#endif
-#include "../Util.h"
-#include "../common/Port.h"
-#include "../System.h"
-
-int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
 int gfxBG2Changed = 0;
 int gfxBG3Changed = 0;
@@ -76,19 +88,18 @@ int gfxBG2X = 0;
 int gfxBG2Y = 0;
 int gfxBG3X = 0;
 int gfxBG3Y = 0;
+
 //int gfxLastVCOUNT = 0;
 
+#include "GBAGfx.h"
 
+int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
 // GLOBALS.CPP 
 
 reg_pair reg[45];
 memoryMap map[256];
 bool ioReadable[0x400];
-bool N_FLAG = 0;
-bool C_FLAG = 0;
-bool Z_FLAG = 0;
-bool V_FLAG = 0;
 bool armState = true;
 bool armIrqEnable = true;
 uint32_t armNextPC = 0x00000000;
@@ -5562,7 +5573,6 @@ void CPULoop()
 #else
 	int ticks = 250000;
 #endif
-	int clockTicks;
 	int timerOverflow = 0;
 	// variable used by the CPU core
 	cpuTotalTicks = 0;

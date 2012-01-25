@@ -1,26 +1,3 @@
-#include "GBA.h"
-#include "GBAcpu.h"
-#include "GBAinline.h"
-#include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sound.h"
-#include "Sram.h"
-#include "bios.h"
-#ifdef USE_CHEATS
-#include "Cheats.h"
-#endif
-#include "../NLS.h"
-#ifdef ELF
-#include "elf.h"
-#endif
-#include "../Util.h"
-#include "../System.h"
-
-#ifdef __CELLOS_LV2__
-#include <ppu_intrinsics.h>
-#endif
-
 #ifdef _MSC_VER
  // Disable "empty statement" warnings
  #pragma warning(disable: 4390)
@@ -28,8 +5,6 @@
  // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.
  #define offset offset_
 #endif
-
-static int clockTicks;
 
 static  void armUnknownInsn(u32 opcode)
 {
