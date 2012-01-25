@@ -253,12 +253,16 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 			realX += dx;
 			realY += dy;
 		}
-	} else {
-		for(u32 x = 0; x < 240u; ++x) {
-			int xxx = (realX >> 8);
-			int yyy = (realY >> 8);
+	}
+	else
+	{
+		for(u32 x = 0; x < 240u; ++x)
+		{
+			unsigned xxx = (realX >> 8);
+			unsigned yyy = (realY >> 8);
 
-			if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY) {
+			if(xxx < sizeX && yyy < sizeY)
+			{
 				int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
 
 				int tileX = (xxx & 7);
@@ -267,9 +271,10 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 				u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
 
 				line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
-			} else {
-				line[x] = 0x80000000;
 			}
+			else
+				line[x] = 0x80000000;
+
 			realX += dx;
 			realY += dy;
 		}
@@ -363,15 +368,15 @@ int& currentY, int changed, u32 *line)
 		realY -= y*dmy;
 	}
 
-	int xxx = (realX >> 8);
-	int yyy = (realY >> 8);
+	unsigned xxx = (realX >> 8);
+	unsigned yyy = (realY >> 8);
 
-	for(u32 x = 0; x < 240u; ++x) {
-		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY) {
+	for(u32 x = 0; x < 240u; ++x)
+	{
+		if(xxx < sizeX && yyy < sizeY)
 			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
-		} else {
+		else
 			line[x] = 0x80000000;
-		}
 
 		realX += dx;
 		realY += dy;
@@ -795,10 +800,10 @@ static INLINE void gfxDrawSprites (void)
 										lineOBJpix-=2;
 									if (lineOBJpix<0)
 										continue;
-									int xxx = realX >> 8;
-									int yyy = realY >> 8;
-									if(unsigned(xxx) < sizeX &&
-											unsigned(yyy) < sizeY && sx < 240){
+									unsigned xxx = realX >> 8;
+									unsigned yyy = realY >> 8;
+									if(xxx < sizeX && yyy < sizeY && sx < 240)
+									{
 
 										u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 													+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
@@ -838,10 +843,10 @@ static INLINE void gfxDrawSprites (void)
 										lineOBJpix-=2;
 									if (lineOBJpix<0)
 										continue;
-									int xxx = realX >> 8;
-									int yyy = realY >> 8;
-									if(unsigned(xxx) < sizeX &&
-											unsigned(yyy) < sizeY && sx < 240){
+									unsigned xxx = realX >> 8;
+									unsigned yyy = realY >> 8;
+									if(xxx < sizeX && yyy < sizeY && sx < 240)
+									{
 
 										u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 													+ ((yyy & 7)<<2) + ((xxx >> 3)<<5)
@@ -1227,10 +1232,6 @@ static INLINE void gfxDrawOBJWin (void)
 								int xxx = realX >> 8;
 								int yyy = realY >> 8;
 
-								//              if(x == 0 || x == (sizeX-1) ||
-								//                 t == 0 || t == (sizeY-1)) {
-								//                lineOBJ[sx] = 0x001F | prio;
-								//              } else {
 								if(xxx < 0 || xxx >= sizeX ||
 										yyy < 0 || yyy >= sizeY ||
 										sx >= 240) {
@@ -1247,7 +1248,6 @@ static INLINE void gfxDrawOBJWin (void)
 										line[lineOBJWin][sx] = 1;
 									}
 								}
-								//            }
 								sx = (sx+1)&511;
 								realX += dx;
 								realY += dy;
