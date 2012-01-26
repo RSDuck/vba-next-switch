@@ -43,6 +43,7 @@ static const int table [0x40] =
 #include "../System.h"
 
 bus_t bus;
+graphics_t graphics;
 
 #define lineOBJ 4
 #define lineOBJWin 5
@@ -116,8 +117,6 @@ int frameSkip = 1;
 bool speedup = false;
 #endif
 bool cpuIsMultiBoot = false;
-int layerSettings = 0xff00;
-int layerEnable = 0xff00;
 bool speedHack = true;
 int cpuSaveType = 0;
 #ifdef USE_CHEATS
@@ -134,14 +133,11 @@ uint8_t *bios = 0;
 uint8_t *rom = 0;
 uint8_t *internalRAM = 0;
 uint8_t *workRAM = 0;
-uint8_t *paletteRAM = 0;
 uint8_t *vram = 0;
 uint8_t *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
-uint16_t DISPCNT  = 0x0080;
-uint16_t DISPSTAT = 0x0000;
 uint16_t VCOUNT   = 0x0000;
 uint16_t BG0CNT   = 0x0000;
 uint16_t BG1CNT   = 0x0000;
@@ -226,7 +222,6 @@ int SWITicks = 0;
 int IRQTicks = 0;
 
 uint32_t mastercode = 0;
-int layerEnableDelay = 0;
 int cpuDmaTicksToUpdate = 0;
 int cpuDmaCount = 0;
 
@@ -246,7 +241,6 @@ uint32_t cpuPrefetch[2];
 
 int cpuTotalTicks = 0;
 
-int lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 uint8_t timerOnOffDelay = 0;
 uint16_t timer0Value = 0;
 bool timer0On = false;
@@ -490,8 +484,8 @@ uint32_t myROM[] = {
 };
 
 variable_desc saveGameStruct[] = {
-  { &DISPCNT  , sizeof(uint16_t) },
-  { &DISPSTAT , sizeof(uint16_t) },
+  { &graphics.DISPCNT  , sizeof(uint16_t) },
+  { &graphics.DISPSTAT , sizeof(uint16_t) },
   { &VCOUNT   , sizeof(uint16_t) },
   { &BG0CNT   , sizeof(uint16_t) },
   { &BG1CNT   , sizeof(uint16_t) },
@@ -569,7 +563,7 @@ variable_desc saveGameStruct[] = {
   { &IME      , sizeof(uint16_t) },
   { &holdState, sizeof(bool) },
   { &holdType, sizeof(int) },
-  { &lcdTicks, sizeof(int) },
+  { &graphics.lcdTicks, sizeof(int) },
   { &timer0On , sizeof(bool) },
   { &timer0Ticks , sizeof(int) },
   { &timer0Reload , sizeof(int) },
@@ -610,7 +604,7 @@ variable_desc saveGameStruct[] = {
 
 INLINE int CPUUpdateTicks()
 {
-	int cpuLoopTicks = lcdTicks;
+	int cpuLoopTicks = graphics.lcdTicks;
 
 	if(soundTicks < cpuLoopTicks)
 		cpuLoopTicks = soundTicks;
@@ -663,11 +657,11 @@ INLINE int CPUUpdateTicks()
 }
 
 #define CPUCompareVCOUNT() \
-  if(VCOUNT == (DISPSTAT >> 8)) \
+  if(VCOUNT == (graphics.DISPSTAT >> 8)) \
   { \
-    DISPSTAT |= 4; \
-    UPDATE_REG(0x04, DISPSTAT); \
-    if(DISPSTAT & 0x20) \
+    graphics.DISPSTAT |= 4; \
+    UPDATE_REG(0x04, graphics.DISPSTAT); \
+    if(graphics.DISPSTAT & 0x20) \
     { \
       IF |= 4; \
       UPDATE_REG(0x202, IF); \
@@ -675,14 +669,14 @@ INLINE int CPUUpdateTicks()
   } \
   else \
   { \
-    DISPSTAT &= 0xFFFB; \
-    UPDATE_REG(0x4, DISPSTAT); \
+    graphics.DISPSTAT &= 0xFFFB; \
+    UPDATE_REG(0x4, graphics.DISPSTAT); \
   } \
-  if (layerEnableDelay>0) \
+  if (graphics.layerEnableDelay > 0) \
   { \
-      layerEnableDelay--; \
-      if (layerEnableDelay==1) \
-          layerEnable = layerSettings & DISPCNT; \
+      graphics.layerEnableDelay--; \
+      if (graphics.layerEnableDelay == 1) \
+          graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT; \
   }
 
 #define CPUSoftwareInterrupt_() \
@@ -708,7 +702,7 @@ static bool CPUWriteState(gzFile gzFile)
 
 	utilWriteInt(gzFile, useBios);
 
-	utilGzWrite(gzFile, &bus.reg[0], sizeof(reg));
+	utilGzWrite(gzFile, &bus.reg[0], sizeof(bus.reg));
 
 	utilWriteData(gzFile, saveGameStruct);
 
@@ -718,7 +712,7 @@ static bool CPUWriteState(gzFile gzFile)
 	utilWriteInt(gzFile, IRQTicks);
 
 	utilGzWrite(gzFile, internalRAM, 0x8000);
-	utilGzWrite(gzFile, paletteRAM, 0x400);
+	utilGzWrite(gzFile, graphics.paletteRAM, 0x400);
 	utilGzWrite(gzFile, workRAM, 0x40000);
 	utilGzWrite(gzFile, vram, 0x20000);
 	utilGzWrite(gzFile, oam, 0x400);
@@ -755,7 +749,7 @@ unsigned CPUWriteState_libgba(uint8_t* data, unsigned size)
 	utilWriteIntMem(data, IRQTicks);
 
 	utilWriteMem(data, internalRAM, 0x8000);
-	utilWriteMem(data, paletteRAM, 0x400);
+	utilWriteMem(data, graphics.paletteRAM, 0x400);
 	utilWriteMem(data, workRAM, 0x40000);
 	utilWriteMem(data, vram, 0x20000);
 	utilWriteMem(data, oam, 0x400);
@@ -1204,9 +1198,9 @@ static void CPUCleanUp()
 		vram = NULL;
 	}
 
-	if(paletteRAM != NULL) {
-		free(paletteRAM);
-		paletteRAM = NULL;
+	if(graphics.paletteRAM != NULL) {
+		free(graphics.paletteRAM);
+		graphics.paletteRAM = NULL;
 	}
 
 	if(internalRAM != NULL) {
@@ -1312,8 +1306,8 @@ int CPULoadRom(const char *szFile)
 		CPUCleanUp();
 		return 0;
 	}
-	paletteRAM = (uint8_t *)calloc(1,0x400);
-	if(paletteRAM == NULL) {
+	graphics.paletteRAM = (uint8_t *)calloc(1,0x400);
+	if(graphics.paletteRAM == NULL) {
 #ifdef CELL_VBA_DEBUG
 		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
 				"PRAM");
@@ -1407,18 +1401,18 @@ void doMirroring (bool b)
 
 void mode0RenderLine(uint32_t * lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0100)
+	if(graphics.layerEnable & 0x0100)
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 
-	if(layerEnable & 0x0200)
+	if(graphics.layerEnable & 0x0200)
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 
-	if(layerEnable & 0x0400)
+	if(graphics.layerEnable & 0x0400)
 		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
 
-	if(layerEnable & 0x0800)
+	if(graphics.layerEnable & 0x0800)
 		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
 
 	gfxDrawSprites();
@@ -1489,19 +1483,19 @@ void mode0RenderLine(uint32_t * lineMix)
 
 void mode0RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 
-	if(layerEnable & 0x0100)
+	if(graphics.layerEnable & 0x0100)
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 
-	if(layerEnable & 0x0200)
+	if(graphics.layerEnable & 0x0200)
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 
-	if(layerEnable & 0x0400)
+	if(graphics.layerEnable & 0x0400)
 		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
 
-	if(layerEnable & 0x0800)
+	if(graphics.layerEnable & 0x0800)
 		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
 
 	gfxDrawSprites();
@@ -1629,12 +1623,12 @@ void mode0RenderLineNoWindow(uint32_t *lineMix)
 
 void mode0RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -1643,7 +1637,7 @@ void mode0RenderLineAll(uint32_t *lineMix)
 		else
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 	}
-	if(layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -1653,19 +1647,19 @@ void mode0RenderLineAll(uint32_t *lineMix)
 			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
 	}
 
-	if((layerEnable & 0x0100)) {
+	if((graphics.layerEnable & 0x0100)) {
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 	}
 
-	if((layerEnable & 0x0200)) {
+	if((graphics.layerEnable & 0x0200)) {
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 	}
 
-	if((layerEnable & 0x0400)) {
+	if((graphics.layerEnable & 0x0400)) {
 		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
 	}
 
-	if((layerEnable & 0x0800)) {
+	if((graphics.layerEnable & 0x0800)) {
 		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
 	}
 
@@ -1812,17 +1806,17 @@ These routines only render a single line at a time, because of the way the GBA d
 
 void mode1RenderLine(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0100) {
+	if(graphics.layerEnable & 0x0100) {
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 	}
 
-	if(layerEnable & 0x0200) {
+	if(graphics.layerEnable & 0x0200) {
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 	}
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -1907,18 +1901,18 @@ void mode1RenderLine(uint32_t *lineMix)
 
 void mode1RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0100) {
+	if(graphics.layerEnable & 0x0100) {
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 	}
 
 
-	if(layerEnable & 0x0200) {
+	if(graphics.layerEnable & 0x0200) {
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 	}
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2056,12 +2050,12 @@ void mode1RenderLineNoWindow(uint32_t *lineMix)
 
 void mode1RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2076,7 +2070,7 @@ void mode1RenderLineAll(uint32_t *lineMix)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2092,13 +2086,13 @@ void mode1RenderLineAll(uint32_t *lineMix)
 #endif
 	}
 
-	if(layerEnable & 0x0100)
+	if(graphics.layerEnable & 0x0100)
 		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
 
-	if(layerEnable & 0x0200)
+	if(graphics.layerEnable & 0x0200)
 		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2240,9 +2234,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 void mode2RenderLine(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2254,7 +2248,7 @@ void mode2RenderLine(uint32_t *lineMix)
 				changed, line[2]);
 	}
 
-	if(layerEnable & 0x0800) {
+	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2328,9 +2322,9 @@ void mode2RenderLine(uint32_t *lineMix)
 
 void mode2RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2342,7 +2336,7 @@ void mode2RenderLineNoWindow(uint32_t *lineMix)
 				changed, line[2]);
 	}
 
-	if(layerEnable & 0x0800) {
+	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2457,12 +2451,12 @@ void mode2RenderLineNoWindow(uint32_t *lineMix)
 
 void mode2RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2477,7 +2471,7 @@ void mode2RenderLineAll(uint32_t *lineMix)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2493,7 +2487,7 @@ void mode2RenderLineAll(uint32_t *lineMix)
 #endif
 	}
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2505,7 +2499,7 @@ void mode2RenderLineAll(uint32_t *lineMix)
 				changed, line[2]);
 	}
 
-	if(layerEnable & 0x0800) {
+	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > VCOUNT)
@@ -2632,9 +2626,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 void mode3RenderLine(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -2688,9 +2682,9 @@ void mode3RenderLine(uint32_t *lineMix)
 
 void mode3RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -2781,12 +2775,12 @@ void mode3RenderLineNoWindow(uint32_t *lineMix)
 
 void mode3RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2801,7 +2795,7 @@ void mode3RenderLineAll(uint32_t *lineMix)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -2817,7 +2811,7 @@ void mode3RenderLineAll(uint32_t *lineMix)
 #endif
 	}
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -2930,9 +2924,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 void mode4RenderLine(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x400)
+	if(graphics.layerEnable & 0x400)
 	{
 		int changed = gfxBG2Changed;
 
@@ -2987,9 +2981,9 @@ void mode4RenderLine(uint32_t *lineMix)
 
 void mode4RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x400)
+	if(graphics.layerEnable & 0x400)
 	{
 		int changed = gfxBG2Changed;
 
@@ -3081,12 +3075,12 @@ void mode4RenderLineNoWindow(uint32_t *lineMix)
 
 void mode4RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -3101,7 +3095,7 @@ void mode4RenderLineAll(uint32_t *lineMix)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(layerEnable & 0x4000)
+	if(graphics.layerEnable & 0x4000)
 	{
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
@@ -3118,7 +3112,7 @@ void mode4RenderLineAll(uint32_t *lineMix)
 #endif
 	}
 
-	if(layerEnable & 0x400)
+	if(graphics.layerEnable & 0x400)
 	{
 		int changed = gfxBG2Changed;
 
@@ -3233,9 +3227,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 void mode5RenderLine(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -3290,9 +3284,9 @@ void mode5RenderLine(uint32_t *lineMix)
 
 void mode5RenderLineNoWindow(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400) {
+	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -3384,9 +3378,9 @@ void mode5RenderLineNoWindow(uint32_t *lineMix)
 
 void mode5RenderLineAll(uint32_t *lineMix)
 {
-	uint16_t *palette = (uint16_t *)paletteRAM;
+	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(layerEnable & 0x0400)
+	if(graphics.layerEnable & 0x0400)
 	{
 		int changed = gfxBG2Changed;
 
@@ -3408,7 +3402,7 @@ void mode5RenderLineAll(uint32_t *lineMix)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000) {
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -3423,7 +3417,7 @@ void mode5RenderLineAll(uint32_t *lineMix)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -3529,51 +3523,51 @@ void mode5RenderLineAll(uint32_t *lineMix)
 void (*renderLine)(uint32_t*) = mode0RenderLine;
 
 #define CPUUpdateRender() \
-  switch(DISPCNT & 7) { \
+  switch(graphics.DISPCNT & 7) { \
   case 0: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode0RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode0RenderLineNoWindow; \
     else \
       renderLine = mode0RenderLineAll; \
     break; \
   case 1: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode1RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode1RenderLineNoWindow; \
     else \
       renderLine = mode1RenderLineAll; \
     break; \
   case 2: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode2RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode2RenderLineNoWindow; \
     else \
       renderLine = mode2RenderLineAll; \
     break; \
   case 3: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode3RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode3RenderLineNoWindow; \
     else \
       renderLine = mode3RenderLineAll; \
     break; \
   case 4: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode4RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode4RenderLineNoWindow; \
     else \
       renderLine = mode4RenderLineAll; \
     break; \
   case 5: \
-    if((!fxOn && !windowOn && !(layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode5RenderLine; \
-    else if(fxOn && !windowOn && !(layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode5RenderLineNoWindow; \
     else \
       renderLine = mode5RenderLineAll; \
@@ -3613,7 +3607,7 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 	}
 
 	utilReadMem(internalRAM, data, 0x8000);
-	utilReadMem(paletteRAM, data, 0x400);
+	utilReadMem(graphics.paletteRAM, data, 0x400);
 	utilReadMem(workRAM, data, 0x40000);
 	utilReadMem(vram, data, 0x20000);
 	utilReadMem(oam, data, 0x400);
@@ -3627,7 +3621,7 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 
 	//// Copypasta stuff ...
 	// set pointers!
-	layerEnable = layerSettings & DISPCNT;
+	graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT;
 
 	CPUUpdateRender();
 
@@ -3721,7 +3715,7 @@ static bool CPUReadState(gzFile gzFile)
 		return false;
 	}
 
-	utilGzRead(gzFile, &bus.reg[0], sizeof(reg));
+	utilGzRead(gzFile, &bus.reg[0], sizeof(bus.reg));
 
 	utilReadData(gzFile, saveGameStruct);
 
@@ -3748,7 +3742,7 @@ static bool CPUReadState(gzFile gzFile)
 	}
 
 	utilGzRead(gzFile, internalRAM, 0x8000);
-	utilGzRead(gzFile, paletteRAM, 0x400);
+	utilGzRead(gzFile, graphics.paletteRAM, 0x400);
 	utilGzRead(gzFile, workRAM, 0x40000);
 	utilGzRead(gzFile, vram, 0x20000);
 	utilGzRead(gzFile, oam, 0x400);
@@ -3815,7 +3809,7 @@ static bool CPUReadState(gzFile gzFile)
 	}
 
 	// set pointers!
-	layerEnable = layerSettings & DISPCNT;
+	graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT;
 
 	CPUUpdateRender();
 
@@ -4292,7 +4286,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	dm = ((((15) & dm_gt_15_mask) | ((((dm) & ~(dm_gt_15_mask))))));
 
 	//if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-	//    blank = (((DISPSTAT | ((DISPSTAT>>1)&1))==1) ?  true : false);
+	//    blank = (((graphics.DISPSTAT | ((graphics.DISPSTAT>>1)&1))==1) ?  true : false);
 
 	if(transfer32)
 	{
@@ -4613,31 +4607,31 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			{ // we need to place the following code in { } because we declare & initialize variables in a case statement
 
 				if((value & 7) > 5) // display modes above 0-5 are prohibited
-					DISPCNT = (value & 7);
+					graphics.DISPCNT = (value & 7);
 
-				bool change = (0 != ((DISPCNT ^ value) & 0x80));
-				bool changeBG = (0 != ((DISPCNT ^ value) & 0x0F00));
-				uint16_t changeBGon = ((~DISPCNT) & value) & 0x0F00; // these layers are being activated
+				bool change = (0 != ((graphics.DISPCNT ^ value) & 0x80));
+				bool changeBG = (0 != ((graphics.DISPCNT ^ value) & 0x0F00));
+				uint16_t changeBGon = ((~graphics.DISPCNT) & value) & 0x0F00; // these layers are being activated
 
-				DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
-				UPDATE_REG(0x00, DISPCNT);
+				graphics.DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
+				UPDATE_REG(0x00, graphics.DISPCNT);
 
 				if(changeBGon) {
-					layerEnableDelay = 4;
-					layerEnable = layerSettings & value & (~changeBGon);
+					graphics.layerEnableDelay = 4;
+					graphics.layerEnable = graphics.layerSettings & value & (~changeBGon);
 				} else {
-					layerEnable = layerSettings & value;
+					graphics.layerEnable = graphics.layerSettings & value;
 					// CPUUpdateTicks();
 				}
 
-				windowOn = (layerEnable & 0x6000) ? true : false;
+				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
 				if(change && !((value & 0x80)))
 				{
-					if(!(DISPSTAT & 1))
+					if(!(graphics.DISPSTAT & 1))
 					{
-						lcdTicks = 1008;
-						DISPSTAT &= 0xFFFC;
-						UPDATE_REG(0x04, DISPSTAT);
+						graphics.lcdTicks = 1008;
+						graphics.DISPSTAT &= 0xFFFC;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
 						CPUCompareVCOUNT();
 					}
 				}
@@ -4646,20 +4640,20 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				if(changeBG) {
 					// CPU Update Render Buffers set to false
 					//CPUUpdateRenderBuffers(false);
-					if(!(layerEnable & 0x0100))
+					if(!(graphics.layerEnable & 0x0100))
 						memset(line[0], -1, 240 * sizeof(u32));
-					if(!(layerEnable & 0x0200))
+					if(!(graphics.layerEnable & 0x0200))
 						memset(line[1], -1, 240 * sizeof(u32));
-					if(!(layerEnable & 0x0400))
+					if(!(graphics.layerEnable & 0x0400))
 						memset(line[2], -1, 240 * sizeof(u32));
-					if(!(layerEnable & 0x0800))
+					if(!(graphics.layerEnable & 0x0800))
 						memset(line[3], -1, 240 * sizeof(u32));
 				}
 				break;
 			}
 		case 0x04:
-			DISPSTAT = (value & 0xFF38) | (DISPSTAT & 7);
-			UPDATE_REG(0x04, DISPSTAT);
+			graphics.DISPSTAT = (value & 0xFF38) | (graphics.DISPSTAT & 7);
+			UPDATE_REG(0x04, graphics.DISPSTAT);
 			break;
 		case 0x06:
 			// not writable
@@ -5224,6 +5218,13 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 		*((uint16_t *)&rom[0x1fe209c]) = 0xdffa; // SWI 0xFA
 		*((uint16_t *)&rom[0x1fe209e]) = 0x4770; // BX LR
 	}
+
+	graphics.layerSettings = 0xff00;
+	graphics.layerEnable = 0xff00;
+	graphics.layerEnableDelay = 1;
+	graphics.DISPCNT = 0x0080;
+	graphics.DISPSTAT = 0;
+	graphics.lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 }
 
 void CPUReset()
@@ -5245,11 +5246,11 @@ void CPUReset()
 	}
 	rtcReset();
 	// clean registers
-	memset(&bus.reg[0], 0, sizeof(reg));
+	memset(&bus.reg[0], 0, sizeof(bus.reg));
 	// clean OAM
 	memset(oam, 0, 0x400);
 	// clean palette
-	memset(paletteRAM, 0, 0x400);
+	memset(graphics.paletteRAM, 0, 0x400);
 	// clean picture
 	memset(pix, 0, 4*160*240);
 	// clean vram
@@ -5257,8 +5258,8 @@ void CPUReset()
 	// clean io memory
 	memset(ioMem, 0, 0x400);
 
-	DISPCNT  = 0x0080;
-	DISPSTAT = 0x0000;
+	graphics.DISPCNT  = 0x0080;
+	graphics.DISPSTAT = 0x0000;
 	VCOUNT   = (useBios && !skipBios) ? 0 :0x007E;
 	BG0CNT   = 0x0000;
 	BG1CNT   = 0x0000;
@@ -5360,7 +5361,7 @@ void CPUReset()
 	}
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
-	UPDATE_REG(0x00, DISPCNT);
+	UPDATE_REG(0x00, graphics.DISPCNT);
 	UPDATE_REG(0x06, VCOUNT);
 	UPDATE_REG(0x20, BG2PA);
 	UPDATE_REG(0x26, BG2PD);
@@ -5386,7 +5387,7 @@ void CPUReset()
 	biosProtected[2] = 0x29;
 	biosProtected[3] = 0xe1;
 
-	lcdTicks = (useBios && !skipBios) ? 1008 : 208;
+	graphics.lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 	timer0On = false;
 	timer0Ticks = 0;
 	timer0Reload = 0;
@@ -5419,7 +5420,7 @@ void CPUReset()
 	frameCount = 0;
 #endif
 	saveType = 0;
-	layerEnable = DISPCNT & layerSettings;
+	graphics.layerEnable = graphics.DISPCNT & graphics.layerSettings;
 
 	memset(line[0], -1, 240 * sizeof(u32));
 	memset(line[1], -1, 240 * sizeof(u32));
@@ -5439,7 +5440,7 @@ void CPUReset()
 	map[3].mask = 0x7FFF;
 	map[4].address = ioMem;
 	map[4].mask = 0x3FF;
-	map[5].address = paletteRAM;
+	map[5].address = graphics.paletteRAM;
 	map[5].mask = 0x3FF;
 	map[6].address = vram;
 	map[6].mask = 0x1FFFF;
@@ -5622,32 +5623,32 @@ updateLoop:
 					IRQTicks = 0;
 			}
 
-			lcdTicks -= clockTicks;
+			graphics.lcdTicks -= clockTicks;
 
 
-			if(lcdTicks <= 0) {
-				if(DISPSTAT & 1) { // V-BLANK
+			if(graphics.lcdTicks <= 0) {
+				if(graphics.DISPSTAT & 1) { // V-BLANK
 					// if in V-Blank mode, keep computing...
-					if(DISPSTAT & 2) {
-						lcdTicks += 1008;
+					if(graphics.DISPSTAT & 2) {
+						graphics.lcdTicks += 1008;
 						VCOUNT++;
 						UPDATE_REG(0x06, VCOUNT);
-						DISPSTAT &= 0xFFFD;
-						UPDATE_REG(0x04, DISPSTAT);
+						graphics.DISPSTAT &= 0xFFFD;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
 						CPUCompareVCOUNT();
 					} else {
-						lcdTicks += 224;
-						DISPSTAT |= 2;
-						UPDATE_REG(0x04, DISPSTAT);
-						if(DISPSTAT & 16) {
+						graphics.lcdTicks += 224;
+						graphics.DISPSTAT |= 2;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
+						if(graphics.DISPSTAT & 16) {
 							IF |= 2;
 							UPDATE_REG(0x202, IF);
 						}
 					}
 
 					if(VCOUNT >= 228) { //Reaching last line
-						DISPSTAT &= 0xFFFC;
-						UPDATE_REG(0x04, DISPSTAT);
+						graphics.DISPSTAT &= 0xFFFC;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
 						VCOUNT = 0;
 						UPDATE_REG(0x06, VCOUNT);
 						CPUCompareVCOUNT();
@@ -5659,13 +5660,13 @@ updateLoop:
 						framesToSkip = 9; // try 6 FPS during speedup
 #endif
 
-					if(DISPSTAT & 2) {
+					if(graphics.DISPSTAT & 2) {
 						// if in H-Blank, leave it and move to drawing mode
 						VCOUNT++;
 						UPDATE_REG(0x06, VCOUNT);
 
-						lcdTicks += 1008;
-						DISPSTAT &= 0xFFFD;
+						graphics.lcdTicks += 1008;
+						graphics.DISPSTAT &= 0xFFFD;
 						if(VCOUNT == 160)
 						{
 #ifdef USE_FRAMESKIP
@@ -5724,10 +5725,10 @@ updateLoop:
 #endif
 #endif
 
-							DISPSTAT |= 1;
-							DISPSTAT &= 0xFFFD;
-							UPDATE_REG(0x04, DISPSTAT);
-							if(DISPSTAT & 0x0008) {
+							graphics.DISPSTAT |= 1;
+							graphics.DISPSTAT &= 0xFFFD;
+							UPDATE_REG(0x04, graphics.DISPSTAT);
+							if(graphics.DISPSTAT & 0x0008) {
 								IF |= 1;
 								UPDATE_REG(0x202, IF);
 							}
@@ -5745,7 +5746,7 @@ updateLoop:
 #endif
 						}
 
-						UPDATE_REG(0x04, DISPSTAT);
+						UPDATE_REG(0x04, graphics.DISPSTAT);
 						CPUCompareVCOUNT();
 
 					} else {
@@ -5759,11 +5760,11 @@ updateLoop:
 						}
 #endif
 						// entering H-Blank
-						DISPSTAT |= 2;
-						UPDATE_REG(0x04, DISPSTAT);
-						lcdTicks += 224;
+						graphics.DISPSTAT |= 2;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
+						graphics.lcdTicks += 224;
 						CPUCheckDMA(2, 0x0f);
-						if(DISPSTAT & 16) {
+						if(graphics.DISPSTAT & 16) {
 							IF |= 2;
 							UPDATE_REG(0x202, IF);
 						}

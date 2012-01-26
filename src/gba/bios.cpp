@@ -735,7 +735,7 @@ void BIOS_RegisterRamReset(u32 flags)
     }
     if(flags & 0x04) {
       // clear palette RAM
-      memset(paletteRAM, 0, 0x400);
+      memset(graphics.paletteRAM, 0, 0x400);
     }
     if(flags & 0x08) {
       // clear VRAM

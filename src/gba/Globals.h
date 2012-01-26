@@ -4,7 +4,6 @@
 #include "../common/Types.h"
 #include "GBA.h"
 
-extern reg_pair reg[45];
 extern bool ioReadable[0x400];
 extern bool N_FLAG;
 extern bool C_FLAG;
@@ -12,7 +11,6 @@ extern bool Z_FLAG;
 extern bool V_FLAG;
 extern bool armState;
 extern bool armIrqEnable;
-extern u32 armNextPC;
 extern int armMode;
 extern int saveType;
 extern bool useBios;
@@ -22,8 +20,6 @@ extern int frameSkip;
 extern bool speedup;
 #endif
 extern bool cpuIsMultiBoot;
-extern int layerSettings;
-extern int layerEnable;
 extern bool speedHack;
 extern int cpuSaveType;
 extern bool cheatsEnabled;
@@ -36,14 +32,11 @@ extern u8 *bios;
 extern u8 *rom;
 extern u8 *internalRAM;
 extern u8 *workRAM;
-extern u8 *paletteRAM;
 extern u8 *vram;
 extern u8 *pix;
 extern u8 *oam;
 extern u8 *ioMem;
 
-extern u16 DISPCNT;
-extern u16 DISPSTAT;
 extern u16 VCOUNT;
 extern u16 MOSAIC;
 extern u16 TM0D;

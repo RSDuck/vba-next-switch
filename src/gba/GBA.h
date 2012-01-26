@@ -62,7 +62,19 @@ typedef struct
 	uint32_t armNextPC;
 } bus_t;
 
+typedef struct
+{
+	uint8_t * paletteRAM;
+	uint16_t DISPCNT;
+	uint16_t DISPSTAT;
+	int layerSettings;
+	int layerEnable;
+	int layerEnableDelay;
+	int lcdTicks;
+} graphics_t;
+
 extern bus_t bus;
+extern graphics_t graphics;
 
 #ifndef NO_GBA_MAP
 extern memoryMap map[256];

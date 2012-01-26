@@ -8,7 +8,7 @@
 
 static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 {
-	u16 *palette = (u16 *)paletteRAM;
+	u16 *palette = (u16 *)graphics.paletteRAM;
 	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
 	u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) << 11];
 	u32 prio = ((control & 3)<<25) + 0x1000000;
@@ -153,7 +153,7 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
 {
-	u16 *palette = (u16 *)paletteRAM;
+	u16 *palette = (u16 *)graphics.paletteRAM;
 	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
 	u8 *screenBase = (u8 *)&vram[((control >> 8) & 0x1f) << 11];
 	int prio = ((control & 3) << 25) + 0x1000000;
@@ -410,8 +410,8 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 				       int changed,
 				       u32 *line)
 {
-  u16 *palette = (u16 *)paletteRAM;
-  u8 *screenBase = (DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
+  u16 *palette = (u16 *)graphics.paletteRAM;
+  u8 *screenBase = (graphics.DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
   int prio = ((control & 3) << 25) + 0x1000000;
   u32 sizeX = 240;
   u32 sizeY = 160;
@@ -521,7 +521,7 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 					    int changed,
 					    u32 *line)
 {
-  u16 *screenBase = (DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
+  u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
     (u16 *)&vram[0];
   int prio = ((control & 3) << 25) + 0x1000000;
   u32 sizeX = 160;
@@ -630,14 +630,14 @@ static INLINE void gfxDrawSprites (void)
 {
 	unsigned lineOBJpix, m;
 
-	lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
+	lineOBJpix = (graphics.DISPCNT & 0x20) ? 954 : 1226;
 	m = 0;
 
 	memset(line[lineOBJ], -1, 240 * sizeof(u32));
 
-	if(layerEnable & 0x1000) {
+	if(graphics.layerEnable & 0x1000) {
 		u16 *sprites = (u16 *)oam;
-		u16 *spritePalette = &((u16 *)paletteRAM)[256];
+		u16 *spritePalette = &((u16 *)graphics.paletteRAM)[256];
 		int mosaicY = ((MOSAIC & 0xF000)>>12) + 1;
 		int mosaicX = ((MOSAIC & 0xF00)>>8) + 1;
 		for(u32 x = 0; x < 128u; ++x) {
@@ -700,7 +700,7 @@ static INLINE void gfxDrawSprites (void)
 			int sx = (a1 & 0x1FF);
 
 			// computes ticks used by OBJ-WIN if OBJWIN is enabled
-			if (((a0 & 0x0c00) == 0x0800) && (layerEnable & 0x8000))
+			if (((a0 & 0x0c00) == 0x0800) && (graphics.layerEnable & 0x8000))
 			{
 				if ((a0 & 0x0300) == 0x0300)
 				{
@@ -788,10 +788,10 @@ static INLINE void gfxDrawSprites (void)
 
 							if(a0 & 0x2000) {
 								int c = (a2 & 0x3FF);
-								if((DISPCNT & 7) > 2 && (c < 512))
+								if((graphics.DISPCNT & 7) > 2 && (c < 512))
 									continue;
 								int inc = 32;
-								if(DISPCNT & 0x40)
+								if(graphics.DISPCNT & 0x40)
 									inc = sizeX >> 2;
 								else
 									c &= 0x3FE;
@@ -831,11 +831,11 @@ static INLINE void gfxDrawSprites (void)
 								}
 							} else {
 								int c = (a2 & 0x3FF);
-								if((DISPCNT & 7) > 2 && (c < 512))
+								if((graphics.DISPCNT & 7) > 2 && (c < 512))
 									continue;
 
 								int inc = 32;
-								if(DISPCNT & 0x40)
+								if(graphics.DISPCNT & 0x40)
 									inc = sizeX >> 3;
 								int palette = (a2 >> 8) & 0xF0;
 								for(u32 x = 0; x < fieldX; ++x) {
@@ -897,11 +897,11 @@ static INLINE void gfxDrawSprites (void)
 							if(a1 & 0x2000)
 								t = sizeY - t - 1;
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 
 							int inc = 32;
-							if(DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40) {
 								inc = sizeX >> 2;
 							} else {
 								c &= 0x3FE;
@@ -972,13 +972,13 @@ static INLINE void gfxDrawSprites (void)
 							if(a1 & 0x2000)
 								t = sizeY - t - 1;
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 
 							int inc = 32;
-							if(DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 3;
-							}
+
 							int xxx = 0;
 							if(a1 & 0x1000)
 								xxx = sizeX - 1;
@@ -1095,9 +1095,9 @@ static INLINE void gfxDrawOBJWin (void)
 {
 	memset(line[lineOBJWin], -1, 240 * sizeof(u32));
 
-	if((layerEnable & 0x9000) == 0x9000) {
+	if((graphics.layerEnable & 0x9000) == 0x9000) {
 		u16 *sprites = (u16 *)oam;
-		// u16 *spritePalette = &((u16 *)paletteRAM)[256];
+		// u16 *spritePalette = &((u16 *)graphics.paletteRAM)[256];
 		for(int x = 0; x < 128 ; x++) {
 			int lineOBJpix = lineOBJpixleft[x];
 			u16 a0 = READ16LE(sprites++);
@@ -1185,10 +1185,10 @@ static INLINE void gfxDrawOBJWin (void)
 
 						if(a0 & 0x2000) {
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 							int inc = 32;
-							if(DISPCNT & 0x40)
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 2;
 							else
 								c &= 0x3FE;
@@ -1217,11 +1217,11 @@ static INLINE void gfxDrawOBJWin (void)
 							}
 						} else {
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 
 							int inc = 32;
-							if(DISPCNT & 0x40)
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 3;
 							// int palette = (a2 >> 8) & 0xF0;
 							for(int x = 0; x < fieldX; x++) {
@@ -1272,11 +1272,11 @@ static INLINE void gfxDrawOBJWin (void)
 							if(a1 & 0x2000)
 								t = sizeY - t - 1;
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 
 							int inc = 32;
-							if(DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40) {
 								inc = sizeX >> 2;
 							} else {
 								c &= 0x3FE;
@@ -1326,11 +1326,11 @@ static INLINE void gfxDrawOBJWin (void)
 							if(a1 & 0x2000)
 								t = sizeY - t - 1;
 							int c = (a2 & 0x3FF);
-							if((DISPCNT & 7) > 2 && (c < 512))
+							if((graphics.DISPCNT & 7) > 2 && (c < 512))
 								continue;
 
 							int inc = 32;
-							if(DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40) {
 								inc = sizeX >> 3;
 							}
 							int xxx = 0;

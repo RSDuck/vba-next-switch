@@ -70,11 +70,11 @@ static INLINE u32 CPUReadMemory(u32 address)
 				goto unreadable;
 			break;
 		case 5:
-			value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
+			value = READ32LE(((u32 *)&graphics.paletteRAM[address & 0x3fC]));
 			break;
 		case 6:
 			address = (address & 0x1fffc);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -167,11 +167,11 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			else goto unreadable;
 			break;
 		case 5:
-			value = READ16LE(((u16 *)&paletteRAM[address & 0x3fe]));
+			value = READ16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]));
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -249,10 +249,10 @@ static INLINE u8 CPUReadByte(u32 address)
 				return ioMem[address & 0x3ff];
 			else goto unreadable;
 		case 5:
-			return paletteRAM[address & 0x3ff];
+			return graphics.paletteRAM[address & 0x3ff];
 		case 6:
 			address = (address & 0x1ffff);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return 0;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -315,11 +315,11 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			}
 			break;
 		case 0x05:
-			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
+			WRITE32LE(((u32 *)&graphics.paletteRAM[address & 0x3FC]), value);
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -360,11 +360,11 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 				CPUUpdateRegister(address & 0x3fe, value);
 			break;
 		case 5:
-			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
+			WRITE16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]), value);
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -472,18 +472,18 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 5:
 			// no need to switch
-			*((u16 *)&paletteRAM[address & 0x3FE]) = (b << 8) | b;
+			*((u16 *)&graphics.paletteRAM[address & 0x3FE]) = (b << 8) | b;
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
 
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
-			if ((address) < objTilesAddress[((DISPCNT&7)+1)>>2])
+			if ((address) < objTilesAddress[((graphics.DISPCNT&7)+1)>>2])
 				*((u16 *)&vram[address]) = (b << 8) | b;
 			break;
 		case 7:
