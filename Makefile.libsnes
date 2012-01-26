@@ -111,13 +111,13 @@ LIBS :=
 
 $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
-	$(AR) rcs $@ $(OBJECTS)
+	$(AR) rcs $@ $(OBJS)
 else ifeq ($(platform), snc-ps3)
-	$(AR) rcs $@ $(OBJECTS)
+	$(AR) rcs $@ $(OBJS)
 else ifeq ($(platform), xenon)
-	$(AR) rcs $@ $(OBJECTS)
+	$(AR) rcs $@ $(OBJS)
 else ifeq ($(platform), wii)
-	$(AR) rcs $@ $(OBJECTS)
+	$(AR) rcs $@ $(OBJS)
 else
 	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
 endif
