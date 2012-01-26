@@ -2,28 +2,25 @@
 #define GBACPU_H
 
 #define UPDATE_REG(address, value)	WRITE16LE(((u16 *)&ioMem[address]),value);
-#define ARM_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);
-#define THUMB_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
+#define ARM_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadMemoryQuick(bus.armNextPC+4);
+#define THUMB_PREFETCH_NEXT		cpuPrefetch[1] = CPUReadHalfWordQuick(bus.armNextPC+2);
 
 #define ARM_PREFETCH \
   {\
-    cpuPrefetch[0] = CPUReadMemoryQuick(armNextPC);\
-    cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);\
+    cpuPrefetch[0] = CPUReadMemoryQuick(bus.armNextPC);\
+    cpuPrefetch[1] = CPUReadMemoryQuick(bus.armNextPC+4);\
   }
 
 #define THUMB_PREFETCH \
   {\
-    cpuPrefetch[0] = CPUReadHalfWordQuick(armNextPC);\
-    cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
+    cpuPrefetch[0] = CPUReadHalfWordQuick(bus.armNextPC);\
+    cpuPrefetch[1] = CPUReadHalfWordQuick(bus.armNextPC+2);\
   }
  
 #ifdef USE_SWITICKS
 extern int SWITicks;
 #endif
 extern u32 mastercode;
-extern bool busPrefetch;
-extern bool busPrefetchEnable;
-extern u32 busPrefetchCount;
 extern int cpuNextEvent;
 extern bool holdState;
 extern u32 cpuPrefetch[2];
@@ -56,14 +53,14 @@ INLINE int dataTicksAccess(u32 address, u8 bit32) // DATA 8/16bits NON SEQ
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
-		busPrefetchCount=0;
-		busPrefetch=false;
+		bus.busPrefetchCount=0;
+		bus.busPrefetch=false;
 	}
-	else if (busPrefetch)
+	else if (bus.busPrefetch)
 	{
 		waitState = value;
 		waitState = (1 & ~waitState) | (waitState & waitState);
-		busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1; 
+		bus.busPrefetchCount = ((bus.busPrefetchCount+1)<<waitState) - 1; 
 	}
 
 	return value;
@@ -82,14 +79,14 @@ INLINE int dataTicksAccessSeq(u32 address, u8 bit32)// DATA 8/16bits SEQ
 
 	if ((addr>=0x08) || (addr < 0x02))
 	{
-		busPrefetchCount=0;
-		busPrefetch=false;
+		bus.busPrefetchCount=0;
+		bus.busPrefetch=false;
 	}
-	else if (busPrefetch)
+	else if (bus.busPrefetch)
 	{
 		waitState = value;
 		waitState = (1 & ~waitState) | (waitState & waitState);
-		busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+		bus.busPrefetchCount = ((bus.busPrefetchCount+1)<<waitState) - 1;
 	}
 
 	return value;
@@ -104,18 +101,18 @@ static INLINE int codeTicksAccess(u32 address, u8 bit32) // THUMB NON SEQ
 
 	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
 	{
-		if (busPrefetchCount&0x1)
+		if (bus.busPrefetchCount&0x1)
 		{
-			if (busPrefetchCount&0x2)
+			if (bus.busPrefetchCount&0x2)
 			{
-				busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
+				bus.busPrefetchCount = ((bus.busPrefetchCount&0xFF)>>2) | (bus.busPrefetchCount&0xFFFFFF00);
 				return 0;
 			}
-			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+			bus.busPrefetchCount = ((bus.busPrefetchCount&0xFF)>>1) | (bus.busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr]-1;
 		}
 	}
-	busPrefetchCount = 0;
+	bus.busPrefetchCount = 0;
 
 	if(bit32)		/* ARM NON SEQ */
 		ret = memoryWait32[addr];
@@ -131,19 +128,19 @@ static INLINE int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 
 	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
 	{
-		if (busPrefetchCount&0x1)
+		if (bus.busPrefetchCount&0x1)
 		{
-			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+			bus.busPrefetchCount = ((bus.busPrefetchCount&0xFF)>>1) | (bus.busPrefetchCount&0xFFFFFF00);
 			return 0;
 		}
-		else if (busPrefetchCount>0xFF)
+		else if (bus.busPrefetchCount>0xFF)
 		{
-			busPrefetchCount=0;
+			bus.busPrefetchCount=0;
 			return memoryWait[addr];
 		}
 	}
 	else
-		busPrefetchCount = 0;
+		bus.busPrefetchCount = 0;
 
 	return memoryWaitSeq[addr];
 }
@@ -154,19 +151,19 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 
 	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
 	{
-		if (busPrefetchCount&0x1)
+		if (bus.busPrefetchCount&0x1)
 		{
-			if (busPrefetchCount&0x2)
+			if (bus.busPrefetchCount&0x2)
 			{
-				busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
+				bus.busPrefetchCount = ((bus.busPrefetchCount&0xFF)>>2) | (bus.busPrefetchCount&0xFFFFFF00);
 				return 0;
 			}
-			busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+			bus.busPrefetchCount = ((bus.busPrefetchCount&0xFF)>>1) | (bus.busPrefetchCount&0xFFFFFF00);
 			return memoryWaitSeq[addr];
 		}
-		else if (busPrefetchCount>0xFF)
+		else if (bus.busPrefetchCount > 0xFF)
 		{
-			busPrefetchCount=0;
+			bus.busPrefetchCount=0;
 			return memoryWait32[addr];
 		}
 	}
@@ -178,7 +175,7 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 #ifdef HAVE_CHEATS
 static INLINE void cpuMasterCodeCheck()
 {
-  if((mastercode) && (mastercode == armNextPC))
+  if((mastercode) && (mastercode == bus.armNextPC))
   {
     u32 ext = (joy >> 10);
     cpuTotalTicks += cheatsCheckKeys(P1^0x3FF, ext);

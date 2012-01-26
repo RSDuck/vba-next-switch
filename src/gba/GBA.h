@@ -53,11 +53,21 @@ typedef union {
 #endif
 } reg_pair;
 
+typedef struct 
+{
+	reg_pair reg[45];
+	bool busPrefetch;
+	bool busPrefetchEnable;
+	uint32_t busPrefetchCount;
+	uint32_t armNextPC;
+} bus_t;
+
+extern bus_t bus;
+
 #ifndef NO_GBA_MAP
 extern memoryMap map[256];
 #endif
 
-extern reg_pair reg[45];
 extern uint8_t biosProtected[4];
 
 extern uint64_t joy;

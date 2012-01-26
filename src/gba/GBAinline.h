@@ -43,7 +43,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 	switch(address >> 24)
 	{
 		case 0:
-			if(reg[15].I >> 24)
+			if(bus.reg[15].I >> 24)
 			{
 				if(address < 0x4000)
 					value = READ32LE(((u32 *)&biosProtected));
@@ -105,11 +105,11 @@ static INLINE u32 CPUReadMemory(u32 address)
 unreadable:
 
 			if(armState)
-				value = CPUReadMemoryQuick(reg[15].I);
+				value = CPUReadMemoryQuick(bus.reg[15].I);
 			else
 			{
-				value = CPUReadHalfWordQuick(reg[15].I) |
-					CPUReadHalfWordQuick(reg[15].I) << 16;
+				value = CPUReadHalfWordQuick(bus.reg[15].I) |
+					CPUReadHalfWordQuick(bus.reg[15].I) << 16;
 			}
 	}
 
@@ -129,7 +129,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 	switch(address >> 24)
 	{
 		case 0:
-			if (reg[15].I >> 24)
+			if (bus.reg[15].I >> 24)
 			{
 				if(address < 0x4000)
 					value = READ16LE(((u16 *)&biosProtected[address&2]));
@@ -206,9 +206,9 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 		default:
 unreadable:
 			if(armState) {
-				value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
+				value = CPUReadHalfWordQuick(bus.reg[15].I + (address & 2));
 			} else {
-				value = CPUReadHalfWordQuick(reg[15].I);
+				value = CPUReadHalfWordQuick(bus.reg[15].I);
 			}
 			break;
 	}
@@ -232,7 +232,7 @@ static INLINE u8 CPUReadByte(u32 address)
 	switch(address >> 24)
 	{
 		case 0:
-			if (reg[15].I >> 24)
+			if (bus.reg[15].I >> 24)
 			{
 				if(address < 0x4000)
 					return biosProtected[address & 3];
@@ -290,9 +290,9 @@ static INLINE u8 CPUReadByte(u32 address)
 		default:
 unreadable:
 			if(armState)
-				return CPUReadByteQuick(reg[15].I+(address & 3));
+				return CPUReadByteQuick(bus.reg[15].I+(address & 3));
 			else
-				return CPUReadByteQuick(reg[15].I+(address & 1));
+				return CPUReadByteQuick(bus.reg[15].I+(address & 1));
 			break;
 	}
 }

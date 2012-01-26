@@ -9,16 +9,16 @@
 static  void armUnknownInsn(u32 opcode)
 {
     // CPU Undefined Exception - ghetto inline
-  u32 PC = reg[15].I;
+  u32 PC = bus.reg[15].I;
   bool savedArmState = armState;
   CPUSwitchMode(0x1b, true, false);
-  reg[14].I = PC - (savedArmState ? 4 : 2);
-  reg[15].I = 0x04;
+  bus.reg[14].I = PC - (savedArmState ? 4 : 2);
+  bus.reg[15].I = 0x04;
   armState = true;
   armIrqEnable = false;
-  armNextPC = 0x04;
+  bus.armNextPC = 0x04;
   ARM_PREFETCH;
-  reg[15].I += 4;
+  bus.reg[15].I += 4;
     // CPU Undefined Exception - end of ghetto inline
 }
 
@@ -86,9 +86,9 @@ static  void armUnknownInsn(u32 opcode)
  #define VALUE_LSL_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (!shift) {  /* LSL #0 most common? */    \
-        value = reg[opcode & 0x0F].I;                   \
+        value = bus.reg[opcode & 0x0F].I;                   \
     } else {                                            \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
         value = v << shift;                             \
     }
@@ -96,13 +96,13 @@ static  void armUnknownInsn(u32 opcode)
 // OP Rd,Rb,Rm LSL Rs
 #ifndef VALUE_LSL_REG_C
  #define VALUE_LSL_REG_C \
-    unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+    unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (reg[opcode & 0x0F].I & 1 ? true : false);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 1 ? true : false);\
         } else if (shift < 32) {                \
-            u32 v = reg[opcode & 0x0F].I;               \
+            u32 v = bus.reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
             value = v << shift;                         \
         } else {                                        \
@@ -110,7 +110,7 @@ static  void armUnknownInsn(u32 opcode)
             C_OUT = false;                              \
         }                                               \
     } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+        value = bus.reg[opcode & 0x0F].I;                   \
     }
 #endif
 // OP Rd,Rb,Rm LSR #
@@ -118,24 +118,24 @@ static  void armUnknownInsn(u32 opcode)
  #define VALUE_LSR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = v >> shift;                             \
     } else {                                            \
         value = 0;                                      \
-        C_OUT = (reg[opcode & 0x0F].I & 0x80000000) ? true : false;\
+        C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000) ? true : false;\
     }
 #endif
 // OP Rd,Rb,Rm LSR Rs
 #ifndef VALUE_LSR_REG_C
  #define VALUE_LSR_REG_C \
-    unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+    unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
         } else if (shift < 32) {                \
-            u32 v = reg[opcode & 0x0F].I;               \
+            u32 v = bus.reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
             value = v >> shift;                         \
         } else {                                        \
@@ -143,7 +143,7 @@ static  void armUnknownInsn(u32 opcode)
             C_OUT = false;                              \
         }                                               \
     } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+        value = bus.reg[opcode & 0x0F].I;                   \
     }
 #endif
 // OP Rd,Rb,Rm ASR #
@@ -151,12 +151,11 @@ static  void armUnknownInsn(u32 opcode)
  #define VALUE_ASR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        /* VC++ BUG: u32 v; (s32)v>>n is optimized to shr! */ \
-        s32 v = reg[opcode & 0x0F].I;                   \
+        s32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
         value = v >> (int)shift;                        \
     } else {                                            \
-        if (reg[opcode & 0x0F].I & 0x80000000) {        \
+        if (bus.reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
             C_OUT = true;                               \
         } else {                                        \
@@ -168,17 +167,17 @@ static  void armUnknownInsn(u32 opcode)
 // OP Rd,Rb,Rm ASR Rs
 #ifndef VALUE_ASR_REG_C
  #define VALUE_ASR_REG_C \
-    unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+    unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift < 32) {                           \
         if (shift) {                            \
-            s32 v = reg[opcode & 0x0F].I;               \
+            s32 v = bus.reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
             value = v >> (int)shift;                    \
         } else {                                        \
-            value = reg[opcode & 0x0F].I;               \
+            value = bus.reg[opcode & 0x0F].I;               \
         }                                               \
     } else {                                            \
-        if (reg[opcode & 0x0F].I & 0x80000000) {        \
+        if (bus.reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
             C_OUT = true;                               \
         } else {                                        \
@@ -192,12 +191,12 @@ static  void armUnknownInsn(u32 opcode)
  #define VALUE_ROR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v & 1) ? true : false;                 \
         value = ((v >> 1) |                             \
                  (C_FLAG << 31));                       \
@@ -206,14 +205,14 @@ static  void armUnknownInsn(u32 opcode)
 // OP Rd,Rb,Rm ROR Rs
 #ifndef VALUE_ROR_REG_C
  #define VALUE_ROR_REG_C \
-    unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+    unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift & 0x1F) {                         \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = bus.reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+        value = bus.reg[opcode & 0x0F].I;                   \
         if (shift)                                      \
             C_OUT = (value & 0x80000000 ? true : false);\
     }
@@ -268,108 +267,108 @@ static  void armUnknownInsn(u32 opcode)
 #define C_CHECK_PC(SETCOND) if (dest != 15) { SETCOND }
 #ifndef OP_AND
  #define OP_AND \
-    u32 res = reg[(opcode>>16)&15].I & value;           \
-    reg[dest].I = res;
+    u32 res = bus.reg[(opcode>>16)&15].I & value;           \
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_ANDS
  #define OP_ANDS   OP_AND C_CHECK_PC(C_SETCOND_LOGICAL)
 #endif
 #ifndef OP_EOR
  #define OP_EOR \
-    u32 res = reg[(opcode>>16)&15].I ^ value;           \
-    reg[dest].I = res;
+    u32 res = bus.reg[(opcode>>16)&15].I ^ value;           \
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_EORS
  #define OP_EORS   OP_EOR C_CHECK_PC(C_SETCOND_LOGICAL)
 #endif
 #ifndef OP_SUB
  #define OP_SUB \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs - rhs;                                \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_SUBS
  #define OP_SUBS   OP_SUB C_CHECK_PC(C_SETCOND_SUB)
 #endif
 #ifndef OP_RSB
  #define OP_RSB \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = rhs - lhs;                                \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_RSBS
  #define OP_RSBS   OP_RSB C_CHECK_PC(C_SETCOND_SUB)
 #endif
 #ifndef OP_ADD
  #define OP_ADD \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs + rhs;                                \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_ADDS
  #define OP_ADDS   OP_ADD C_CHECK_PC(C_SETCOND_ADD)
 #endif
 #ifndef OP_ADC
  #define OP_ADC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs + rhs + (u32)C_FLAG;                  \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_ADCS
  #define OP_ADCS   OP_ADC C_CHECK_PC(C_SETCOND_ADD)
 #endif
 #ifndef OP_SBC
  #define OP_SBC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs - rhs - !((u32)C_FLAG);               \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_SBCS
  #define OP_SBCS   OP_SBC C_CHECK_PC(C_SETCOND_SUB)
 #endif
 #ifndef OP_RSC
  #define OP_RSC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = rhs - lhs - !((u32)C_FLAG);               \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_RSCS
  #define OP_RSCS   OP_RSC C_CHECK_PC(C_SETCOND_SUB)
 #endif
 #ifndef OP_TST
  #define OP_TST \
-    u32 res = reg[(opcode >> 16) & 0x0F].I & value;     \
+    u32 res = bus.reg[(opcode >> 16) & 0x0F].I & value;     \
     C_SETCOND_LOGICAL;
 #endif
 #ifndef OP_TEQ
  #define OP_TEQ \
-    u32 res = reg[(opcode >> 16) & 0x0F].I ^ value;     \
+    u32 res = bus.reg[(opcode >> 16) & 0x0F].I ^ value;     \
     C_SETCOND_LOGICAL;
 #endif
 #ifndef OP_CMP
  #define OP_CMP \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs - rhs;                                \
     C_SETCOND_SUB;
 #endif
 #ifndef OP_CMN
  #define OP_CMN \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
+    u32 lhs = bus.reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
     u32 res = lhs + rhs;                                \
     C_SETCOND_ADD;
 #endif
 #ifndef OP_ORR
  #define OP_ORR \
-    u32 res = reg[(opcode >> 16) & 0x0F].I | value;     \
-    reg[dest].I = res;
+    u32 res = bus.reg[(opcode >> 16) & 0x0F].I | value;     \
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_ORRS
  #define OP_ORRS   OP_ORR C_CHECK_PC(C_SETCOND_LOGICAL)
@@ -377,15 +376,15 @@ static  void armUnknownInsn(u32 opcode)
 #ifndef OP_MOV
  #define OP_MOV \
     u32 res = value;                                    \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_MOVS
  #define OP_MOVS   OP_MOV C_CHECK_PC(C_SETCOND_LOGICAL)
 #endif
 #ifndef OP_BIC
  #define OP_BIC \
-    u32 res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
-    reg[dest].I = res;
+    u32 res = bus.reg[(opcode >> 16) & 0x0F].I & (~value);  \
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_BICS
  #define OP_BICS   OP_BIC C_CHECK_PC(C_SETCOND_LOGICAL)
@@ -393,7 +392,7 @@ static  void armUnknownInsn(u32 opcode)
 #ifndef OP_MVN
  #define OP_MVN \
     u32 res = ~value;                                   \
-    reg[dest].I = res;
+    bus.reg[dest].I = res;
 #endif
 #ifndef OP_MVNS
  #define OP_MVNS   OP_MVN C_CHECK_PC(C_SETCOND_LOGICAL)
@@ -404,13 +403,13 @@ static  void armUnknownInsn(u32 opcode)
 #endif
 #ifndef SETCOND_MUL
  #define SETCOND_MUL \
-     N_FLAG = ((s32)reg[dest].I < 0) ? true : false;    \
-     Z_FLAG = reg[dest].I ? false : true;
+     N_FLAG = ((s32)bus.reg[dest].I < 0) ? true : false;    \
+     Z_FLAG = bus.reg[dest].I ? false : true;
 #endif
 #ifndef SETCOND_MULL
  #define SETCOND_MULL \
-     N_FLAG = (reg[dest].I & 0x80000000) ? true : false;\
-     Z_FLAG = reg[dest].I || reg[acc].I ? false : true;
+     N_FLAG = (bus.reg[dest].I & 0x80000000) ? true : false;\
+     Z_FLAG = bus.reg[dest].I || bus.reg[acc].I ? false : true;
 #endif
 
 #ifndef ALU_FINISH
@@ -443,27 +442,27 @@ static  void armUnknownInsn(u32 opcode)
     ALU_INIT GETVALUE OP ALU_FINISH;                            \
     if ((opcode & 0x0000F000) != 0x0000F000) {          \
         clockTicks = 1 + ISREGSHIFT                             \
-                       + codeTicksAccessSeq32(armNextPC);       \
+                       + codeTicksAccessSeq32(bus.armNextPC);       \
     } else {                                                    \
         MODECHANGE;                                             \
         if (armState) {                                         \
-            reg[15].I &= 0xFFFFFFFC;                            \
-            armNextPC = reg[15].I;                              \
-            reg[15].I += 4;                                     \
+            bus.reg[15].I &= 0xFFFFFFFC;                            \
+            bus.armNextPC = bus.reg[15].I;                              \
+            bus.reg[15].I += 4;                                     \
             ARM_PREFETCH;                                       \
         } else {                                                \
-            reg[15].I &= 0xFFFFFFFE;                            \
-            armNextPC = reg[15].I;                              \
-            reg[15].I += 2;                                     \
+            bus.reg[15].I &= 0xFFFFFFFE;                            \
+            bus.armNextPC = bus.reg[15].I;                              \
+            bus.reg[15].I += 2;                                     \
             THUMB_PREFETCH;                                     \
         }                                                       \
         clockTicks = 3 + ISREGSHIFT                             \
-                       + codeTicksAccess(armNextPC, BITS_32)           \
-                       + ((codeTicksAccessSeq32(armNextPC)) << 1);       \
+                       + codeTicksAccess(bus.armNextPC, BITS_32)           \
+                       + ((codeTicksAccessSeq32(bus.armNextPC)) << 1);       \
     }
 
 #define MODECHANGE_NO  /*nothing*/
-#define MODECHANGE_YES CPUSwitchMode(reg[17].I & 0x1f, false, true);
+#define MODECHANGE_YES CPUSwitchMode(bus.reg[17].I & 0x1f, false, true);
 
 #define DEFINE_ALU_INSN_C(CODE1, CODE2, OP, MODECHANGE) \
   static  void arm##CODE1##0(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
@@ -565,7 +564,7 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
 // CYCLES: base cycle count (1, 2, or 3)
 #define MUL_INSN(OP, SETCOND, CYCLES) \
     int mult = (opcode & 0x0F);                         \
-    u32 rs = reg[(opcode >> 8) & 0x0F].I;               \
+    u32 rs = bus.reg[(opcode >> 8) & 0x0F].I;               \
     int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     int dest = (opcode >> 16) & 0x0F;  /* or destHi */  \
     OP;                                                 \
@@ -578,25 +577,25 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
         clockTicks += 2;                                \
     else                                                \
         clockTicks += 3;                                \
-    if (busPrefetchCount == 0)                          \
-        busPrefetchCount = ((busPrefetchCount+1)<<clockTicks) - 1; \
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    if (bus.busPrefetchCount == 0)                          \
+        bus.busPrefetchCount = ((bus.busPrefetchCount+1)<<clockTicks) - 1; \
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 
 #define OP_MUL \
-    reg[dest].I = reg[mult].I * rs;
+    bus.reg[dest].I = bus.reg[mult].I * rs;
 #define OP_MLA \
-    reg[dest].I = reg[mult].I * rs + reg[acc].I;
+    bus.reg[dest].I = bus.reg[mult].I * rs + bus.reg[acc].I;
 #define OP_MULL(SIGN) \
-    SIGN##64 res = (SIGN##64)(SIGN##32)reg[mult].I      \
+    SIGN##64 res = (SIGN##64)(SIGN##32)bus.reg[mult].I      \
                  * (SIGN##64)(SIGN##32)rs;              \
-    reg[acc].I = (u32)res;                              \
-    reg[dest].I = (u32)(res >> 32);
+    bus.reg[acc].I = (u32)res;                              \
+    bus.reg[dest].I = (u32)(res >> 32);
 #define OP_MLAL(SIGN) \
-    SIGN##64 res = ((SIGN##64)reg[dest].I<<32 | reg[acc].I)\
-                 + ((SIGN##64)(SIGN##32)reg[mult].I     \
+    SIGN##64 res = ((SIGN##64)bus.reg[dest].I<<32 | bus.reg[acc].I)\
+                 + ((SIGN##64)(SIGN##32)bus.reg[mult].I     \
                     * (SIGN##64)(SIGN##32)rs);          \
-    reg[acc].I = (u32)res;                              \
-    reg[dest].I = (u32)(res >> 32);
+    bus.reg[acc].I = (u32)res;                              \
+    bus.reg[dest].I = (u32)(res >> 32);
 #define OP_UMULL OP_MULL(u)
 #define OP_UMLAL OP_MLAL(u)
 #define OP_SMULL OP_MULL(s)
@@ -637,23 +636,23 @@ static  void arm0F9(u32 opcode) { MUL_INSN(OP_SMLAL, SETCOND_MULL, 3); }
 // SWP Rd, Rm, [Rn]
 static  void arm109(u32 opcode)
 {
-    u32 address = reg[(opcode >> 16) & 15].I;
+    u32 address = bus.reg[(opcode >> 16) & 15].I;
     u32 temp = CPUReadMemory(address);
-    CPUWriteMemory(address, reg[opcode&15].I);
-    reg[(opcode >> 12) & 15].I = temp;
+    CPUWriteMemory(address, bus.reg[opcode&15].I);
+    bus.reg[(opcode >> 12) & 15].I = temp;
     clockTicks = 4 + dataTicksAccess(address, BITS_32) + dataTicksAccess(address, BITS_32)
-                   + codeTicksAccess(armNextPC, BITS_32);
+                   + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // SWPB Rd, Rm, [Rn]
 static  void arm149(u32 opcode)
 {
-    u32 address = reg[(opcode >> 16) & 15].I;
+    u32 address = bus.reg[(opcode >> 16) & 15].I;
     u32 temp = CPUReadByte(address);
-    CPUWriteByte(address, reg[opcode&15].B.B0);
-    reg[(opcode>>12)&15].I = temp;
+    CPUWriteByte(address, bus.reg[opcode&15].B.B0);
+    bus.reg[(opcode>>12)&15].I = temp;
     clockTicks = 4 + dataTicksAccess(address, BITS_32) + dataTicksAccess(address, BITS_32)
-                   + codeTicksAccess(armNextPC, BITS_32);
+                   + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // MRS Rd, CPSR
@@ -662,7 +661,7 @@ static  void arm100(u32 opcode)
     if ((opcode & 0x0FFF0FFF) == 0x010F0000)
     {
 	    CPU_UPDATE_CPSR();
-	    reg[(opcode >> 12) & 0x0F].I = reg[16].I;
+	    bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[16].I;
     }
     else
     {
@@ -674,7 +673,7 @@ static  void arm100(u32 opcode)
 static  void arm140(u32 opcode)
 {
     if ((opcode & 0x0FFF0FFF) == 0x014F0000) {
-        reg[(opcode >> 12) & 0x0F].I = reg[17].I;
+        bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[17].I;
     } else {
         armUnknownInsn(opcode);
     }
@@ -686,8 +685,8 @@ static  void arm120(u32 opcode)
     if ((opcode & 0x0FF0FFF0) == 0x0120F000)
     {
 	    CPU_UPDATE_CPSR();
-	    u32 value = reg[opcode & 15].I;
-	    u32 newValue = reg[16].I;
+	    u32 value = bus.reg[opcode & 15].I;
+	    u32 newValue = bus.reg[16].I;
 	    if (armMode > 0x10) {
 		    if (opcode & 0x00010000)
 			    newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
@@ -700,11 +699,11 @@ static  void arm120(u32 opcode)
 		    newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
 	    newValue |= 0x10;
 	    CPUSwitchMode(newValue & 0x1F, false, true);
-	    reg[16].I = newValue;
+	    bus.reg[16].I = newValue;
 	    CPUUpdateFlags();
 	    if (!armState) {  // this should not be allowed, but it seems to work
 		    THUMB_PREFETCH;
-		    reg[15].I = armNextPC + 2;
+		    bus.reg[15].I = bus.armNextPC + 2;
 	    }
     }
     else
@@ -717,16 +716,16 @@ static  void arm120(u32 opcode)
 static  void arm160(u32 opcode)
 {
     if ((opcode & 0x0FF0FFF0) == 0x0160F000) {
-        u32 value = reg[opcode & 15].I;
+        u32 value = bus.reg[opcode & 15].I;
         if (armMode > 0x10 && armMode < 0x1F) {
             if (opcode & 0x00010000)
-                reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+                bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
             if (opcode & 0x00020000)
-                reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+                bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
             if (opcode & 0x00040000)
-                reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+                bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
             if (opcode & 0x00080000)
-                reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+                bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
         }
     } else {
         armUnknownInsn(opcode);
@@ -744,7 +743,7 @@ static  void arm320(u32 opcode)
 	    if (shift) {
 		    ROR_IMM_MSR;
 	    }
-	    u32 newValue = reg[16].I;
+	    u32 newValue = bus.reg[16].I;
 	    if (armMode > 0x10) {
 		    if (opcode & 0x00010000)
 			    newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
@@ -759,11 +758,11 @@ static  void arm320(u32 opcode)
 	    newValue |= 0x10;
 
 	    CPUSwitchMode(newValue & 0x1F, false, true);
-	    reg[16].I = newValue;
+	    bus.reg[16].I = newValue;
 	    CPUUpdateFlags();
 	    if (!armState) {  // this should not be allowed, but it seems to work
 		    THUMB_PREFETCH;
-		    reg[15].I = armNextPC + 2;
+		    bus.reg[15].I = bus.armNextPC + 2;
 	    }
     } else {
         armUnknownInsn(opcode);
@@ -781,13 +780,13 @@ static  void arm360(u32 opcode)
                 ROR_IMM_MSR;
             }
             if (opcode & 0x00010000)
-                reg[17].I = (reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+                bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
             if (opcode & 0x00020000)
-                reg[17].I = (reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+                bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
             if (opcode & 0x00040000)
-                reg[17].I = (reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+                bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
             if (opcode & 0x00080000)
-                reg[17].I = (reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+                bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
         }
     } else {
         armUnknownInsn(opcode);
@@ -799,24 +798,24 @@ static  void arm121(u32 opcode)
 {
     if ((opcode & 0x0FFFFFF0) == 0x012FFF10) {
         int base = opcode & 0x0F;
-        busPrefetchCount = 0;
-        armState = reg[base].I & 1 ? false : true;
+        bus.busPrefetchCount = 0;
+        armState = bus.reg[base].I & 1 ? false : true;
         if (armState) {
-            reg[15].I = reg[base].I & 0xFFFFFFFC;
-            armNextPC = reg[15].I;
-            reg[15].I += 4;
+            bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFC;
+            bus.armNextPC = bus.reg[15].I;
+            bus.reg[15].I += 4;
             ARM_PREFETCH;
-            clockTicks = 3 + codeTicksAccessSeq32(armNextPC)
-                           + codeTicksAccessSeq32(armNextPC)
-                           + codeTicksAccess(armNextPC, BITS_32);
+            clockTicks = 3 + codeTicksAccessSeq32(bus.armNextPC)
+                           + codeTicksAccessSeq32(bus.armNextPC)
+                           + codeTicksAccess(bus.armNextPC, BITS_32);
         } else {
-            reg[15].I = reg[base].I & 0xFFFFFFFE;
-            armNextPC = reg[15].I;
-            reg[15].I += 2;
+            bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFE;
+            bus.armNextPC = bus.reg[15].I;
+            bus.reg[15].I += 2;
             THUMB_PREFETCH;
-            clockTicks = 3 + codeTicksAccessSeq16(armNextPC)
-                           + codeTicksAccessSeq16(armNextPC)
-                           + codeTicksAccess(armNextPC, BITS_16);
+            clockTicks = 3 + codeTicksAccessSeq16(bus.armNextPC)
+                           + codeTicksAccessSeq16(bus.armNextPC)
+                           + codeTicksAccess(bus.armNextPC, BITS_16);
         }
     } else {
         armUnknownInsn(opcode);
@@ -830,51 +829,51 @@ static  void arm121(u32 opcode)
 #define OFFSET_IMM8 \
     int offset = ((opcode & 0x0F) | ((opcode>>4) & 0xF0));
 #define OFFSET_REG \
-    int offset = reg[opcode & 15].I;
+    int offset = bus.reg[opcode & 15].I;
 #define OFFSET_LSL \
-    int offset = reg[opcode & 15].I << ((opcode>>7) & 31);
+    int offset = bus.reg[opcode & 15].I << ((opcode>>7) & 31);
 #define OFFSET_LSR \
     int shift = (opcode >> 7) & 31;                     \
-    int offset = shift ? reg[opcode & 15].I >> shift : 0;
+    int offset = shift ? bus.reg[opcode & 15].I >> shift : 0;
 #define OFFSET_ASR \
     int shift = (opcode >> 7) & 31;                     \
     int offset;                                         \
     if (shift)                                          \
-        offset = (int)((s32)reg[opcode & 15].I >> shift);\
-    else if (reg[opcode & 15].I & 0x80000000)           \
+        offset = (int)((s32)bus.reg[opcode & 15].I >> shift);\
+    else if (bus.reg[opcode & 15].I & 0x80000000)           \
         offset = 0xFFFFFFFF;                            \
     else                                                \
         offset = 0;
 #define OFFSET_ROR \
     int shift = (opcode >> 7) & 31;                     \
-    u32 offset = reg[opcode & 15].I;                    \
+    u32 offset = bus.reg[opcode & 15].I;                    \
     if (shift) {                                        \
         ROR_OFFSET;                                     \
     } else {                                            \
         RRX_OFFSET;                                     \
     }
 
-#define ADDRESS_POST (reg[base].I)
-#define ADDRESS_PREDEC (reg[base].I - offset)
-#define ADDRESS_PREINC (reg[base].I + offset)
+#define ADDRESS_POST (bus.reg[base].I)
+#define ADDRESS_PREDEC (bus.reg[base].I - offset)
+#define ADDRESS_PREINC (bus.reg[base].I + offset)
 
-#define OP_STR    CPUWriteMemory(address, reg[dest].I)
-#define OP_STRH   CPUWriteHalfWord(address, reg[dest].W.W0)
-#define OP_STRB   CPUWriteByte(address, reg[dest].B.B0)
-#define OP_LDR    reg[dest].I = CPUReadMemory(address)
-#define OP_LDRH   reg[dest].I = CPUReadHalfWord(address)
-#define OP_LDRB   reg[dest].I = CPUReadByte(address)
-#define OP_LDRSH  reg[dest].I = (s16)CPUReadHalfWordSigned(address)
-#define OP_LDRSB  reg[dest].I = (s8)CPUReadByte(address)
+#define OP_STR    CPUWriteMemory(address, bus.reg[dest].I)
+#define OP_STRH   CPUWriteHalfWord(address, bus.reg[dest].W.W0)
+#define OP_STRB   CPUWriteByte(address, bus.reg[dest].B.B0)
+#define OP_LDR    bus.reg[dest].I = CPUReadMemory(address)
+#define OP_LDRH   bus.reg[dest].I = CPUReadHalfWord(address)
+#define OP_LDRB   bus.reg[dest].I = CPUReadByte(address)
+#define OP_LDRSH  bus.reg[dest].I = (s16)CPUReadHalfWordSigned(address)
+#define OP_LDRSB  bus.reg[dest].I = (s8)CPUReadByte(address)
 
 #define WRITEBACK_NONE     /*nothing*/
-#define WRITEBACK_PRE      reg[base].I = address
-#define WRITEBACK_POSTDEC  reg[base].I = address - offset
-#define WRITEBACK_POSTINC  reg[base].I = address + offset
+#define WRITEBACK_PRE      bus.reg[base].I = address
+#define WRITEBACK_POSTDEC  bus.reg[base].I = address - offset
+#define WRITEBACK_POSTINC  bus.reg[base].I = address + offset
 
 #define LDRSTR_INIT(CALC_OFFSET, CALC_ADDRESS) \
-    if (busPrefetchCount == 0)                          \
-        busPrefetch = busPrefetchEnable;                \
+    if (bus.busPrefetchCount == 0)                          \
+        bus.busPrefetch = bus.busPrefetchEnable;                \
     int dest = (opcode >> 12) & 15;                     \
     int base = (opcode >> 16) & 15;                     \
     CALC_OFFSET;                                        \
@@ -886,7 +885,7 @@ static  void arm121(u32 opcode)
     STORE_DATA;                                         \
     WRITEBACK2;                                         \
     clockTicks = 2 + dataTicksAccess(address, BITS_##SIZE)     \
-                   + codeTicksAccess(armNextPC, BITS_32);
+                   + codeTicksAccess(bus.armNextPC, BITS_32);
 #define LDR(CALC_OFFSET, CALC_ADDRESS, LOAD_DATA, WRITEBACK, SIZE) \
     LDRSTR_INIT(CALC_OFFSET, CALC_ADDRESS);             \
     LOAD_DATA;                                          \
@@ -896,14 +895,14 @@ static  void arm121(u32 opcode)
     }                                                   \
     clockTicks = 0;                                     \
     if (dest == 15) {                                   \
-        reg[15].I &= 0xFFFFFFFC;                        \
-        armNextPC = reg[15].I;                          \
-        reg[15].I += 4;                                 \
+        bus.reg[15].I &= 0xFFFFFFFC;                        \
+        bus.armNextPC = bus.reg[15].I;                          \
+        bus.reg[15].I += 4;                                 \
         ARM_PREFETCH;                                   \
         clockTicks += 2 + ((dataTicksAccessSeq(address, BITS_32)) << 1);\
     }                                                   \
     clockTicks += 3 + dataTicksAccess(address, BITS_##SIZE)    \
-                    + codeTicksAccess(armNextPC, BITS_32);
+                    + codeTicksAccess(bus.armNextPC, BITS_32);
 #define STR_POSTDEC(CALC_OFFSET, STORE_DATA, SIZE) \
   STR(CALC_OFFSET, ADDRESS_POST, STORE_DATA, WRITEBACK_NONE, WRITEBACK_POSTDEC, SIZE)
 #define STR_POSTINC(CALC_OFFSET, STORE_DATA, SIZE) \
@@ -1276,7 +1275,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
 
 #define STM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
-        CPUWriteMemory(address, reg[(num)].I);          \
+        CPUWriteMemory(address, bus.reg[(num)].I);          \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
@@ -1287,19 +1286,19 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     }
 #define STMW_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
-        CPUWriteMemory(address, reg[(num)].I);          \
+        CPUWriteMemory(address, bus.reg[(num)].I);          \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
             clockTicks += 1 + dataTicksAccessSeq(address, BITS_32);\
         }                                               \
-        reg[base].I = temp;                             \
+        bus.reg[base].I = temp;                             \
         count++;                                        \
         address += 4;                                   \
     }
 #define LDM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
-        reg[(num)].I = CPUReadMemory(address);          \
+        bus.reg[(num)].I = CPUReadMemory(address);          \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
@@ -1348,7 +1347,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     }
 #define STM_PC \
     if (opcode & (1U<<15)) {                            \
-        CPUWriteMemory(address, reg[15].I+4);           \
+        CPUWriteMemory(address, bus.reg[15].I+4);           \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
@@ -1358,13 +1357,13 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     }
 #define STMW_PC \
     if (opcode & (1U<<15)) {                            \
-        CPUWriteMemory(address, reg[15].I+4);           \
+        CPUWriteMemory(address, bus.reg[15].I+4);           \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
             clockTicks += 1 + dataTicksAccessSeq(address, BITS_32);\
         }                                               \
-        reg[base].I = temp;                             \
+        bus.reg[base].I = temp;                             \
         count++;                                        \
     }
 #define LDM_LOW \
@@ -1417,7 +1416,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     LDM_LOW;                                            \
     LDM_HIGH;                                           \
     if (opcode & (1U<<15)) {                            \
-        reg[15].I = CPUReadMemory(address);             \
+        bus.reg[15].I = CPUReadMemory(address);             \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32);\
         } else {                                        \
@@ -1426,10 +1425,10 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
         count++;                                        \
     }                                                   \
     if (opcode & (1U<<15)) {                            \
-        armNextPC = reg[15].I;                          \
-        reg[15].I += 4;                                 \
+        bus.armNextPC = bus.reg[15].I;                          \
+        bus.reg[15].I += 4;                                 \
         ARM_PREFETCH;                                   \
-        clockTicks += 1 + codeTicksAccessSeq32(armNextPC);\
+        clockTicks += 1 + codeTicksAccessSeq32(bus.armNextPC);\
     }
 #define STM_ALL_2 \
     STM_LOW(STM_REG);                                   \
@@ -1443,7 +1442,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     LDM_LOW;                                            \
     if (opcode & (1U<<15)) {                            \
         LDM_HIGH;                                       \
-        reg[15].I = CPUReadMemory(address);             \
+        bus.reg[15].I = CPUReadMemory(address);             \
         if (!count) {                                   \
             clockTicks += 1 + dataTicksAccess(address, BITS_32); \
         } else {                                        \
@@ -1455,474 +1454,474 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     }
 #define LDM_ALL_2B \
     if (opcode & (1U<<15)) {                            \
-        CPUSwitchMode(reg[17].I & 0x1F, false, true);   \
+        CPUSwitchMode(bus.reg[17].I & 0x1F, false, true);   \
         if (armState) {                                 \
-            armNextPC = reg[15].I & 0xFFFFFFFC;         \
-            reg[15].I = armNextPC + 4;                  \
+            bus.armNextPC = bus.reg[15].I & 0xFFFFFFFC;         \
+            bus.reg[15].I = bus.armNextPC + 4;                  \
             ARM_PREFETCH;                               \
         } else {                                        \
-            armNextPC = reg[15].I & 0xFFFFFFFE;         \
-            reg[15].I = armNextPC + 2;                  \
+            bus.armNextPC = bus.reg[15].I & 0xFFFFFFFE;         \
+            bus.reg[15].I = bus.armNextPC + 2;                  \
             THUMB_PREFETCH;                             \
         }                                               \
-        clockTicks += 1 + codeTicksAccessSeq32(armNextPC);\
+        clockTicks += 1 + codeTicksAccessSeq32(bus.armNextPC);\
     }
 
 
 // STMDA Rn, {Rlist}
 static  void arm800(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp + 4) & 0xFFFFFFFC;
     int count = 0;
     STM_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDA Rn, {Rlist}
 static  void arm810(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp + 4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMDA Rn!, {Rlist}
 static  void arm820(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp+4) & 0xFFFFFFFC;
     int count = 0;
     STMW_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDA Rn!, {Rlist}
 static  void arm830(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp + 4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
 }
 
 // STMDA Rn, {Rlist}^
 static  void arm840(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp+4) & 0xFFFFFFFC;
     int count = 0;
     STM_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDA Rn, {Rlist}^
 static  void arm850(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp + 4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMDA Rn!, {Rlist}^
 static  void arm860(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp+4) & 0xFFFFFFFC;
     int count = 0;
     STMW_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDA Rn!, {Rlist}^
 static  void arm870(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = (temp + 4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIA Rn, {Rlist}
 static  void arm880(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     STM_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIA Rn, {Rlist}
 static  void arm890(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIA Rn!, {Rlist}
 static  void arm8A0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
     STMW_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIA Rn!, {Rlist}
 static  void arm8B0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
 }
 
 // STMIA Rn, {Rlist}^
 static  void arm8C0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     STM_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIA Rn, {Rlist}^
 static  void arm8D0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIA Rn!, {Rlist}^
 static  void arm8E0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
     STMW_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIA Rn!, {Rlist}^
 static  void arm8F0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-    u32 address = reg[base].I & 0xFFFFFFFC;
+    u32 address = bus.reg[base].I & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMDB Rn, {Rlist}
 static  void arm900(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     STM_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDB Rn, {Rlist}
 static  void arm910(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMDB Rn!, {Rlist}
 static  void arm920(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     STMW_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDB Rn!, {Rlist}
 static  void arm930(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
 }
 
 // STMDB Rn, {Rlist}^
 static  void arm940(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     STM_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDB Rn, {Rlist}^
 static  void arm950(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMDB Rn!, {Rlist}^
 static  void arm960(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     STMW_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMDB Rn!, {Rlist}^
 static  void arm970(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I -
+    u32 temp = bus.reg[base].I -
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
     u32 address = temp & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIB Rn, {Rlist}
 static  void arm980(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     STM_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIB Rn, {Rlist}
 static  void arm990(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIB Rn!, {Rlist}
 static  void arm9A0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
     STMW_ALL;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIB Rn!, {Rlist}
 static  void arm9B0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
 }
 
 // STMIB Rn, {Rlist}^
 static  void arm9C0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     STM_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIB Rn, {Rlist}^
 static  void arm9D0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // STMIB Rn!, {Rlist}^
 static  void arm9E0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
     STMW_ALL_2;
-    clockTicks += 1 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIB Rn!, {Rlist}^
 static  void arm9F0(u32 opcode)
 {
-    if (busPrefetchCount == 0)
-        busPrefetch = busPrefetchEnable;
+    if (bus.busPrefetchCount == 0)
+        bus.busPrefetch = bus.busPrefetchEnable;
     int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = reg[base].I +
+    u32 temp = bus.reg[base].I +
         4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-    u32 address = (reg[base].I+4) & 0xFFFFFFFC;
+    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
     int count = 0;
     LDM_ALL_2;
     if (!(opcode & (1U << base)))
-        reg[base].I = temp;
+        bus.reg[base].I = temp;
     LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32);
+    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // B/BL/SWI and (unimplemented) coproc support ////////////////////////////
@@ -1935,16 +1934,16 @@ static  void armA00(u32 opcode)
     int offset = opcode & 0x00FFFFFF;
     if (offset & 0x00800000)
         offset |= 0xFF000000;  // negative offset
-    reg[15].I += offset<<2;
-    armNextPC = reg[15].I;
-    reg[15].I += 4;
+    bus.reg[15].I += offset<<2;
+    bus.armNextPC = bus.reg[15].I;
+    bus.reg[15].I += 4;
     ARM_PREFETCH;
 	 
-    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
 	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(armNextPC, BITS_32) + codeTicksVal;
+    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
 
-    busPrefetchCount = 0;
+    bus.busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
@@ -1957,17 +1956,17 @@ static  void armB00(u32 opcode)
     int offset = opcode & 0x00FFFFFF;
     if (offset & 0x00800000)
         offset |= 0xFF000000;  // negative offset
-    reg[14].I = reg[15].I - 4;
-    reg[15].I += offset<<2;
-    armNextPC = reg[15].I;
-    reg[15].I += 4;
+    bus.reg[14].I = bus.reg[15].I - 4;
+    bus.reg[15].I += offset<<2;
+    bus.armNextPC = bus.reg[15].I;
+    bus.reg[15].I += 4;
     ARM_PREFETCH;
 
-    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
 	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(armNextPC, BITS_32) + codeTicksVal;
+    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
 
-    busPrefetchCount = 0;
+    bus.busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
@@ -1988,15 +1987,15 @@ static  void armF00(u32 opcode)
 	int codeTicksVal = 0;
 	int ct = 0;
 
-    //clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
-    //clockTicks += 2 + codeTicksAccess(armNextPC, BITS_32)
-    //                + codeTicksAccessSeq32(armNextPC);
+    //clockTicks = codeTicksAccessSeq32(bus.armNextPC) + 1;
+    //clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32)
+    //                + codeTicksAccessSeq32(bus.armNextPC);
 
-    codeTicksVal = codeTicksAccessSeq32(armNextPC);
+    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
 	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(armNextPC, BITS_32) + codeTicksVal;
+    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
 
-    busPrefetchCount = 0;
+    bus.busPrefetchCount = 0;
 
 	clockTicks = ct;
     CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
@@ -2221,25 +2220,25 @@ int armExecute()
 		}
 #endif
 
-        if ((armNextPC & 0x0803FFFF) == 0x08020000)
-          busPrefetchCount = 0x100;
+        if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
+          bus.busPrefetchCount = 0x100;
 
         u32 opcode = cpuPrefetch[0];
         cpuPrefetch[0] = cpuPrefetch[1];
 
-        busPrefetch = false;
-        int32_t busprefetch_mask = ((busPrefetchCount & 0xFFFFFE00) | -(busPrefetchCount & 0xFFFFFE00)) >> 31;
-        busPrefetchCount = (0x100 | (busPrefetchCount & 0xFF) & busprefetch_mask) | (busPrefetchCount & ~busprefetch_mask);
+        bus.busPrefetch = false;
+        int32_t busprefetch_mask = ((bus.busPrefetchCount & 0xFFFFFE00) | -(bus.busPrefetchCount & 0xFFFFFE00)) >> 31;
+        bus.busPrefetchCount = (0x100 | (bus.busPrefetchCount & 0xFF) & busprefetch_mask) | (bus.busPrefetchCount & ~busprefetch_mask);
         #if 0
-        if (busPrefetchCount & 0xFFFFFE00)
-            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+        if (bus.busPrefetchCount & 0xFFFFFE00)
+            bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
         #endif
 
        
-        int oldArmNextPC = armNextPC;
+        int oldArmNextPC = bus.armNextPC;
 
-        armNextPC = reg[15].I;
-        reg[15].I += 4;
+        bus.armNextPC = bus.reg[15].I;
+        bus.reg[15].I += 4;
         ARM_PREFETCH_NEXT;
 
         int cond = opcode >> 28;
