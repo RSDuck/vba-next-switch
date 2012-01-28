@@ -231,6 +231,8 @@ ifeq ($(MULTIMAN_SUPPORT),1)
 else
 	$(MAKE_FSELF_NPDRM) $(PPU_TARGET) ps3/pkg/USRDIR/EBOOT.BIN
 endif
+	git submodule init
+	git submodule update
 	$(MAKE_PACKAGE_NPDRM) ps3/pkg/package.conf ps3/pkg
 
 
@@ -256,6 +258,8 @@ ifeq ($(MULTIMAN_SUPPORT),1)
 else
 	$(MKSELF_GEOHOT) $(PPU_TARGET) ps3/pkg/USRDIR/EBOOT.BIN VBAM900000
 endif
+	git submodule init
+	git submodule update
 	$(PYTHONBIN) $(MKPKG_PSLIGHT) --contentid IV0002-VBAM90000_00-SAMPLE0000000001 ps3/pkg/ vbanext-ps3-v$(EMULATOR_VERSION)-fw3.41.pkg
 
 #use this to create a PKG for use with CFW 3.55
@@ -265,5 +269,7 @@ ifeq ($(MULTIMAN_SUPPORT),1)
 else
 	$(MKSELF_GEOHOT) $(PPU_TARGET) ps3/pkg/USRDIR/EBOOT.BIN VBAM900000
 endif
+	git submodule init
+	git submodule update
 	$(PYTHONBIN) $(MKPKG_PSLIGHT) --contentid IV0002-VBAM90000_00-SAMPLE0000000001 ps3/pkg/ vbanext-ps3-v$(EMULATOR_VERSION)-cfw3.55.pkg
 	$(PKG_FINALIZE) vbanext-ps3-v$(EMULATOR_VERSION)-cfw3.55.pkg
