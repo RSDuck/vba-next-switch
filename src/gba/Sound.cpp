@@ -356,11 +356,11 @@ void soundTimerOverflow(int timer)
 		pcm [1].timer_overflowed( timer );
 }
 
-void flush_samples(Simple_Effects_Buffer * buffer)
+void flush_samples(Simple_Effects_Buffer * effects_buffer)
 {
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = buffer->read_samples( (int16_t*) soundFinalWave, buffer->samples_avail() );
+	int numSamples = effects_buffer->read_samples( (int16_t*) soundFinalWave, effects_buffer->samples_avail() );
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 

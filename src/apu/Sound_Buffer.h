@@ -34,9 +34,6 @@ class Blip_Buffer
 	/* Removes all available samples and clear buffer to silence.*/
 	void clear( void);
 
-	/* Number of samples available for reading with read_samples()*/
-	long samples_avail() const;
-
 	/* Removes 'count' samples from those waiting to be read*/
 	void remove_samples( long count );
 
@@ -94,7 +91,6 @@ class Blip_Synth
 {
 	public:
 	Blip_Buffer* buf;
-	int last_amp;
 	int delta_factor;
 
 	Blip_Synth();
@@ -199,8 +195,6 @@ INLINE void Blip_Synth::offset( int32_t t, int delta, Blip_Buffer* buf ) const
 
 #define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
 
-INLINE long Blip_Buffer::samples_avail() const  { return (long) (offset_ >> BLIP_BUFFER_ACCURACY); }
-
 /* 1/4th of a second */
 #define BLIP_DEFAULT_LENGTH 250
 
@@ -230,7 +224,7 @@ class Stereo_Buffer
 
 		void end_frame( int32_t );
 
-		long samples_avail() { return (bufs_buffer [0].samples_avail() - mixer_samples_read) << 1; }
+		long samples_avail() { return ((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );
 		Blip_Buffer bufs_buffer [BUFS_SIZE];
@@ -292,7 +286,7 @@ class Effects_Buffer {
 		channel_t channel( int i) { return chans[i + EXTRA_CHANS].channel; }
 		void end_frame( int32_t );
 		long read_samples( int16_t*, long );
-		long samples_avail() const { return (bufs_buffer [0].samples_avail() - mixer_samples_read) * 2; }
+		long samples_avail() const { return ((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) * 2; }
 		void mixer_read_pairs( int16_t* out, int count );
 		long sample_rate_;
 		int length_;

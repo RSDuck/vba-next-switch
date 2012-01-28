@@ -38,9 +38,7 @@ void Gb_Osc::reset()
 
 INLINE void Gb_Osc::update_amp( int32_t time, int new_amp )
 {
-	int delta;
-
-        delta = new_amp - last_amp;
+	int delta = new_amp - last_amp;
         if ( delta )
         {
                 last_amp = new_amp;

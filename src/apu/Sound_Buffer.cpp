@@ -25,7 +25,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 /* BLIP BUFFER */
 
 #define FIXED_SHIFT 12
-#define TO_FIXED( f )   int ((f) * ((int) 1 << FIXED_SHIFT))
+#define SAL_FIXED_SHIFT 4096
+#define TO_FIXED( f )   int ((f) * SAL_FIXED_SHIFT)
 #define FROM_FIXED( f ) ((f) >> FIXED_SHIFT)
 
 Blip_Buffer::Blip_Buffer()
@@ -111,7 +112,6 @@ void Blip_Buffer::remove_samples( long count )
 Blip_Synth::Blip_Synth()
 {
         buf          = 0;
-        last_amp     = 0;
         delta_factor = 0;
 }
 
@@ -133,7 +133,7 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 	}
 	while ( ++offset );
 
-	BLIP_READER_END( reader, *this );
+        reader_accum_ = reader_reader_accum;
 
 	remove_samples( count );
 
@@ -153,7 +153,7 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
         offset_       = in.offset_;
         reader_accum_ = in.reader_accum_;
-        memcpy( buffer_, in.buf, sizeof in.buf );
+        memcpy( buffer_, in.buf, sizeof(in.buf));
 }
 
 /* Stereo_Buffer*/
@@ -244,8 +244,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		int offset = -count;
 		do
 		{
-			int s = center_reader_accum + side_reader_accum;
-			s >>= 14;
+			int s = (center_reader_accum + side_reader_accum) >> 14;
 			BLIP_READER_NEXT_IDX_( side,   offset );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
@@ -269,8 +268,7 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		int offset = -count;
 		do
 		{
-			int s = center_reader_accum + side_reader_accum;
-			s >>= 14;
+			int s = (center_reader_accum + side_reader_accum) >> 14;
 			BLIP_READER_NEXT_IDX_( side,   offset );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s, s );
@@ -320,8 +318,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		offset = -count;
 		do
 		{
-			s_tmp = center_reader_accum + side_reader_accum;
-			s_tmp >>= 14;
+			s_tmp = (center_reader_accum + side_reader_accum) >> 14;
 			BLIP_READER_NEXT_IDX_( side,   offset );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s_tmp, s_tmp );
@@ -345,8 +342,7 @@ void Effects_Buffer::mixer_read_pairs( int16_t * out, int count )
 		offset = -count;
 		do
 		{
-			s_tmp = center_reader_accum + side_reader_accum;
-			s_tmp >>= 14;
+			s_tmp = (center_reader_accum + side_reader_accum) >> 14;
 			BLIP_READER_NEXT_IDX_( side,   offset );
 			BLIP_READER_NEXT_IDX_( center, offset );
 			BLIP_CLAMP( s_tmp, s_tmp );
@@ -499,10 +495,10 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
 /* Configuration*/
 
 /* 3 wave positions with/without surround, 2 multi (one with same config as wave)*/
-int const simple_bufs = 3 * 2 + 2 - 1;
+#define SIMPLE_BUFS 7
 
 Simple_Effects_Buffer::Simple_Effects_Buffer() :
-        Effects_Buffer( EXTRA_CHANS + simple_bufs, 18 * 1024L )
+        Effects_Buffer( EXTRA_CHANS + SIMPLE_BUFS, 18 * 1024L )
 {
         config_.echo     = 0.20f;
         config_.stereo   = 0.20f;
