@@ -249,6 +249,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		realY -= y*dmy;
 	}
 
+	memset(line, -1, 240 * sizeof(u32));
 	if(control & 0x2000)
 	{
 		for(u32 x = 0; x < 240u; ++x)
@@ -263,7 +264,8 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 
 			u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
 
-			line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
+			if(color)
+				line[x] = (READ16LE(&palette[color])|prio);
 
 			realX += dx;
 			realY += dy;
@@ -285,10 +287,9 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 
 				u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
 
-				line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
+				if(color)
+					line[x] = (READ16LE(&palette[color])|prio);
 			}
-			else
-				line[x] = 0x80000000;
 
 			realX += dx;
 			realY += dy;
@@ -391,12 +392,11 @@ int& currentY, int changed, u32 *line)
 	unsigned xxx = (realX >> 8);
 	unsigned yyy = (realY >> 8);
 
+	memset(line, -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(xxx < sizeX && yyy < sizeY)
 			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
-		else
-			line[x] = 0x80000000;
 
 		realX += dx;
 		realY += dy;
@@ -504,33 +504,35 @@ static INLINE void gfxDrawRotScreen256(u16 control,
   int xxx = (realX >> 8);
   int yyy = (realY >> 8);
 
-  for(u32 x = 0; x < 240; ++x) {
-	if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY) {
-      u8 color = screenBase[yyy * 240 + xxx];
-      line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
-    } else {
-      line[x] = 0x80000000;
-    }
-    realX += dx;
-    realY += dy;
+  memset(line, -1, 240 * sizeof(u32));
+  for(u32 x = 0; x < 240; ++x)
+  {
+	  u8 color = screenBase[yyy * 240 + xxx];
+	  if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
+		  line[x] = (READ16LE(&palette[color])|prio);
+	  realX += dx;
+	  realY += dy;
 
-    xxx = (realX >> 8);
-    yyy = (realY >> 8);
+	  xxx = (realX >> 8);
+	  yyy = (realY >> 8);
   }
 
-  if(control & 0x40) {
-    int mosaicX = (MOSAIC & 0xF) + 1;
-    if(mosaicX > 1) {
-      int m = 1;
-      for(u32 i = 0; i < 239u; ++i) {
-        line[i+1] = line[i];
-        ++m;
-        if(m == mosaicX) {
-          m = 1;
-          ++i;
-        }
-      }
-    }
+  if(control & 0x40)
+  {
+	  int mosaicX = (MOSAIC & 0xF) + 1;
+	  if(mosaicX > 1)
+	  {
+		  int m = 1;
+		  for(u32 i = 0; i < 239u; ++i)
+		  {
+			  line[i+1] = line[i];
+			  if(++m == mosaicX)
+			  {
+				  m = 1;
+				  ++i;
+			  }
+		  }
+	  }
   }
 }
 
@@ -586,20 +588,21 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
   if(VCOUNT == 0)
     changed = 3;
 
-  if(changed & 1) {
-    currentX = (x_l) | ((x_h & 0x07FF)<<16);
-    if(x_h & 0x0800)
-      currentX |= 0xF8000000;
-  } else {
-    currentX += dmx;
+  currentX += dmx;
+  currentY += dmy;
+
+  if(changed & 1)
+  {
+	  currentX = (x_l) | ((x_h & 0x07FF)<<16);
+	  if(x_h & 0x0800)
+		  currentX |= 0xF8000000;
   }
 
-  if(changed & 2) {
-    currentY = (y_l) | ((y_h & 0x07FF)<<16);
-    if(y_h & 0x0800)
-      currentY |= 0xF8000000;
-  } else {
-    currentY += dmy;
+  if(changed & 2)
+  {
+	  currentY = (y_l) | ((y_h & 0x07FF)<<16);
+	  if(y_h & 0x0800)
+		  currentY |= 0xF8000000;
   }
 
   int realX = currentX;
