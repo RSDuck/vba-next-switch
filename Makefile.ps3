@@ -54,27 +54,29 @@ BUILD_DIR		= ./objs
 
 
 # build src lists and object file lists
-VBA_CPPSRCS	+= $(SRC_DIR)/ps3video.cpp \
-		$(SRC_DIR)/emu-ps3.cpp \
-		$(VBA_API_DIR)/Util.cpp \
-		$(VBA_API_DIR)/apu/Sound_Buffer.cpp \
-		$(VBA_API_DIR)/gb/GB.cpp \
-		$(VBA_API_DIR)/gb/gbCheats.cpp \
-		$(VBA_API_DIR)/gb/gbDis.cpp \
-		$(VBA_API_DIR)/gb/gbGfx.cpp \
-		$(VBA_API_DIR)/gb/gbGlobals.cpp \
-		$(VBA_API_DIR)/gb/gbMemory.cpp \
-		$(VBA_API_DIR)/gb/gbPrinter.cpp \
-		$(VBA_API_DIR)/gb/gbSGB.cpp \
-		$(VBA_API_DIR)/gb/gbSound.cpp \
-		$(VBA_API_DIR)/gba/GBA.cpp \
-		$(VBA_API_DIR)/gba/Sound.cpp \
-		$(VBA_API_DIR)/gba/EEprom.cpp \
-		$(VBA_API_DIR)/gba/Flash.cpp \
-		$(VBA_API_DIR)/gba/RTC.cpp \
-		$(VBA_API_DIR)/gba/Sram.cpp \
-		$(VBA_API_DIR)/gba/bios.cpp \
-		$(SRC_DIR)/menu.cpp
+VBA_CPPSRCS	+=	$(SRC_DIR)/ps3video.cpp \
+			$(SRC_DIR)/emu-ps3.cpp \
+			$(VBA_API_DIR)/Util.cpp \
+			$(VBA_API_DIR)/gb/GB.cpp \
+			$(VBA_API_DIR)/gb/gbCheats.cpp \
+			$(VBA_API_DIR)/gb/gbDis.cpp \
+			$(VBA_API_DIR)/gb/gbGfx.cpp \
+			$(VBA_API_DIR)/gb/gbGlobals.cpp \
+			$(VBA_API_DIR)/gb/gbMemory.cpp \
+			$(VBA_API_DIR)/gb/gbPrinter.cpp \
+			$(VBA_API_DIR)/gb/gbSGB.cpp \
+			$(VBA_API_DIR)/gb/gbSound.cpp \
+			$(VBA_API_DIR)/gba/Sound.cpp \
+			$(VBA_API_DIR)/gba/EEprom.cpp \
+			$(VBA_API_DIR)/gba/Flash.cpp \
+			$(VBA_API_DIR)/gba/RTC.cpp \
+			$(VBA_API_DIR)/gba/Sram.cpp \
+			$(VBA_API_DIR)/gba/bios.cpp \
+			$(SRC_DIR)/menu.cpp \
+			$(VBA_API_DIR)/apu/Sound_Buffer.cpp \
+			$(VBA_API_DIR)/gba/GBA.cpp
+
+
 
 VBA_CPPOBJS 	= $(VBA_CPPSRCS:.cpp=.ppu.o)
 

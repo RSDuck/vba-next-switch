@@ -16,7 +16,8 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	int sizeY = 256;
 
 	int tileXOdd = 0;
-	switch((control >> 14) & 3) {
+	switch((control >> 14) & 3)
+	{
 		case 0:
 			break;
 		case 1:
@@ -41,14 +42,17 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 
 	bool mosaicOn = (control & 0x40) ? true : false;
 
-	if(mosaicOn) {
-		if((VCOUNT % mosaicY) != 0) {
+	if(mosaicOn)
+	{
+		if((VCOUNT % mosaicY) != 0)
+		{
 			mosaicY = VCOUNT - (VCOUNT % mosaicY);
 			yyy = (vofs + mosaicY) & maskY;
 		}
 	}
 
-	if(yyy > 255 && sizeY > 256) {
+	if(yyy > 255 && sizeY > 256)
+	{
 		yyy &= 255;
 		screenBase += 0x400;
 		if(sizeX > 256)
@@ -56,9 +60,11 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	}
 
 	int yshift = ((yyy>>3)<<5);
-	if((control) & 0x80) {
-		u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
-		for(u32 x = 0; x < 240u; x++) {
+	u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
+	if((control) & 0x80)
+	{
+		for(u32 x = 0; x < 240u; x++)
+		{
 			u16 data = READ16LE(screenSource);
 
 			int tile = data & 0x3FF;
@@ -77,22 +83,25 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 
 			line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
 
-			++xxx;
-			if(xxx == 256) {
+			if(++xxx == 256)
+			{
+				screenSource = screenBase + yshift;
 				if(sizeX > 256)
-					screenSource = screenBase + 0x400 + yshift;
-				else {
-					screenSource = screenBase + yshift;
+					screenSource += 0x400;
+				else
 					xxx = 0;
-				}
-			} else if(xxx >= sizeX) {
+			}
+			else if(xxx >= sizeX)
+			{
 				xxx = 0;
 				screenSource = screenBase + yshift;
 			}
 		}
-	} else { 
-		u16 *screenSource = screenBase + ((xxx>>8) << 10) +((xxx&255)>>3) + yshift; 
-		for(u32 x = 0; x < 240u; ++x) {
+	}
+	else
+	{ 
+		for(u32 x = 0; x < 240u; ++x)
+		{
 			u16 data = READ16LE(screenSource);
 
 			int tile = data & 0x3FF;
@@ -120,15 +129,16 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 			int pal = (data>>8) & 0xF0;
 			line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
 
-			++xxx;
-			if(xxx == 256) {
+			if(++xxx == 256)
+			{
+				screenSource = screenBase + yshift;
 				if(sizeX > 256)
-					screenSource = screenBase + 0x400 + yshift;
-				else {
-					screenSource = screenBase + yshift;
+					screenSource += 0x400;
+				else
 					xxx = 0;
-				}
-			} else if(xxx >= sizeX) {
+			}
+			else if(xxx >= sizeX)
+			{
 				xxx = 0;
 				screenSource = screenBase + yshift;
 			}
@@ -160,7 +170,8 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 
 	u32 sizeX = 128;
 	u32 sizeY = 128;
-	switch((control >> 14) & 3) {
+	switch((control >> 14) & 3)
+	{
 		case 0:
 			break;
 		case 1:
@@ -210,34 +221,38 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	if(VCOUNT == 0)
 		changed = 3;
 
-	if(changed & 1) {
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
 		currentX = (x_l) | ((x_h & 0x07FF)<<16);
 		if(x_h & 0x0800)
 			currentX |= 0xF8000000;
-	} else {
-		currentX += dmx;
 	}
 
-	if(changed & 2) {
+	if(changed & 2)
+	{
 		currentY = (y_l) | ((y_h & 0x07FF)<<16);
 		if(y_h & 0x0800)
 			currentY |= 0xF8000000;
-	} else {
-		currentY += dmy;
 	}
 
 	int realX = currentX;
 	int realY = currentY;
 
-	if(control & 0x40) {
+	if(control & 0x40)
+	{
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = (VCOUNT % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
 
-	if(control & 0x2000) {
-		for(u32 x = 0; x < 240u; ++x) {
+	if(control & 0x2000)
+	{
+		for(u32 x = 0; x < 240u; ++x)
+		{
 			int xxx = (realX >> 8) & maskX;
 			int yyy = (realY >> 8) & maskY;
 
@@ -280,14 +295,17 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		}
 	}
 
-	if(control & 0x40) {
+	if(control & 0x40)
+	{
 		int mosaicX = (MOSAIC & 0xF) + 1;
-		if(mosaicX > 1) {
+		if(mosaicX > 1)
+		{
 			int m = 1;
-			for(u32 i = 0; i < 239u; ++i) {
+			for(u32 i = 0; i < 239u; ++i)
+			{
 				line[i+1] = line[i];
-				++m;
-				if(m == mosaicX) {
+				if(++m == mosaicX)
+				{
 					m = 1;
 					++i;
 				}
@@ -343,19 +361,21 @@ int& currentY, int changed, u32 *line)
 	if(VCOUNT == 0)
 		changed = 3;
 
-	if(changed & 1) {
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
 		currentX = (x_l) | ((x_h & 0x07FF)<<16);
 		if(x_h & 0x0800)
 			currentX |= 0xF8000000;
-	} else
-		currentX += dmx;
+	}
 
-	if(changed & 2) {
+	if(changed & 2)
+	{
 		currentY = (y_l) | ((y_h & 0x07FF)<<16);
 		if(y_h & 0x0800)
 			currentY |= 0xF8000000;
-	} else {
-		currentY += dmy;
 	}
 
 	int realX = currentX;
@@ -389,10 +409,11 @@ int& currentY, int changed, u32 *line)
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1) {
 			int m = 1;
-			for(u32 i = 0; i < 239u; ++i) {
+			for(u32 i = 0; i < 239u; ++i)
+			{
 				line[i+1] = line[i];
-				++m;
-				if(m == mosaicX) {
+				if(++m == mosaicX)
+				{
 					m = 1;
 					++i;
 				}
@@ -453,20 +474,21 @@ static INLINE void gfxDrawRotScreen256(u16 control,
   if(VCOUNT == 0)
     changed = 3;
 
-  if(changed & 1) {
+  currentX += dmx;
+  currentY += dmy;
+
+  if(changed & 1)
+  {
     currentX = (x_l) | ((x_h & 0x07FF)<<16);
     if(x_h & 0x0800)
       currentX |= 0xF8000000;
-  } else {
-    currentX += dmx;
   }
 
-  if(changed & 2) {
+  if(changed & 2)
+  {
     currentY = (y_l) | ((y_h & 0x07FF)<<16);
     if(y_h & 0x0800)
       currentY |= 0xF8000000;
-  } else {
-    currentY += dmy;
   }
 
   int realX = currentX;
@@ -635,12 +657,14 @@ static INLINE void gfxDrawSprites (void)
 
 	memset(line[lineOBJ], -1, 240 * sizeof(u32));
 
-	if(graphics.layerEnable & 0x1000) {
+	if(graphics.layerEnable & 0x1000)
+	{
 		u16 *sprites = (u16 *)oam;
 		u16 *spritePalette = &((u16 *)graphics.paletteRAM)[256];
 		int mosaicY = ((MOSAIC & 0xF000)>>12) + 1;
 		int mosaicX = ((MOSAIC & 0xF00)>>8) + 1;
-		for(u32 x = 0; x < 128u; ++x) {
+		for(u32 x = 0; x < 128; x++)
+		{
 			u16 a0 = READ16LE(sprites++);
 			u16 a1 = READ16LE(sprites++);
 			u16 a2 = READ16LE(sprites++);
@@ -662,8 +686,6 @@ static INLINE void gfxDrawSprites (void)
 				a0 &= 0x3FFF;
 				a1 &= 0x3FFF;
 			}
-
-
 
 			u32 sizeX = 8<<(a1>>14);
 			u32 sizeY = sizeX;
@@ -718,7 +740,7 @@ static INLINE void gfxDrawSprites (void)
 					sx -= 512;
 #endif
 
-				if (sx<0)
+				if (sx < 0)
 				{
 					sizeX+=sx;
 					sx = 0;
@@ -735,199 +757,80 @@ static INLINE void gfxDrawSprites (void)
 				}
 				continue;
 			}
+
 			// else ignores OBJ-WIN if OBJWIN is disabled, and ignored disabled OBJ
-			else if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200))
+			else if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200) || lineOBJpix < 0)
 				continue;
 
-			if (lineOBJpix<0)
-				continue;
-
-			if(a0 & 0x0100) {
+			if(a0 & 0x0100)
+			{
 				u32 fieldX = sizeX;
 				u32 fieldY = sizeY;
-				if(a0 & 0x0200) {
+				if(a0 & 0x0200)
+				{
 					fieldX <<= 1;
 					fieldY <<= 1;
 				}
 				if((sy+fieldY) > 256)
 					sy -= 256;
 				int t = VCOUNT - sy;
-				if(unsigned(t) < fieldY) {
+				if(unsigned(t) < fieldY)
+				{
 					u32 startpix = 0;
 					if ((sx+fieldX)> 512)
-					{
 						startpix=512-sx;
-					}
-					if (lineOBJpix>0)
-						if((sx < 240) || startpix) {
-							lineOBJpix-=8;
-							// int t2 = t - (fieldY >> 1);
-							int rot = (((a1 >> 9) & 0x1F) << 4);
-							u16 *OAM = (u16 *)oam;
-							int dx = READ16LE(&OAM[3 + rot]);
-							if(dx & 0x8000)
-								dx |= 0xFFFF8000;
-							int dmx = READ16LE(&OAM[7 + rot]);
-							if(dmx & 0x8000)
-								dmx |= 0xFFFF8000;
-							int dy = READ16LE(&OAM[11 + rot]);
-							if(dy & 0x8000)
-								dy |= 0xFFFF8000;
-							int dmy = READ16LE(&OAM[15 + rot]);
-							if(dmy & 0x8000)
-								dmy |= 0xFFFF8000;
 
-							if(a0 & 0x1000) {
-								t -= (t % mosaicY);
-							}
-
-							int realX = ((sizeX) << 7) - (fieldX >> 1)*dx + ((t - (fieldY>>1))* dmx);
-							int realY = ((sizeY) << 7) - (fieldX >> 1)*dy + ((t - (fieldY>>1))* dmy);
-
-							u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-
-							if(a0 & 0x2000) {
-								int c = (a2 & 0x3FF);
-								if((graphics.DISPCNT & 7) > 2 && (c < 512))
-									continue;
-								int inc = 32;
-								if(graphics.DISPCNT & 0x40)
-									inc = sizeX >> 2;
-								else
-									c &= 0x3FE;
-								for(u32 x = 0; x < fieldX; x++) {
-									if (x >= startpix)
-										lineOBJpix-=2;
-									if (lineOBJpix<0)
-										continue;
-									unsigned xxx = realX >> 8;
-									unsigned yyy = realY >> 8;
-									if(xxx < sizeX && yyy < sizeY && sx < 240)
-									{
-
-										u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-													+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
-													(xxx & 7))&0x7FFF)];
-										if ((color==0) && (((prio >> 25)&3) <
-													((line[lineOBJ][sx]>>25)&3))) {
-											line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
-											if((a0 & 0x1000) && m)
-												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
-										} else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000))) {
-											line[lineOBJ][sx] = READ16LE(&spritePalette[color]) | prio;
-											if((a0 & 0x1000) && m)
-												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
-										}
-
-										if (a0 & 0x1000) {
-											++m;
-											if (m==mosaicX)
-												m=0;
-										}
-									}
-									sx = (sx+1)&511;
-									realX += dx;
-									realY += dy;
-								}
-							} else {
-								int c = (a2 & 0x3FF);
-								if((graphics.DISPCNT & 7) > 2 && (c < 512))
-									continue;
-
-								int inc = 32;
-								if(graphics.DISPCNT & 0x40)
-									inc = sizeX >> 3;
-								int palette = (a2 >> 8) & 0xF0;
-								for(u32 x = 0; x < fieldX; ++x) {
-									if (x >= startpix)
-										lineOBJpix-=2;
-									if (lineOBJpix<0)
-										continue;
-									unsigned xxx = realX >> 8;
-									unsigned yyy = realY >> 8;
-									if(xxx < sizeX && yyy < sizeY && sx < 240)
-									{
-
-										u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-													+ ((yyy & 7)<<2) + ((xxx >> 3)<<5)
-													+ ((xxx & 7)>>1))&0x7FFF)];
-										if(xxx & 1)
-											color >>= 4;
-										else
-											color &= 0x0F;
-
-										if ((color==0) && (((prio >> 25)&3) <
-													((line[lineOBJ][sx]>>25)&3))) {
-											line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
-											if((a0 & 0x1000) && m)
-												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
-										} else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000))) {
-											line[lineOBJ][sx] = READ16LE(&spritePalette[palette+color]) | prio;
-											if((a0 & 0x1000) && m)
-												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
-										}
-									}
-									if((a0 & 0x1000) && m) {
-										++m;
-										if (m==mosaicX)
-											m=0;
-									}
-
-									sx = (sx+1)&511;
-									realX += dx;
-									realY += dy;
-
-								}
-							}
-						}
-				}
-			} else {
-				if(sy+sizeY > 256)
-					sy -= 256;
-				int t = VCOUNT - sy;
-				if(unsigned(t) < sizeY) {
-					u32 startpix = 0;
-					if ((sx+sizeX)> 512)
+					if (lineOBJpix && ((sx < 240) || startpix))
 					{
-						startpix=512-sx;
-					}
-					if((sx < 240) || startpix) {
-						lineOBJpix+=2;
-						if(a0 & 0x2000) {
-							if(a1 & 0x2000)
-								t = sizeY - t - 1;
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
+						lineOBJpix-=8;
+						int rot = (((a1 >> 9) & 0x1F) << 4);
+						u16 *OAM = (u16 *)oam;
+						int dx = READ16LE(&OAM[3 + rot]);
+						if(dx & 0x8000)
+							dx |= 0xFFFF8000;
+						int dmx = READ16LE(&OAM[7 + rot]);
+						if(dmx & 0x8000)
+							dmx |= 0xFFFF8000;
+						int dy = READ16LE(&OAM[11 + rot]);
+						if(dy & 0x8000)
+							dy |= 0xFFFF8000;
+						int dmy = READ16LE(&OAM[15 + rot]);
+						if(dmy & 0x8000)
+							dmy |= 0xFFFF8000;
 
+						if(a0 & 0x1000)
+							t -= (t % mosaicY);
+
+						int realX = ((sizeX) << 7) - (fieldX >> 1)*dx + ((t - (fieldY>>1))* dmx);
+						int realY = ((sizeY) << 7) - (fieldX >> 1)*dy + ((t - (fieldY>>1))* dmy);
+
+						u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+
+						int c = (a2 & 0x3FF);
+						if((graphics.DISPCNT & 7) > 2 && (c < 512))
+							continue;
+
+						if(a0 & 0x2000)
+						{
 							int inc = 32;
-							if(graphics.DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 2;
-							} else {
+							else
 								c &= 0x3FE;
-							}
-							int xxx = 0;
-							if(a1 & 0x1000)
-								xxx = sizeX-1;
-
-							if(a0 & 0x1000) {
-								t -= (t % mosaicY);
-							}
-
-							int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
-										+ ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7)) & 0x7FFF);
-
-							if(a1 & 0x1000)
-								xxx = 7;
-							u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-
-							for(u32 xx = 0; xx < sizeX; xx++) {
-								if (xx >= startpix)
-									--lineOBJpix;
+							for(u32 x = 0; x < fieldX; x++)
+							{
+								if (x >= startpix)
+									lineOBJpix-=2;
 								if (lineOBJpix<0)
 									continue;
-								if(sx < 240) {
-									u8 color = vram[address];
+								unsigned xxx = realX >> 8;
+								unsigned yyy = realY >> 8;
+								if(xxx < sizeX && yyy < sizeY && sx < 240)
+								{
+
+									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+												+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
+												(xxx & 7))&0x7FFF)];
 									if ((color==0) && (((prio >> 25)&3) <
 												((line[lineOBJ][sx]>>25)&3))) {
 										line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
@@ -944,23 +847,158 @@ static INLINE void gfxDrawSprites (void)
 										if (m==mosaicX)
 											m=0;
 									}
+								}
+								sx = (sx+1)&511;
+								realX += dx;
+								realY += dy;
+							}
+						}
+						else
+						{
+							int inc = 32;
+							if(graphics.DISPCNT & 0x40)
+								inc = sizeX >> 3;
+							int palette = (a2 >> 8) & 0xF0;
+							for(u32 x = 0; x < fieldX; ++x)
+							{
+								if (x >= startpix)
+									lineOBJpix-=2;
+								if (lineOBJpix<0)
+									continue;
+								unsigned xxx = realX >> 8;
+								unsigned yyy = realY >> 8;
+								if(xxx < sizeX && yyy < sizeY && sx < 240)
+								{
+
+									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+												+ ((yyy & 7)<<2) + ((xxx >> 3)<<5)
+												+ ((xxx & 7)>>1))&0x7FFF)];
+									if(xxx & 1)
+										color >>= 4;
+									else
+										color &= 0x0F;
+
+									if ((color==0) && (((prio >> 25)&3) <
+									((line[lineOBJ][sx]>>25)&3)))
+									{
+										line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
+										if((a0 & 0x1000) && m)
+											line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
+									}
+									else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000)))
+									{
+										line[lineOBJ][sx] = READ16LE(&spritePalette[palette+color]) | prio;
+										if((a0 & 0x1000) && m)
+											line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
+									}
+								}
+								if((a0 & 0x1000) && m)
+								{
+									if (++m==mosaicX)
+										m=0;
+								}
+
+								sx = (sx+1)&511;
+								realX += dx;
+								realY += dy;
+
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if(sy+sizeY > 256)
+					sy -= 256;
+				int t = VCOUNT - sy;
+				if(unsigned(t) < sizeY)
+				{
+					u32 startpix = 0;
+					if ((sx+sizeX)> 512)
+						startpix=512-sx;
+
+					if((sx < 240) || startpix)
+					{
+						lineOBJpix+=2;
+
+						if(a1 & 0x2000)
+							t = sizeY - t - 1;
+
+						int c = (a2 & 0x3FF);
+						if((graphics.DISPCNT & 7) > 2 && (c < 512))
+							continue;
+
+						if(a0 & 0x2000)
+						{
+							int inc = 32;
+							if(graphics.DISPCNT & 0x40)
+								inc = sizeX >> 2;
+							else
+								c &= 0x3FE;
+
+							int xxx = 0;
+							if(a1 & 0x1000)
+								xxx = sizeX-1;
+
+							if(a0 & 0x1000)
+								t -= (t % mosaicY);
+
+							int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
+							+ ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7)) & 0x7FFF);
+
+							if(a1 & 0x1000)
+								xxx = 7;
+							u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+
+							for(u32 xx = 0; xx < sizeX; xx++)
+							{
+								if (xx >= startpix)
+									--lineOBJpix;
+								if (lineOBJpix<0)
+									continue;
+								if(sx < 240)
+								{
+									u8 color = vram[address];
+									if ((color==0) && (((prio >> 25)&3) <
+									((line[lineOBJ][sx]>>25)&3)))
+									{
+										line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
+										if((a0 & 0x1000) && m)
+											line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
+									}
+									else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000)))
+									{
+										line[lineOBJ][sx] = READ16LE(&spritePalette[color]) | prio;
+										if((a0 & 0x1000) && m)
+											line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
+									}
+
+									if (a0 & 0x1000)
+									{
+										if (++m==mosaicX)
+											m = 0;
+									}
 
 								}
 
 								sx = (sx+1) & 511;
-								if(a1 & 0x1000) {
-									--xxx;
+								if(a1 & 0x1000)
+								{
 									--address;
-									if(xxx == -1) {
+									if(--xxx == -1)
+									{
 										address -= 56;
 										xxx = 7;
 									}
 									if(address < 0x10000)
 										address += 0x8000;
-								} else {
-									++xxx;
+								}
+								else
+								{
 									++address;
-									if(xxx == 8) {
+									if(++xxx == 8)
+									{
 										address += 56;
 										xxx = 0;
 									}
@@ -968,13 +1006,9 @@ static INLINE void gfxDrawSprites (void)
 										address -= 0x8000;
 								}
 							}
-						} else {
-							if(a1 & 0x2000)
-								t = sizeY - t - 1;
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
-
+						}
+						else
+						{
 							int inc = 32;
 							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 3;
@@ -983,31 +1017,34 @@ static INLINE void gfxDrawSprites (void)
 							if(a1 & 0x1000)
 								xxx = sizeX - 1;
 
-							if(a0 & 0x1000) {
+							if(a0 & 0x1000)
 								t -= (t % mosaicY);
-							}
 
 							int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
-										+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7FFF);
+							+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7FFF);
+
 							u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 							int palette = (a2 >> 8) & 0xF0;
-							if(a1 & 0x1000) {
+							if(a1 & 0x1000)
+							{
 								xxx = 7;
 								int xx = sizeX - 1;
-								do{
+								do
+								{
 									if (xx >= (int)(startpix))
 										--lineOBJpix;
 									//if (lineOBJpix<0)
 									//  continue;
-									if(sx < 240) {
+									if(sx < 240)
+									{
 										u8 color = vram[address];
-										if(xx & 1) {
+										if(xx & 1)
 											color >>= 4;
-										} else
+										else
 											color &= 0x0F;
 
 										if ((color==0) && (((prio >> 25)&3) <
-													((line[lineOBJ][sx]>>25)&3)))
+										((line[lineOBJ][sx]>>25)&3)))
 										{
 											line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
 											if((a0 & 0x1000) && m)
@@ -1020,25 +1057,27 @@ static INLINE void gfxDrawSprites (void)
 												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
 										}
 									}
-									if (a0 & 0x1000) {
-										++m;
-										if (m==mosaicX)
+									if (a0 & 0x1000)
+									{
+										if (++m==mosaicX)
 											m=0;
 									}
 									sx = (sx+1) & 511;
-									--xxx;
 									if(!(xx & 1))
 										--address;
-									if(xxx == -1) {
+									if(--xxx == -1)
+									{
 										xxx = 7;
 										address -= 28;
 									}
 									if(address < 0x10000)
 										address += 0x8000;
-									--xx;
-								}while(xx >= 0);
-							} else {
-								for(u32 xx = 0; xx < sizeX; ++xx) {
+								}while(--xx >= 0);
+							}
+							else
+							{
+								for(u32 xx = 0; xx < sizeX; ++xx)
+								{
 									if (xx >= startpix)
 										--lineOBJpix;
 									//if (lineOBJpix<0)
@@ -1047,34 +1086,34 @@ static INLINE void gfxDrawSprites (void)
 									{
 										u8 color = vram[address];
 										if(xx & 1)
-										{
 											color >>= 4;
-										}
 										else
 											color &= 0x0F;
 
 										if ((color==0) && (((prio >> 25)&3) <
-													((line[lineOBJ][sx]>>25)&3))) {
+										((line[lineOBJ][sx]>>25)&3)))
+										{
 											line[lineOBJ][sx] = (line[lineOBJ][sx] & 0xF9FFFFFF) | prio;
 											if((a0 & 0x1000) && m)
 												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
-										} else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000))) {
+										}
+										else if((color) && (prio < (line[lineOBJ][sx]&0xFF000000)))
+										{
 											line[lineOBJ][sx] = READ16LE(&spritePalette[palette + color]) | prio;
 											if((a0 & 0x1000) && m)
 												line[lineOBJ][sx]=(line[lineOBJ][sx-1] & 0xF9FFFFFF) | prio;
 
 										}
 									}
-									if (a0 & 0x1000) {
-										++m;
-										if (m==mosaicX)
+									if (a0 & 0x1000)
+									{
+										if (++m==mosaicX)
 											m=0;
 									}
 									sx = (sx+1) & 511;
-									++xxx;
 									if(xx & 1)
 										++address;
-									if(xxx == 8)
+									if(++xxx == 8)
 									{
 										address += 28;
 										xxx = 0;
@@ -1095,10 +1134,12 @@ static INLINE void gfxDrawOBJWin (void)
 {
 	memset(line[lineOBJWin], -1, 240 * sizeof(u32));
 
-	if((graphics.layerEnable & 0x9000) == 0x9000) {
+	if((graphics.layerEnable & 0x9000) == 0x9000)
+	{
 		u16 *sprites = (u16 *)oam;
 		// u16 *spritePalette = &((u16 *)graphics.paletteRAM)[256];
-		for(int x = 0; x < 128 ; x++) {
+		for(int x = 0; x < 128 ; x++)
+		{
 			int lineOBJpix = lineOBJpixleft[x];
 			u16 a0 = READ16LE(sprites++);
 			u16 a1 = READ16LE(sprites++);
@@ -1141,7 +1182,8 @@ static INLINE void gfxDrawOBJWin (void)
 
 			int sy = (a0 & 255);
 
-			if(a0 & 0x0100) {
+			if(a0 & 0x0100)
+			{
 				int fieldX = sizeX;
 				int fieldY = sizeY;
 				if(a0 & 0x0200) {
@@ -1183,16 +1225,19 @@ static INLINE void gfxDrawOBJWin (void)
 
 						// u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
-						if(a0 & 0x2000) {
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
+						int c = (a2 & 0x3FF);
+						if((graphics.DISPCNT & 7) > 2 && (c < 512))
+							continue;
+
+						if(a0 & 0x2000)
+						{
 							int inc = 32;
 							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 2;
 							else
 								c &= 0x3FE;
-							for(int x = 0; x < fieldX; x++) {
+							for(int x = 0; x < fieldX; x++)
+							{
 								if (x >= startpix)
 									lineOBJpix-=2;
 								if (lineOBJpix<0)
@@ -1203,22 +1248,22 @@ static INLINE void gfxDrawOBJWin (void)
 								if(xxx < 0 || xxx >= sizeX ||
 										yyy < 0 || yyy >= sizeY ||
 										sx >= 240) {
-								} else {
+								}
+								else
+								{
 									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 												+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
 												(xxx & 7))&0x7fff)];
-									if(color) {
+									if(color)
 										line[lineOBJWin][sx] = 1;
-									}
 								}
 								sx = (sx+1)&511;
 								realX += dx;
 								realY += dy;
 							}
-						} else {
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
+						}
+						else
+						{
 
 							int inc = 32;
 							if(graphics.DISPCNT & 0x40)
@@ -1235,7 +1280,9 @@ static INLINE void gfxDrawOBJWin (void)
 								if(xxx < 0 || xxx >= sizeX ||
 										yyy < 0 || yyy >= sizeY ||
 										sx >= 240) {
-								} else {
+								}
+								else
+								{
 									u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 												+ ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
 												((xxx & 7)>>1))&0x7fff)];
@@ -1244,9 +1291,8 @@ static INLINE void gfxDrawOBJWin (void)
 									else
 										color &= 0x0F;
 
-									if(color) {
+									if(color)
 										line[lineOBJWin][sx] = 1;
-									}
 								}
 								sx = (sx+1)&511;
 								realX += dx;
@@ -1255,32 +1301,36 @@ static INLINE void gfxDrawOBJWin (void)
 						}
 					}
 				}
-			} else {
+			}
+			else
+			{
 				if((sy+sizeY) > 256)
 					sy -= 256;
 				int t = VCOUNT - sy;
-				if((t >= 0) && (t < sizeY)) {
+				if((t >= 0) && (t < sizeY))
+				{
 					int sx = (a1 & 0x1FF);
 					int startpix = 0;
 					if ((sx+sizeX)> 512)
-					{
 						startpix=512-sx;
-					}
-					if((sx < 240) || startpix) {
+
+					if((sx < 240) || startpix)
+					{
 						lineOBJpix+=2;
-						if(a0 & 0x2000) {
-							if(a1 & 0x2000)
-								t = sizeY - t - 1;
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
+						if(a1 & 0x2000)
+							t = sizeY - t - 1;
+						int c = (a2 & 0x3FF);
+						if((graphics.DISPCNT & 7) > 2 && (c < 512))
+							continue;
+						if(a0 & 0x2000)
+						{
 
 							int inc = 32;
-							if(graphics.DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 2;
-							} else {
+							else
 								c &= 0x3FE;
-							}
+
 							int xxx = 0;
 							if(a1 & 0x1000)
 								xxx = sizeX-1;
@@ -1322,41 +1372,38 @@ static INLINE void gfxDrawOBJWin (void)
 										address -= 0x8000;
 								}
 							}
-						} else {
-							if(a1 & 0x2000)
-								t = sizeY - t - 1;
-							int c = (a2 & 0x3FF);
-							if((graphics.DISPCNT & 7) > 2 && (c < 512))
-								continue;
-
+						}
+						else
+						{
 							int inc = 32;
-							if(graphics.DISPCNT & 0x40) {
+							if(graphics.DISPCNT & 0x40)
 								inc = sizeX >> 3;
-							}
 							int xxx = 0;
 							if(a1 & 0x1000)
 								xxx = sizeX - 1;
 							int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
-										+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7fff);
+							+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7fff);
 							// u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 							// int palette = (a2 >> 8) & 0xF0;
-							if(a1 & 0x1000) {
+							if(a1 & 0x1000)
+							{
 								xxx = 7;
-								for(int xx = sizeX - 1; xx >= 0; xx--) {
+								for(int xx = sizeX - 1; xx >= 0; xx--)
+								{
 									if (xx >= startpix)
 										lineOBJpix--;
 									if (lineOBJpix<0)
 										continue;
-									if(sx < 240) {
+									if(sx < 240)
+									{
 										u8 color = vram[address];
-										if(xx & 1) {
+										if(xx & 1)
 											color = (color >> 4);
-										} else
+										else
 											color &= 0x0F;
 
-										if(color) {
+										if(color)
 											line[lineOBJWin][sx] = 1;
-										}
 									}
 									sx = (sx+1) & 511;
 									xxx--;
@@ -1369,22 +1416,25 @@ static INLINE void gfxDrawOBJWin (void)
 									if(address < 0x10000)
 										address += 0x8000;
 								}
-							} else {
-								for(int xx = 0; xx < sizeX; xx++) {
+							}
+							else
+							{
+								for(int xx = 0; xx < sizeX; xx++)
+								{
 									if (xx >= startpix)
 										lineOBJpix--;
 									if (lineOBJpix<0)
 										continue;
-									if(sx < 240) {
+									if(sx < 240)
+									{
 										u8 color = vram[address];
-										if(xx & 1) {
+										if(xx & 1)
 											color = (color >> 4);
-										} else
+										else
 											color &= 0x0F;
 
-										if(color) {
+										if(color)
 											line[lineOBJWin][sx] = 1;
-										}
 									}
 									sx = (sx+1) & 511;
 									xxx++;
