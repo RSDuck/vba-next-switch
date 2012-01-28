@@ -193,8 +193,6 @@ INLINE void Blip_Synth::offset( int32_t t, int delta, Blip_Buffer* buf ) const
         offset_resampled( t * buf->factor_ + buf->offset_, delta, buf );
 }
 
-#define SAMPLES_AVAILABLE() ((long)(offset_ >> BLIP_BUFFER_ACCURACY))
-
 /* 1/4th of a second */
 #define BLIP_DEFAULT_LENGTH 250
 

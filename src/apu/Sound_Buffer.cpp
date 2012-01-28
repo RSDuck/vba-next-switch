@@ -102,7 +102,7 @@ void Blip_Buffer::remove_samples( long count )
 	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
 
 	/* copy remaining samples to beginning and clear old samples*/
-	long remain = SAMPLES_AVAILABLE() + BLIP_BUFFER_EXTRA_;
+	long remain = (offset_ >> BLIP_BUFFER_ACCURACY) + BLIP_BUFFER_EXTRA_;
 	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
 	memset( buffer_ + remain, 0, count * sizeof(*buffer_));
 }
