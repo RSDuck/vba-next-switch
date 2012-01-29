@@ -27,6 +27,9 @@
 #define BANK_SIZE_MIN_ONE 31
 #define BANK_SIZE_DIV_TWO 16
 
+/* 11-bit frequency in NRx3 and NRx4*/
+#define GB_OSC_FREQUENCY() (((regs[4] & 7) << 8) + regs[3])
+
 class Gb_Osc
 {
 	public:
@@ -47,13 +50,12 @@ class Gb_Osc
 	void clock_length();
 	void reset();
 	protected:
-
-	/* 11-bit frequency in NRx3 and NRx4*/
-	int frequency() const { return (regs [4] & 7) * 0x100 + regs [3]; }
-
 	void update_amp( int32_t, int new_amp );
 	int write_trig( int frame_phase, int max_len, int old_data );
 };
+
+/* Non-zero if DAC is enabled*/
+#define GB_ENV_DAC_ENABLED() (regs[2] & 0xF8)
 
 class Gb_Env : public Gb_Osc
 {
@@ -71,9 +73,6 @@ class Gb_Env : public Gb_Osc
 		volume    = 0;
 		Gb_Osc::reset();
 	}
-	protected:
-	/* Non-zero if DAC is enabled*/
-	int dac_enabled() const { return regs [2] & 0xF8; }
 	private:
 	void zombie_volume( int old, int data );
 	int reload_env_timer();
@@ -92,7 +91,7 @@ class Gb_Square : public Gb_Env
 	}
 	private:
 	/* Frequency timer period*/
-	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_4); }
+	int period() const { return (2048 - GB_OSC_FREQUENCY()) * (CLK_MUL_MUL_4); }
 };
 
 
@@ -121,6 +120,10 @@ class Gb_Sweep_Square : public Gb_Square
 };
 
 
+#define GB_NOISE_PERIOD2_INDEX()	(regs[3] >> 4)
+#define GB_NOISE_PERIOD2(base)		(base << GB_NOISE_PERIOD2_INDEX())
+#define GB_NOISE_LFSR_MASK()		((regs[3] & 0x08) ? ~0x4040 : ~0x4000)
+
 class Gb_Noise : public Gb_Env
 {
 	public:
@@ -135,12 +138,10 @@ class Gb_Noise : public Gb_Env
 		Gb_Env::reset();
 		delay = CLK_MUL_MUL_4; /* TODO: remove?*/
 	}
-	private:
-	int period2_index() const { return regs [3] >> 4; }
-	int period2( int base) const { return base << period2_index(); }
-	unsigned lfsr_mask() const { return (regs [3] & 0x08) ? ~0x4040 : ~0x4000; }
 };
 
+/* Non-zero if DAC is enabled*/
+#define GB_WAVE_DAC_ENABLED() (regs[0] & 0x80)
 
 class Gb_Wave : public Gb_Osc
 {
@@ -166,10 +167,7 @@ class Gb_Wave : public Gb_Osc
 	friend class Gb_Apu;
 
 	/* Frequency timer period*/
-	int period() const { return (2048 - frequency()) * (CLK_MUL_MUL_2); }
-
-	/* Non-zero if DAC is enabled*/
-	int dac_enabled() const { return regs [0] & 0x80; }
+	int period() const { return (2048 - GB_OSC_FREQUENCY()) * (CLK_MUL_MUL_2); }
 
 	void corrupt_wave();
 

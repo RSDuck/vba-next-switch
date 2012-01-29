@@ -110,7 +110,7 @@ void Gb_Apu::reset( uint32_t mode, bool agb_wave )
 	last_time   = 0;
 	frame_phase = 0;
 
-	for ( int i = 0; i < 0x20; i++ )
+	for ( int i = 0; i < 32; i++ )
 		regs [i] = 0;
 
 	square1.reset();
@@ -304,7 +304,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			for ( int i = OSC_COUNT; --i >= 0; )
 				silence_osc( *oscs [i] );
 
-			for ( int i = 0; i < 0x20; i++ )
+			for ( int i = 0; i < 32; i++ )
 				regs [i] = 0;
 
 			square1.reset();

@@ -277,7 +277,7 @@ class Effects_Buffer {
 		/* Sets the number of channels available and optionally their types
 		(type information used by Effects_Buffer) */
 
-		const char * set_channel_count( int, int const* = 0 );
+		const char * set_channel_count( int, int const* );
 		void clock_rate( long );
 
 		// Gets indexed channel, from 0 to channel count - 1

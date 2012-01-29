@@ -200,7 +200,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 			break;
 
 		case 2:
-			if ( !dac_enabled() )
+			if ( !GB_ENV_DAC_ENABLED() )
 				enabled = false;
 
 			zombie_volume( old, data );
@@ -220,7 +220,7 @@ bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
 				env_enabled = true;
 				if ( frame_phase == 7 )
 					env_delay++;
-				if ( !dac_enabled() )
+				if ( !GB_ENV_DAC_ENABLED() )
 					enabled = false;
 				return true;
 			}
@@ -252,7 +252,7 @@ INLINE void Gb_Sweep_Square::write_register( int frame_phase, int reg, int old_d
 
         if ( Gb_Square::write_register( frame_phase, reg, old_data, data ) )
         {
-                sweep_freq = frequency();
+                sweep_freq = GB_OSC_FREQUENCY();
                 sweep_neg = false;
                 reload_sweep_timer();
                 sweep_enabled = (regs [0] & (PERIOD_MASK | SHIFT_MASK)) != 0;
@@ -276,7 +276,7 @@ INLINE void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
         switch ( reg )
 	{
 		case 0:
-			if ( !dac_enabled() )
+			if ( !GB_WAVE_DAC_ENABLED() )
 				enabled = false;
 			break;
 
@@ -288,7 +288,7 @@ INLINE void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			bool was_enabled = enabled;
 			if ( write_trig( frame_phase, 256, old_data ) )
 			{
-				if ( !dac_enabled() )
+				if ( !GB_WAVE_DAC_ENABLED() )
 					enabled = false;
 				else if ( mode == MODE_DMG && was_enabled && (unsigned) (delay - CLK_MUL_MUL_2) < CLK_MUL_MUL_2 )
 					corrupt_wave();
@@ -342,7 +342,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if ( GB_ENV_DAC_ENABLED() )
                 {
                         if ( enabled )
                                 vol = volume;
@@ -352,7 +352,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                                 amp = -(vol >> 1);
 
                         /* Play inaudible frequencies as constant amplitude*/
-                        if ( frequency() >= 0x7FA && delay < CLK_MUL_MUL_32 )
+                        if ( GB_OSC_FREQUENCY() >= 0x7FA && delay < CLK_MUL_MUL_32 )
                         {
                                 amp += (vol * duty) >> 3;
                                 vol = 0;
@@ -461,7 +461,7 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 
 		/* Convert from Fibonacci to Galois configuration,*/
 		/* shifted left 2 bits*/
-		s ^= (s & 2) * 0x80;
+		s ^= (s & 2) << 7;
 
 		/* Each iteration is equivalent to clocking LFSR 7 times*/
 		/* (interesting similarity to single clocking below)*/
@@ -489,7 +489,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if ( GB_ENV_DAC_ENABLED() )
                 {
                         if ( enabled )
                                 vol = volume;
@@ -520,7 +520,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         int const period1 = period1s [regs [3] & 7] * CLK_MUL;
         {
                 int extra = (end_time - time) - delay;
-                int const per2 = period2(8);
+                int const per2 = GB_NOISE_PERIOD2(8);
                 time += delay + ((divider ^ (per2 >> 1)) & (per2 - 1)) * period1;
 
                 int count = (extra < 0 ? 0 : (extra + period1 - 1) / period1);
@@ -531,11 +531,11 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
         /* Generate wave*/
         if ( time < end_time )
         {
-                unsigned const mask = lfsr_mask();
+                unsigned const mask = GB_NOISE_LFSR_MASK();
                 unsigned bits = phase;
 
-                int per = period2( period1 * 8 );
-                if ( period2_index() >= 0xE )
+                int per = GB_NOISE_PERIOD2( period1 * 8 );
+                if ( GB_NOISE_PERIOD2_INDEX() >= 0xE )
                 {
                         time = end_time;
                 }
@@ -585,13 +585,13 @@ void Gb_Wave::run( int32_t time, int32_t end_time )
         if ( out )
         {
                 int amp = dac_off_amp;
-                if ( dac_enabled() )
+                if ( GB_WAVE_DAC_ENABLED() )
                 {
                         /* Play inaudible frequencies as constant amplitude*/
                         amp = 128; /* really depends on average of all samples in wave*/
 
                         /* if delay is larger, constant amplitude won't start yet*/
-                        if ( frequency() <= 0x7FB || delay > CLK_MUL_MUL_15 )
+                        if ( GB_OSC_FREQUENCY() <= 0x7FB || delay > CLK_MUL_MUL_15 )
                         {
                                 if ( volume_mul )
                                         playing = (int) enabled;

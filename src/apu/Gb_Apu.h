@@ -36,8 +36,8 @@ class Gb_Apu
 	// Sets buffer(s) to generate sound into. If left and right are NULL, output is mono.
 	// If all are NULL, no output is generated but other emulation still runs.
 	// If chan is specified, only that channel's output is changed, otherwise all are.
-	void set_output( Blip_Buffer* center, Blip_Buffer* left = NULL, Blip_Buffer* right = NULL,
-			int chan = OSC_COUNT );
+	void set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right,
+			int chan);
 
 	void reset( uint32_t mode, bool agb_wave);
 
@@ -62,7 +62,7 @@ class Gb_Apu
 
 	// If true, reduces clicking by disabling DAC biasing. Note that this reduces
 	// emulation accuracy, since the clicks are authentic.
-	void reduce_clicks( bool reduce = true );
+	void reduce_clicks( bool reduce);
 
 	// Save states
 
