@@ -51,10 +51,6 @@ class Gb_Apu
 	// Emulates CPU read from addr at specified time.
 	int read_register( int32_t time, unsigned addr );
 
-	// Emulates sound hardware up to specified time, ends current time frame, then
-	// starts a new frame at time 0.
-	void end_frame( int32_t frame_length );
-
 	// Sound adjustments
 
 	// Sets overall volume, where 1.0 is normal.
@@ -73,16 +69,16 @@ class Gb_Apu
 
 	// Loads state. You should call reset() BEFORE this.
 	const char * load_state( gb_apu_state_t const& in );
-
-	public:
+	int32_t last_time;          // time sound emulator has been run to
+	int32_t     frame_time;     // time of next frame sequencer action
 	Gb_Apu();
+	void run_until_( int32_t );
 	private:
 	// noncopyable
 	Gb_Apu( const Gb_Apu& );
 	Gb_Apu& operator = ( const Gb_Apu& );
 
 	Gb_Osc*     oscs [OSC_COUNT];
-	int32_t last_time;          // time sound emulator has been run to
 	int32_t frame_period;       // clocks between each frame sequencer step
 	double      volume_;
 	bool        reduce_clicks_;
@@ -91,7 +87,6 @@ class Gb_Apu
 	Gb_Square       square2;
 	Gb_Wave         wave;
 	Gb_Noise        noise;
-	int32_t     frame_time;     // time of next frame sequencer action
 	int             frame_phase;    // phase of next frame sequencer step
 	uint8_t  regs [REGS_SIZE];// last values written to registers
 
@@ -103,8 +98,6 @@ class Gb_Apu
 	void apply_stereo();
 	void apply_volume();
 	void synth_volume( int );
-	void run_until_( int32_t );
-	void run_until( int32_t );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
 	const char* save_load( gb_apu_state_t*, bool save );

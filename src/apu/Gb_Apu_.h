@@ -216,16 +216,6 @@ void Gb_Apu::run_until_( int32_t end_time )
 	}while(1);
 }
 
-void Gb_Apu::end_frame( int32_t end_time )
-{
-	if ( end_time > last_time )
-		run_until_( end_time );
-
-	frame_time -= end_time;
-
-	last_time -= end_time;
-}
-
 void Gb_Apu::silence_osc( Gb_Osc& o )
 {
 	int delta;

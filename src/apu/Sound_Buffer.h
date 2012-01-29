@@ -219,9 +219,6 @@ class Stereo_Buffer
 		const char * set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
 		void clock_rate( long );
 		void clear();
-
-		void end_frame( int32_t );
-
 		long samples_avail() { return ((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1; }
 		long read_samples( int16_t*, long );
 		void mixer_read_pairs( int16_t* out, int count );

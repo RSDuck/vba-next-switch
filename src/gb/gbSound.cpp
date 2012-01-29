@@ -47,7 +47,15 @@ void gbSoundEvent(register uint16_t address, register int data)
 
 static void end_frame( int32_t time )
 {
-	gb_apu       ->end_frame( time );
+	/* Emulates sound hardware up to a specified time, ends current time
+	frame, then starts a new frame at time 0 */
+
+	if(time > gb_apu->last_time)
+		gb_apu->run_until_(time);
+	
+	gb_apu->frame_time -= time;
+	gb_apu->last_time -= time;
+
 	stereo_buffer->end_frame( time );
 }
 

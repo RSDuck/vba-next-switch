@@ -188,13 +188,6 @@ void Stereo_Buffer::clear()
 	bufs_buffer [0].clear();
 }
 
-void Stereo_Buffer::end_frame( int32_t time )
-{
-	bufs_buffer[2].offset_ += time * bufs_buffer[2].factor_;
-	bufs_buffer[1].offset_ += time * bufs_buffer[1].factor_;
-	bufs_buffer[0].offset_ += time * bufs_buffer[0].factor_;
-}
-
 long Stereo_Buffer::read_samples( int16_t * out, long out_size )
 {
 	int pair_count;

@@ -370,8 +370,19 @@ void psoundTickfn()
 	pcm [0].pcm.end_frame( SOUND_CLOCK_TICKS );
 	pcm [1].pcm.end_frame( SOUND_CLOCK_TICKS );
 
-	gb_apu       ->end_frame( SOUND_CLOCK_TICKS );
-	stereo_buffer->end_frame( SOUND_CLOCK_TICKS );
+	/* Emulates sound hardware up to a specified time, ends current time
+	frame, then starts a new frame at time 0 */
+
+	if(SOUND_CLOCK_TICKS > gb_apu->last_time)
+		gb_apu->run_until_( SOUND_CLOCK_TICKS );
+
+	gb_apu->frame_time -= SOUND_CLOCK_TICKS;
+	gb_apu->last_time -= SOUND_CLOCK_TICKS;
+
+	stereo_buffer->bufs_buffer[2].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[2].factor_;
+	stereo_buffer->bufs_buffer[1].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[1].factor_;
+	stereo_buffer->bufs_buffer[0].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[0].factor_;
+
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples

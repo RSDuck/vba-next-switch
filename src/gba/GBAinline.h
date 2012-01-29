@@ -205,10 +205,11 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			// default
 		default:
 unreadable:
-			if(armState) {
-				value = CPUReadHalfWordQuick(bus.reg[15].I + (address & 2));
-			} else {
-				value = CPUReadHalfWordQuick(bus.reg[15].I);
+			{
+				int param = bus.reg[15].I;
+				if(armState)
+					param += (address & 2);
+				value = CPUReadHalfWordQuick(param);
 			}
 			break;
 	}
@@ -460,14 +461,18 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 						cpuNextEvent = cpuTotalTicks;
 						break;
 					default: // every other register
-						u32 lowerBits = address & 0x3fe;
-						if(address & 1) {
-							CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0x00FF) | (b << 8));
-						} else {
-							CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0xFF00) | b);
+						{
+							u32 lowerBits = address & 0x3fe;
+							uint16_t param;
+							if(address & 1)
+								param = (READ16LE(&ioMem[lowerBits]) & 0x00FF) | (b << 8);
+							else
+								param = (READ16LE(&ioMem[lowerBits]) & 0xFF00) | b;
+
+							CPUUpdateRegister(lowerBits, param);
 						}
+					break;
 				}
-				break;
 			}
 			break;
 		case 5:
