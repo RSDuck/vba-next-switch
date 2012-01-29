@@ -30,7 +30,7 @@ static const int table [0x40] =
 #include "Flash.h"
 #include "Sound.h"
 #include "Sram.h"
-#include "bios.h"
+#include "bios_.h"
 #include "../NLS.h"
 #ifdef USE_CHEATS
 #include "Cheats.h"
@@ -4057,7 +4057,7 @@ void CPUSoftwareInterrupt(int comment)
 			ARM_PREFETCH;
 			break;
 		case 0x01:
-			BIOS_RegisterRamReset();
+			BIOS_REGISTER_RAM_RESET();
 			break;
 		case 0x02:
 			holdState = true;
@@ -4083,7 +4083,7 @@ void CPUSoftwareInterrupt(int comment)
 			CPUSoftwareInterrupt_();
 			break;
 		case 0x08:
-			BIOS_Sqrt();
+			BIOS_SQRT();
 			break;
 		case 0x09:
 			BIOS_ArcTan();
@@ -4140,7 +4140,7 @@ void CPUSoftwareInterrupt(int comment)
 			BIOS_CpuFastSet();
 			break;
 		case 0x0D:
-			BIOS_GetBiosChecksum();
+			BIOS_GET_BIOS_CHECKSUM();
 			break;
 		case 0x0E:
 			BIOS_BgAffineSet();
@@ -4259,10 +4259,10 @@ void CPUSoftwareInterrupt(int comment)
 				soundResume();
 			break;
 		case 0x1F:
-			BIOS_MidiKey2Freq();
+			BIOS_MIDI_KEY_2_FREQ();
 			break;
 		case 0x2A:
-			BIOS_SndDriverJmpTableCopy();
+			BIOS_SND_DRIVER_JMP_TABLE_COPY();
 			// let it go, because we don't really emulate this function
 		default:
 			break;
@@ -5466,12 +5466,15 @@ void CPUReset()
 	CPUUpdateWindow1();
 
 	// make sure registers are correctly initialized if not using BIOS
-	if(!useBios) {
+	if(!useBios)
+	{
 		if(cpuIsMultiBoot)
 			BIOS_RegisterRamReset(0xfe);
 		else
 			BIOS_RegisterRamReset(0xff);
-	} else {
+	}
+	else
+	{
 		if(cpuIsMultiBoot)
 			BIOS_RegisterRamReset(0xfe);
 	}

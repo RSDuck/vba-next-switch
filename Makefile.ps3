@@ -72,7 +72,6 @@ VBA_CPPSRCS	+=	$(SRC_DIR)/ps3video.cpp \
 			$(VBA_API_DIR)/gba/Flash.cpp \
 			$(VBA_API_DIR)/gba/RTC.cpp \
 			$(VBA_API_DIR)/gba/Sram.cpp \
-			$(VBA_API_DIR)/gba/bios.cpp \
 			$(SRC_DIR)/menu.cpp \
 			$(VBA_API_DIR)/apu/Sound_Buffer.cpp \
 			$(VBA_API_DIR)/gba/GBA.cpp
