@@ -61,57 +61,50 @@ static const int table [0x40] =
 		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
 };
 
-class Gba_Pcm
+typedef struct
 {
-	public:
-		void init();
-		void apply_control( int idx );
-		void update( int dac );
-		void end_frame( int );
-		Blip_Buffer* output;
-		int last_time;
-		int last_amp;
-		int shift;
-};
+	int last_amp;
+	int last_time;
+	int shift;
+	Blip_Buffer* output;
+} gba_pcm_t;
 
-class Gba_Pcm_Fifo
+typedef struct
 {
-	public:
-		int     which;
-		Gba_Pcm pcm;
+	bool enabled;
+	uint8_t   fifo [32];
+	int  count;
+	int  dac;
+	int  readIndex;
+	int  writeIndex;
+	int     which;
+	int  timer;
+	gba_pcm_t pcm;
+} gba_pcm_fifo_t;
 
-		void write_control( int data );
-		void write_fifo( int data );
-		void timer_overflowed( int which_timer );
-
-		// public only so save state routines can access it
-		int  readIndex;
-		int  count;
-		int  writeIndex;
-		int  dac;
-		uint8_t   fifo [32];
-		int  timer;
-		bool enabled;
-};
-
-static Gba_Pcm_Fifo     pcm [2];
+static gba_pcm_fifo_t   pcm [2];
 static Gb_Apu*          gb_apu;
 static Stereo_Buffer*   stereo_buffer;
 
 static Blip_Synth pcm_synth; // 32 kHz, 16 kHz, 8 kHz
 
-void Gba_Pcm::init()
+static void gba_pcm_init (void)
 {
-	output    = 0;
-	last_time = 0;
-	last_amp  = 0;
-	shift     = 0;
+	pcm[0].pcm.output    = 0;
+	pcm[0].pcm.last_time = 0;
+	pcm[0].pcm.last_amp  = 0;
+	pcm[0].pcm.shift     = 0;
+
+	pcm[1].pcm.output    = 0;
+	pcm[1].pcm.last_time = 0;
+	pcm[1].pcm.last_amp  = 0;
+	pcm[1].pcm.shift     = 0;
 }
 
-void Gba_Pcm::apply_control( int idx )
+static void gba_pcm_apply_control( int pcm_idx, int idx )
 {
 	int ch = 0;
-	shift = ~ioMem [SGCNT0_H] >> (2 + idx) & 1;
+	pcm[pcm_idx].pcm.shift = ~ioMem [SGCNT0_H] >> (2 + idx) & 1;
 
 	if ( (ioMem [NR52] & 0x80) )
 		ch = ioMem [SGCNT0_H+1] >> (idx << 2) & 3;
@@ -130,34 +123,13 @@ void Gba_Pcm::apply_control( int idx )
 			break;
 	}
 
-	if ( output != out )
+	if ( pcm[pcm_idx].pcm.output != out )
 	{
-		if ( output )
-			pcm_synth.offset( SOUND_CLOCK_TICKS - soundTicks, -last_amp, output );
-		last_amp = 0;
-		output = out;
+		if ( pcm[pcm_idx].pcm.output )
+			pcm_synth.offset( SOUND_CLOCK_TICKS - soundTicks, -pcm[pcm_idx].pcm.last_amp, pcm[pcm_idx].pcm.output );
+		pcm[pcm_idx].pcm.last_amp = 0;
+		pcm[pcm_idx].pcm.output = out;
 	}
-}
-
-void Gba_Pcm::end_frame( int time )
-{
-	last_time -= time;
-	if ( last_time < -2048 )
-		last_time = -2048;
-}
-
-void Gba_Pcm::update( int dac )
-{
-	int time = SOUND_CLOCK_TICKS -  soundTicks;
-
-	dac = (int8_t) dac >> shift;
-	int delta = dac - last_amp;
-	if ( delta )
-	{
-		last_amp = dac;
-		pcm_synth.offset( time, delta, output );
-	}
-	last_time = time;
 }
 
 static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
@@ -166,6 +138,67 @@ static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict ad
 	uint32_t addr2_table = *addr2 - 0x60;
 	*addr = table [addr1_table];
 	*addr2 = table [addr2_table];
+}
+
+static void pcm_fifo_write_control( int data, int data2)
+{
+	pcm[0].enabled = (data & 0x0300) ? true : false;
+	pcm[0].timer   = (data & 0x0400) ? 1 : 0;
+
+	if ( data & 0x0800 )
+	{
+		// Reset
+		pcm[0].writeIndex = 0;
+		pcm[0].readIndex  = 0;
+		pcm[0].count      = 0;
+		pcm[0].dac        = 0;
+		memset(pcm[0].fifo, 0, sizeof(pcm[0].fifo));
+	}
+
+	gba_pcm_apply_control( 0, pcm[0].which );
+
+	if(pcm[0].pcm.output)
+	{
+		int time = SOUND_CLOCK_TICKS -  soundTicks;
+
+		pcm[0].dac = (int8_t)pcm[0].dac >> pcm[0].pcm.shift;
+		int delta = pcm[0].dac - pcm[0].pcm.last_amp;
+		if ( delta )
+		{
+			pcm[0].pcm.last_amp = pcm[0].dac;
+			pcm_synth.offset( time, delta, pcm[0].pcm.output );
+		}
+		pcm[0].pcm.last_time = time;
+	}
+
+	pcm[1].enabled = (data2 & 0x0300) ? true : false;
+	pcm[1].timer   = (data2 & 0x0400) ? 1 : 0;
+
+	if ( data2 & 0x0800 )
+	{
+		// Reset
+		pcm[1].writeIndex = 0;
+		pcm[1].readIndex  = 0;
+		pcm[1].count      = 0;
+		pcm[1].dac        = 0;
+		memset( pcm[1].fifo, 0, sizeof(pcm[1].fifo));
+	}
+
+	gba_pcm_apply_control( 1, pcm[1].which );
+
+	if(pcm[1].pcm.output)
+	{
+		int time = SOUND_CLOCK_TICKS -  soundTicks;
+
+		pcm[1].dac = (int8_t)pcm[1].dac >> pcm[1].pcm.shift;
+		int delta = pcm[1].dac - pcm[1].pcm.last_amp;
+		if ( delta )
+		{
+			pcm[1].pcm.last_amp = pcm[1].dac;
+			pcm_synth.offset( time, delta, pcm[1].pcm.output );
+		}
+		pcm[1].pcm.last_time = time;
+	}
 }
 
 static void soundEvent_u16_parallel(uint32_t address[])
@@ -177,8 +210,7 @@ static void soundEvent_u16_parallel(uint32_t address[])
 			case SGCNT0_H:
 				//Begin of Write SGCNT0_H
 				WRITE16LE( &ioMem [SGCNT0_H], 0 & 0x770F );
-				pcm [0].write_control( 0      );
-				pcm [1].write_control( 0);
+				pcm_fifo_write_control(0, 0);
 
 				gb_apu->volume( apu_vols [ioMem [SGCNT0_H] & 3] );
 				//End of SGCNT0_H
@@ -186,13 +218,19 @@ static void soundEvent_u16_parallel(uint32_t address[])
 
 			case FIFOA_L:
 			case FIFOA_H:
-				pcm [0].write_fifo( 0 );
+				pcm[0].fifo [pcm[0].writeIndex  ] = 0;
+				pcm[0].fifo [pcm[0].writeIndex+1] = 0;
+				pcm[0].count += 2;
+				pcm[0].writeIndex = (pcm[0].writeIndex + 2) & 31;
 				WRITE16LE( &ioMem[address[i]], 0 );
 				break;
 
 			case FIFOB_L:
 			case FIFOB_H:
-				pcm [1].write_fifo( 0 );
+				pcm[1].fifo [pcm[1].writeIndex  ] = 0;
+				pcm[1].fifo [pcm[1].writeIndex+1] = 0;
+				pcm[1].count += 2;
+				pcm[1].writeIndex = (pcm[1].writeIndex + 2) & 31;
 				WRITE16LE( &ioMem[address[i]], 0 );
 				break;
 
@@ -213,16 +251,17 @@ static void soundEvent_u16_parallel(uint32_t address[])
 	}
 }
 
-void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
+static void gba_pcm_fifo_timer_overflowed( unsigned pcm_idx )
 {
-	if ( count <= 16 )
+	if ( pcm[pcm_idx].count <= 16 )
 	{
 		// Need to fill FIFO
-		CPUCheckDMA( 3, which ? 4 : 2 );
-		if ( count <= 16 )
+		CPUCheckDMA( 3, pcm[pcm_idx].which ? 4 : 2 );
+
+		if ( pcm[pcm_idx].count <= 16 )
 		{
 			// Not filled by DMA, so fill with 16 bytes of silence
-			int reg = which ? FIFOB_L : FIFOA_L;
+			int reg = pcm[pcm_idx].which ? FIFOB_L : FIFOA_L;
 
 			uint32_t address_array[8] = {reg, reg+2, reg, reg+2, reg, reg+2, reg, reg+2};
 			soundEvent_u16_parallel(address_array);
@@ -230,42 +269,25 @@ void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 	}
 
 	// Read next sample from FIFO
-	count--;
-	dac = fifo [readIndex];
-	readIndex = (readIndex + 1) & 31;
+	pcm[pcm_idx].count--;
+	pcm[pcm_idx].dac = pcm[pcm_idx].fifo [pcm[pcm_idx].readIndex];
+	pcm[pcm_idx].readIndex = (pcm[pcm_idx].readIndex + 1) & 31;
 
-	if(pcm.output)
-		pcm.update( dac );
-}
-
-void Gba_Pcm_Fifo::write_control( int data )
-{
-	enabled = (data & 0x0300) ? true : false;
-	timer   = (data & 0x0400) ? 1 : 0;
-
-	if ( data & 0x0800 )
+	if(pcm[pcm_idx].pcm.output)
 	{
-		// Reset
-		writeIndex = 0;
-		readIndex  = 0;
-		count      = 0;
-		dac        = 0;
-		memset( fifo, 0, sizeof fifo );
+		int time = SOUND_CLOCK_TICKS -  soundTicks;
+
+		pcm[pcm_idx].dac = (int8_t)pcm[pcm_idx].dac >> pcm[pcm_idx].pcm.shift;
+		int delta = pcm[pcm_idx].dac - pcm[pcm_idx].pcm.last_amp;
+		if ( delta )
+		{
+			pcm[pcm_idx].pcm.last_amp = pcm[pcm_idx].dac;
+			pcm_synth.offset( time, delta, pcm[pcm_idx].pcm.output );
+		}
+		pcm[pcm_idx].pcm.last_time = time;
 	}
-
-	pcm.apply_control( which );
-
-	if(pcm.output)
-		pcm.update( dac );
 }
 
-void Gba_Pcm_Fifo::write_fifo( int data )
-{
-	fifo [writeIndex  ] = data & 0xFF;
-	fifo [writeIndex+1] = data >> 8;
-	count += 2;
-	writeIndex = (writeIndex + 2) & 31;
-}
 
 static int gba_to_gb_sound( int addr )
 {
@@ -284,8 +306,8 @@ void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 
 		if ( address[i] == NR52 )
 		{
-			pcm [0].pcm.apply_control( 0 );
-			pcm [1].pcm.apply_control( 1 );
+			gba_pcm_apply_control(0, 0 );
+			gba_pcm_apply_control(1, 1 );
 		}
 		// TODO: what about byte writes to SGCNT0_H etc.?
 	}
@@ -298,8 +320,8 @@ void soundEvent_u8(int gb_addr, uint32_t address, uint8_t data)
 
 	if ( address == NR52 )
 	{
-		pcm [0].pcm.apply_control( 0 );
-		pcm [1].pcm.apply_control( 1 );
+		gba_pcm_apply_control(0, 0 );
+		gba_pcm_apply_control(1, 1 );
 	}
 	// TODO: what about byte writes to SGCNT0_H etc.?
 }
@@ -312,8 +334,7 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 		case SGCNT0_H:
 			//Begin of Write SGCNT0_H
 			WRITE16LE( &ioMem [SGCNT0_H], data & 0x770F );
-			pcm [0].write_control( data      );
-			pcm [1].write_control( data >> 4 );
+			pcm_fifo_write_control( data, data >> 4);
 
 			gb_apu->volume( apu_vols [ioMem [SGCNT0_H] & 3] );
 			//End of SGCNT0_H
@@ -321,13 +342,19 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 
 		case FIFOA_L:
 		case FIFOA_H:
-			pcm [0].write_fifo( data );
+			pcm[0].fifo [pcm[0].writeIndex  ] = data & 0xFF;
+			pcm[0].fifo [pcm[0].writeIndex+1] = data >> 8;
+			pcm[0].count += 2;
+			pcm[0].writeIndex = (pcm[0].writeIndex + 2) & 31;
 			WRITE16LE( &ioMem[address], data );
 			break;
 
 		case FIFOB_L:
 		case FIFOB_H:
-			pcm [1].write_fifo( data );
+			pcm[1].fifo [pcm[1].writeIndex  ] = data & 0xFF;
+			pcm[1].fifo [pcm[1].writeIndex+1] = data >> 8;
+			pcm[1].count += 2;
+			pcm[1].writeIndex = (pcm[1].writeIndex + 2) & 31;
 			WRITE16LE( &ioMem[address], data );
 			break;
 
@@ -351,9 +378,9 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 void soundTimerOverflow(int timer)
 {
 	if ( timer == pcm[0].timer && pcm[0].enabled )
-		pcm [0].timer_overflowed( timer );
+		gba_pcm_fifo_timer_overflowed(0);
 	if ( timer == pcm[1].timer && pcm[1].enabled )
-		pcm [1].timer_overflowed( timer );
+		gba_pcm_fifo_timer_overflowed(1);
 }
 
 void flush_samples(Simple_Effects_Buffer * effects_buffer)
@@ -367,8 +394,13 @@ void flush_samples(Simple_Effects_Buffer * effects_buffer)
 void psoundTickfn()
 {
 	// Run sound hardware to present
-	pcm [0].pcm.end_frame( SOUND_CLOCK_TICKS );
-	pcm [1].pcm.end_frame( SOUND_CLOCK_TICKS );
+	pcm[0].pcm.last_time -= SOUND_CLOCK_TICKS;
+	if ( pcm[0].pcm.last_time < -2048 )
+		pcm[0].pcm.last_time = -2048;
+
+	pcm[1].pcm.last_time -= SOUND_CLOCK_TICKS;
+	if ( pcm[1].pcm.last_time < -2048 )
+		pcm[1].pcm.last_time = -2048;
 
 	/* Emulates sound hardware up to a specified time, ends current time
 	frame, then starts a new frame at time 0 */
@@ -393,8 +425,8 @@ void psoundTickfn()
 static void apply_muting()
 {
 	// PCM
-	pcm [0].pcm.apply_control( 0 );
-	pcm [1].pcm.apply_control( 1 );
+	gba_pcm_apply_control(1, 0 );
+	gba_pcm_apply_control(1, 1 );
 
 	// APU
 	gb_apu->set_output( &stereo_buffer->bufs_buffer[2],
@@ -411,14 +443,13 @@ static void apply_muting()
 }
 
 
-static void remake_stereo_buffer()
+static void remake_stereo_buffer (void)
 {
 	if ( !ioMem )
 		return;
 
 	// Clears pointers kept to old stereo_buffer
-	pcm [0].pcm.init();
-	pcm [1].pcm.init();
+	gba_pcm_init();
 
 	// Stereo_Buffer
 	delete stereo_buffer;
@@ -508,8 +539,8 @@ void soundReset()
 		ioMem[NR52] = 0x80;
 		gb_apu->write_register( SOUND_CLOCK_TICKS -  soundTicks, gb_addr, 0x80 );
 
-		pcm [0].pcm.apply_control( 0 );
-		pcm [1].pcm.apply_control( 1 );
+		gba_pcm_apply_control(0, 0 );
+		gba_pcm_apply_control(1, 1 );
 	}
 
 	// TODO: what about byte writes to SGCNT0_H etc.?
@@ -539,15 +570,12 @@ void soundSetSampleRate(long sampleRate)
 {
 	if ( soundSampleRate != sampleRate )
 	{
+		soundSampleRate      = sampleRate;
+
 		if ( systemCanChangeSoundQuality() )
 		{
 			soundShutdown();
-			soundSampleRate      = sampleRate;
 			soundInit();
-		}
-		else
-		{
-			soundSampleRate      = sampleRate;
 		}
 
 		remake_stereo_buffer();
@@ -812,8 +840,7 @@ void soundReadGame( gzFile in, int version )
 	//Begin of Write SGCNT0_H
 	int data = (READ16LE( &ioMem [SGCNT0_H] ) & 0x770F);
 	WRITE16LE( &ioMem [SGCNT0_H], data & 0x770F );
-	pcm [0].write_control( data      );
-	pcm [1].write_control( data >> 4 );
+	pcm_fifo_write_control( data, data >> 4 );
 
 	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 	//End of SGCNT0_H
@@ -841,8 +868,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	//Begin of Write SGCNT0_H
 	int data = (READ16LE( &ioMem [SGCNT0_H] ) & 0x770F);
 	WRITE16LE( &ioMem [SGCNT0_H], data & 0x770F );
-	pcm [0].write_control( data      );
-	pcm [1].write_control( data >> 4 );
+	pcm_fifo_write_control( data, data >> 4 );
 
 	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 	//End of SGCNT0_H
