@@ -45,11 +45,6 @@ static const int table [0x40] =
 bus_t bus;
 graphics_t graphics;
 
-#define lineOBJ 4
-#define lineOBJWin 5
-
-
-
 static int clockTicks;
 
 #define CPU_UPDATE_CPSR() \
@@ -1444,8 +1439,8 @@ void mode0RenderLine(uint32_t * lineMix)
 			top = 0x08;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -1528,8 +1523,8 @@ void mode0RenderLineNoWindow(uint32_t *lineMix)
 			top = 0x08;
 		}
 
-		if(line[lineOBJ][x] < (color & 0xFF000000)) {
-			color = line[lineOBJ][x];
+		if(line[4][x] < (color & 0xFF000000)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -1566,9 +1561,9 @@ void mode0RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x08;
 							}
 
-							if((line[lineOBJ][x] < (back & 0xFF000000)) && (top != 0x10))
+							if((line[4][x] < (back & 0xFF000000)) && (top != 0x10))
 							{
-								back = line[lineOBJ][x];
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -1677,7 +1672,7 @@ void mode0RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000)) {
+		if(!(line[5][x] & 0x80000000)) {
 			mask = WINOUT >> 8;
 		}
 
@@ -1706,8 +1701,8 @@ void mode0RenderLineAll(uint32_t *lineMix)
 			top = 0x08;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[lineOBJ][x];
+		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -1770,8 +1765,8 @@ void mode0RenderLineAll(uint32_t *lineMix)
 							top2 = 0x08;
 						}
 
-						if(((mask & 16) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
-							back = line[lineOBJ][x];
+						if(((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
+							back = line[4][x];
 							top2 = 0x10;
 						}
 
@@ -1837,7 +1832,7 @@ void mode1RenderLine(uint32_t *lineMix)
 
 		uint8_t li1 = (uint8_t)(line[1][x]>>24);
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[lineOBJ][x]>>24);	
+		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -1858,7 +1853,7 @@ void mode1RenderLine(uint32_t *lineMix)
 				color = line[2][x];
 				top = 0x04;
 			}else if(r == li4){
-				color = line[lineOBJ][x];
+				color = line[4][x];
 				top = 0x10;
 			}
 		}
@@ -1933,7 +1928,7 @@ void mode1RenderLineNoWindow(uint32_t *lineMix)
 
 		uint8_t li1 = (uint8_t)(line[1][x]>>24);
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[lineOBJ][x]>>24);	
+		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -1954,7 +1949,7 @@ void mode1RenderLineNoWindow(uint32_t *lineMix)
 				color = line[2][x];
 				top = 0x04;
 			}else if(r == li4){
-				color = line[lineOBJ][x];
+				color = line[4][x];
 				top = 0x10;
 			}
 		}
@@ -1984,8 +1979,8 @@ void mode1RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2117,7 +2112,7 @@ void mode1RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000)) {
+		if(!(line[5][x] & 0x80000000)) {
 			mask = WINOUT >> 8;
 		}
 
@@ -2142,8 +2137,8 @@ void mode1RenderLineAll(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((mask & 16) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[lineOBJ][x];
+		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -2194,8 +2189,8 @@ void mode1RenderLineAll(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2270,7 +2265,7 @@ void mode2RenderLine(uint32_t *lineMix)
 
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
 		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[lineOBJ][x]>>24);	
+		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -2286,7 +2281,7 @@ void mode2RenderLine(uint32_t *lineMix)
 				color = line[3][x];
 				top = 0x08;
 			}else if(r == li4){
-				color = line[lineOBJ][x];
+				color = line[4][x];
 				top = 0x10;
 			}
 		}
@@ -2358,7 +2353,7 @@ void mode2RenderLineNoWindow(uint32_t *lineMix)
 
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
 		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[lineOBJ][x]>>24);	
+		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -2374,7 +2369,7 @@ void mode2RenderLineNoWindow(uint32_t *lineMix)
 				color = line[3][x];
 				top = 0x08;
 			}else if(r == li4){
-				color = line[lineOBJ][x];
+				color = line[4][x];
 				top = 0x10;
 			}
 		}
@@ -2399,8 +2394,8 @@ void mode2RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x08;
 							}
 
-							if((top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2525,7 +2520,7 @@ void mode2RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000)) {
+		if(!(line[5][x] & 0x80000000)) {
 			mask = WINOUT >> 8;
 		}
 
@@ -2544,8 +2539,8 @@ void mode2RenderLineAll(uint32_t *lineMix)
 			top = 0x08;
 		}
 
-		if((mask & 16) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[lineOBJ][x];
+		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -2586,8 +2581,8 @@ void mode2RenderLineAll(uint32_t *lineMix)
 								top2 = 0x08;
 							}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2656,8 +2651,8 @@ void mode3RenderLine(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -2712,8 +2707,8 @@ void mode3RenderLineNoWindow(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -2732,8 +2727,8 @@ void mode3RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if(top != 0x10 && ((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24))) {
-								back = line[lineOBJ][x];
+							if(top != 0x10 && ((uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24))) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2840,7 +2835,7 @@ void mode3RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000)) {
+		if(!(line[5][x] & 0x80000000)) {
 			mask = WINOUT >> 8;
 		}
 
@@ -2854,8 +2849,8 @@ void mode3RenderLineAll(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[lineOBJ][x];
+		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -2885,8 +2880,8 @@ void mode3RenderLineAll(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -2955,8 +2950,8 @@ void mode4RenderLine(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3012,8 +3007,8 @@ void mode4RenderLineNoWindow(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3032,8 +3027,8 @@ void mode4RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -3141,7 +3136,7 @@ void mode4RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000))
+		if(!(line[5][x] & 0x80000000))
 			mask = WINOUT >> 8;
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -3155,9 +3150,9 @@ void mode4RenderLineAll(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24)))
+		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)))
 		{
-			color = line[lineOBJ][x];
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3187,8 +3182,8 @@ void mode4RenderLineAll(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -3258,8 +3253,8 @@ void mode5RenderLine(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3315,8 +3310,8 @@ void mode5RenderLineNoWindow(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[lineOBJ][x];
+		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3335,8 +3330,8 @@ void mode5RenderLineNoWindow(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
@@ -3445,7 +3440,7 @@ void mode5RenderLineAll(uint32_t *lineMix)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[lineOBJWin][x] & 0x80000000)) {
+		if(!(line[5][x] & 0x80000000)) {
 			mask = WINOUT >> 8;
 		}
 
@@ -3459,8 +3454,8 @@ void mode5RenderLineAll(uint32_t *lineMix)
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[lineOBJ][x];
+		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[4][x];
 			top = 0x10;
 		}
 
@@ -3490,8 +3485,8 @@ void mode5RenderLineAll(uint32_t *lineMix)
 								top2 = 0x04;
 							}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[lineOBJ][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[lineOBJ][x];
+							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+								back = line[4][x];
 								top2 = 0x10;
 							}
 
