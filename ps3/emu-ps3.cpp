@@ -41,7 +41,7 @@
 
 #include <ppu_intrinsics.h>
 
-SYS_PROCESS_PARAM(1001, 0x40000);
+SYS_PROCESS_PARAM(1001, 0x80000);
 
 char contentInfoPath[MAX_PATH_LENGTH];
 char usrDirPath[MAX_PATH_LENGTH];

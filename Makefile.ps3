@@ -6,6 +6,7 @@ ORIGINAL_BRANCHES		= 0
 MULTIMAN_SUPPORT		= 0
 SDK_340				= 1
 DOWNLOAD_SHADERS		= 1
+STRIPPING_ENABLE		= 0
 
 # specify build tools
 CELL_BUILD_TOOLS	= GCC
@@ -227,7 +228,9 @@ set_useProfile_flags:
 
 # RULE: build the package
 pkg: $(PPU_TARGET)
+ifeq ($(STRIPPING_ENABLE),1)
 	$(STRIP) $(PPU_TARGET) 
+endif
 ifeq ($(MULTIMAN_SUPPORT),1)
 	$(MKFSELF_WC) $(PPU_TARGET) ps3/pkg/USRDIR/RELOAD.SELF
 else
