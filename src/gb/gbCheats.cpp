@@ -80,7 +80,7 @@ void gbCheatsReadGameSkip(gzFile gzFile, int version)
     int gbGgOn = utilReadInt( gzFile );
     if( gbGgOn ) {
       int n = utilReadInt( gzFile );
-      if( n > 0 ) {
+      if( n ) {
         utilGzSeek( gzFile, n * sizeof(gbXxCheat), SEEK_CUR );
       }
     }
@@ -88,14 +88,14 @@ void gbCheatsReadGameSkip(gzFile gzFile, int version)
     int gbGsOn = utilReadInt( gzFile );
     if( gbGsOn ) {
       int n = utilReadInt(gzFile);
-      if( n > 0 ) {
+      if( n ) {
         utilGzSeek( gzFile, n * sizeof(gbXxCheat), SEEK_CUR );
       }
     }
   } else {
     int n = utilReadInt( gzFile );
 
-    if( n > 0 ) {
+    if( n ) {
       utilGzSeek( gzFile, n * sizeof(gbCheat), SEEK_CUR );
     }
   }

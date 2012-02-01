@@ -209,7 +209,7 @@ void gbSgbDrawBorderTile(int x, int y, int tile, int attr)
   int flipX = attr & 0x40;
   int flipY = attr & 0x80;
 
-  while(l > 0) {
+  while(l) {
     uint8_t mask = 0x80;
     uint8_t a = *tileAddress++;
     uint8_t b = *tileAddress++;
@@ -224,7 +224,7 @@ void gbSgbDrawBorderTile(int x, int y, int tile, int attr)
     else
       yyy = 7 - yy;
 
-    while(mask > 0) {
+    while(mask) {
 
       uint8_t color = 0;
       if(a & mask)

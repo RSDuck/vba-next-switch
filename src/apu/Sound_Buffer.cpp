@@ -24,10 +24,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 /* BLIP BUFFER */
 
-#define FIXED_SHIFT 12
-#define SAL_FIXED_SHIFT 4096
-#define TO_FIXED( f )   int ((f) * SAL_FIXED_SHIFT)
-#define FROM_FIXED( f ) ((f) >> FIXED_SHIFT)
+#define TO_FIXED( f )   ((int)(f) << 12)
+#define FROM_FIXED( f ) ((f) >> 12)
 
 Blip_Buffer::Blip_Buffer()
 {

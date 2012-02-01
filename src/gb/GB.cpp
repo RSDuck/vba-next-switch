@@ -2917,7 +2917,7 @@ bool gbReadSaveMBC2(const char * name)
                  1,
                  1,
                  file);
-    if(read > 0) {
+    if(read) {
       systemMessage(MSG_FAILED_TO_READ_SGM,
                     N_("Battery file's size incompatible with the rom settings %s (%d).\nWarning : save of the battery file is now disabled !"), name, read);
       fclose(file);
@@ -3071,7 +3071,7 @@ bool gbReadSaveMBC7(const char * name)
 				1,
 				1,
 				file);
-		if(read > 0) {
+		if(read) {
 			systemMessage(MSG_FAILED_TO_READ_SGM,
 					N_("Battery file's size incompatible with the rom settings %s (%d).\nWarning : save of the battery file is now disabled !"), name, read);
 			fclose(file);

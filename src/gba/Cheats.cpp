@@ -610,7 +610,8 @@ int cheatsCheckKeys(u32 keys, u32 extended)
         int vinc = (cheatsList[i].value >> 24) & 255;
         int count = (cheatsList[i].value >> 16) & 255;
         int ainc = (cheatsList[i].value & 0xffff);
-        while(count > 0) {
+        while(count)
+	{
           CPUWriteByte(addr, value);
           value += vinc;
           addr += ainc;
@@ -626,7 +627,8 @@ int cheatsCheckKeys(u32 keys, u32 extended)
         int vinc = (cheatsList[i].value >> 24) & 255;
         int count = (cheatsList[i].value >> 16) & 255;
         int ainc = (cheatsList[i].value & 0xffff)*2;
-        while(count > 0) {
+        while(count)
+	{
           CPUWriteHalfWord(addr, value);
           value += vinc;
           addr += ainc;
@@ -642,7 +644,8 @@ int cheatsCheckKeys(u32 keys, u32 extended)
         int vinc = (cheatsList[i].value >> 24) & 255;
         int count = (cheatsList[i].value >> 16) & 255;
         int ainc = (cheatsList[i].value & 0xffff)*4;
-        while(count > 0) {
+        while(count)
+	{
           CPUWriteMemory(addr, value);
           value += vinc;
           addr += ainc;
@@ -1570,7 +1573,8 @@ void cheatsDecryptGSACode(u32& address, u32& value, bool v3)
   u32 *seeds = v3 ? seeds_v3 : seeds_v1;
 
   int bitsleft = 32;
-  while (bitsleft > 0) {
+  while (bitsleft)
+  {
     value -= ((((address << 4) + seeds[2]) ^ (address + rollingseed)) ^
               ((address >> 5) + seeds[3]));
     address -= ((((value << 4) + seeds[0]) ^ (value + rollingseed)) ^
@@ -2078,7 +2082,8 @@ bool cheatsImportGSACodeFile(const char *name, int game, bool v3)
   fread(&games, 1, 4, f);
   bool found = false;
   int g = 0;
-  while(games > 0) {
+  while(games)
+  {
     if(g == game) {
       found = true;
       break;
@@ -2087,7 +2092,8 @@ bool cheatsImportGSACodeFile(const char *name, int game, bool v3)
     fseek(f,len,SEEK_CUR);
     int codes = 0;
     fread(&codes, 1, 4, f);
-    while(codes > 0) {
+    while(codes)
+    {
       fread(&len, 1, 4, f);
       fseek(f, len, SEEK_CUR);
       fseek(f, 8, SEEK_CUR);
@@ -2105,7 +2111,8 @@ bool cheatsImportGSACodeFile(const char *name, int game, bool v3)
     fseek(f, len, SEEK_CUR);
     int codes = 0;
     fread(&codes, 1, 4, f);
-    while(codes > 0) {
+    while(codes)
+    {
       fread(&len, 1, 4, f);
       fread(desc, 1, len, f);
       desc[len] =0;
