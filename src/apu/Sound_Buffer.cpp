@@ -20,8 +20,6 @@ details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
-#include "blargg_source.h"
-
 /* BLIP BUFFER */
 
 #define TO_FIXED( f )   ((int)(f) << 12)
@@ -52,7 +50,7 @@ void Blip_Buffer::clear( void)
                 memset( buffer_, 0, (buffer_size_ + BLIP_BUFFER_EXTRA_) * sizeof (int32_t) );
 }
 
-const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
+int32_t Blip_Buffer::set_sample_rate( long new_rate, int msec )
 {
         /* start with maximum length that resampled time can represent*/
         long new_size = (ULONG_MAX >> BLIP_BUFFER_ACCURACY) - BLIP_BUFFER_EXTRA_ - 64;
@@ -67,7 +65,7 @@ const char * Blip_Buffer::set_sample_rate( long new_rate, int msec )
         {
                 void* p = realloc( buffer_, (new_size + BLIP_BUFFER_EXTRA_) * sizeof *buffer_ );
                 if ( !p )
-                        return "Out of memory";
+			return -1;	/* Out of memory */
                 buffer_ = (int32_t *) p;
         }
 
@@ -163,11 +161,18 @@ Stereo_Buffer::Stereo_Buffer()
 
 Stereo_Buffer::~Stereo_Buffer() { }
 
-const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
+int32_t Stereo_Buffer::set_sample_rate( long rate, int msec )
 {
         mixer_samples_read = 0;
         for ( int i = BUFS_SIZE; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
+	{
+		do
+		{
+			int32_t retval  = bufs_buffer [i].set_sample_rate( rate, msec );
+			if (retval != 0)
+				return -1;
+		}while(0);
+	}
         return 0; 
 }
 
@@ -405,21 +410,32 @@ Effects_Buffer::~Effects_Buffer()
 }
 
 /* avoid using new [] */
-const char * Effects_Buffer::new_bufs( int size )
+int32_t Effects_Buffer::new_bufs( int size )
 {
         bufs_buffer = (buf_t*) malloc( size * sizeof *bufs_buffer );
-        CHECK_ALLOC( bufs_buffer );
+
+	do
+	{
+		if ( (bufs_buffer) == 0 )
+		return -1; /* Out of memory */
+	}while(0);
+
         for ( int i = 0; i < size; i++ )
                 new (bufs_buffer + i) buf_t;
         bufs_size = size;
         return 0;
 }
 
-const char * Effects_Buffer::set_sample_rate( long rate, int msec )
+int32_t Effects_Buffer::set_sample_rate( long rate, int msec )
 {
         /* extra to allow farther past-the-end pointers */
         mixer_samples_read = 0;
-        RETURN_ERR( echo.resize( echo_size + STEREO ) );
+	do
+	{
+		int retval = echo.resize( echo_size + STEREO );
+		if ( retval != 0 )
+			return -1;
+	}while(0);
 	sample_rate_ = rate;
 	length_ = msec;
 	return 0;
@@ -432,7 +448,7 @@ void Effects_Buffer::clock_rate( long rate )
                 bufs_buffer[i].factor_ = bufs_buffer [i].clock_rate_factor( clock_rate_ );
 }
 
-const char * Effects_Buffer::set_channel_count( int count, int const* types )
+int32_t Effects_Buffer::set_channel_count( int count, int const* types )
 {
 	channel_count_ = count;
 	channel_types_ = types;
@@ -448,12 +464,27 @@ const char * Effects_Buffer::set_channel_count( int count, int const* types )
 
         mixer_samples_read = 0;
 
-        RETURN_ERR( chans.resize( count + EXTRA_CHANS ) );
+	do {
+		int32_t retval = chans.resize(count + EXTRA_CHANS);
+		if ( retval != 0 )
+			return -1;
+	}while(0);
 
-        RETURN_ERR( new_bufs( (count + EXTRA_CHANS) < bufs_max ? (count + EXTRA_CHANS) : bufs_max));
+
+	do {
+		int32_t retval = new_bufs( (count + EXTRA_CHANS) < bufs_max ? (count + EXTRA_CHANS) : bufs_max);
+		if ( retval != 0 )
+			return -1;
+	}while(0);
 
         for ( int i = bufs_size; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( sample_rate_, length_ ));
+	{
+		do {
+			int32_t retval  = bufs_buffer [i].set_sample_rate( sample_rate_, length_ );
+			if ( retval != 0)
+				return -1;
+		}while(0);
+	}
 
         for ( int i = chans.size(); --i >= 0; )
         {

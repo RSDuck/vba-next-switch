@@ -21,7 +21,7 @@ class Blip_Buffer
 	// Sets output sample rate and buffer length in milliseconds (1/1000 sec, defaults
 	// to 1/4 second) and clears buffer. If there isn't enough memory, leaves buffer
 	// untouched and returns "Out of memory", otherwise returns NULL.
-	const char * set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
+	int32_t set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
 
 	// Reads at most 'max_samples' out of buffer into 'dest', removing them from
 	// the buffer. Returns number of samples actually read and removed. If stereo is
@@ -216,7 +216,7 @@ class Stereo_Buffer
 	public:
 		Stereo_Buffer();
 		~Stereo_Buffer();
-		const char * set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
+		int32_t set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
 		void clock_rate( long );
 		void clear();
 		long samples_avail() { return ((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1; }
@@ -269,12 +269,12 @@ class Effects_Buffer {
 		// Apply any changes made to config() and chan_config()
 		virtual void apply_config();
 		void clear();
-		const char * set_sample_rate( long samples_per_sec, int msec = BLIP_DEFAULT_LENGTH);
+		int32_t set_sample_rate( long samples_per_sec, int msec = BLIP_DEFAULT_LENGTH);
 
 		/* Sets the number of channels available and optionally their types
 		(type information used by Effects_Buffer) */
 
-		const char * set_channel_count( int, int const* );
+		int32_t set_channel_count( int, int const* );
 		void clock_rate( long );
 
 		// Gets indexed channel, from 0 to channel count - 1
@@ -332,7 +332,7 @@ class Effects_Buffer {
 		bool no_echo;
 
 		void mix_effects( int16_t* out, int pair_count );
-		const char * new_bufs( int size );
+		int32_t new_bufs( int size );
 		//from Multi_Buffer
 		unsigned channels_changed_count_;
 		int samples_per_frame_;

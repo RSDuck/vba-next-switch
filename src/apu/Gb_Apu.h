@@ -68,7 +68,7 @@ class Gb_Apu
 	void save_state( gb_apu_state_t* state_out );
 
 	// Loads state. You should call reset() BEFORE this.
-	const char * load_state( gb_apu_state_t const& in );
+	int32_t load_state( gb_apu_state_t const& in );
 	int32_t last_time;          // time sound emulator has been run to
 	int32_t     frame_time;     // time of next frame sequencer action
 	Gb_Apu();
@@ -100,7 +100,7 @@ class Gb_Apu
 	void synth_volume( int );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
-	const char* save_load( gb_apu_state_t*, bool save );
+	int32_t save_load( gb_apu_state_t*, bool save );
 	void save_load2( gb_apu_state_t*, bool save );
 };
 

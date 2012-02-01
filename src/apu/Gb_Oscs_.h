@@ -13,8 +13,6 @@ details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
-#include "blargg_source.h"
-
 /* enables bug in early CGB units that causes problems in some games*/
 #define CGB_02 0
 
@@ -517,7 +515,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
 
         /* Run timer and calculate time of next LFSR clock*/
         static unsigned char const period1s [8] = { 1, 2, 4, 6, 8, 10, 12, 14 };
-        int const period1 = period1s [regs [3] & 7] * CLK_MUL;
+        int const period1 = period1s [regs [3] & 7] << CLK_MUL_SHIFT;
         {
                 int extra = (end_time - time) - delay;
                 int const per2 = GB_NOISE_PERIOD2(8);
