@@ -55,20 +55,20 @@ static  void armUnknownInsn(u32 opcode)
 // C core
 
 #define C_SETCOND_LOGICAL \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
+    N_FLAG = ((s32)res < 0);             \
+    Z_FLAG = (res == 0);                 \
     C_FLAG = C_OUT;
 #define C_SETCOND_ADD \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
+    N_FLAG = ((s32)res < 0);             \
+    Z_FLAG = (res == 0);                 \
     V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) |        \
               (POS(lhs) & POS(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & NEG(rhs)) |                   \
               (NEG(lhs) & POS(res)) |                   \
               (NEG(rhs) & POS(res))) ? true : false;
 #define C_SETCOND_SUB \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
+    N_FLAG = ((s32)res < 0);             \
+    Z_FLAG = (res == 0);                 \
     V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) |        \
               (POS(lhs) & NEG(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & POS(rhs)) |                   \
@@ -100,7 +100,7 @@ static  void armUnknownInsn(u32 opcode)
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (bus.reg[opcode & 0x0F].I & 1 ? true : false);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 1);\
         } else if (shift < 32) {                \
             u32 v = bus.reg[opcode & 0x0F].I;               \
             C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
@@ -197,7 +197,7 @@ static  void armUnknownInsn(u32 opcode)
                  (v >> shift));                         \
     } else {                                            \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v & 1) ? true : false;                 \
+        C_OUT = (v & 1);                 \
         value = ((v >> 1) |                             \
                  (C_FLAG << 31));                       \
     }
@@ -403,13 +403,13 @@ static  void armUnknownInsn(u32 opcode)
 #endif
 #ifndef SETCOND_MUL
  #define SETCOND_MUL \
-     N_FLAG = ((s32)bus.reg[dest].I < 0) ? true : false;    \
-     Z_FLAG = bus.reg[dest].I ? false : true;
+     N_FLAG = ((s32)bus.reg[dest].I < 0);    \
+     Z_FLAG = !bus.reg[dest].I;
 #endif
 #ifndef SETCOND_MULL
  #define SETCOND_MULL \
-     N_FLAG = (bus.reg[dest].I & 0x80000000) ? true : false;\
-     Z_FLAG = bus.reg[dest].I || bus.reg[acc].I ? false : true;
+     N_FLAG = (bus.reg[dest].I & 0x80000000);\
+     Z_FLAG = !(bus.reg[dest].I || bus.reg[acc].I);
 #endif
 
 #ifndef ALU_FINISH
@@ -799,7 +799,7 @@ static  void arm121(u32 opcode)
     if ((opcode & 0x0FFFFFF0) == 0x012FFF10) {
         int base = opcode & 0x0F;
         bus.busPrefetchCount = 0;
-        armState = bus.reg[base].I & 1 ? false : true;
+        armState = !(bus.reg[base].I & 1);
         if (armState) {
             bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFC;
             bus.armNextPC = bus.reg[15].I;
