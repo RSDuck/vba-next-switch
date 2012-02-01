@@ -3883,12 +3883,12 @@ void CPUUpdateFlags(bool breakLoop)
 {
 	uint32_t CPSR = bus.reg[16].I;
 
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
+	N_FLAG = (CPSR & 0x80000000);
+	Z_FLAG = (CPSR & 0x40000000);
+	C_FLAG = (CPSR & 0x20000000);
+	V_FLAG = (CPSR & 0x10000000);
+	armState = !(CPSR & 0x20);
+	armIrqEnable = !(CPSR & 0x80);
 	if(breakLoop)
 	{
 		if (armIrqEnable && (IF & IE) && (IME & 1))
@@ -3900,12 +3900,12 @@ void CPUUpdateFlags()
 {
 	uint32_t CPSR = bus.reg[16].I;
 
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
+	N_FLAG = (CPSR & 0x80000000);
+	Z_FLAG = (CPSR & 0x40000000);
+	C_FLAG = (CPSR & 0x20000000);
+	V_FLAG = (CPSR & 0x10000000);
+	armState = !(CPSR & 0x20);
+	armIrqEnable = !(CPSR & 0x80);
 	if (armIrqEnable && (IF & IE) && (IME & 1))
 		cpuNextEvent = cpuTotalTicks;
 }
@@ -4033,18 +4033,17 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 
 void CPUSoftwareInterrupt(int comment)
 {
-	//static bool disableMessage = false;
-	if(armState) comment >>= 16;
-	if(useBios) {
+	if(armState)
+		comment >>= 16;
+
+	if(useBios)
+	{
 		CPUSoftwareInterrupt_();
 		return;
 	}
-	// This would be correct, but it causes problems if uncommented
-	//  else {
-	//    biosProtected = 0xe3a02004;
-	//  }
 
-	switch(comment) {
+	switch(comment)
+	{
 		case 0x00:
 			BIOS_SoftReset();
 			ARM_PREFETCH;
@@ -4291,7 +4290,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 				CPUWriteMemory(d, 0);
 				d += di;
 				c--;
-			}while(c != 0);
+			}while(c);
 		}
 		else
 		{
@@ -4300,7 +4299,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 				d += di;
 				s += si;
 				c--;
-			}while(c != 0);
+			}while(c);
 		}
 	}
 	else
@@ -4314,7 +4313,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 				CPUWriteHalfWord(d, 0);
 				d += di;
 				c--;
-			}while(c != 0);
+			}while(c);
 		}
 		else
 		{
@@ -4323,7 +4322,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 				d += di;
 				s += si;
 				c--;
-			}while(c != 0);
+			}while(c);
 		}
 	}
 
@@ -4609,15 +4608,14 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				graphics.DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
 				UPDATE_REG(0x00, graphics.DISPCNT);
 
-				if(changeBGon) {
+				graphics.layerEnable = graphics.layerSettings & value;
+				if(changeBGon)
+				{
 					graphics.layerEnableDelay = 4;
-					graphics.layerEnable = graphics.layerSettings & value & (~changeBGon);
-				} else {
-					graphics.layerEnable = graphics.layerSettings & value;
-					// CPUUpdateTicks();
+					graphics.layerEnable &= ~changeBGon;
 				}
 
-				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
+				windowOn = (graphics.layerEnable & 0x6000);
 				if(change && !((value & 0x80)))
 				{
 					if(!(graphics.DISPSTAT & 1))
@@ -4874,7 +4872,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xBA:
 			{
-				bool start = ((DM0CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = (DM0CNT_H ^ value) & 0x8000;
 				value &= 0xF7E0;
 
 				DM0CNT_H = value;
@@ -4910,7 +4908,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xC6:
 			{
-				bool start = ((DM1CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = (DM1CNT_H ^ value) & 0x8000;
 				value &= 0xF7E0;
 
 				DM1CNT_H = value;
@@ -4946,7 +4944,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xD2:
 			{
-				bool start = ((DM2CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = (DM2CNT_H ^ value) & 0x8000;
 
 				value &= 0xF7E0;
 
@@ -4983,7 +4981,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xDE:
 			{
-				bool start = ((DM3CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = (DM3CNT_H ^ value) & 0x8000;
 
 				value &= 0xFFE0;
 
@@ -5717,7 +5715,7 @@ updateLoop:
 							if((cheatsEnabled) && (mastercode==0))
 								remainingTicks += cheatsCheckKeys(P1^0x3FF, ext);
 #ifdef USE_FRAMESKIP
-							speedup = (ext & 1) ? true : false;
+							speedup = ext & 1;
 #endif
 #endif
 
@@ -5964,7 +5962,7 @@ updateLoop:
 						timer0Ticks = (0x10000 - TM0D) << timer0ClockReload;
 						UPDATE_REG(0x100, TM0D);
 					}
-					timer0On = timer0Value & 0x80 ? true : false;
+					timer0On = timer0Value & 0x80;
 					TM0CNT = timer0Value & 0xC7;
 					UPDATE_REG(0x102, TM0CNT);
 					//    CPUUpdateTicks();
@@ -5978,7 +5976,7 @@ updateLoop:
 						timer1Ticks = (0x10000 - TM1D) << timer1ClockReload;
 						UPDATE_REG(0x104, TM1D);
 					}
-					timer1On = timer1Value & 0x80 ? true : false;
+					timer1On = timer1Value & 0x80;
 					TM1CNT = timer1Value & 0xC7;
 					UPDATE_REG(0x106, TM1CNT);
 				}
@@ -5991,7 +5989,7 @@ updateLoop:
 						timer2Ticks = (0x10000 - TM2D) << timer2ClockReload;
 						UPDATE_REG(0x108, TM2D);
 					}
-					timer2On = timer2Value & 0x80 ? true : false;
+					timer2On = timer2Value & 0x80;
 					TM2CNT = timer2Value & 0xC7;
 					UPDATE_REG(0x10A, TM2CNT);
 				}
@@ -6004,7 +6002,7 @@ updateLoop:
 						timer3Ticks = (0x10000 - TM3D) << timer3ClockReload;
 						UPDATE_REG(0x10C, TM3D);
 					}
-					timer3On = timer3Value & 0x80 ? true : false;
+					timer3On = timer3Value & 0x80;
 					TM3CNT = timer3Value & 0xC7;
 					UPDATE_REG(0x10E, TM3CNT);
 				}
