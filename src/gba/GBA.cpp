@@ -736,7 +736,7 @@ unsigned CPUWriteState_libgba(uint8_t* data, unsigned size)
 	utilWriteIntMem(data, SAVE_GAME_VERSION);
 	utilWriteMem(data, &rom[0xa0], 16);
 	utilWriteIntMem(data, useBios);
-	utilWriteMem(data, &bus.reg[0], sizeof(reg));
+	utilWriteMem(data, &bus.reg[0], sizeof(bus.reg));
 
 	utilWriteDataMem(data, saveGameStruct);
 
@@ -3584,7 +3584,7 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 	// Don't care about use bios ...
 	utilReadIntMem(data);
 
-	utilReadMem(&bus.reg[0], data, sizeof(reg));
+	utilReadMem(&bus.reg[0], data, sizeof(bus.reg));
 
 	utilReadDataMem(data, saveGameStruct);
 

@@ -1,4 +1,4 @@
-DEBUG=0
+DEBUG = 0
 
 ifeq ($(platform),)
 platform = unix
@@ -13,10 +13,12 @@ else ifneq ($(findstring Darwin,$(shell uname -a)),)
 endif
 endif
 
+LIBSNES_DIR := libsnes
+
 ifeq ($(platform), unix)
    TARGET := libsnes.so
    fpic := -fPIC
-   SHARED := -shared
+   SHARED := -shared -Wl,-version-script=$(LIBSNES_DIR)/link.T -Wl,-no-undefined
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), osx)
    TARGET := libsnes.dylib
@@ -55,7 +57,7 @@ else
    TARGET := snes.dll
    CC = gcc
    CXX = g++
-   SHARED := -shared -static-libgcc -static-libstdc++
+   SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=$(LIBSNES_DIR)/link.T
    ENDIANNESS_DEFINES = -DLSB_FIRST
 endif
 
@@ -67,7 +69,6 @@ else
 	CXXFLAGS += -O3
 endif
 
-LIBSNES_DIR := libsnes
 VBA_DIR := ./src
 UTILS_DIR := ./utils
 
@@ -95,16 +96,13 @@ OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS)
 VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
 ifeq ($(platform), snc-ps3)
-WARNING_DEFINES =
 CODE_DEFINES =
 else
-WARNING_DEFINES = -Wl, no-undefined -Wl,
 CODE_DEFINES = -std=gnu99
 endif
 
 CFLAGS += $(CODE_DEFINES) $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
 CXXFLAGS += $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
-LDFLAGS += -$(WARNING_DEFINES) --version-script=$(LIBSNES_DIR)/link.T
 
 INCDIRS := -I$(VBA_DIR)
 LIBS :=
