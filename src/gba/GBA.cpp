@@ -1393,12 +1393,8 @@ void doMirroring (bool b)
          brightness_switch(); \
       }
 
-//we only use 32bit color depth for now
-#define START_RENDERLINE() uint32_t * lineMix = ((uint32_t *)pix + 241 * (VCOUNT+1));
-
-static void mode0RenderLine (void)
+void mode0RenderLine(uint32_t * lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0100)
@@ -1479,9 +1475,8 @@ static void mode0RenderLine (void)
 	}
 }
 
-static void mode0RenderLineNoWindow (void)
+void mode0RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 
@@ -1620,9 +1615,8 @@ static void mode0RenderLineNoWindow (void)
 	}
 }
 
-static void mode0RenderLineAll (void)
+void mode0RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
@@ -1804,9 +1798,8 @@ Layer 2 is 256 colours and allows only 256 tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-static void mode1RenderLine (void)
+void mode1RenderLine(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0100) {
@@ -1900,9 +1893,8 @@ static void mode1RenderLine (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode1RenderLineNoWindow (void)
+void mode1RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0100) {
@@ -2050,9 +2042,8 @@ static void mode1RenderLineNoWindow (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode1RenderLineAll (void)
+void mode1RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
@@ -2235,9 +2226,8 @@ It does not support flipping.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-static void mode2RenderLine (void)
+void mode2RenderLine(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -2324,9 +2314,8 @@ static void mode2RenderLine (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode2RenderLineNoWindow (void)
+void mode2RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -2454,9 +2443,8 @@ static void mode2RenderLineNoWindow (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode2RenderLineAll (void)
+void mode2RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
@@ -2630,9 +2618,8 @@ It doesn't support paging, scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-static void mode3RenderLine (void)
+void mode3RenderLine(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -2683,9 +2670,8 @@ static void mode3RenderLine (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode3RenderLineNoWindow (void)
+void mode3RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -2773,9 +2759,8 @@ static void mode3RenderLineNoWindow (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode3RenderLineAll (void)
+void mode3RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
@@ -2919,9 +2904,8 @@ It doesn't support scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-static void mode4RenderLine (void)
+void mode4RenderLine(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x400)
@@ -2977,9 +2961,8 @@ static void mode4RenderLine (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode4RenderLineNoWindow (void)
+void mode4RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x400)
@@ -3072,9 +3055,8 @@ static void mode4RenderLineNoWindow (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode4RenderLineAll (void)
+void mode4RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	bool inWindow0 = false;
@@ -3225,9 +3207,8 @@ It doesn't support scrolling, flipping, rotation or tiles.
 These routines only render a single line at a time, because of the way the GBA does events.
 */
 
-static void mode5RenderLine (void)
+void mode5RenderLine(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -3279,9 +3260,8 @@ static void mode5RenderLine (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode5RenderLineNoWindow (void)
+void mode5RenderLineNoWindow(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400) {
@@ -3370,9 +3350,8 @@ static void mode5RenderLineNoWindow (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-static void mode5RenderLineAll (void)
+void mode5RenderLineAll(uint32_t *lineMix)
 {
-	START_RENDERLINE();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0400)
@@ -3511,7 +3490,7 @@ static void mode5RenderLineAll (void)
 	//gfxLastVCOUNT = VCOUNT;
 }
 
-void (*renderLine)() = mode0RenderLine;
+void (*renderLine)(uint32_t*) = mode0RenderLine;
 
 #define CPUUpdateRender() \
   switch(graphics.DISPCNT & 7) { \
@@ -5746,7 +5725,8 @@ updateLoop:
 						if(frameCount >= framesToSkip)
 						{
 #endif
-							(*renderLine)();
+							//we only use 32bit color depth
+							(*renderLine)((uint32_t *)pix + 241 * (VCOUNT+1));
 #ifdef USE_FRAMESKIP
 						}
 #endif
