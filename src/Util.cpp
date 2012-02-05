@@ -146,6 +146,7 @@ static bool utilIsImage(const char *file)
 
 uint32_t utilFindType(const char *file)
 {
+	char buffer [2048];
 	if ( !utilIsImage( file ) ) /* TODO: utilIsArchive() instead?*/
 		return IMAGE_UNKNOWN;
 

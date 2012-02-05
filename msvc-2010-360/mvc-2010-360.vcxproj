@@ -38,6 +38,8 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">CompileAsC</CompileAs>
     </ClCompile>
     <ClCompile Include="..\src\common\Patch.cpp" />
+    <ClCompile Include="..\src\gba\agbprint.cpp" />
+    <ClCompile Include="..\src\gba\bios.cpp" />
     <ClCompile Include="..\src\gba\Cheats.cpp" />
     <ClCompile Include="..\src\gba\EEprom.cpp" />
     <ClCompile Include="..\src\gba\Flash.cpp" />
@@ -231,7 +233,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DB17AF79-EB79-4062-ACA8-F82864712DA0}</ProjectGuid>
     <Keyword>Xbox360Proj</Keyword>
-    <ProjectName>vba-next-360</ProjectName>
+    <ProjectName>msvc-2010-360</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'" Label="Configuration">
@@ -282,22 +284,22 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile_FastCap|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">
     <ClCompile>

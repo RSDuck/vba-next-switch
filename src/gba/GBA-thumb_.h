@@ -678,7 +678,7 @@ static  void thumb44_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = (codeTicksAccessSeq16(bus.armNextPC)<<1)
+    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -692,7 +692,7 @@ static  void thumb44_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = (codeTicksAccessSeq16(bus.armNextPC)<<1)
+    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -736,7 +736,7 @@ static  void thumb46_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = (codeTicksAccessSeq16(bus.armNextPC)<<1)
+    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -750,7 +750,7 @@ static  void thumb46_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = (codeTicksAccessSeq16(bus.armNextPC)<<1)
+    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -1176,6 +1176,7 @@ static  void thumbC8(u32 opcode)
 // BEQ offset
 static  void thumbD0(u32 opcode)
 {
+  int val;
   if(Z_FLAG) {
     bus.reg[15].I += ((s8)(opcode & 0xFF)) << 1;
     bus.armNextPC = bus.reg[15].I;
