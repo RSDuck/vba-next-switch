@@ -328,7 +328,7 @@ void memoryUpdateMBC3Clock()
 {
   time_t now = time(NULL);
   time_t diff = now - gbDataMBC3.mapperLastTime;
-  if(diff) {
+  if(diff > 0) {
     // update the clock according to the last update time
     gbDataMBC3.mapperSeconds += (int)(diff % 60);
     if(gbDataMBC3.mapperSeconds > 59) {
@@ -1225,7 +1225,7 @@ void memoryUpdateTAMA5Clock()
 
   time_t now = time(NULL);
   time_t diff = now - gbDataTAMA5.mapperLastTime;
-  if(diff) {
+  if(diff > 0) {
     // update the clock according to the last update time
     gbDataTAMA5.mapperSeconds += (int)(diff % 60);
     if(gbDataTAMA5.mapperSeconds > 59) {

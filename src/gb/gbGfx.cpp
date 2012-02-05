@@ -128,7 +128,7 @@ void gbRenderLine()
           tile_b = gbInvertTab[tile_b];
         }
 
-        while(bx) {
+        while(bx > 0) {
           uint8_t c = (tile_a & bx) ? 1 : 0;
           c += ((tile_b & bx) ? 2 : 0);
 
@@ -323,7 +323,7 @@ void gbRenderLine()
               tile_b = gbInvertTab[tile_b];
             }
 
-            while(bx) {
+            while(bx > 0) {
               uint8_t c = (tile_a & bx) != 0 ? 1 : 0;
               c += ((tile_b & bx) != 0 ? 2 : 0);
 
@@ -555,7 +555,7 @@ void gbDrawSprites(bool draw)
         tile &= 254;
       int flags = gbMemory[address++];
 
-      if(x && y && x < 168 && y < 160) {
+      if(x > 0 && y > 0 && x < 168 && y < 160) {
         // check if sprite intersects current line
         int t = yc -y + 16;
         if((size && t >=0 && t < 16) || (!size && t >= 0 && t < 8)) {

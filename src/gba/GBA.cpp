@@ -667,7 +667,7 @@ INLINE int CPUUpdateTicks()
     graphics.DISPSTAT &= 0xFFFB; \
     UPDATE_REG(0x4, graphics.DISPSTAT); \
   } \
-  if (graphics.layerEnableDelay) \
+  if (graphics.layerEnableDelay > 0) \
   { \
       graphics.layerEnableDelay--; \
       if (graphics.layerEnableDelay == 1) \
@@ -3593,7 +3593,7 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 	stopState = utilReadIntMem(data) ? true : false;
 
 	IRQTicks = utilReadIntMem(data);
-	if (IRQTicks)
+	if (IRQTicks > 0)
 		intState = true;
 	else
 	{
@@ -5887,8 +5887,7 @@ updateLoop:
 			ticks -= clockTicks;
 			cpuNextEvent = CPUUpdateTicks();
 
-			if(cpuDmaTicksToUpdate)
-			{
+			if(cpuDmaTicksToUpdate > 0) {
 				if(cpuDmaTicksToUpdate > cpuNextEvent)
 					clockTicks = cpuNextEvent;
 				else
@@ -5942,8 +5941,7 @@ updateLoop:
 				}
 			}
 
-			if(remainingTicks)
-			{
+			if(remainingTicks > 0) {
 				if(remainingTicks > cpuNextEvent)
 					clockTicks = cpuNextEvent;
 				else

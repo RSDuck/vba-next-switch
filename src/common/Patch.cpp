@@ -119,7 +119,7 @@ static uLong computePatchCRC(FILE *f, unsigned int size)
     readed = fread(buf, 1, MIN(size, sizeof(buf)), f);
     crc = crc32(crc, buf, readed);
     size -= readed;
-  } while (readed);
+  } while (readed > 0);
   return crc;
 }
 
@@ -315,7 +315,7 @@ static bool patchApplyPPF1(FILE *f, u8 **rom, int *size)
 
   u8 *mem = *rom;
 
-  while (count) {
+  while (count > 0) {
     int offset = readInt4(f);
     if (offset == -1)
       break;
@@ -354,12 +354,12 @@ static bool patchApplyPPF2(FILE *f, u8 **rom, int *size)
     return false;
 
   int idlen = ppfFileIdLen(f, 2);
-  if (idlen)
+  if (idlen > 0)
     count -= 16 + 16 + idlen;
 
   fseek(f, 56+4+1024, SEEK_SET);
 
-  while (count) {
+  while (count > 0) {
     int offset = readInt4(f);
     if (offset == -1)
       break;
@@ -402,12 +402,12 @@ static bool patchApplyPPF3(FILE *f, u8 **rom, int *size)
   }
 
   int idlen = ppfFileIdLen(f, 2);
-  if (idlen)
+  if (idlen > 0)
     count -= 16 + 16 + idlen;
 
   fseek(f, 56+4+(blockcheck ? 1024 : 0), SEEK_SET);
 
-  while (count) {
+  while (count > 0) {
     __off64_t offset = readInt8(f);
     if (offset == -1)
       break;
