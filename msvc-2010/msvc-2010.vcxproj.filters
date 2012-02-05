@@ -63,12 +63,6 @@
     <ClCompile Include="..\src\gba\Sram.cpp">
       <Filter>Source Files\gba</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gba\agbprint.cpp">
-      <Filter>Source Files\gba</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gba\bios.cpp">
-      <Filter>Source Files\gba</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gba\Cheats.cpp">
       <Filter>Source Files\gba</Filter>
     </ClCompile>
