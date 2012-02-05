@@ -222,14 +222,14 @@ static void BIOS_CpuSet()
 		// fill ?
 		if((cnt >> 24) & 1) {
 			u32 value = (source>0x0EFFFFFF ? 0x1CAD1CAD : CPUReadMemory(source));
-			while(count > 0) {
+			while(count) {
 				CPUWriteMemory(dest, value);
 				dest += 4;
 				count--;
 			}
 		} else {
 			// copy
-			while(count > 0) {
+			while(count) {
 				CPUWriteMemory(dest, (source>0x0EFFFFFF ? 0x1CAD1CAD : CPUReadMemory(source)));
 				source += 4;
 				dest += 4;
@@ -277,7 +277,7 @@ static void BIOS_CpuFastSet()
 
 	// fill?
 	if((cnt >> 24) & 1) {
-		while(count > 0) {
+		while(count) {
 			// BIOS always transfers 32 bytes at a time
 			u32 value = (source>0x0EFFFFFF ? 0xBAFFFFFB : CPUReadMemory(source));
 			for(int i = 0; i < 8; i++) {
@@ -288,7 +288,7 @@ static void BIOS_CpuFastSet()
 		}
 	} else {
 		// copy
-		while(count > 0) {
+		while(count) {
 			// BIOS always transfers 32 bytes at a time
 			for(int i = 0; i < 8; i++) {
 				CPUWriteMemory(dest, (source>0x0EFFFFFF ? 0xBAFFFFFB :CPUReadMemory(source)));
@@ -318,7 +318,7 @@ static void BIOS_Diff8bitUnFilterWram()
 	CPUWriteByte(dest++, data);
 	len--;
 
-	while(len > 0)
+	while(len)
 	{
 		u8 diff = CPUReadByte(source++);
 		data += diff;
@@ -435,7 +435,7 @@ static void BIOS_HuffUnComp()
 	u32 writeValue = 0;
 
 	if((header & 0x0F) == 8) {
-		while(len > 0)
+		while(len)
 		{
 			// take left
 			if(pos == 0)
@@ -560,7 +560,7 @@ static void BIOS_LZ77UnCompVram()
 
 	int len = header >> 8;
 
-	while(len > 0) {
+	while(len) {
 		u8 d = CPUReadByte(source++);
 
 		if(d) {
@@ -638,7 +638,7 @@ static void BIOS_LZ77UnCompWram()
 
 	int len = header >> 8;
 
-	while(len > 0) {
+	while(len) {
 		u8 d = CPUReadByte(source++);
 
 		if(d) {
@@ -801,7 +801,7 @@ static void BIOS_RLUnCompVram()
 	int byteShift = 0;
 	u32 writeValue = 0;
 
-	while(len > 0) {
+	while(len) {
 		u8 d = CPUReadByte(source++);
 		int l = d & 0x7F;
 		if(d & 0x80) {
@@ -858,7 +858,7 @@ static void BIOS_RLUnCompWram()
 
 	int len = header >> 8;
 
-	while(len > 0) {
+	while(len) {
 		u8 d = CPUReadByte(source++);
 		int l = d & 0x7F;
 		if(d & 0x80) {
