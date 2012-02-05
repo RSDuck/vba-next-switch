@@ -1237,8 +1237,9 @@ static void CPUCleanUp()
 int CPULoadRom(const char *szFile)
 {
 	romSize = 0x2000000;
-	if(rom != NULL)
+	if(rom != NULL) {
 		CPUCleanUp();
+	}
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -1263,9 +1264,10 @@ int CPULoadRom(const char *szFile)
 
 		if(szFile!=NULL)
 		{
-			if(!utilLoad(szFile, utilIsGBAImage,
-			whereToLoad, romSize))
-			{
+			if(!utilLoad(szFile,
+						utilIsGBAImage,
+						whereToLoad,
+						romSize)) {
 				free(rom);
 				rom = NULL;
 				free(workRAM);

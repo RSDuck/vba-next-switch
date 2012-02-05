@@ -171,9 +171,6 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 	char *buf = NULL;
 
 	fp = fopen(file,"rb");
-	if(!fp)
-		return NULL;
-
 	fseek(fp, 0, SEEK_END); /*go to end*/
 	size = ftell(fp); /* get position at end (length)*/
 	rewind(fp);
@@ -193,15 +190,26 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 
 	if(utilIsZipFile(file))
 	{
+		FILE *gd = NULL;
+		uint8_t * buf = (uint8_t *)malloc(64*1024*1024);
 		printf("ZIP file detected: %s\n", file);
-		size = UnZipBuffer(image, fp);
+
+		/* Open file */
+		gd = fopen(file, "rb");
+		if(!gd)
+			return 0;
+
+		size = UnZipBuffer(buf, gd);
+
+		memcpy(image, buf, size); /* read into buffer*/
+		/* Close file */
+		fclose(gd);
 	}
 	else
 	{
 		printf("Non-ZIP file detected: %s\n",file);
 		fread(image, 1, size, fp); /* read into buffer*/
 	}
-	/* Close file */
 	fclose(fp);
 	return image;
 }

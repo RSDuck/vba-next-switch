@@ -700,8 +700,9 @@ long ZEXPORT memtell(file)
  * PKWare Zip Header - adopted into zip standard
  */
 #define PKZIPID 0x504b0304
+//#define MAXROM 0x500000
 #define ZIPCHUNK 2048
-#define MAXROMSIZE 67108864
+#define MAXROMSIZE 64*1024*1024
 
 /*
  * Zip file header definition
