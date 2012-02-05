@@ -5,10 +5,10 @@
 #define GB_OSCS_H
 
 #include "blargg_common.h"
+#include "blargg_source.h"
 #include "Sound_Buffer.h"
 
 #define	CLK_MUL	GB_APU_OVERCLOCK
-#define CLK_MUL_SHIFT 2
 #define CLK_MUL_MUL_2 8
 #define CLK_MUL_MUL_4 16
 #define CLK_MUL_MUL_6 24

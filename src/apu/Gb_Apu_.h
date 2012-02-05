@@ -15,6 +15,8 @@ details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
+#include "blargg_source.h"
+
 #define VOL_REG 0xFF24
 #define STEREO_REG 0xFF25
 #define STATUS_REG 0xFF26
@@ -23,9 +25,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #define OSC_COUNT 4
 
-#define GB_APU_CALC_OUTPUT(osc) \
-	int bits = regs [STEREO_REG - START_ADDR] >> osc; \
-	bits = (bits >> 3 & 2) | (bits & 1);
+INLINE int Gb_Apu::calc_output( int osc ) const
+{
+	int bits = regs [STEREO_REG - START_ADDR] >> osc;
+	return (bits >> 3 & 2) | (bits & 1);
+}
 
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
@@ -38,10 +42,10 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 		o.outputs [1] = right;
 		o.outputs [2] = left;
 		o.outputs [3] = center;
-		GB_APU_CALC_OUTPUT(i);
-		o.output = o.outputs [bits];
+		o.output = o.outputs [calc_output( i )];
+		++i;
 	}
-	while ( ++i < osc );
+	while ( i < osc );
 }
 
 void Gb_Apu::synth_volume( int iv )
@@ -186,7 +190,7 @@ void Gb_Apu::run_until_( int32_t end_time )
 			break;
 
 		/* run frame sequencer*/
-		frame_time += frame_period << CLK_MUL_SHIFT;
+		frame_time += frame_period * CLK_MUL;
 		switch ( frame_phase++ )
 		{
 			case 2:
@@ -276,8 +280,7 @@ void Gb_Apu::write_register( int32_t time, unsigned addr, int data )
 			for ( int i = OSC_COUNT; --i >= 0; )
 			{
 				Gb_Osc& o = *oscs [i];
-				GB_APU_CALC_OUTPUT(i);
-				Blip_Buffer* out = o.outputs[bits];
+				Blip_Buffer* out = o.outputs [calc_output( i )];
 				if ( o.output != out )
 				{
 					silence_osc( o );
@@ -321,8 +324,7 @@ void Gb_Apu::apply_stereo()
 	for ( i = OSC_COUNT; --i >= 0; )
 	{
 		Gb_Osc& o = *oscs [i];
-		GB_APU_CALC_OUTPUT(i);
-		Blip_Buffer* out = o.outputs[bits];
+		Blip_Buffer* out = o.outputs [calc_output( i )];
 		if ( o.output != out )
 		{
 			silence_osc( o );
@@ -378,7 +380,7 @@ int Gb_Apu::read_register( int32_t time, unsigned addr )
 
 #define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
 
-INLINE int32_t Gb_Apu::save_load( gb_apu_state_t* io, bool save )
+INLINE const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
 	int format, version;
 
@@ -386,16 +388,16 @@ INLINE int32_t Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 
 	REFLECT( format, format );
 	if ( format != io->format0 )
-		return -1; /* Unsupported sound save state format */
+		return "Unsupported sound save state format";
 
 	version = 0;
 	REFLECT( version, version );
 
 	/* Registers and wave RAM*/
 	if ( save )
-		memcpy( io->regs, regs, sizeof(io->regs));
+		memcpy( io->regs, regs, sizeof io->regs );
 	else
-		memcpy( regs, io->regs, sizeof(regs));
+		memcpy( regs, io->regs, sizeof     regs );
 
 	/* Frame sequencer*/
 	REFLECT( frame_time,  frame_time  );
@@ -441,15 +443,9 @@ void Gb_Apu::save_state( gb_apu_state_t* out )
 	save_load2( out, true );
 }
 
-int32_t Gb_Apu::load_state( gb_apu_state_t const& in )
+const char * Gb_Apu::load_state( gb_apu_state_t const& in )
 {
-	do
-	{
-		int retval = save_load( CONST_CAST(gb_apu_state_t*,&in), false);
-		if (retval != 0)
-			return -1;
-	}while(0);
-
+	RETURN_ERR( save_load( CONST_CAST(gb_apu_state_t*,&in), false));
 	save_load2( CONST_CAST(gb_apu_state_t*,&in), false );
 
 	apply_stereo();

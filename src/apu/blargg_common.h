@@ -40,13 +40,14 @@ public:
 	size_t size() const { return size_; }
 	T* begin() const { return begin_; }
 	T* end() const { return begin_ + size_; }
-	int32_t resize( size_t n )
+	const char * resize( size_t n )
 	{
+		// TODO: blargg_common.cpp to hold this as an outline function, ugh
 		void* p = realloc( begin_, n * sizeof (T) );
 		if ( p )
 			begin_ = (T*) p;
 		else if ( n > size_ ) // realloc failure only a problem if expanding
-			return -1; /* out of memory */
+			return "Out of memory";
 		size_ = n;
 		return 0;
 	}
