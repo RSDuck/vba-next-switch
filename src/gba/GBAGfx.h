@@ -315,10 +315,21 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	}
 }
 
-static INLINE void gfxDrawRotScreen16Bit(u16 control, u16 x_l, u16 x_h, 
-u16 y_l, u16 y_h, u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, 
-int& currentY, int changed, u32 *line)
+static INLINE void gfxDrawRotScreen16Bit(int changed)
 {
+	u16 control = BG2CNT;
+	u16 x_l = BG2X_L;
+	u16 x_h = BG2X_H;
+	u16 y_l = BG2Y_L;
+	u16 y_h = BG2Y_H;
+	u16 pa = BG2PA;
+	u16 pb = BG2PB;
+	u16 pc = BG2PC;
+	u16 pd = BG2PD;
+	int& currentX = gfxBG2X;
+	int& currentY = gfxBG2Y;
+
+	u32 * line = &line[2];
 	u16 *screenBase = (u16 *)&vram[0];
 	int prio = ((control & 3) << 25) + 0x1000000;
 
@@ -536,116 +547,123 @@ static INLINE void gfxDrawRotScreen256(u16 control,
   }
 }
 
-static INLINE void gfxDrawRotScreen16Bit160(u16 control,
-					    u16 x_l, u16 x_h,
-					    u16 y_l, u16 y_h,
-					    u16 pa,  u16 pb,
-					    u16 pc,  u16 pd,
-					    int& currentX, int& currentY,
-					    int changed,
-					    u32 *line)
+static INLINE void gfxDrawRotScreen16Bit160(int changed)
 {
-  u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
-    (u16 *)&vram[0];
-  int prio = ((control & 3) << 25) + 0x1000000;
-  u32 sizeX = 160;
-  u32 sizeY = 128;
+	u16 control = BG2CNT;
+	u16 x_l = BG2X_L;
+	u16 x_h = BG2X_H;
+	u16 y_l = BG2Y_L;
+	u16 y_h = BG2Y_H;
+	u16 pa = BG2PA;
+	u16 pb = BG2PB;
+	u16 pc = BG2PC;
+	u16 pd = BG2PD;
+	int& currentX = gfxBG2X;
+	int& currentY = gfxBG2Y;
 
-  int startX = (x_l) | ((x_h & 0x07FF)<<16);
-  if(x_h & 0x0800)
-    startX |= 0xF8000000;
-  int startY = (y_l) | ((y_h & 0x07FF)<<16);
-  if(y_h & 0x0800)
-    startY |= 0xF8000000;
+
+	u32 *line = &line[2];
+	u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
+		(u16 *)&vram[0];
+	int prio = ((control & 3) << 25) + 0x1000000;
+	u32 sizeX = 160;
+	u32 sizeY = 128;
+
+	int startX = (x_l) | ((x_h & 0x07FF)<<16);
+	if(x_h & 0x0800)
+		startX |= 0xF8000000;
+	int startY = (y_l) | ((y_h & 0x07FF)<<16);
+	if(y_h & 0x0800)
+		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-  int dx = pa & 0x7FFF;
-  dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = pa & 0x7FFF;
+	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
 
-  int dmx = pb & 0x7FFF;
-  dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = pb & 0x7FFF;
+	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
 
-  int dy = pc & 0x7FFF;
-  dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = pc & 0x7FFF;
+	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
 
-  int dmy = pd & 0x7FFF;
-  dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = pd & 0x7FFF;
+	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
 #else
-  int dx = pa & 0x7FFF;
-  if(pa & 0x8000)
-    dx |= 0xFFFF8000;
-  int dmx = pb & 0x7FFF;
-  if(pb & 0x8000)
-    dmx |= 0xFFFF8000;
-  int dy = pc & 0x7FFF;
-  if(pc & 0x8000)
-    dy |= 0xFFFF8000;
-  int dmy = pd & 0x7FFF;
-  if(pd & 0x8000)
-    dmy |= 0xFFFF8000;
+	int dx = pa & 0x7FFF;
+	if(pa & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = pb & 0x7FFF;
+	if(pb & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = pc & 0x7FFF;
+	if(pc & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = pd & 0x7FFF;
+	if(pd & 0x8000)
+		dmy |= 0xFFFF8000;
 #endif
 
-  if(VCOUNT == 0)
-    changed = 3;
+	if(VCOUNT == 0)
+		changed = 3;
 
-  currentX += dmx;
-  currentY += dmy;
+	currentX += dmx;
+	currentY += dmy;
 
-  if(changed & 1)
-  {
-	  currentX = (x_l) | ((x_h & 0x07FF)<<16);
-	  if(x_h & 0x0800)
-		  currentX |= 0xF8000000;
-  }
+	if(changed & 1)
+	{
+		currentX = (x_l) | ((x_h & 0x07FF)<<16);
+		if(x_h & 0x0800)
+			currentX |= 0xF8000000;
+	}
 
-  if(changed & 2)
-  {
-	  currentY = (y_l) | ((y_h & 0x07FF)<<16);
-	  if(y_h & 0x0800)
-		  currentY |= 0xF8000000;
-  }
+	if(changed & 2)
+	{
+		currentY = (y_l) | ((y_h & 0x07FF)<<16);
+		if(y_h & 0x0800)
+			currentY |= 0xF8000000;
+	}
 
-  int realX = currentX;
-  int realY = currentY;
+	int realX = currentX;
+	int realY = currentY;
 
-  if(control & 0x40) {
-    int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-    int y = VCOUNT - (VCOUNT % mosaicY);
-    realX = startX + y*dmx;
-    realY = startY + y*dmy;
-  }
+	if(control & 0x40) {
+		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+		int y = VCOUNT - (VCOUNT % mosaicY);
+		realX = startX + y*dmx;
+		realY = startY + y*dmy;
+	}
 
-  int xxx = (realX >> 8);
-  int yyy = (realY >> 8);
+	int xxx = (realX >> 8);
+	int yyy = (realY >> 8);
 
-  memset(line, -1, 240 * sizeof(u32));
-  for(u32 x = 0; x < 240u; ++x)
-  {
-	  if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
-		  line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+	memset(line, -1, 240 * sizeof(u32));
+	for(u32 x = 0; x < 240u; ++x)
+	{
+		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
+			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
-	  realX += dx;
-	  realY += dy;
+		realX += dx;
+		realY += dy;
 
-	  xxx = (realX >> 8);
-	  yyy = (realY >> 8);
-  }
+		xxx = (realX >> 8);
+		yyy = (realY >> 8);
+	}
 
 
-  int mosaicX = (MOSAIC & 0xF) + 1;
-  if(control & 0x40 && (mosaicX > 1))
-  {
-	  int m = 1;
-	  for(u32 i = 0; i < 239u; ++i)
-	  {
-		  line[i+1] = line[i];
-		  if(++m == mosaicX)
-		  {
-			  m = 1;
-			  ++i;
-		  }
-	  }
-  }
+	int mosaicX = (MOSAIC & 0xF) + 1;
+	if(control & 0x40 && (mosaicX > 1))
+	{
+		int m = 1;
+		for(u32 i = 0; i < 239u; ++i)
+		{
+			line[i+1] = line[i];
+			if(++m == mosaicX)
+			{
+				m = 1;
+				++i;
+			}
+		}
+	}
 }
 
 /* lineOBJpix is used to keep track of the drawn OBJs

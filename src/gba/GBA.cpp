@@ -91,7 +91,6 @@ int gfxBG3Y = 0;
 
 //int gfxLastVCOUNT = 0;
 
-#include "GBAGfx.h"
 
 int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
@@ -210,6 +209,8 @@ uint16_t IF       = 0x0000;
 uint16_t IME      = 0x0000;
 
 //END OF GLOBALS.CPP
+
+#include "GBAGfx.h"
 
 #ifdef USE_SWITICKS
 int SWITicks = 0;
@@ -2629,11 +2630,7 @@ void mode3RenderLine(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(changed);
 	}
 
 	gfxDrawSprites();
@@ -2685,11 +2682,7 @@ void mode3RenderLineNoWindow(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(changed);
 	}
 
 	gfxDrawSprites();
@@ -2812,11 +2805,7 @@ void mode3RenderLineAll(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(changed);
 	}
 
 	gfxDrawSprites();
@@ -3230,11 +3219,7 @@ void mode5RenderLine(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(changed);
 	}
 
 	gfxDrawSprites();
@@ -3287,11 +3272,7 @@ void mode5RenderLineNoWindow(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(changed);
 	}
 
 	gfxDrawSprites();
@@ -3382,11 +3363,7 @@ void mode5RenderLineAll(uint32_t *lineMix)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(changed);
 	}
 
 	gfxDrawSprites();
