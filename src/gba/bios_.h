@@ -115,7 +115,7 @@ static void BIOS_BitUnPack()
 	int revbits = 8 - bits;
 	// u32 value = 0;
 	u32 base = CPUReadMemory(header+4);
-	bool addBase = base & 0x80000000;
+	bool addBase = (base & 0x80000000) ? true : false;
 	base &= 0x7fffffff;
 	int dataSize = CPUReadByte(header+3);
 

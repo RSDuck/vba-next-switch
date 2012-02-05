@@ -40,7 +40,7 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	int mosaicX = (MOSAIC & 0x000F)+1;
 	int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
-	bool mosaicOn = control & 0x40;
+	bool mosaicOn = (control & 0x40) ? true : false;
 
 	if(mosaicOn)
 	{

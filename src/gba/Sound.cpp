@@ -142,8 +142,8 @@ static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict ad
 
 static void pcm_fifo_write_control( int data, int data2)
 {
-	pcm[0].enabled = data & 0x0300;
-	pcm[0].timer   = data & 0x0400;
+	pcm[0].enabled = (data & 0x0300) ? true : false;
+	pcm[0].timer   = (data & 0x0400) ? 1 : 0;
 
 	if ( data & 0x0800 )
 	{
@@ -171,8 +171,8 @@ static void pcm_fifo_write_control( int data, int data2)
 		pcm[0].pcm.last_time = time;
 	}
 
-	pcm[1].enabled = data2 & 0x0300;
-	pcm[1].timer   = data2 & 0x0400;
+	pcm[1].enabled = (data2 & 0x0300) ? true : false;
+	pcm[1].timer   = (data2 & 0x0400) ? 1 : 0;
 
 	if ( data2 & 0x0800 )
 	{
