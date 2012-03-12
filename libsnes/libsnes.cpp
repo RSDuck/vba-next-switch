@@ -140,7 +140,14 @@ EXPORT void snes_set_cartridge_basename(const char*)
 
 // SSNES extension.
 static snes_environment_t environ_cb;
-EXPORT void snes_set_environment(snes_environment_t cb) { environ_cb = cb; }
+EXPORT void snes_set_environment(snes_environment_t cb)
+{
+	bool dummy;
+	environ_cb = cb;
+	dummy = 0;
+	cb(SNES_ENVIRONMENT_SET_BATCH_LOAD, &dummy);
+	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, "gb|gbc|gba|dmg|DMG|GBA|GB|GBC|zip|ZIP");
+}
 static const char *full_path;
 
 EXPORT void snes_init(void)
@@ -305,7 +312,7 @@ void LoadImagePreferences()
 
 	if(found)
 	{
-		fprintf(stderr, "found ROM in vba-over list\n");
+		fprintf(stderr, "Found ROM in vba-over list.\n");
 
 		enableRtc = gbaover[found_no].rtcEnabled;
 
@@ -319,10 +326,10 @@ void LoadImagePreferences()
 		mirroringEnable = gbaover[found_no].mirroringEnabled;
 	}
 
-	fprintf(stderr, "RTC = %d\n", enableRtc);
-	fprintf(stderr, "flashSize = %d\n", flashSize);
-	fprintf(stderr, "cpuSaveType = %d\n", cpuSaveType);
-	fprintf(stderr, "mirroringEnable = %d\n", mirroringEnable);
+	fprintf(stderr, "RTC = %d.\n", enableRtc);
+	fprintf(stderr, "flashSize = %d.\n", flashSize);
+	fprintf(stderr, "cpuSaveType = %d.\n", cpuSaveType);
+	fprintf(stderr, "mirroringEnable = %d.\n", mirroringEnable);
 }
 
 static void gba_init(void)
