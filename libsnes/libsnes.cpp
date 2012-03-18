@@ -146,7 +146,7 @@ EXPORT void snes_set_environment(snes_environment_t cb)
 	environ_cb = cb;
 	dummy = 0;
 	cb(SNES_ENVIRONMENT_SET_BATCH_LOAD, &dummy);
-	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, "gb|gbc|gba|dmg|DMG|GBA|GB|GBC|zip|ZIP");
+	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, (void*)"gb|gbc|gba|dmg|DMG|GBA|GB|GBC|zip|ZIP");
 }
 static const char *full_path;
 
