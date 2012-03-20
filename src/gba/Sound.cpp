@@ -383,14 +383,6 @@ void soundTimerOverflow(int timer)
 		gba_pcm_fifo_timer_overflowed(1);
 }
 
-void flush_samples(Simple_Effects_Buffer * effects_buffer)
-{
-	// dump all the samples available
-	// VBA will only ever store 1 frame worth of samples
-	int numSamples = effects_buffer->read_samples( (int16_t*) soundFinalWave, effects_buffer->samples_avail() );
-	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
-}
-
 void psoundTickfn()
 {
 	// Run sound hardware to present

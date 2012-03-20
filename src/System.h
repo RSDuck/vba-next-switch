@@ -14,13 +14,10 @@ extern char special_action_msg[256];
 #endif
 
 extern bool systemPauseOnFrame();
-extern void systemGbPrint(uint8_t *,int,int,int,int);
 extern void systemScreenCapture(int);
 extern void systemDrawScreen();
 // updates the joystick data
 extern bool systemReadJoypads();
-// return information about the given joystick, -1 for default joystick
-extern void systemReadJoypadGB(int);
 extern uint32_t systemGetClock();
 extern void systemMessage(int, const char *, ...);
 extern void systemSetTitle(const char *);
@@ -36,7 +33,6 @@ extern void systemShowSpeed(int);
 extern void system10Frames(int);
 #endif
 extern void systemFrame();
-extern void systemGbBorderOn();
 
 #ifdef USE_FRAMESKIP
 extern void Sm60FPS_Init();

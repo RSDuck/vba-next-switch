@@ -71,9 +71,4 @@ extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() w
 // Saves/loads emulator state
 void soundSaveGameMem(uint8_t *& data);
 void soundReadGameMem(const uint8_t *& data, int version);
-
-class Simple_Effects_Buffer;
-
-void flush_samples(Simple_Effects_Buffer * buffer);
-
 #endif // SOUND_H

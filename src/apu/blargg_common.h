@@ -16,9 +16,6 @@ a Game Boy Advance emulator. */
 /* Uncomment to enable platform-specific (and possibly non-portable) optimizations. */
 #define BLARGG_NONPORTABLE 1
 
-/* Uncomment if automatic byte-order determination doesn't work */
-//#define BLARGG_BIG_ENDIAN 1
-
 #ifndef STATIC_CAST
 	#if __GNUC__ >= 4
 		#define STATIC_CAST(T,expr) static_cast<T> (expr)
@@ -40,17 +37,6 @@ public:
 	size_t size() const { return size_; }
 	T* begin() const { return begin_; }
 	T* end() const { return begin_ + size_; }
-	const char * resize( size_t n )
-	{
-		// TODO: blargg_common.cpp to hold this as an outline function, ugh
-		void* p = realloc( begin_, n * sizeof (T) );
-		if ( p )
-			begin_ = (T*) p;
-		else if ( n > size_ ) // realloc failure only a problem if expanding
-			return "Out of memory";
-		size_ = n;
-		return 0;
-	}
 	T& operator [] ( size_t n ) const
 	{
 		return begin_ [n];

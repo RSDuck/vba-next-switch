@@ -15,11 +15,8 @@ typedef struct {
 	int size;
 } variable_desc;
 
-void utilApplyIPS(const char *ips, uint8_t **rom, int *size);
 bool utilIsGBAImage(const char *);
 bool utilIsGBImage(const char *);
-bool utilIsGzipFile(const char *);
-bool utilIsZipFile(const char *);
 void utilStripDoubleExtension(const char *, char *);
 uint32_t utilFindType(const char *);
 uint8_t *utilLoad(const char *, bool (*)(const char*), uint8_t *, int &);

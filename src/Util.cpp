@@ -62,35 +62,10 @@ bool utilIsGBAImage(const char * file)
 	return false;
 }
 
-bool utilIsGBImage(const char * file)
-{
-	if(strlen(file) > 4)
-	{
-		const char * p = strrchr(file,'.');
-
-		if(p != NULL)
-		{
-			if((strcasecmp(p, ".dmg") == 0) ||
-					(strcasecmp(p, ".gb") == 0) ||
-					(strcasecmp(p, ".gbc") == 0) ||
-					(strcasecmp(p, ".cgb") == 0) ||
-					(strcasecmp(p, ".sgb") == 0))
-				return true;
-		}
-	}
-
-	return false;
-}
-
-static bool utilIsImage(const char *file)
-{
-	return utilIsGBAImage(file) || utilIsGBImage(file);
-}
-
 uint32_t utilFindType(const char *file)
 {
 	char buffer [2048];
-	if ( !utilIsImage( file ) ) /* TODO: utilIsArchive() instead?*/
+	if ( !utilIsGBAImage( file ) ) /* TODO: utilIsArchive() instead?*/
 		return IMAGE_UNKNOWN;
 
 	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_GB;
@@ -131,8 +106,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 		}
 	}
 
-   printf("Non-ZIP file detected: %s\n",file);
-   fread(image, 1, size, fp); /* read into buffer*/
+	fread(image, 1, size, fp); /* read into buffer*/
 	fclose(fp);
 	return image;
 }
