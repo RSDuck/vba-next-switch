@@ -24,7 +24,7 @@ void utilPutWord(uint8_t *, uint16_t);
 
 void utilGBAFindSave(const uint8_t *, const int);
 
-void utilUpdateSystemColorMaps();
+void utilUpdateSystemColorMaps (void);
 bool utilFileExists( const char *filename );
 
 void utilWriteIntMem(uint8_t *& data, int);

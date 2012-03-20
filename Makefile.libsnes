@@ -70,18 +70,13 @@ else
 endif
 
 VBA_DIR := src
-UTILS_DIR := utils
+LIBSNES_DIR := libsnes
 
-VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
-IGNORE_SRC := $(LIBSNES_DIR)/gbaconv.c
-
-VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
+VBA_CXXSRCS := $(VBA_DIR)/Util.cpp $(VBA_DIR)/gba/Sound.cpp $(VBA_DIR)/gba/Memory.cpp $(VBA_DIR)/gba/RTC.cpp $(VBA_DIR)/apu/Sound_Buffer.cpp $(VBA_DIR)/gba/GBA.cpp $(LIBSNES_DIR)/libsnes.cpp
 
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
-VBA_CSRCS := $(filter-out $(IGNORE_SRC),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c)))
-VBA_COBJ := $(VBA_CSRCS:.c=.o)
 
-OBJS := $(VBA_COBJ) $(VBA_CXXOBJ)
+OBJS := $(VBA_CXXOBJ)
 
 VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 

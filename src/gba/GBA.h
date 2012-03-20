@@ -101,13 +101,13 @@ extern bool CPUWriteState(const char *);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
-extern void applyTimer ();
+extern void applyTimer (void);
 extern void CPUInit(const char *,bool);
 extern void CPUReset();
 #ifdef USE_FRAMESKIP
 extern void CPULoop(int ticks);
 #else
-extern void CPULoop();
+extern void CPULoop(void);
 #endif
 extern void CPUCheckDMA(int,int);
 

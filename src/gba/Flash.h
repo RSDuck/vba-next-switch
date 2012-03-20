@@ -10,9 +10,9 @@ extern uint8_t flashRead(uint32_t address);
 extern void flashWrite(uint32_t address, uint8_t byte);
 extern void flashDelayedWrite(uint32_t address, uint8_t byte);
 extern void flashSaveDecide(uint32_t address, uint8_t byte);
-extern void flashReset();
+extern void flashReset(void);
 extern void flashSetSize(int size);
-extern void flashInit();
+extern void flashInit(void);
 
 extern int flashSize;
 

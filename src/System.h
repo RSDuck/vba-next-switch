@@ -53,7 +53,6 @@ extern void systemOnSoundShutdown();
 
 extern uint16_t systemColorMap16[0x10000];
 extern uint32_t systemColorMap32[0x10000];
-extern uint16_t systemGbPalette[24];
 
 extern int systemRedShift;
 extern int systemGreenShift;

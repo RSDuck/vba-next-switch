@@ -9,14 +9,14 @@
 
 // Initializes sound and returns true if successful. Sets sound quality to
 // current value in soundQuality global.
-bool soundInit();
+bool soundInit (void);
 
 // sets the Sound throttle
 void soundSetThrottle(unsigned short throttle);
 
 // Manages sound volume, where 1.0 is normal
 void soundSetVolume( float );
-float soundGetVolume();
+float soundGetVolume (void);
 
 // Manages muting bitmask. The bits control the following channels:
 // 0x001 Pulse 1
@@ -26,19 +26,19 @@ float soundGetVolume();
 // 0x100 PCM 1
 // 0x200 PCM 2
 void soundSetEnable( int mask );
-int  soundGetEnable();
+int  soundGetEnable (void);
 
 // Pauses/resumes system sound output
-void soundPause();
-void soundResume();
+void soundPause (void);
+void soundResume (void);
 extern bool soundPaused; // current paused state
 
 // Cleans up sound. Afterwards, soundInit() can be called again.
-void soundShutdown();
+void soundShutdown (void);
 
 //// GBA sound options
 
-long soundGetSampleRate();
+long soundGetSampleRate (void);
 void soundSetSampleRate(long sampleRate);
 
 // Sound settings

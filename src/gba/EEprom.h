@@ -4,10 +4,10 @@
 extern void eepromReadGameMem(const uint8_t *&data, int version);
 extern void eepromSaveGameMem(uint8_t *&data);
 
-extern int eepromRead(u32 address);
-extern void eepromWrite(u32 address, u8 value);
-extern void eepromInit();
-extern void eepromReset();
+extern int eepromRead(void);
+extern void eepromWrite(u8 value);
+extern void eepromInit(void);
+extern void eepromReset(void);
 
 #ifdef __LIBSNES__
 extern u8 *eepromData;

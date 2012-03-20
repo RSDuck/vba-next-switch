@@ -29,7 +29,6 @@ static snes_input_state_t input_cb;
 extern uint64_t joy;
 
 // Workaround for broken-by-design GBA save semantics.
-uint16_t systemGbPalette[24];
 uint8_t libsnes_save_buf[0x20000 + 0x2000];
 static unsigned libsnes_save_size = sizeof(libsnes_save_buf);
 
@@ -107,7 +106,7 @@ EXPORT unsigned snes_library_revision_minor(void)
 
 EXPORT const char *snes_library_id(void)
 {
-   return "VBANext";
+   return "VBA Next";
 }
 
 EXPORT void snes_set_video_refresh(snes_video_refresh_t cb)
@@ -146,7 +145,7 @@ EXPORT void snes_set_environment(snes_environment_t cb)
 	environ_cb = cb;
 	dummy = 0;
 	cb(SNES_ENVIRONMENT_SET_BATCH_LOAD, &dummy);
-	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, (void*)"gb|gbc|gba|dmg|DMG|GBA|GB|GBC|zip|ZIP");
+	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, (void*)"gba|GBA|zip|ZIP");
 }
 static const char *full_path;
 
@@ -377,8 +376,6 @@ EXPORT void snes_reset(void)
    CPUReset();
 }
 
-void systemReadJoypadGB(int) {}
-
 static void systemReadJoypadGBA(void)
 {
    poll_cb();
@@ -608,10 +605,4 @@ bool systemCanChangeSoundQuality()
 }
 
 void systemFrame()
-{}
-
-void systemGbPrint(unsigned char*, int, int, int, int)
-{}
-
-void systemGbBorderOn()
 {}

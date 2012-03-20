@@ -20,6 +20,8 @@ extern int systemBlueShift;
 extern uint16_t systemColorMap16[0x10000];
 extern uint32_t systemColorMap32[0x10000];
 
+extern bool cpuIsMultiBoot;
+
 void utilPutDword(uint8_t *p, uint32_t value)
 {
 	*p++ = value & 255;
@@ -33,9 +35,6 @@ void utilPutWord(uint8_t *p, uint16_t value)
 	*p++ = value & 255;
 	*p = (value >> 8) & 255;
 }
-
-
-extern bool cpuIsMultiBoot;
 
 bool utilIsGBAImage(const char * file)
 {
@@ -65,10 +64,14 @@ bool utilIsGBAImage(const char * file)
 uint32_t utilFindType(const char *file)
 {
 	char buffer [2048];
-	if ( !utilIsGBAImage( file ) ) /* TODO: utilIsArchive() instead?*/
-		return IMAGE_UNKNOWN;
+	uint32_t retval;
 
-	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_UNKNOWN;
+	if (utilIsGBAImage(file))
+		retval = IMAGE_GBA;
+	else
+		retval = IMAGE_UNKNOWN;
+
+	return retval;
 }
 
 static int utilGetSize(int size)
@@ -159,7 +162,7 @@ void utilGBAFindSave(const uint8_t *data, const int size)
 	flashSetSize(flashSize);
 }
 
-void utilUpdateSystemColorMaps()
+void utilUpdateSystemColorMaps (void)
 {
 	int i;
 

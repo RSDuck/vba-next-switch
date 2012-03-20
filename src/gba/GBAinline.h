@@ -95,8 +95,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
-				// no need to swap this
-				return eepromRead(address);
+				return eepromRead();	// no need to swap this
 			goto unreadable;
 		case 14:
 			if(cpuFlashEnabled | cpuSramEnabled)
@@ -195,8 +194,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
-				// no need to swap this
-				return  eepromRead(address);
+				return  eepromRead();	// no need to swap this
 			goto unreadable;
 		case 14:
 			if(cpuFlashEnabled | cpuSramEnabled)
@@ -268,7 +266,7 @@ static INLINE u8 CPUReadByte(u32 address)
 			return rom[address & 0x1FFFFFF];
 		case 13:
 			if(cpuEEPROMEnabled)
-				return eepromRead(address);
+				return eepromRead();
 			goto unreadable;
 		case 14:
 			if(cpuSramEnabled | cpuFlashEnabled)
@@ -333,7 +331,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x0D:
 			if(cpuEEPROMEnabled) {
-				eepromWrite(address, value);
+				eepromWrite(value);
 				break;
 			}
 			break;
@@ -382,7 +380,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
-				eepromWrite(address, (u8)value);
+				eepromWrite((u8)value);
 			break;
 		case 14:
 			if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)
@@ -498,7 +496,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
-				eepromWrite(address, b);
+				eepromWrite(b);
 			break;
 		case 14:
 			if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled))
