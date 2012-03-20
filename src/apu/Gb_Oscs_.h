@@ -15,12 +15,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #include "blargg_source.h"
 
-/* enables bug in early CGB units that causes problems in some games*/
-#define CGB_02 0
-
-/* enables CGB-05 zombie behavior*/
-#define CGB_05 0
-
 #define TRIGGER_MASK 0x80
 #define LENGTH_ENABLED 0x40
 
@@ -114,15 +108,7 @@ void Gb_Sweep_Square::clock_sweep()
 
 int Gb_Wave::access( unsigned addr ) const
 {
-	addr = phase & BANK_SIZE_MIN_ONE;
-	if ( mode == MODE_DMG )
-	{
-		addr++;
-		if ( delay > CLK_MUL )
-			return -1; // can only access within narrow time window while playing
-	}
-
-	addr >>= 1;
+	addr = (phase & BANK_SIZE_MIN_ONE) >> 1;
 	return addr & 0x0F;
 }
 
@@ -157,36 +143,23 @@ int Gb_Osc::write_trig( int frame_phase, int max_len, int old_data )
 
 INLINE void Gb_Env::zombie_volume( int old, int data )
 {
-        int v = volume;
-        if ( mode == MODE_AGB)
-        {
-                // CGB-05 behavior, very close to AGB behavior as well
-                if ( (old ^ data) & 8 )
-                {
-                        if ( !(old & 8) )
-                        {
-                                v++;
-                                if ( old & 7 )
-                                        v++;
-                        }
+	int v = volume;
 
-                        v = 16 - v;
-                }
-                else if ( (old & 0x0F) == 8 )
-                        v++;
-        }
-        else
-        {
-                // CGB-04&02 behavior, very close to MGB behavior as well
-                if ( !(old & 7) && env_enabled )
-                        v++;
-                else if ( !(old & 8) )
-                        v += 2;
+	// CGB-05 behavior, very close to AGB behavior as well
+	if ( (old ^ data) & 8 )
+	{
+		if ( !(old & 8) )
+		{
+			v++;
+			if ( old & 7 )
+				v++;
+		}
 
-                if ( (old ^ data) & 8 )
-                        v = 16 - v;
-        }
-        volume = v & 0x0F;
+		v = 16 - v;
+	}
+	else if ( (old & 0x0F) == 8 )
+		v++;
+	volume = v & 0x0F;
 }
 
 bool Gb_Env::write_register( int frame_phase, int reg, int old, int data )
@@ -290,8 +263,6 @@ INLINE void Gb_Wave::write_register( int frame_phase, int reg, int old_data, int
 			{
 				if ( !GB_WAVE_DAC_ENABLED() )
 					enabled = false;
-				else if ( mode == MODE_DMG && was_enabled && (unsigned) (delay - CLK_MUL_MUL_2) < CLK_MUL_MUL_2 )
-					corrupt_wave();
 				phase = 0;
 				delay    = period() + CLK_MUL_MUL_6;
 			}
@@ -328,12 +299,9 @@ void Gb_Square::run( int32_t time, int32_t end_time )
         int const duty_code = regs [1] >> 6;
         int32_t duty_offset = duty_offsets [duty_code];
         int32_t duty = duties [duty_code];
-        if ( mode == MODE_AGB )
-        {
-                /* AGB uses inverted duty*/
-                duty_offset -= duty;
-                duty = 8 - duty;
-        }
+	/* AGB uses inverted duty*/
+	duty_offset -= duty;
+	duty = 8 - duty;
         int ph = (phase + duty_offset) & 7;
 
         /* Determine what will be generated*/
@@ -347,9 +315,7 @@ void Gb_Square::run( int32_t time, int32_t end_time )
                         if ( enabled )
                                 vol = volume;
 
-                        amp = -DAC_BIAS;
-                        if ( mode == MODE_AGB )
-                                amp = -(vol >> 1);
+			amp = -(vol >> 1);
 
                         /* Play inaudible frequencies as constant amplitude*/
                         if ( GB_OSC_FREQUENCY() >= 0x7FA && delay < CLK_MUL_MUL_32 )
@@ -494,9 +460,7 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                         if ( enabled )
                                 vol = volume;
 
-                        amp = -DAC_BIAS;
-                        if ( mode == MODE_AGB )
-                                amp = -(vol >> 1);
+			amp = -(vol >> 1);
 
                         if ( !(phase & 1) )
                         {
@@ -506,11 +470,8 @@ void Gb_Noise::run( int32_t time, int32_t end_time )
                 }
 
                 /* AGB negates final output*/
-                if ( mode == MODE_AGB )
-                {
-                        vol = -vol;
-                        amp    = -amp;
-                }
+		vol = -vol;
+		amp    = -amp;
 
                 update_amp( time, amp );
         }

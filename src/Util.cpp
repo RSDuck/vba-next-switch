@@ -68,7 +68,7 @@ uint32_t utilFindType(const char *file)
 	if ( !utilIsGBAImage( file ) ) /* TODO: utilIsArchive() instead?*/
 		return IMAGE_UNKNOWN;
 
-	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_GB;
+	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_UNKNOWN;
 }
 
 static int utilGetSize(int size)
@@ -100,7 +100,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 		image = (uint8_t *)malloc(utilGetSize(size));
 		if(image == NULL)
 		{
-			systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
+			systemMessage(MSG_OUT_OF_MEMORY, "Failed to allocate memory for %s",
 					"data");
 			return NULL;
 		}

@@ -22,22 +22,26 @@ static  void thumbUnknownInsn(u32 opcode)
             (NEG(a) & POS(c)) |\
             (NEG(b) & POS(c))) ? true : false;
 #endif
+
 #ifndef ADDOVERFLOW
  #define ADDOVERFLOW(a, b, c) \
   V_FLAG = ((NEG(a) & NEG(b) & POS(c)) |\
             (POS(a) & POS(b) & NEG(c))) ? true : false;
 #endif
+
 #ifndef SUBCARRY
  #define SUBCARRY(a, b, c) \
   C_FLAG = ((NEG(a) & POS(b)) |\
             (NEG(a) & POS(c)) |\
             (POS(b) & POS(c))) ? true : false;
 #endif
+
 #ifndef SUBOVERFLOW
  #define SUBOVERFLOW(a, b, c)\
   V_FLAG = ((NEG(a) & POS(b) & POS(c)) |\
             (POS(a) & NEG(b) & NEG(c))) ? true : false;
 #endif
+
 #ifndef ADD_RD_RS_RN
  #define ADD_RD_RS_RN(N) \
    {\
@@ -51,6 +55,7 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef ADD_RD_RS_O3
  #define ADD_RD_RS_O3(N) \
    {\
@@ -64,9 +69,11 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef ADD_RD_RS_O3_0
 # define ADD_RD_RS_O3_0 ADD_RD_RS_O3
 #endif
+
 #ifndef ADD_RN_O8
  #define ADD_RN_O8(d) \
    {\
@@ -80,6 +87,7 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef CMN_RD_RS
  #define CMN_RD_RS \
    {\
@@ -92,6 +100,7 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef ADC_RD_RS
  #define ADC_RD_RS \
    {\
@@ -105,6 +114,7 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef SUB_RD_RS_RN
  #define SUB_RD_RS_RN(N) \
    {\
@@ -118,6 +128,7 @@ static  void thumbUnknownInsn(u32 opcode)
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef SUB_RD_RS_O3
  #define SUB_RD_RS_O3(N) \
    {\
@@ -131,6 +142,7 @@ static  void thumbUnknownInsn(u32 opcode)
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #endif
+
 #ifndef SUB_RD_RS_O3_0
 # define SUB_RD_RS_O3_0 SUB_RD_RS_O3
 #endif

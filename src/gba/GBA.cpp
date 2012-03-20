@@ -725,8 +725,7 @@ bool CPUExportEepromFile(const char *fileName)
 		FILE *file = fopen(fileName, "wb");
 
 		if(!file) {
-			systemMessage(MSG_ERROR_CREATING_FILE, N_("Error creating file %s"),
-					fileName);
+			systemMessage(MSG_ERROR_CREATING_FILE, "Error creating file %s", fileName);
 			return false;
 		}
 
@@ -763,8 +762,7 @@ bool CPUWriteBatteryFile(const char *fileName)
 		FILE *file = fopen(fileName, "wb");
 
 		if(!file) {
-			systemMessage(MSG_ERROR_CREATING_FILE, N_("Error creating file %s"),
-					fileName);
+			systemMessage(MSG_ERROR_CREATING_FILE, "Error creating file %s", fileName);
 			return false;
 		}
 
@@ -798,9 +796,6 @@ bool CPUReadGSASnapshot(const char *fileName)
 	FILE *file = fopen(fileName, "rb");
 
 	if(!file) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_CANNOT_OPEN_FILE, N_("Cannot open file %s"), fileName);
-#endif
 		return false;
 	}
 
@@ -834,12 +829,6 @@ bool CPUReadGSASnapshot(const char *fileName)
 		if(buffer2[i] < 32)
 			buffer2[i] = 32;
 	if(memcmp(buffer, buffer2, 16)) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_CANNOT_IMPORT_SNAPSHOT_FOR,
-				N_("Cannot import snapshot for %s. Current game is %s"),
-				buffer,
-				buffer2);
-#endif
 		fclose(file);
 		return false;
 	}
@@ -850,11 +839,6 @@ bool CPUReadGSASnapshot(const char *fileName)
 			return false;
 		}
 	} else {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_UNSUPPORTED_SNAPSHOT_FILE,
-				N_("Unsupported snapshot file %s"),
-				fileName);
-#endif
 		fclose(file);
 		return false;
 	}
@@ -873,9 +857,6 @@ bool CPUReadGSASPSnapshot(const char *fileName)
 	FILE *file = fopen(fileName, "rb");
 
 	if(!file) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_CANNOT_OPEN_FILE, N_("Cannot open file %s"), fileName);
-#endif
 		return false;
 	}
 
@@ -888,12 +869,6 @@ bool CPUReadGSASPSnapshot(const char *fileName)
 	romname[namesz] = 0;
 
 	if(memcmp(romname, savename, namesz)) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_CANNOT_IMPORT_SNAPSHOT_FOR,
-				N_("Cannot import snapshot for %s. Current game is %s"),
-				savename,
-				romname);
-#endif
 		fclose(file);
 		return false;
 	}
@@ -904,14 +879,6 @@ bool CPUReadGSASPSnapshot(const char *fileName)
 	footer[footersz] = 0;
 
 	if(memcmp(footer, gsvfooter, footersz)) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(0,
-				N_("Unsupported snapshot file %s. Footer '%s' at %u should be '%s'"),
-				fileName,
-				footer,
-				footerpos,
-				gsvfooter);
-#endif
 		fclose(file);
 		return false;
 	}
@@ -929,9 +896,6 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 	FILE *file = fopen(fileName, "wb");
 
 	if(!file) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_CANNOT_OPEN_FILE, N_("Cannot open file %s"), fileName);
-#endif
 		return false;
 	}
 
@@ -1167,18 +1131,10 @@ int CPULoadRom(const char *szFile)
 
 	rom = (uint8_t *)malloc(0x2000000);
 	if(rom == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"ROM");
-#endif
 		return 0;
 	}
 	workRAM = (uint8_t *)calloc(1, 0x40000);
 	if(workRAM == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"WRAM");
-#endif
 		return 0;
 	}
 
@@ -1207,64 +1163,36 @@ int CPULoadRom(const char *szFile)
 
 	bios = (uint8_t *)calloc(1,0x4000);
 	if(bios == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"BIOS");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	internalRAM = (uint8_t *)calloc(1,0x8000);
 	if(internalRAM == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"IRAM");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	graphics.paletteRAM = (uint8_t *)calloc(1,0x400);
 	if(graphics.paletteRAM == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"PRAM");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	vram = (uint8_t *)calloc(1, 0x20000);
 	if(vram == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"VRAM");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	oam = (uint8_t *)calloc(1, 0x400);
 	if(oam == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"OAM");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	pix = (uint8_t *)calloc(1, 4 * 241 * 162);
 	if(pix == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"PIX");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
 	ioMem = (uint8_t *)calloc(1, 0x400);
 	if(ioMem == NULL) {
-#ifdef CELL_VBA_DEBUG
-		systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
-				"IO");
-#endif
 		CPUCleanUp();
 		return 0;
 	}
@@ -3568,10 +3496,6 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 			gbaSaveType = 5;
 			break;
 		default:
-#ifdef CELL_VBA_DEBUG
-			systemMessage(MSG_UNSUPPORTED_SAVE_TYPE,
-					N_("Unsupported save type %d"), saveType);
-#endif
 			break;
 	}
 	if(eepromInUse)
@@ -3731,9 +3655,6 @@ void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 				bus.reg[17].I = bus.reg[SPSR_UND].I;
 			break;
 		default:
-#ifdef CELL_VBA_DEBUG
-			systemMessage(MSG_UNSUPPORTED_ARM_MODE, N_("Unsupported ARM mode %02x"), mode);
-#endif
 			break;
 	}
 	armMode = mode;
@@ -4851,10 +4772,6 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 		{
 			if(size == 0x4000)
 				useBios = true;
-#ifdef CELL_VBA_DEBUG
-			else
-				systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BIOS file size"));
-#endif
 		}
 	}
 

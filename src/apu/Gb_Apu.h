@@ -13,8 +13,6 @@ struct gb_apu_state_t;
 
 /* Resets hardware to initial power on state BEFORE boot ROM runs. Mode selects*/
 /* sound hardware. Additional AGB wave features are enabled separately.*/
-#define MODE_DMG	0
-#define MODE_CGB	1
 #define MODE_AGB	2
 
 #define START_ADDR	0xFF10
