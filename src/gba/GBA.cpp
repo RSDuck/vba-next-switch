@@ -107,10 +107,6 @@ uint32_t stop = 0x08000568;
 int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
-#ifdef USE_FRAMESKIP
-int frameSkip = 1;
-bool speedup = false;
-#endif
 bool cpuIsMultiBoot = false;
 bool speedHack = true;
 int cpuSaveType = 0;
@@ -268,12 +264,6 @@ uint32_t dma3Dest = 0;
 void (*cpuSaveGameFunc)(uint32_t,uint8_t) = flashSaveDecide;
 bool fxOn = false;
 bool windowOn = false;
-#ifdef USE_FRAMESKIP
-int frameCount = 0;
-#endif
-#ifdef USE_FRAMESKIP
-uint32_t lastTime = 0;
-#endif
 int count = 0;
 
 const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
@@ -5037,9 +5027,6 @@ void CPUReset()
 	renderLine = mode0RenderLine;
 	fxOn = false;
 	windowOn = false;
-#ifdef USE_FRAMESKIP
-	frameCount = 0;
-#endif
 	saveType = 0;
 	graphics.layerEnable = graphics.DISPCNT & graphics.layerSettings;
 
@@ -5154,9 +5141,6 @@ void CPUReset()
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-#ifdef USE_FRAMESKIP
-	lastTime = systemGetClock();
-#endif
 
 #ifdef USE_SWITICKS
 	SWITicks = 0;
@@ -5186,18 +5170,10 @@ void CPUInterrupt()
 	biosProtected[3] = 0xe5;
 }
 
-#ifdef USE_FRAMESKIP
-void CPULoop(int ticks)
-#else
-void CPULoop()
-#endif
+void CPULoop (void)
 {
 	bus.busPrefetchCount = 0;
-#ifdef USE_FRAMESKIP
-	ticks = 250000;
-#else
 	int ticks = 250000;
-#endif
 	int timerOverflow = 0;
 	// variable used by the CPU core
 	cpuTotalTicks = 0;
@@ -5278,11 +5254,6 @@ updateLoop:
 						CPUCompareVCOUNT();
 					}
 				} else {
-#ifdef USE_FRAMESKIP
-					int framesToSkip = systemFrameSkip;
-					if(speedup)
-						framesToSkip = 9; // try 6 FPS during speedup
-#endif
 
 					if(graphics.DISPSTAT & 2) {
 						// if in H-Blank, leave it and move to drawing mode
@@ -5293,26 +5264,6 @@ updateLoop:
 						graphics.DISPSTAT &= 0xFFFD;
 						if(VCOUNT == 160)
 						{
-#ifdef USE_FRAMESKIP
-							count++;
-							systemFrame();
-
-							if((count & 10) == 0)
-								system10Frames(60);
-							if(count == 60)
-							{
-								uint32_t time = systemGetClock();
-								if(time != lastTime)
-								{
-									uint32_t t = 100000/(time - lastTime);
-									systemShowSpeed(t);
-								}
-								else
-									systemShowSpeed(0);
-								lastTime = time;
-								count = 0;
-							}
-#endif
 							/* update joystick information */
 							P1 = 0x03FF ^ (joy & 0x3FF);
 #if 0
@@ -5344,9 +5295,6 @@ updateLoop:
 							// If no (m) code is enabled, apply the cheats at each LCDline
 							if((cheatsEnabled) && (mastercode==0))
 								remainingTicks += cheatsCheckKeys(P1^0x3FF, ext);
-#ifdef USE_FRAMESKIP
-							speedup = (ext & 1) ? true : false;
-#endif
 #endif
 
 							graphics.DISPSTAT |= 1;
@@ -5357,32 +5305,15 @@ updateLoop:
 								UPDATE_REG(0x202, IF);
 							}
 							CPUCheckDMA(1, 0x0f);
-#ifdef USE_FRAMESKIP
-							if(frameCount >= framesToSkip) {
-#endif
 								systemDrawScreen();
-#ifdef USE_FRAMESKIP
-								frameCount = 0;
-							} else
-								frameCount++;
-							if(systemPauseOnFrame())
-								ticks = 0;
-#endif
 						}
 
 						UPDATE_REG(0x04, graphics.DISPSTAT);
 						CPUCompareVCOUNT();
 
 					} else {
-#ifdef USE_FRAMESKIP
-						if(frameCount >= framesToSkip)
-						{
-#endif
 							//we only use 32bit color depth
 							(*renderLine)((uint32_t *)pix + 241 * (VCOUNT+1));
-#ifdef USE_FRAMESKIP
-						}
-#endif
 						// entering H-Blank
 						graphics.DISPSTAT |= 2;
 						UPDATE_REG(0x04, graphics.DISPSTAT);

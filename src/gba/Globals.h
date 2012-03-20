@@ -16,9 +16,6 @@ extern int saveType;
 extern bool useBios;
 extern bool skipBios;
 extern int frameSkip;
-#ifdef USE_FRAMESKIP
-extern bool speedup;
-#endif
 extern bool cpuIsMultiBoot;
 extern bool speedHack;
 extern int cpuSaveType;

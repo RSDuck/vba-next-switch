@@ -104,11 +104,7 @@ extern void CPUUpdateRegister(uint32_t, uint16_t);
 extern void applyTimer (void);
 extern void CPUInit(const char *,bool);
 extern void CPUReset();
-#ifdef USE_FRAMESKIP
-extern void CPULoop(int ticks);
-#else
 extern void CPULoop(void);
-#endif
 extern void CPUCheckDMA(int,int);
 
 #define R13_IRQ  18

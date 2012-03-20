@@ -4,9 +4,6 @@
 #include <stdint.h>
 
 // For backwards compatibility with the original VBA defines
-#ifdef FRAMESKIP
-#define USE_FRAMESKIP
-#endif
 
 #ifdef __CELLOS_LV2__
 extern uint32_t special_action_msg_expired;
@@ -29,16 +26,7 @@ extern int  systemGetSensorY();
 #endif
 extern bool systemCanChangeSoundQuality();
 extern void systemShowSpeed(int);
-#ifdef USE_FRAMESKIP
-extern void system10Frames(int);
-#endif
 extern void systemFrame();
-
-#ifdef USE_FRAMESKIP
-extern void Sm60FPS_Init();
-extern bool Sm60FPS_CanSkipFrame();
-extern void Sm60FPS_Sleep();
-#endif
 
 // sound functions
 extern bool systemSoundInit();
