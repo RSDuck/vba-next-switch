@@ -2,7 +2,6 @@
 #define SYSTEM_H
 
 #include <stdint.h>
-#include <zlib.h>
 
 // For backwards compatibility with the original VBA defines
 #ifdef FRAMESKIP

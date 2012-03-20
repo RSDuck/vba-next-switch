@@ -735,118 +735,13 @@ static variable_desc gba_state [] =
 	{ NULL, 0 }
 };
 
-// Reads and discards count bytes from in
-static void skip_read( gzFile in, int count )
-{
-	char buf [512];
-
-	do
-	{
-		int n = sizeof buf;
-		if ( n > count )
-			n = count;
-
-		count -= n;
-		utilGzRead( in, buf, n );
-	}while ( count );
-}
-
-void soundSaveGame( gzFile out )
-{
-	gb_apu->save_state( &state.apu );
-
-	// Be sure areas for expansion get written as zero
-	memset( dummy_state, 0, sizeof dummy_state );
-
-	utilWriteData( out, gba_state );
-}
-
-#ifdef __LIBSNES__
 void soundSaveGameMem(uint8_t *& data)
 {
    gb_apu->save_state(&state.apu);
    memset(dummy_state, 0, sizeof dummy_state);
    utilWriteDataMem(data, gba_state);
 }
-#endif
 
-void soundReadGame( gzFile in, int version )
-{
-	// Prepare APU and default state
-
-	//Begin of Reset APU
-	gb_apu->reset( MODE_AGB, true );
-
-	if ( stereo_buffer )
-		stereo_buffer->clear();
-
-	soundTicks = SOUND_CLOCK_TICKS;
-	//End of Reset APU
-
-	gb_apu->save_state( &state.apu );
-
-	if ( version > SAVE_GAME_VERSION_9 )
-		utilReadData( in, gba_state );
-	else
-	{
-		//Begin of soundReadGameOld
-		// Read main data
-		utilReadData( in, old_gba_state );
-		skip_read( in, 6*735 + 2*735 );
-
-
-		// Copy APU regs
-		ioMem [NR52] |= 0x80; // old sound played even when this wasn't set (power on)
-
-		state.apu.regs [gba_to_gb_sound( NR10 ) - 0xFF10] = ioMem [NR10];
-		state.apu.regs [gba_to_gb_sound( NR11 ) - 0xFF10] = ioMem [NR11];
-		state.apu.regs [gba_to_gb_sound( NR12 ) - 0xFF10] = ioMem [NR12];
-		state.apu.regs [gba_to_gb_sound( NR13 ) - 0xFF10] = ioMem [NR13];
-		state.apu.regs [gba_to_gb_sound( NR14 ) - 0xFF10] = ioMem [NR14];
-		state.apu.regs [gba_to_gb_sound( NR21 ) - 0xFF10] = ioMem [NR21];
-		state.apu.regs [gba_to_gb_sound( NR22 ) - 0xFF10] = ioMem [NR22];
-		state.apu.regs [gba_to_gb_sound( NR23 ) - 0xFF10] = ioMem [NR23];
-		state.apu.regs [gba_to_gb_sound( NR24 ) - 0xFF10] = ioMem [NR24];
-		state.apu.regs [gba_to_gb_sound( NR30 ) - 0xFF10] = ioMem [NR30];
-		state.apu.regs [gba_to_gb_sound( NR31 ) - 0xFF10] = ioMem [NR31];
-		state.apu.regs [gba_to_gb_sound( NR32 ) - 0xFF10] = ioMem [NR32];
-		state.apu.regs [gba_to_gb_sound( NR33 ) - 0xFF10] = ioMem [NR33];
-		state.apu.regs [gba_to_gb_sound( NR34 ) - 0xFF10] = ioMem [NR34];
-		state.apu.regs [gba_to_gb_sound( NR41 ) - 0xFF10] = ioMem [NR41];
-		state.apu.regs [gba_to_gb_sound( NR42 ) - 0xFF10] = ioMem [NR42];
-		state.apu.regs [gba_to_gb_sound( NR43 ) - 0xFF10] = ioMem [NR43];
-		state.apu.regs [gba_to_gb_sound( NR44 ) - 0xFF10] = ioMem [NR44];
-		state.apu.regs [gba_to_gb_sound( NR50 ) - 0xFF10] = ioMem [NR50];
-		state.apu.regs [gba_to_gb_sound( NR51 ) - 0xFF10] = ioMem [NR51];
-		state.apu.regs [gba_to_gb_sound( NR52 ) - 0xFF10] = ioMem [NR52];
-
-		// Copy wave RAM to both banks
-		memcpy( &state.apu.regs [0x20], &ioMem [0x90], 0x10 );
-		memcpy( &state.apu.regs [0x30], &ioMem [0x90], 0x10 );
-
-		// Read both banks of wave RAM if available
-		if ( version >= SAVE_GAME_VERSION_3 )
-			utilReadData( in, old_gba_state2 );
-
-		// Restore PCM
-		pcm [0].dac = state.soundDSAValue;
-		pcm [1].dac = state.soundDSBValue;
-
-		(void) utilReadInt( in ); // ignore quality
-		//End of soundReadGameOld
-	}
-
-	gb_apu->load_state( state.apu );
-	//Begin of Write SGCNT0_H
-	int data = (READ16LE( &ioMem [SGCNT0_H] ) & 0x770F);
-	WRITE16LE( &ioMem [SGCNT0_H], data & 0x770F );
-	pcm_fifo_write_control( data, data >> 4 );
-
-	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
-	//End of SGCNT0_H
-}
-
-#ifdef __LIBSNES__
 void soundReadGameMem(const uint8_t *& in_data, int)
 {
 	// Prepare APU and default state
@@ -873,4 +768,4 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 	//End of SGCNT0_H
 }
-#endif
+

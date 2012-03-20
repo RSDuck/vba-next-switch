@@ -94,13 +94,9 @@ extern bool CPUExportEepromFile(const char *);
 extern bool CPUImportEepromFile(const char *);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
-#ifdef __LIBSNES__
 extern bool CPUReadState_libgba(const uint8_t*, unsigned);
-#endif
 extern bool CPUWriteMemState(char *, int);
-#ifdef __LIBSNES__
 extern unsigned CPUWriteState_libgba(uint8_t*, unsigned);
-#endif
 extern bool CPUWriteState(const char *);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);

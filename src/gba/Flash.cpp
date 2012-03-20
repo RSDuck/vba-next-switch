@@ -70,25 +70,6 @@ void flashReset()
   flashBank = 0;
 }
 
-void flashSaveGame(gzFile gzFile)
-{
-  utilWriteData(gzFile, flashSaveData3);
-}
-
-void flashReadGame(gzFile gzFile, int version)
-{
-  if(version < SAVE_GAME_VERSION_5)
-    utilReadData(gzFile, flashSaveData);
-  else if(version < SAVE_GAME_VERSION_7) {
-    utilReadData(gzFile, flashSaveData2);
-    flashBank = 0;
-    flashSetSize(flashSize);
-  } else {
-    utilReadData(gzFile, flashSaveData3);
-  }
-}
-
-#ifdef __LIBSNES__
 void flashSaveGameMem(uint8_t *& data)
 {
    utilWriteDataMem(data, flashSaveData3);
@@ -97,19 +78,6 @@ void flashSaveGameMem(uint8_t *& data)
 void flashReadGameMem(const uint8_t *& data, int)
 {
    utilReadDataMem(data, flashSaveData3);
-}
-#endif
-
-void flashReadGameSkip(gzFile gzFile, int version)
-{
-  // skip the flash data in a save game
-  if(version < SAVE_GAME_VERSION_5)
-    utilReadDataSkip(gzFile, flashSaveData);
-  else if(version < SAVE_GAME_VERSION_7) {
-    utilReadDataSkip(gzFile, flashSaveData2);
-  } else {
-    utilReadDataSkip(gzFile, flashSaveData3);
-  }
 }
 
 void flashSetSize(int size)

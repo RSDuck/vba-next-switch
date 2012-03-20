@@ -215,17 +215,6 @@ void rtcReset()
 	rtcClockData.state = IDLE;
 }
 
-void rtcSaveGame(gzFile gzFile)
-{
-	utilGzWrite(gzFile, &rtcClockData, sizeof(rtcClockData));
-}
-
-void rtcReadGame(gzFile gzFile)
-{
-	utilGzRead(gzFile, &rtcClockData, sizeof(rtcClockData));
-}
-
-#ifdef __LIBSNES__
 void rtcSaveGameMem(uint8_t *& data)
 {
 	utilWriteMem(data, &rtcClockData, sizeof(rtcClockData));
@@ -235,5 +224,4 @@ void rtcReadGameMem(const uint8_t *& data)
 {
 	utilReadMem(&rtcClockData, data, sizeof(rtcClockData));
 }
-#endif
 

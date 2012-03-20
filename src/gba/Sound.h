@@ -69,13 +69,8 @@ extern int SOUND_CLOCK_TICKS;   // Number of 16.8 MHz clocks between calls to so
 extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() will be called
 
 // Saves/loads emulator state
-void soundSaveGame( gzFile );
-void soundReadGame( gzFile, int version );
-
-#ifdef __LIBSNES__
 void soundSaveGameMem(uint8_t *& data);
 void soundReadGameMem(const uint8_t *& data, int version);
-#endif
 
 class Simple_Effects_Buffer;
 

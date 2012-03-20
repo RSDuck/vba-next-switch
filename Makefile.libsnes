@@ -69,29 +69,19 @@ else
 	CXXFLAGS += -O3
 endif
 
-VBA_DIR := ./src
-UTILS_DIR := ./utils
+VBA_DIR := src
+UTILS_DIR := utils
 
-VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gb $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
+VBA_SRC_DIRS := $(LIBSNES_DIR) $(VBA_DIR) $(VBA_DIR)/gba $(VBA_DIR)/apu $(VBA_DIR)/common
 IGNORE_SRC := $(LIBSNES_DIR)/gbaconv.c
 
-ifeq ($(platform), ps3)
-   CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
-   VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
-else ifeq ($(platform), xenon)
-   CXX_BLACKLIST := $(VBA_DIR)/common/Patch.cpp
-   VBA_CXXSRCS := $(filter-out $(CXX_BLACKLIST),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp)))
-else
-   VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
-endif
+VBA_CXXSRCS := $(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.cpp))
 
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 VBA_CSRCS := $(filter-out $(IGNORE_SRC),$(foreach dir,$(VBA_SRC_DIRS),$(wildcard $(dir)/*.c)))
 VBA_COBJ := $(VBA_CSRCS:.c=.o)
-UTIL_SOURCES := $(wildcard $(UTILS_DIR)/zlib/*.c)
-UTIL_OBJS := $(UTIL_SOURCES:.c=.o)
 
-OBJS := $(VBA_COBJ) $(VBA_CXXOBJ) $(UTIL_OBJS)
+OBJS := $(VBA_COBJ) $(VBA_CXXOBJ)
 
 VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
@@ -101,8 +91,8 @@ else
 CODE_DEFINES = -std=gnu99
 endif
 
-CFLAGS += $(CODE_DEFINES) $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
-CXXFLAGS += $(fpic) $(VBA_DEFINES) -I$(UTILS_DIR)/zlib
+CFLAGS += $(CODE_DEFINES) $(fpic) $(VBA_DEFINES)
+CXXFLAGS += $(fpic) $(VBA_DEFINES)
 
 INCDIRS := -I$(VBA_DIR)
 LIBS :=

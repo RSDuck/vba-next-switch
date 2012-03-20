@@ -7,12 +7,7 @@ void rtcEnable(bool);
 bool rtcIsEnabled();
 void rtcReset();
 
-void rtcReadGame(gzFile gzFile);
-void rtcSaveGame(gzFile gzFile);
-
-#ifdef __LIBSNES__
 void rtcReadGameMem(const uint8_t *& data);
 void rtcSaveGameMem(uint8_t *& data);
-#endif
 
 #endif // RTC_H
