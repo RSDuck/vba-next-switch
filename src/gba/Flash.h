@@ -3,6 +3,8 @@
 
 #define FLASH_128K_SZ 0x20000
 
+extern int flashSize;
+
 extern void flashSaveGameMem(uint8_t *& data);
 extern void flashReadGameMem(const uint8_t *& data, int version);
 
@@ -13,8 +15,6 @@ extern void flashSaveDecide(uint32_t address, uint8_t byte);
 extern void flashReset(void);
 extern void flashSetSize(int size);
 extern void flashInit(void);
-
-extern int flashSize;
 
 #ifdef __LIBSNES__
 extern uint8_t *flashSaveMemory;

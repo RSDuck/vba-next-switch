@@ -1,14 +1,3 @@
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
-
-#include "Gb_Apu_.h"
-#include "Gb_Oscs_.h"
-#include "Sound_Buffer.h"
-#include "../System.h"
-
-/* Blip_Buffer 0.4.1. http://www.slack.net/~ant */
-
 /* Copyright (C) 2003-2007 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
 General Public License as published by the Free Software Foundation; either
@@ -20,9 +9,33 @@ details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
-#include "blargg_source.h"
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
 
-/* BLIP BUFFER */
+#include "blargg_source.h"
+#include "../System.h"
+#include "Gb_Apu.h"
+
+/*============================================================
+	GB APU
+============================================================ */
+
+#include "Gb_Apu_.h"
+
+/*============================================================
+	GB OSCS
+============================================================ */
+
+#include "Gb_Oscs_.h"
+
+#include "Sound_Buffer.h"
+
+/*============================================================
+	BLIP BUFFER
+============================================================ */
+
+/* Blip_Buffer 0.4.1. http://www.slack.net/~ant */
 
 #define FIXED_SHIFT 12
 #define SAL_FIXED_SHIFT 4096

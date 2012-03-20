@@ -42,7 +42,6 @@
 
 static int16_t   soundFinalWave [1600];
 long  soundSampleRate    = 22050;
-bool  soundPaused        = true;
 int   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
 int   soundTicks         = SOUND_CLOCK_TICKS_;
 
@@ -383,7 +382,7 @@ void soundTimerOverflow(int timer)
 		gba_pcm_fifo_timer_overflowed(1);
 }
 
-void psoundTickfn()
+void process_sound_tick_fn (void)
 {
 	// Run sound hardware to present
 	pcm[0].pcm.last_time -= SOUND_CLOCK_TICKS;
@@ -414,7 +413,7 @@ void psoundTickfn()
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
-static void apply_muting()
+static void apply_muting (void)
 {
 	// PCM
 	gba_pcm_apply_control(1, 0 );
@@ -477,39 +476,19 @@ static void remake_stereo_buffer (void)
 	pcm_synth.volume( 0.66 / 256 * SOUNDVOLUME_ );
 }
 
-void soundShutdown()
-{
-	systemOnSoundShutdown();
-}
-
-void soundPause()
-{
-	soundPaused = true;
-	systemSoundPause();
-}
-
-void soundResume()
-{
-	soundPaused = false;
-	systemSoundResume();
-}
-
-
-float soundGetVolume()
+float soundGetVolume (void)
 {
 	return SOUNDVOLUME;
 }
 
 
-int soundGetEnable()
+int soundGetEnable (void)
 {
 	return (soundEnableFlag & 0x30f);
 }
 
-void soundReset()
+void soundReset (void)
 {
-	systemSoundReset();
-
 	remake_stereo_buffer();
 	//Begin of Reset APU
 	gb_apu->reset( MODE_AGB, true );
@@ -520,7 +499,6 @@ void soundReset()
 	soundTicks = SOUND_CLOCK_TICKS;
 	//End of Reset APU
 
-	soundPaused = true;
 	SOUND_CLOCK_TICKS = SOUND_CLOCK_TICKS_;
 	soundTicks        = SOUND_CLOCK_TICKS_;
 
@@ -539,37 +517,11 @@ void soundReset()
 	// End of Sound Event (NR52)
 }
 
-bool soundInit()
-{
-	bool sound_driver_ok = systemSoundInit();
-
-	if ( !sound_driver_ok )
-		return false;
-
-	if (systemSoundInitDriver(soundSampleRate))
-		return false;
-
-	soundPaused = true;
-	return true;
-}
-
-void soundSetThrottle(unsigned short throttle)
-{
-   systemSoundSetThrottle(throttle);
-}
-
 void soundSetSampleRate(long sampleRate)
 {
 	if ( soundSampleRate != sampleRate )
 	{
 		soundSampleRate      = sampleRate;
-
-		if ( systemCanChangeSoundQuality() )
-		{
-			soundShutdown();
-			soundInit();
-		}
-
 		remake_stereo_buffer();
 	}
 }
@@ -660,10 +612,6 @@ static variable_desc old_gba_state [] =
 	SKIP( int, soundDSBTimer ),
 	LOAD( uint8_t [32], pcm [1].fifo ),
 	LOAD( int, state.soundDSBValue ),
-
-	// skipped manually
-	//LOAD( int, soundBuffer[0][0], 6*735 },
-	//LOAD( int, soundFinalWave[0], 2*735 },
 	{ NULL, 0 }
 };
 
@@ -729,9 +677,9 @@ static variable_desc gba_state [] =
 
 void soundSaveGameMem(uint8_t *& data)
 {
-   gb_apu->save_state(&state.apu);
-   memset(dummy_state, 0, sizeof dummy_state);
-   utilWriteDataMem(data, gba_state);
+	gb_apu->save_state(&state.apu);
+	memset(dummy_state, 0, sizeof dummy_state);
+	utilWriteDataMem(data, gba_state);
 }
 
 void soundReadGameMem(const uint8_t *& in_data, int)

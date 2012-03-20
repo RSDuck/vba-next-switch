@@ -7,6 +7,10 @@
 #include "Sound.h"
 #include "GBAcpu.h"
 
+#define CPUReadByteQuick(addr)		map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
+#define CPUReadHalfWordQuick(addr)	READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+#define CPUReadMemoryQuick(addr)	READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+
 extern const u32 objTilesAddress[3];
 
 extern bool stopState;
@@ -33,9 +37,7 @@ extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
 
-#define CPUReadByteQuick(addr)		map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
-#define CPUReadHalfWordQuick(addr)	READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
-#define CPUReadMemoryQuick(addr)	READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+extern u32 myROM[];
 
 static INLINE u32 CPUReadMemory(u32 address)
 {
@@ -119,7 +121,6 @@ unreadable:
 	return value;
 }
 
-extern u32 myROM[];
 
 static INLINE u32 CPUReadHalfWord(u32 address)
 {

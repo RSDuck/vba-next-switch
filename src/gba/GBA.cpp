@@ -3868,10 +3868,6 @@ void CPUSoftwareInterrupt(int comment)
 			BIOS_Diff16bitUnFilter();
 			break;
 		case 0x19:
-			if(bus.reg[0].I)
-				soundPause();
-			else
-				soundResume();
 			break;
 		case 0x1F:
 			BIOS_MIDI_KEY_2_FREQ();
@@ -5332,7 +5328,7 @@ updateLoop:
 			// mute sound
 			soundTicks -= clockTicks;
 			if(!soundTicks) {
-				psoundTickfn();
+				process_sound_tick_fn();
 				soundTicks += SOUND_CLOCK_TICKS;
 			}
 

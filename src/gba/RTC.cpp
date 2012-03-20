@@ -9,24 +9,24 @@
 #include "../NLS.h"
 
 /* RTC states */
-#define IDLE 0
-#define COMMAND 1
-#define DATA 2
-#define READDATA 3
+#define IDLE		0
+#define COMMAND		1
+#define DATA		2
+#define READDATA	3
 
 typedef struct {
-  u8 byte0;
-  u8 byte1;
-  u8 byte2;
-  u8 command;
-  int dataLen;
-  int bits;
-  int state;
-  u8 data[12];
-  // reserved variables for future
-  u8 reserved[12];
-  bool reserved2;
-  u32 reserved3;
+	u8 byte0;
+	u8 byte1;
+	u8 byte2;
+	u8 command;
+	int dataLen;
+	int bits;
+	int state;
+	u8 data[12];
+	// reserved variables for future
+	u8 reserved[12];
+	bool reserved2;
+	u32 reserved3;
 } RTCCLOCKDATA;
 
 static RTCCLOCKDATA rtcClockData;
@@ -37,7 +37,7 @@ void rtcEnable(bool e)
 	rtcEnabled = e;
 }
 
-bool rtcIsEnabled()
+bool rtcIsEnabled (void)
 {
 	return rtcEnabled;
 }
@@ -202,7 +202,7 @@ bool rtcWrite(u32 address, u16 value)
 	return true;
 }
 
-void rtcReset()
+void rtcReset (void)
 {
 	memset(&rtcClockData, 0, sizeof(rtcClockData));
 

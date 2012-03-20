@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef _MSC_VER
@@ -28,8 +29,19 @@ static snes_input_poll_t poll_cb;
 static snes_input_state_t input_cb;
 extern uint64_t joy;
 
-// Workaround for broken-by-design GBA save semantics.
-uint8_t libsnes_save_buf[0x20000 + 0x2000];
+u16 systemColorMap16[0x10000];
+u32 systemColorMap32[0x10000];
+int systemColorDepth = 32;
+int systemDebug = 0;
+int systemVerbose = 0;
+int systemFrameSkip = 0;
+int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+int systemSpeed = 0;
+int systemRedShift = 10;
+int systemGreenShift = 5;
+int systemBlueShift = 0;
+uint8_t libsnes_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
+
 static unsigned libsnes_save_size = sizeof(libsnes_save_buf);
 
 EXPORT uint8_t *snes_get_memory_data(unsigned id)
@@ -350,18 +362,16 @@ static void gba_init(void)
 		rtcEnable(enableRtc);
 	doMirroring(mirroringEnable);
 
-	soundInit();
 	soundSetSampleRate(32000);
 
 	CPUInit(0, false);
 	CPUReset();
 
 	soundReset();
-	soundResume();
 
-	uint8_t *state_buf = new uint8_t[2000000];
+	uint8_t * state_buf = (uint8_t*)malloc(2000000);
 	serialize_size = CPUWriteState_libgba(state_buf, 2000000);
-	delete[] state_buf;
+	free(state_buf);
 }
 
 EXPORT void snes_term(void) {}
@@ -502,29 +512,6 @@ EXPORT bool snes_get_region(void)
    return SNES_REGION_NTSC;
 }
 
-void systemOnSoundShutdown()
-{}
-
-void systemSoundNonblock(bool)
-{}
-
-void systemSoundSetThrottle(u16)
-{}
-
-bool systemSoundInitDriver(long)
-{
-   return true;
-}
-
-void systemSoundPause()
-{}
-
-void systemSoundReset()
-{}
-
-void systemSoundResume()
-{}
-
 void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 {
    for (int i = 0; i < length; i += 2)
@@ -577,32 +564,8 @@ void systemDrawScreen()
 }
 #endif
 
-// Stubs
-u16 systemColorMap16[0x10000];
-u32 systemColorMap32[0x10000];
-int systemColorDepth = 32;
-int systemDebug = 0;
-int systemVerbose = 0;
-int systemFrameSkip = 0;
-int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-int systemSpeed = 0;
-int systemRedShift = 10;
-int systemGreenShift = 5;
-int systemBlueShift = 0;
 
-void systemMessage(int, const char*, ...)
-{}
-
-
-bool systemSoundInit()
+void systemMessage(int, const char* str, ...)
 {
-   return true;
+	fprintf(stderr, str);
 }
-
-bool systemCanChangeSoundQuality()
-{
-   return true;
-}
-
-void systemFrame()
-{}

@@ -4,8 +4,8 @@
 u16 rtcRead(u32 address);
 bool rtcWrite(u32 address, u16 value);
 void rtcEnable(bool);
-bool rtcIsEnabled();
-void rtcReset();
+bool rtcIsEnabled (void);
+void rtcReset (void);
 
 void rtcReadGameMem(const uint8_t *& data);
 void rtcSaveGameMem(uint8_t *& data);
