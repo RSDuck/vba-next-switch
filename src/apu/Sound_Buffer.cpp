@@ -171,14 +171,15 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
 
 /* Stereo_Buffer*/
 
-Stereo_Buffer::Stereo_Buffer()
+Blip_Buffer bufs_buffer [BUFS_SIZE];
+int mixer_samples_read;
+
+void stereo_buffer_new (void)
 {
         mixer_samples_read = 0;
 }
 
-Stereo_Buffer::~Stereo_Buffer() { }
-
-const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
+const char * stereo_buffer_set_sample_rate( long rate, int msec )
 {
         mixer_samples_read = 0;
         for ( int i = BUFS_SIZE; --i >= 0; )
@@ -186,14 +187,14 @@ const char * Stereo_Buffer::set_sample_rate( long rate, int msec )
         return 0; 
 }
 
-void Stereo_Buffer::clock_rate( long rate )
+void stereo_buffer_clock_rate( long rate )
 {
 	bufs_buffer[2].factor_ = bufs_buffer [2].clock_rate_factor( rate );
 	bufs_buffer[1].factor_ = bufs_buffer [1].clock_rate_factor( rate );
 	bufs_buffer[0].factor_ = bufs_buffer [0].clock_rate_factor( rate );
 }
 
-void Stereo_Buffer::clear()
+void stereo_buffer_clear (void)
 {
         mixer_samples_read = 0;
 	bufs_buffer [2].clear();
@@ -201,33 +202,10 @@ void Stereo_Buffer::clear()
 	bufs_buffer [0].clear();
 }
 
-long Stereo_Buffer::read_samples( int16_t * out, long out_size )
-{
-	int pair_count;
+/* mixers use a single index value to improve performance on register-challenged processors
+ * offset goes from negative to zero*/
 
-        out_size = (STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size) ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
-
-        pair_count = int (out_size >> 1);
-        if ( pair_count )
-	{
-		mixer_read_pairs( out, pair_count );
-
-		bufs_buffer[2].remove_samples( mixer_samples_read );
-		bufs_buffer[1].remove_samples( mixer_samples_read );
-		bufs_buffer[0].remove_samples( mixer_samples_read );
-		mixer_samples_read = 0;
-	}
-        return out_size;
-}
-
-
-/* Stereo_Mixer*/
-
-/* mixers use a single index value to improve performance on register-challenged processors*/
-/* offset goes from negative to zero*/
-
-
-void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
+static INLINE void stereo_buffer_mixer_read_pairs( int16_t* out, int count )
 {
 	/* TODO: if caller never marks buffers as modified, uses mono*/
 	/* except that buffer isn't cleared, so caller can encounter*/
@@ -289,3 +267,24 @@ void Stereo_Buffer::mixer_read_pairs( int16_t* out, int count )
 		BLIP_READER_END( center, bufs_buffer[2] );
 	}
 }
+
+long stereo_buffer_read_samples( int16_t * out, long out_size )
+{
+	int pair_count;
+
+        out_size = (STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size) ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
+
+        pair_count = int (out_size >> 1);
+        if ( pair_count )
+	{
+		stereo_buffer_mixer_read_pairs( out, pair_count );
+
+		bufs_buffer[2].remove_samples( mixer_samples_read );
+		bufs_buffer[1].remove_samples( mixer_samples_read );
+		bufs_buffer[0].remove_samples( mixer_samples_read );
+		mixer_samples_read = 0;
+	}
+        return out_size;
+}
+
+

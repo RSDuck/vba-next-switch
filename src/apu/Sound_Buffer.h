@@ -211,20 +211,14 @@ struct channel_t {
 
 #define STEREO_BUFFER_SAMPLES_AVAILABLE() ((long)(bufs_buffer[0].offset_ -  mixer_samples_read) << 1)
 
-class Stereo_Buffer
-{
-	public:
-		Stereo_Buffer();
-		~Stereo_Buffer();
-		const char * set_sample_rate( long, int msec = BLIP_DEFAULT_LENGTH);
-		void clock_rate( long );
-		void clear();
-		long samples_avail() { return ((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1; }
-		long read_samples( int16_t*, long );
-		void mixer_read_pairs( int16_t* out, int count );
-		Blip_Buffer bufs_buffer [BUFS_SIZE];
-	private:
-		int mixer_samples_read;
-};
+extern Blip_Buffer bufs_buffer [BUFS_SIZE];
+extern int mixer_samples_read;
+
+void stereo_buffer_new (void);
+const char * stereo_buffer_set_sample_rate( long rate, int msec);
+void stereo_buffer_clock_rate( long rate );
+void stereo_buffer_clear (void);
+long stereo_buffer_read_samples( int16_t * out , long out_size );
+#define stereo_buffer_samples_avail() ((((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1))
 
 #endif

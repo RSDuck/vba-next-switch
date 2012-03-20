@@ -83,7 +83,6 @@ typedef struct
 
 static gba_pcm_fifo_t   pcm [2];
 static Gb_Apu*          gb_apu;
-static Stereo_Buffer*   stereo_buffer;
 
 static Blip_Synth pcm_synth; // 32 kHz, 16 kHz, 8 kHz
 
@@ -112,13 +111,13 @@ static void gba_pcm_apply_control( int pcm_idx, int idx )
 	switch ( ch )
 	{
 		case 1:
-			out = &stereo_buffer->bufs_buffer[1];
+			out = &bufs_buffer[1];
 			break;
 		case 2:
-			out = &stereo_buffer->bufs_buffer[0];
+			out = &bufs_buffer[0];
 			break;
 		case 3:
-			out = &stereo_buffer->bufs_buffer[2];
+			out = &bufs_buffer[2];
 			break;
 	}
 
@@ -402,14 +401,14 @@ void process_sound_tick_fn (void)
 	gb_apu->frame_time -= SOUND_CLOCK_TICKS;
 	gb_apu->last_time -= SOUND_CLOCK_TICKS;
 
-	stereo_buffer->bufs_buffer[2].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[2].factor_;
-	stereo_buffer->bufs_buffer[1].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[1].factor_;
-	stereo_buffer->bufs_buffer[0].offset_ += SOUND_CLOCK_TICKS * stereo_buffer->bufs_buffer[0].factor_;
+	bufs_buffer[2].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[2].factor_;
+	bufs_buffer[1].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[1].factor_;
+	bufs_buffer[0].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[0].factor_;
 
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = stereo_buffer->read_samples( (int16_t*) soundFinalWave, stereo_buffer->samples_avail() );
+	int numSamples = stereo_buffer_read_samples( (int16_t*) soundFinalWave, stereo_buffer_samples_avail() );
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
@@ -420,17 +419,10 @@ static void apply_muting (void)
 	gba_pcm_apply_control(1, 1 );
 
 	// APU
-	gb_apu->set_output( &stereo_buffer->bufs_buffer[2],
-	&stereo_buffer->bufs_buffer[0], &stereo_buffer->bufs_buffer[1], 0 );
-
-	gb_apu->set_output( &stereo_buffer->bufs_buffer[2],
-	&stereo_buffer->bufs_buffer[0], &stereo_buffer->bufs_buffer[1], 1 );
-
-	gb_apu->set_output( &stereo_buffer->bufs_buffer[2],
-	&stereo_buffer->bufs_buffer[0], &stereo_buffer->bufs_buffer[1], 2 );
-
-	gb_apu->set_output( &stereo_buffer->bufs_buffer[2],
-	&stereo_buffer->bufs_buffer[0], &stereo_buffer->bufs_buffer[1], 3 );
+	gb_apu->set_output( &bufs_buffer[2], &bufs_buffer[0], &bufs_buffer[1], 0 );
+	gb_apu->set_output( &bufs_buffer[2], &bufs_buffer[0], &bufs_buffer[1], 1 );
+	gb_apu->set_output( &bufs_buffer[2], &bufs_buffer[0], &bufs_buffer[1], 2 );
+	gb_apu->set_output( &bufs_buffer[2], &bufs_buffer[0], &bufs_buffer[1], 3 );
 }
 
 
@@ -443,12 +435,10 @@ static void remake_stereo_buffer (void)
 	gba_pcm_init();
 
 	// Stereo_Buffer
-	delete stereo_buffer;
-	stereo_buffer = 0;
 
-	stereo_buffer = new Stereo_Buffer; // TODO: handle out of memory
-	stereo_buffer->set_sample_rate( soundSampleRate ); // TODO: handle out of memory
-	stereo_buffer->clock_rate( CLOCK_RATE );
+	stereo_buffer_new();
+	stereo_buffer_set_sample_rate( soundSampleRate, BLIP_DEFAULT_LENGTH );
+	stereo_buffer_clock_rate( CLOCK_RATE );
 
 	// PCM
 	pcm [0].which = 0;
@@ -460,16 +450,12 @@ static void remake_stereo_buffer (void)
 		gb_apu = new Gb_Apu; // TODO: handle out of memory
 		gb_apu->reset( MODE_AGB, true );
 
-		if ( stereo_buffer )
-			stereo_buffer->clear();
+		stereo_buffer_clear();
 
 		soundTicks = SOUND_CLOCK_TICKS;
 	}
 
-	if ( stereo_buffer || ioMem )
-	{
-		apply_muting();
-	}
+	apply_muting();
 
 	gb_apu->volume(apu_vols [ioMem [SGCNT0_H] & 3] );
 
@@ -493,8 +479,7 @@ void soundReset (void)
 	//Begin of Reset APU
 	gb_apu->reset( MODE_AGB, true );
 
-	if ( stereo_buffer )
-		stereo_buffer->clear();
+	stereo_buffer_clear();
 
 	soundTicks = SOUND_CLOCK_TICKS;
 	//End of Reset APU
@@ -689,8 +674,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 	//Begin of Reset APU
 	gb_apu->reset( MODE_AGB, true );
 
-	if ( stereo_buffer )
-		stereo_buffer->clear();
+	stereo_buffer_clear();
 
 	soundTicks = SOUND_CLOCK_TICKS;
 	//End of Reset APU
