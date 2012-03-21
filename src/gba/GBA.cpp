@@ -3686,14 +3686,8 @@ void CPUSoftwareInterrupt(int comment)
 			cpuNextEvent = cpuTotalTicks;
 			break;
 		case 0x04:
-			CPUSoftwareInterrupt_();
-			break;
 		case 0x05:
-			CPUSoftwareInterrupt_();
-			break;
 		case 0x06:
-			CPUSoftwareInterrupt_();
-			break;
 		case 0x07:
 			CPUSoftwareInterrupt_();
 			break;
