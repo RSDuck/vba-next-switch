@@ -99,7 +99,7 @@ static INLINE int codeTicksAccess(u32 address, u8 bit32) // THUMB NON SEQ
 
 	addr = (address>>24) & 15;
 
-	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+	if (unsigned(addr - 0x08) <= 5)
 	{
 		if (bus.busPrefetchCount&0x1)
 		{
@@ -126,7 +126,7 @@ static INLINE int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 {
 	int addr = (address>>24) & 15;
 
-	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+	if (unsigned(addr - 0x08) <= 5)
 	{
 		if (bus.busPrefetchCount&0x1)
 		{
@@ -149,7 +149,7 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
 	int addr = (address>>24)&15;
 
-	if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+	if (unsigned(addr - 0x08) <= 5)
 	{
 		if (bus.busPrefetchCount&0x1)
 		{
