@@ -468,7 +468,6 @@ static  void thumb40_0(u32 opcode)
   int dest = opcode & 7;
   u32 val = (bus.reg[dest].I & bus.reg[(opcode >> 3)&7].I);
   
-  //bus.reg[dest].I &= bus.reg[(opcode >> 3)&7].I;
   N_FLAG = val & 0x80000000 ? true : false;
   Z_FLAG = val ? false : true;
 
@@ -1585,55 +1584,47 @@ static insnfunc_t thumbInsnTable[1024] = {
 
 int thumbExecute()
 {
-	#ifdef USE_CACHE_PREFETCH
-		// cache the clockTicks, it's used during operations and generates LHS without it
-		#ifdef __ANDROID__
-			prefetch(&clockTicks);
-		#else
-			 __dcbt(&clockTicks);
-		#endif
-	#endif
-	 
 	int ct = 0;
-	
-  do {
-    
-    clockTicks = 0;
 
-    //if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
-    //    bus.busPrefetchCount=0x100;
+	do
+	{
 
-    u32 opcode = cpuPrefetch[0];
-    cpuPrefetch[0] = cpuPrefetch[1];
+		clockTicks = 0;
 
-    bus.busPrefetch = false;
-    if (bus.busPrefetchCount & 0xFFFFFF00)
-      bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
-    
-    u32 oldArmNextPC = bus.armNextPC;
+		//if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
+		//    bus.busPrefetchCount=0x100;
 
-    bus.armNextPC = bus.reg[15].I;
-    bus.reg[15].I += 2;
-    THUMB_PREFETCH_NEXT;
+		u32 opcode = cpuPrefetch[0];
+		cpuPrefetch[0] = cpuPrefetch[1];
 
-    (*thumbInsnTable[opcode>>6])(opcode);
+		bus.busPrefetch = false;
+		if (bus.busPrefetchCount & 0xFFFFFF00)
+			bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
 
-	ct = clockTicks;
+		u32 oldArmNextPC = bus.armNextPC;
 
-	if (ct < 0)
-      return 0;
+		bus.armNextPC = bus.reg[15].I;
+		bus.reg[15].I += 2;
+		THUMB_PREFETCH_NEXT;
 
-	/// better pipelining
-    if (ct==0)
-      clockTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+		(*thumbInsnTable[opcode>>6])(opcode);
 
-    cpuTotalTicks += clockTicks;
+		ct = clockTicks;
+
+		if (ct < 0)
+			return 0;
+
+		/// better pipelining
+		if (ct==0)
+			clockTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+		cpuTotalTicks += clockTicks;
 
 
 #ifdef USE_SWITICKS
-  } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
+	} while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 #else
-  } while ((cpuTotalTicks < cpuNextEvent) & ~armState & ~holdState);
+	} while ((cpuTotalTicks < cpuNextEvent) & ~armState & ~holdState);
 #endif
-  return 1;
+	return 1;
 }

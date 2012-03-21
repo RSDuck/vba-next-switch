@@ -2196,21 +2196,12 @@ static insnfunc_t armInsnTable[4096] = {
 // Wrapper routine (execution loop) ///////////////////////////////////////
 int armExecute()
 {
-#ifdef USE_CACHE_PREFETCH
-	// cache the clockTicks, it's used during operations and generates LHS without it
-	#ifdef __ANDROID__
-		prefetch(&clockTicks);
-	#else
-		 __dcbt(&clockTicks);
-	#endif
-#endif
-
-	u32 cond1;
-	u32 cond2;
+	u32 cond1, cond2;
 
 	int ct = 0;
 
-    do {
+	do
+	{
 		
 		clockTicks = 0;
 		

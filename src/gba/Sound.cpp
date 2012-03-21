@@ -426,15 +426,6 @@ static void gba_pcm_fifo_timer_overflowed( unsigned pcm_idx )
 	}
 }
 
-
-static int gba_to_gb_sound( int addr )
-{
-	if ( addr >= 0x60 && addr < 0xA0 )
-		return table [addr - 0x60];
-	return 0;
-}
-
-
 void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 {
 	for(uint32_t i = 0; i < 2; i++)
