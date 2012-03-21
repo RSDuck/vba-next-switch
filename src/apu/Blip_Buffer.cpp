@@ -29,7 +29,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 #include "Gb_Oscs_.h"
 
-#include "Sound_Buffer.h"
+#include "Blip_Buffer.h"
 
 /*============================================================
 	BLIP BUFFER
@@ -139,7 +139,7 @@ long Blip_Buffer::read_samples( int16_t * out, long count)
 
 	do
 	{
-		int32_t s = BLIP_READER_READ( reader );
+		int32_t s = reader_reader_accum >> 14;
 		BLIP_READER_NEXT_IDX_( reader, offset );
 		BLIP_CLAMP( s, s );
 		out_tmp [offset] = (int16_t) s;
@@ -168,123 +168,3 @@ void Blip_Buffer::load_state( blip_buffer_state_t const& in )
         reader_accum_ = in.reader_accum_;
         memcpy( buffer_, in.buf, sizeof(in.buf));
 }
-
-/* Stereo_Buffer*/
-
-Blip_Buffer bufs_buffer [BUFS_SIZE];
-int mixer_samples_read;
-
-void stereo_buffer_new (void)
-{
-        mixer_samples_read = 0;
-}
-
-const char * stereo_buffer_set_sample_rate( long rate, int msec )
-{
-        mixer_samples_read = 0;
-        for ( int i = BUFS_SIZE; --i >= 0; )
-                RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
-        return 0; 
-}
-
-void stereo_buffer_clock_rate( long rate )
-{
-	bufs_buffer[2].factor_ = bufs_buffer [2].clock_rate_factor( rate );
-	bufs_buffer[1].factor_ = bufs_buffer [1].clock_rate_factor( rate );
-	bufs_buffer[0].factor_ = bufs_buffer [0].clock_rate_factor( rate );
-}
-
-void stereo_buffer_clear (void)
-{
-        mixer_samples_read = 0;
-	bufs_buffer [2].clear();
-	bufs_buffer [1].clear();
-	bufs_buffer [0].clear();
-}
-
-/* mixers use a single index value to improve performance on register-challenged processors
- * offset goes from negative to zero*/
-
-static INLINE void stereo_buffer_mixer_read_pairs( int16_t* out, int count )
-{
-	/* TODO: if caller never marks buffers as modified, uses mono*/
-	/* except that buffer isn't cleared, so caller can encounter*/
-	/* subtle problems and not realize the cause.*/
-	mixer_samples_read += count;
-	int16_t* outtemp = out + count * STEREO;
-
-	/* do left + center and right + center separately to reduce register load*/
-	Blip_Buffer* buf = &bufs_buffer [2];
-	{
-		--buf;
-		--outtemp;
-
-		BLIP_READER_BEGIN( side,   *buf );
-		BLIP_READER_BEGIN( center, bufs_buffer[2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
-		BLIP_READER_ADJ_( center, mixer_samples_read );
-
-		int offset = -count;
-		do
-		{
-			int s = (center_reader_accum + side_reader_accum) >> 14;
-			BLIP_READER_NEXT_IDX_( side,   offset );
-			BLIP_READER_NEXT_IDX_( center, offset );
-			BLIP_CLAMP( s, s );
-
-			++offset; /* before write since out is decremented to slightly before end*/
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
-
-		BLIP_READER_END( side,   *buf );
-	}
-	{
-		--buf;
-		--outtemp;
-
-		BLIP_READER_BEGIN( side,   *buf );
-		BLIP_READER_BEGIN( center, bufs_buffer[2] );
-
-		BLIP_READER_ADJ_( side,   mixer_samples_read );
-		BLIP_READER_ADJ_( center, mixer_samples_read );
-
-		int offset = -count;
-		do
-		{
-			int s = (center_reader_accum + side_reader_accum) >> 14;
-			BLIP_READER_NEXT_IDX_( side,   offset );
-			BLIP_READER_NEXT_IDX_( center, offset );
-			BLIP_CLAMP( s, s );
-
-			++offset; /* before write since out is decremented to slightly before end*/
-			outtemp [offset * STEREO] = (int16_t) s;
-		}while ( offset );
-
-		BLIP_READER_END( side,   *buf );
-
-		/* only end center once*/
-		BLIP_READER_END( center, bufs_buffer[2] );
-	}
-}
-
-long stereo_buffer_read_samples( int16_t * out, long out_size )
-{
-	int pair_count;
-
-        out_size = (STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size) ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
-
-        pair_count = int (out_size >> 1);
-        if ( pair_count )
-	{
-		stereo_buffer_mixer_read_pairs( out, pair_count );
-
-		bufs_buffer[2].remove_samples( mixer_samples_read );
-		bufs_buffer[1].remove_samples( mixer_samples_read );
-		bufs_buffer[0].remove_samples( mixer_samples_read );
-		mixer_samples_read = 0;
-	}
-        return out_size;
-}
-
-

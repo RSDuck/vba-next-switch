@@ -11,7 +11,7 @@
 #include "../System.h"
 
 #include "../apu/Gb_Apu.h"
-#include "../apu/Sound_Buffer.h"
+#include "../apu/Blip_Buffer.h"
 
 #define NR10 0x60
 #define NR11 0x62
@@ -86,6 +86,9 @@ static Gb_Apu*          gb_apu;
 
 static Blip_Synth pcm_synth; // 32 kHz, 16 kHz, 8 kHz
 
+static Blip_Buffer bufs_buffer [BUFS_SIZE];
+static int mixer_samples_read;
+
 static void gba_pcm_init (void)
 {
 	pcm[0].pcm.output    = 0;
@@ -128,6 +131,124 @@ static void gba_pcm_apply_control( int pcm_idx, int idx )
 		pcm[pcm_idx].pcm.last_amp = 0;
 		pcm[pcm_idx].pcm.output = out;
 	}
+}
+
+/*============================================================
+	STEREO BUFFER
+============================================================ */
+
+/* Uses three buffers (one for center) and outputs stereo sample pairs. */
+
+#define STEREO_BUFFER_SAMPLES_AVAILABLE() ((long)(bufs_buffer[0].offset_ -  mixer_samples_read) << 1)
+#define stereo_buffer_samples_avail() ((((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1))
+
+
+static const char * stereo_buffer_set_sample_rate( long rate, int msec )
+{
+        mixer_samples_read = 0;
+        for ( int i = BUFS_SIZE; --i >= 0; )
+                RETURN_ERR( bufs_buffer [i].set_sample_rate( rate, msec ) );
+        return 0; 
+}
+
+static void stereo_buffer_clock_rate( long rate )
+{
+	bufs_buffer[2].factor_ = bufs_buffer [2].clock_rate_factor( rate );
+	bufs_buffer[1].factor_ = bufs_buffer [1].clock_rate_factor( rate );
+	bufs_buffer[0].factor_ = bufs_buffer [0].clock_rate_factor( rate );
+}
+
+static void stereo_buffer_clear (void)
+{
+        mixer_samples_read = 0;
+	bufs_buffer [2].clear();
+	bufs_buffer [1].clear();
+	bufs_buffer [0].clear();
+}
+
+/* mixers use a single index value to improve performance on register-challenged processors
+ * offset goes from negative to zero*/
+
+static INLINE void stereo_buffer_mixer_read_pairs( int16_t* out, int count )
+{
+	/* TODO: if caller never marks buffers as modified, uses mono*/
+	/* except that buffer isn't cleared, so caller can encounter*/
+	/* subtle problems and not realize the cause.*/
+	mixer_samples_read += count;
+	int16_t* outtemp = out + count * STEREO;
+
+	/* do left + center and right + center separately to reduce register load*/
+	Blip_Buffer* buf = &bufs_buffer [2];
+	{
+		--buf;
+		--outtemp;
+
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
+
+		BLIP_READER_ADJ_( side,   mixer_samples_read );
+		BLIP_READER_ADJ_( center, mixer_samples_read );
+
+		int offset = -count;
+		do
+		{
+			int s = (center_reader_accum + side_reader_accum) >> 14;
+			BLIP_READER_NEXT_IDX_( side,   offset );
+			BLIP_READER_NEXT_IDX_( center, offset );
+			BLIP_CLAMP( s, s );
+
+			++offset; /* before write since out is decremented to slightly before end*/
+			outtemp [offset * STEREO] = (int16_t) s;
+		}while ( offset );
+
+		BLIP_READER_END( side,   *buf );
+	}
+	{
+		--buf;
+		--outtemp;
+
+		BLIP_READER_BEGIN( side,   *buf );
+		BLIP_READER_BEGIN( center, bufs_buffer[2] );
+
+		BLIP_READER_ADJ_( side,   mixer_samples_read );
+		BLIP_READER_ADJ_( center, mixer_samples_read );
+
+		int offset = -count;
+		do
+		{
+			int s = (center_reader_accum + side_reader_accum) >> 14;
+			BLIP_READER_NEXT_IDX_( side,   offset );
+			BLIP_READER_NEXT_IDX_( center, offset );
+			BLIP_CLAMP( s, s );
+
+			++offset; /* before write since out is decremented to slightly before end*/
+			outtemp [offset * STEREO] = (int16_t) s;
+		}while ( offset );
+
+		BLIP_READER_END( side,   *buf );
+
+		/* only end center once*/
+		BLIP_READER_END( center, bufs_buffer[2] );
+	}
+}
+
+static long stereo_buffer_read_samples( int16_t * out, long out_size )
+{
+	int pair_count;
+
+        out_size = (STEREO_BUFFER_SAMPLES_AVAILABLE() < out_size) ? STEREO_BUFFER_SAMPLES_AVAILABLE() : out_size;
+
+        pair_count = int (out_size >> 1);
+        if ( pair_count )
+	{
+		stereo_buffer_mixer_read_pairs( out, pair_count );
+
+		bufs_buffer[2].remove_samples( mixer_samples_read );
+		bufs_buffer[1].remove_samples( mixer_samples_read );
+		bufs_buffer[0].remove_samples( mixer_samples_read );
+		mixer_samples_read = 0;
+	}
+        return out_size;
 }
 
 static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
@@ -408,7 +529,7 @@ void process_sound_tick_fn (void)
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
-	int numSamples = stereo_buffer_read_samples( (int16_t*) soundFinalWave, stereo_buffer_samples_avail() );
+	int numSamples = stereo_buffer_read_samples( (int16_t*) soundFinalWave, stereo_buffer_samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
 }
 
@@ -436,7 +557,7 @@ static void remake_stereo_buffer (void)
 
 	// Stereo_Buffer
 
-	stereo_buffer_new();
+        mixer_samples_read = 0;
 	stereo_buffer_set_sample_rate( soundSampleRate, BLIP_DEFAULT_LENGTH );
 	stereo_buffer_clock_rate( CLOCK_RATE );
 

@@ -124,9 +124,6 @@ class Blip_Synth
         int32_t name##_reader_accum = (blip_buffer).reader_accum_
 
 
-/* Current sample */
-#define BLIP_READER_READ( name )        (name##_reader_accum >> 14)
-
 /* Advances to next sample*/
 #define BLIP_READER_NEXT( name, bass ) \
         (void) (name##_reader_accum += *name##_reader_buf++ - (name##_reader_accum >> (bass)))
@@ -206,19 +203,5 @@ struct channel_t {
 	Blip_Buffer* left;
 	Blip_Buffer* right;
 };
-
-/* Uses three buffers (one for center) and outputs stereo sample pairs. */
-
-#define STEREO_BUFFER_SAMPLES_AVAILABLE() ((long)(bufs_buffer[0].offset_ -  mixer_samples_read) << 1)
-
-extern Blip_Buffer bufs_buffer [BUFS_SIZE];
-extern int mixer_samples_read;
-
-void stereo_buffer_new (void);
-const char * stereo_buffer_set_sample_rate( long rate, int msec);
-void stereo_buffer_clock_rate( long rate );
-void stereo_buffer_clear (void);
-long stereo_buffer_read_samples( int16_t * out , long out_size );
-#define stereo_buffer_samples_avail() ((((bufs_buffer [0].offset_ >> BLIP_BUFFER_ACCURACY) - mixer_samples_read) << 1))
 
 #endif

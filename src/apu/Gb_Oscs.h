@@ -6,7 +6,7 @@
 
 #include "blargg_common.h"
 #include "blargg_source.h"
-#include "Sound_Buffer.h"
+#include "Blip_Buffer.h"
 
 #define	CLK_MUL	GB_APU_OVERCLOCK
 #define CLK_MUL_MUL_2 8
