@@ -2306,9 +2306,6 @@ int armExecute()
             (*armInsnTable[(cond1| cond2)])(opcode);
 
 		}
-#ifdef INSN_COUNTER
-        count(opcode, cond_res);
-#endif		
 		ct = clockTicks;
 
         if (ct < 0)
