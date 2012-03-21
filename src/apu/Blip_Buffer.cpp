@@ -110,15 +110,6 @@ uint32_t Blip_Buffer::clock_rate_factor( long rate ) const
         return (uint32_t) factor;
 }
 
-void Blip_Buffer::remove_samples( long count )
-{
-	offset_ -= (uint32_t) count << BLIP_BUFFER_ACCURACY;
-
-	/* copy remaining samples to beginning and clear old samples*/
-	long remain = (offset_ >> BLIP_BUFFER_ACCURACY) + BLIP_BUFFER_EXTRA_;
-	memmove( buffer_, buffer_ + count, remain * sizeof *buffer_ );
-	memset( buffer_ + remain, 0, count * sizeof(*buffer_));
-}
 
 /* Blip_Synth */
 
@@ -126,31 +117,6 @@ Blip_Synth::Blip_Synth()
 {
         buf          = 0;
         delta_factor = 0;
-}
-
-long Blip_Buffer::read_samples( int16_t * out, long count)
-{
-	const int32_t * reader_reader_buf = buffer_;
-	int32_t reader_reader_accum = reader_accum_;
-
-	BLIP_READER_ADJ_( reader, count );
-	int16_t * out_tmp = out + count;
-	int32_t offset = (int32_t) -count;
-
-	do
-	{
-		int32_t s = reader_reader_accum >> 14;
-		BLIP_READER_NEXT_IDX_( reader, offset );
-		BLIP_CLAMP( s, s );
-		out_tmp [offset] = (int16_t) s;
-	}
-	while ( ++offset );
-
-        reader_accum_ = reader_reader_accum;
-
-	remove_samples( count );
-
-	return count;
 }
 
 void Blip_Buffer::save_state( blip_buffer_state_t* out )

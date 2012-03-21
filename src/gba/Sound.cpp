@@ -232,6 +232,28 @@ static INLINE void stereo_buffer_mixer_read_pairs( int16_t* out, int count )
 	}
 }
 
+static void blip_buffer_remove_all_samples( long count )
+{
+	uint32_t new_offset = (uint32_t)count << BLIP_BUFFER_ACCURACY;
+	/* BLIP BUFFER #1 */
+	bufs_buffer[0].offset_ -= new_offset;
+	bufs_buffer[1].offset_ -= new_offset;
+	bufs_buffer[2].offset_ -= new_offset;
+
+	/* copy remaining samples to beginning and clear old samples*/
+	long remain = (bufs_buffer[0].offset_ >> BLIP_BUFFER_ACCURACY) + BLIP_BUFFER_EXTRA_;
+	memmove( bufs_buffer[0].buffer_, bufs_buffer[0].buffer_ + count, remain * sizeof *bufs_buffer[0].buffer_ );
+	memset( bufs_buffer[0].buffer_ + remain, 0, count * sizeof(*bufs_buffer[0].buffer_));
+
+	remain = (bufs_buffer[1].offset_ >> BLIP_BUFFER_ACCURACY) + BLIP_BUFFER_EXTRA_;
+	memmove( bufs_buffer[1].buffer_, bufs_buffer[1].buffer_ + count, remain * sizeof *bufs_buffer[1].buffer_ );
+	memset( bufs_buffer[1].buffer_ + remain, 0, count * sizeof(*bufs_buffer[1].buffer_));
+
+	remain = (bufs_buffer[2].offset_ >> BLIP_BUFFER_ACCURACY) + BLIP_BUFFER_EXTRA_;
+	memmove( bufs_buffer[2].buffer_, bufs_buffer[2].buffer_ + count, remain * sizeof *bufs_buffer[2].buffer_ );
+	memset( bufs_buffer[2].buffer_ + remain, 0, count * sizeof(*bufs_buffer[2].buffer_));
+}
+
 static long stereo_buffer_read_samples( int16_t * out, long out_size )
 {
 	int pair_count;
@@ -242,10 +264,7 @@ static long stereo_buffer_read_samples( int16_t * out, long out_size )
         if ( pair_count )
 	{
 		stereo_buffer_mixer_read_pairs( out, pair_count );
-
-		bufs_buffer[2].remove_samples( mixer_samples_read );
-		bufs_buffer[1].remove_samples( mixer_samples_read );
-		bufs_buffer[0].remove_samples( mixer_samples_read );
+		blip_buffer_remove_all_samples( mixer_samples_read );
 		mixer_samples_read = 0;
 	}
         return out_size;

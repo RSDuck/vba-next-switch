@@ -23,19 +23,8 @@ class Blip_Buffer
 	// untouched and returns "Out of memory", otherwise returns NULL.
 	const char * set_sample_rate( long samples_per_sec, int msec_length = 1000 / 4 );
 
-	// Reads at most 'max_samples' out of buffer into 'dest', removing them from
-	// the buffer. Returns number of samples actually read and removed. If stereo is
-	// true, increments 'dest' one extra time after writing each sample, to allow
-	// easy interleving of two channels into a stereo output buffer.
-	long read_samples( int16_t* dest, long count);
-
-	/* Additional features*/
-
 	/* Removes all available samples and clear buffer to silence.*/
 	void clear( void);
-
-	/* Removes 'count' samples from those waiting to be read*/
-	void remove_samples( long count );
 
 	/* Experimental features*/
 
