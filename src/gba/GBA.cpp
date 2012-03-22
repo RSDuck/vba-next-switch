@@ -67,13 +67,10 @@ static uint8_t memoryWaitSeq32[16] =
 
 static uint8_t biosProtected[4];
 static uint8_t cpuBitsSet[256];
-static uint8_t cpuLowestBitSet[256];
 
 static void CPUSwitchMode(int mode, bool saveState, bool breakLoop);
-static void CPUSwitchMode(int mode, bool saveState);
 static void CPUUpdateFlags(bool breakLoop);
 static void CPUUpdateFlags (void);
-static void CPUSoftwareInterrupt (void);
 static void CPUSoftwareInterrupt(int comment);
 static bool N_FLAG = 0;
 static bool C_FLAG = 0;
@@ -1222,14 +1219,6 @@ static void BIOS_Diff16bitUnFilter (void)
 		dest += 2;
 		len -= 2;
 	}
-}
-
-static void BIOS_DivARM (void)
-{
-	u32 temp = bus.reg[0].I;
-	bus.reg[0].I = bus.reg[1].I;
-	bus.reg[1].I = temp;
-	BIOS_Div();
 }
 
 static void BIOS_HuffUnComp (void)
@@ -7295,11 +7284,6 @@ static bool windowOn = false;
 const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
 static const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
-static const uint8_t gamepakWaitState[4] =  { 4, 3, 2, 8 };
-static const uint8_t gamepakWaitState0[2] = { 2, 1 };
-static const uint8_t gamepakWaitState1[2] = { 4, 1 };
-static const uint8_t gamepakWaitState2[2] = { 8, 1 };
-
 
 #ifndef LSB_FIRST
 bool cpuBiosSwapped = false;
@@ -11785,7 +11769,6 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 		for(j = 0; j < 8; j++)
 			if(i & (1 << j))
 				break;
-		cpuLowestBitSet[i] = j;
 	}
 
 	for(i = 0; i < 0x400; i++)
