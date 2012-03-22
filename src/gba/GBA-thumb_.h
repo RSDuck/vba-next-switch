@@ -536,7 +536,6 @@ static  void thumb41_0(u32 opcode)
 {
   int dest = opcode & 7;
   u32 value = bus.reg[(opcode >> 3)&7].B.B0;
-  u32 val = value;
   
   if(value) {
     if(value < 32) {
@@ -1188,20 +1187,20 @@ static  void thumbC8(u32 opcode)
 // BEQ offset
 static  void thumbD0(u32 opcode)
 {
-  int val;
-  if(Z_FLAG) {
-    bus.reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    bus.armNextPC = bus.reg[15].I;
-    bus.reg[15].I += 2;
-    THUMB_PREFETCH;
+	if(Z_FLAG)
+	{
+		bus.reg[15].I += ((s8)(opcode & 0xFF)) << 1;
+		bus.armNextPC = bus.reg[15].I;
+		bus.reg[15].I += 2;
+		THUMB_PREFETCH;
 #if defined (SPEEDHAX)
-	clockTicks = 30;
+		clockTicks = 30;
 #else
-    clockTicks = ((codeTicksAccessSeq16(bus.armNextPC)) << 1) +
-        codeTicksAccess(bus.armNextPC, BITS_16)+3;
+		clockTicks = ((codeTicksAccessSeq16(bus.armNextPC)) << 1) +
+			codeTicksAccess(bus.armNextPC, BITS_16)+3;
 #endif
-    bus.busPrefetchCount=0;
-  }
+		bus.busPrefetchCount=0;
+	}
 }
 
 // BNE offset
