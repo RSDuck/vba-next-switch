@@ -8,7 +8,6 @@
 #define BUFS_SIZE 3
 
 #include "../System.h"
-
 #include "blargg_common.h"
 
 /* BLIP BUFFER */
@@ -54,6 +53,7 @@ class Blip_Buffer
 	Blip_Buffer( const Blip_Buffer& );
 	Blip_Buffer& operator = ( const Blip_Buffer& );
 };
+
 
 /* Number of bits in resample ratio fraction. Higher values give a more accurate 
    ratio but reduce maximum buffer size.*/
