@@ -43,9 +43,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\VbaNext.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\NLS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -67,22 +64,13 @@
     <ClInclude Include="..\libsnes\libsnes.hpp">
       <Filter>Header Files\libsnes</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gba\Sram.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\EEprom.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\Flash.h">
+    <ClInclude Include="..\src\gba\memory.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba\GBA.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba\Globals.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\RTC.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba\Sound.h">

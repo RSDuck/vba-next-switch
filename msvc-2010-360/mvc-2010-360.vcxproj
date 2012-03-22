@@ -38,17 +38,13 @@
     <ClInclude Include="..\src\gba\sound_blargg.h" />
     <ClInclude Include="..\src\common\Port.h" />
     <ClInclude Include="..\src\common\Types.h" />
-    <ClInclude Include="..\src\gba\EEprom.h" />
-    <ClInclude Include="..\src\gba\Flash.h" />
+    <ClInclude Include="..\src\gba\memory.h" />
     <ClInclude Include="..\src\gba\GBA.h" />
     <ClInclude Include="..\src\gba\Globals.h" />
-    <ClInclude Include="..\src\gba\RTC.h" />
     <ClInclude Include="..\src\gba\Sound.h" />
-    <ClInclude Include="..\src\gba\Sram.h" />
     <ClInclude Include="..\src\NLS.h" />
     <ClInclude Include="..\src\System.h" />
     <ClInclude Include="..\src\Util.h" />
-    <ClInclude Include="..\src\VbaNext.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DB17AF79-EB79-4062-ACA8-F82864712DA0}</ProjectGuid>
