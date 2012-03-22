@@ -3,9 +3,6 @@
 
 #include "../System.h"
 
-#ifdef USE_CHEATS
-#include "Cheats.h"
-#endif
 #include "Globals.h"
 #include "EEprom.h"
 #include "Flash.h"

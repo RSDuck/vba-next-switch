@@ -170,17 +170,4 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 	return memoryWaitSeq32[addr];
 }
 
-
-// Emulates the Cheat System (m) code
-#ifdef HAVE_CHEATS
-static INLINE void cpuMasterCodeCheck()
-{
-  if((mastercode) && (mastercode == bus.armNextPC))
-  {
-    u32 ext = (joy >> 10);
-    cpuTotalTicks += cheatsCheckKeys(P1^0x3FF, ext);
-  }
-}
-#endif
-
 #endif // GBACPU_H

@@ -19,7 +19,6 @@ extern int frameSkip;
 extern bool cpuIsMultiBoot;
 extern bool speedHack;
 extern int cpuSaveType;
-extern bool cheatsEnabled;
 extern bool mirroringEnable;
 extern bool enableRtc;
 extern bool skipSaveGameBattery; // skip battery data when reading save states

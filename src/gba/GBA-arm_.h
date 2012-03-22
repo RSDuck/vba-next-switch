@@ -2195,11 +2195,6 @@ int armExecute()
 
 		clockTicks = 0;
 
-#ifdef USE_CHEATS
-		if( cheatsEnabled )
-			cpuMasterCodeCheck();
-#endif
-
 		if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
 			bus.busPrefetchCount = 0x100;
 
