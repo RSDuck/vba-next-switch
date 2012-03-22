@@ -71,19 +71,7 @@
     <ClInclude Include="..\src\gba\GBA.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gba\GBA-arm_.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\GBAcpu.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\GBAGfx.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\gba\GBAinline.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\gba\GBA-thumb_.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba\Globals.h">

@@ -46,8 +46,8 @@
 #define SPSR_FIQ 44
 
 typedef struct {
-  uint8_t *address;
-  uint32_t mask;
+	uint8_t *address;
+	uint32_t mask;
 } memoryMap;
 
 typedef union {
