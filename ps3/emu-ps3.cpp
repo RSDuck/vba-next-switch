@@ -19,12 +19,6 @@
 #include "../src/gba/GBA.h"
 #include "../src/gba/Sound.h"
 #include "../src/gba/RTC.h"
-#ifdef USE_AGBPRINT
-#include "../src/gba/agbprint.h"
-#endif
-#include "../src/gb/gb.h"
-#include "../src/gb/gbSound.h"
-#include "../src/gb/gbGlobals.h"
 #include "../src/gba/Globals.h"
 #include "emu-ps3.hpp"
 
@@ -32,8 +26,6 @@
 
 #include "conf/config_file.h"
 #include "conf/settings.h"
-
-#include "../src/common/memgzio.h"
 
 #ifdef PS3_PROFILING
 #include "cellframework/network-stdio/net_stdio.h"

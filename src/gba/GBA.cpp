@@ -10,6 +10,8 @@
 #include <ppu_intrinsics.h>
 #endif
 
+#include "../common/Port.h"
+
 static const int table [0x40] =
 {
 		0xFF10,     0,0xFF11,0xFF12,0xFF13,0xFF14,     0,     0,
@@ -39,7 +41,6 @@ static const int table [0x40] =
 #include "elf.h"
 #endif
 #include "../Util.h"
-#include "../common/Port.h"
 #include "../System.h"
 
 bus_t bus;

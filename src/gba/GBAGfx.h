@@ -1,11 +1,6 @@
 #ifndef GFX_H
 #define GFX_H
 
-#include "GBA.h"
-#include "Globals.h"
-
-#include "../common/Port.h"
-
 static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 {
 	u16 *palette = (u16 *)graphics.paletteRAM;

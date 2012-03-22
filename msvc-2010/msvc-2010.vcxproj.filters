@@ -19,17 +19,11 @@
     <Filter Include="Source Files\gba">
       <UniqueIdentifier>{b72b4e4d-41cc-47ac-ae75-05fc547fd36d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\apu">
-      <UniqueIdentifier>{7ea82162-cf18-4454-bd8c-ecb7deb806c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\libsnes">
       <UniqueIdentifier>{01290b17-a062-4772-8a90-1fb347398419}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\gba">
       <UniqueIdentifier>{9553246f-4fb1-41ce-807d-bd3c3dc6f564}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\apu">
-      <UniqueIdentifier>{a7c2b719-93c9-466c-bf8f-952433da4125}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\common">
       <UniqueIdentifier>{d5a23baf-0d6e-4d49-a81e-f1320c3186cc}</UniqueIdentifier>
@@ -47,9 +41,6 @@
     </ClCompile>
     <ClCompile Include="..\src\Util.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\apu\Blip_Buffer.cpp">
-      <Filter>Source Files\apu</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gba\Memory.cpp">
       <Filter>Source Files\gba</Filter>
@@ -107,29 +98,14 @@
     <ClInclude Include="..\libsnes\libsnes.hpp">
       <Filter>Header Files\libsnes</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\apu\blargg_common.h">
-      <Filter>Header Files\apu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\apu\blargg_config.h">
-      <Filter>Header Files\apu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\apu\blargg_source.h">
-      <Filter>Header Files\apu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\apu\Gb_Apu.h">
-      <Filter>Header Files\apu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\apu\Gb_Oscs.h">
-      <Filter>Header Files\apu</Filter>
+    <ClInclude Include="..\src\gba\sound_blargg.h">
+      <Filter>Header Files\gba</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\Types.h">
       <Filter>Header Files\common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\Port.h">
       <Filter>Header Files\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\apu\Blip_Buffer.h">
-      <Filter>Header Files\apu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
