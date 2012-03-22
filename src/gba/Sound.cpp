@@ -828,50 +828,6 @@ static void gb_apu_apply_stereo (void)
 	}
 }
 
-static int gb_apu_read_register( int32_t time, unsigned addr )
-{
-	int reg, mask, data;
-
-	if ( time > gb_apu.last_time )
-		gb_apu_run_until_( time );
-
-	reg = addr - START_ADDR;
-	if ( (unsigned) reg >= REGISTER_COUNT )
-		return 0;
-
-	if ( addr >= WAVE_RAM )
-		return gb_apu.wave.read( addr );
-
-	/* Value read back has some bits always set*/
-	static unsigned char const masks [] = {
-		0x80,0x3F,0x00,0xFF,0xBF,
-		0xFF,0x3F,0x00,0xFF,0xBF,
-		0x7F,0xFF,0x9F,0xFF,0xBF,
-		0xFF,0xFF,0x00,0x00,0xBF,
-		0x00,0x00,0x70,
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
-	};
-
-	mask = masks [reg];
-
-	if (reg == 10 || reg == 12)
-		mask = 0x1F; /* extra implemented bits in wave regs on AGB*/
-
-	data = gb_apu.regs [reg] | mask;
-
-	/* Status register*/
-	if ( addr == STATUS_REG )
-	{
-		data &= 0xF0;
-		data |= (int)gb_apu.square1.enabled << 0;
-		data |= (int)gb_apu.square2.enabled << 1;
-		data |= (int)gb_apu.wave   .enabled << 2;
-		data |= (int)gb_apu.noise  .enabled << 3;
-	}
-
-	return data;
-}
-
 #define REFLECT( x, y ) (save ?       (io->y) = (x) :         (x) = (io->y)          )
 
 static INLINE const char* gb_apu_save_load( gb_apu_state_t* io, bool save )
@@ -1895,15 +1851,6 @@ static void gba_pcm_fifo_timer_overflowed( unsigned pcm_idx )
 	}
 }
 
-
-static int gba_to_gb_sound( int addr )
-{
-	if ( addr >= 0x60 && addr < 0xA0 )
-		return table [addr - 0x60];
-	return 0;
-}
-
-
 void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 {
 	for(uint32_t i = 0; i < 2; i++)
@@ -2130,81 +2077,6 @@ static struct {
 	int soundDSBValue;
 	uint8_t soundDSAValue;
 } state;
-
-// Old GBA sound state format
-static variable_desc old_gba_state [] =
-{
-	SKIP( int, soundPaused ),
-	SKIP( int, soundPlay ),
-	SKIP( int, soundTicks ),
-	SKIP( int, SOUND_CLOCK_TICKS ),
-	SKIP( int, soundLevel1 ),
-	SKIP( int, soundLevel2 ),
-	SKIP( int, soundBalance ),
-	SKIP( int, soundMasterOn ),
-	SKIP( int, soundIndex ),
-	SKIP( int, sound1On ),
-	SKIP( int, sound1ATL ),
-	SKIP( int, sound1Skip ),
-	SKIP( int, sound1Index ),
-	SKIP( int, sound1Continue ),
-	SKIP( int, sound1EnvelopeVolume ),
-	SKIP( int, sound1EnvelopeATL ),
-	SKIP( int, sound1EnvelopeATLReload ),
-	SKIP( int, sound1EnvelopeUpDown ),
-	SKIP( int, sound1SweepATL ),
-	SKIP( int, sound1SweepATLReload ),
-	SKIP( int, sound1SweepSteps ),
-	SKIP( int, sound1SweepUpDown ),
-	SKIP( int, sound1SweepStep ),
-	SKIP( int, sound2On ),
-	SKIP( int, sound2ATL ),
-	SKIP( int, sound2Skip ),
-	SKIP( int, sound2Index ),
-	SKIP( int, sound2Continue ),
-	SKIP( int, sound2EnvelopeVolume ),
-	SKIP( int, sound2EnvelopeATL ),
-	SKIP( int, sound2EnvelopeATLReload ),
-	SKIP( int, sound2EnvelopeUpDown ),
-	SKIP( int, sound3On ),
-	SKIP( int, sound3ATL ),
-	SKIP( int, sound3Skip ),
-	SKIP( int, sound3Index ),
-	SKIP( int, sound3Continue ),
-	SKIP( int, sound3OutputLevel ),
-	SKIP( int, sound4On ),
-	SKIP( int, sound4ATL ),
-	SKIP( int, sound4Skip ),
-	SKIP( int, sound4Index ),
-	SKIP( int, sound4Clock ),
-	SKIP( int, sound4ShiftRight ),
-	SKIP( int, sound4ShiftSkip ),
-	SKIP( int, sound4ShiftIndex ),
-	SKIP( int, sound4NSteps ),
-	SKIP( int, sound4CountDown ),
-	SKIP( int, sound4Continue ),
-	SKIP( int, sound4EnvelopeVolume ),
-	SKIP( int, sound4EnvelopeATL ),
-	SKIP( int, sound4EnvelopeATLReload ),
-	SKIP( int, sound4EnvelopeUpDown ),
-	LOAD( int, soundEnableFlag ),
-	SKIP( int, soundControl ),
-	LOAD( int, pcm [0].readIndex ),
-	LOAD( int, pcm [0].count ),
-	LOAD( int, pcm [0].writeIndex ),
-	SKIP( uint8_t,  soundDSAEnabled ), // was bool, which was one byte on MS compiler
-	SKIP( int, soundDSATimer ),
-	LOAD( uint8_t [32], pcm [0].fifo ),
-	LOAD( uint8_t,  state.soundDSAValue ),
-	LOAD( int, pcm [1].readIndex ),
-	LOAD( int, pcm [1].count ),
-	LOAD( int, pcm [1].writeIndex ),
-	SKIP( int, soundDSBEnabled ),
-	SKIP( int, soundDSBTimer ),
-	LOAD( uint8_t [32], pcm [1].fifo ),
-	LOAD( int, state.soundDSBValue ),
-	{ NULL, 0 }
-};
 
 variable_desc old_gba_state2 [] =
 {

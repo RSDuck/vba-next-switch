@@ -40,9 +40,6 @@ static  void armUnknownInsn(u32 opcode)
 //    VALUE_XXX: Retrieve the second operand's value for an ALU instruction.
 //               The _C and _NC versions are used the same way as ALU_INIT.
 //    OP_XXX: ALU operations.  XXX is the instruction name.
-//    ALU_FINISH: Appended to all ALU instructions.  Usually empty, but if
-//                ALU_INIT started a block ALU_FINISH can be used to end it
-//                (as with the asm(...) statement in the x86 core).
 //    SETCOND_NONE: Used in multiply instructions in place of SETCOND_MUL
 //                  when the condition codes are not set.  Usually empty.
 //    SETCOND_MUL: Used in multiply instructions to set the condition codes.
@@ -412,10 +409,6 @@ static  void armUnknownInsn(u32 opcode)
      Z_FLAG = bus.reg[dest].I || bus.reg[acc].I ? false : true;
 #endif
 
-#ifndef ALU_FINISH
- #define ALU_FINISH /*nothing*/
-#endif
-
 #ifndef ROR_IMM_MSR
  #define ROR_IMM_MSR \
     u32 v = opcode & 0xff;                              \
@@ -437,9 +430,9 @@ static  void armUnknownInsn(u32 opcode)
 // OP: ALU operation (OP_XXX)
 // MODECHANGE: MODECHANGE_NO or MODECHANGE_YES
 // ISREGSHIFT: 1 for insns of the form ...,Rn LSL/etc Rs; 0 otherwise
-// ALU_INIT, GETVALUE, OP, and ALU_FINISH are concatenated in order.
+// ALU_INIT, GETVALUE and OP are concatenated in order.
 #define ALU_INSN(ALU_INIT, GETVALUE, OP, MODECHANGE, ISREGSHIFT) \
-    ALU_INIT GETVALUE OP ALU_FINISH;                            \
+    ALU_INIT GETVALUE OP;                            \
     if ((opcode & 0x0000F000) != 0x0000F000) {          \
         clockTicks = 1 + ISREGSHIFT                             \
                        + codeTicksAccessSeq32(bus.armNextPC);       \
@@ -1896,32 +1889,32 @@ static  void arm9D0(u32 opcode)
 // STMIB Rn!, {Rlist}^
 static  void arm9E0(u32 opcode)
 {
-    if (bus.busPrefetchCount == 0)
-        bus.busPrefetch = bus.busPrefetchEnable;
-    int base = (opcode & 0x000F0000) >> 16;
-    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
-    int count = 0;
-    u32 temp = bus.reg[base].I +
-        4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
-    STMW_ALL_2;
-    clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
+	if (bus.busPrefetchCount == 0)
+		bus.busPrefetch = bus.busPrefetchEnable;
+	int base = (opcode & 0x000F0000) >> 16;
+	u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
+	int count = 0;
+	u32 temp = bus.reg[base].I +
+		4 * (cpuBitsSet[opcode & 0xFF] + cpuBitsSet[(opcode >> 8) & 255]);
+	STMW_ALL_2;
+	clockTicks += 1 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // LDMIB Rn!, {Rlist}^
 static  void arm9F0(u32 opcode)
 {
-    if (bus.busPrefetchCount == 0)
-        bus.busPrefetch = bus.busPrefetchEnable;
-    int base = (opcode & 0x000F0000) >> 16;
-    u32 temp = bus.reg[base].I +
-        4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
-    u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
-    int count = 0;
-    LDM_ALL_2;
-    if (!(opcode & (1U << base)))
-        bus.reg[base].I = temp;
-    LDM_ALL_2B;
-    clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
+	if (bus.busPrefetchCount == 0)
+		bus.busPrefetch = bus.busPrefetchEnable;
+	int base = (opcode & 0x000F0000) >> 16;
+	u32 temp = bus.reg[base].I +
+		4 * (cpuBitsSet[opcode & 255] + cpuBitsSet[(opcode >> 8) & 255]);
+	u32 address = (bus.reg[base].I+4) & 0xFFFFFFFC;
+	int count = 0;
+	LDM_ALL_2;
+	if (!(opcode & (1U << base)))
+		bus.reg[base].I = temp;
+	LDM_ALL_2B;
+	clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
 // B/BL/SWI and (unimplemented) coproc support ////////////////////////////
@@ -1931,19 +1924,19 @@ static  void armA00(u32 opcode)
 {
 	int codeTicksVal = 0;
 	int ct = 0;
-    int offset = opcode & 0x00FFFFFF;
-    if (offset & 0x00800000)
-        offset |= 0xFF000000;  // negative offset
-    bus.reg[15].I += offset<<2;
-    bus.armNextPC = bus.reg[15].I;
-    bus.reg[15].I += 4;
-    ARM_PREFETCH;
-	 
-    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
-	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
+	int offset = opcode & 0x00FFFFFF;
+	if (offset & 0x00800000)
+		offset |= 0xFF000000;  // negative offset
+	bus.reg[15].I += offset<<2;
+	bus.armNextPC = bus.reg[15].I;
+	bus.reg[15].I += 4;
+	ARM_PREFETCH;
 
-    bus.busPrefetchCount = 0;
+	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
+	ct = codeTicksVal + 3;
+	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
+
+	bus.busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
@@ -1953,33 +1946,24 @@ static  void armB00(u32 opcode)
 	int codeTicksVal = 0;
 	int ct = 0;
 
-    int offset = opcode & 0x00FFFFFF;
-    if (offset & 0x00800000)
-        offset |= 0xFF000000;  // negative offset
-    bus.reg[14].I = bus.reg[15].I - 4;
-    bus.reg[15].I += offset<<2;
-    bus.armNextPC = bus.reg[15].I;
-    bus.reg[15].I += 4;
-    ARM_PREFETCH;
+	int offset = opcode & 0x00FFFFFF;
+	if (offset & 0x00800000)
+		offset |= 0xFF000000;  // negative offset
+	bus.reg[14].I = bus.reg[15].I - 4;
+	bus.reg[15].I += offset<<2;
+	bus.armNextPC = bus.reg[15].I;
+	bus.reg[15].I += 4;
+	ARM_PREFETCH;
 
-    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
+	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
 	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
+	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
 
-    bus.busPrefetchCount = 0;
+	bus.busPrefetchCount = 0;
 	clockTicks = ct;
 }
 
-
-#ifdef GP_SUPPORT
-// MRC
-static  void armE01(u32 opcode)
-{
-}
-#else
- #define armE01 armUnknownInsn
-#endif
-
+#define armE01 armUnknownInsn
 
 // SWI <comment>
 static  void armF00(u32 opcode)
@@ -1987,18 +1971,14 @@ static  void armF00(u32 opcode)
 	int codeTicksVal = 0;
 	int ct = 0;
 
-    //clockTicks = codeTicksAccessSeq32(bus.armNextPC) + 1;
-    //clockTicks += 2 + codeTicksAccess(bus.armNextPC, BITS_32)
-    //                + codeTicksAccessSeq32(bus.armNextPC);
-
-    codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
+	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
 	ct = codeTicksVal + 3;
-    ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
+	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
 
-    bus.busPrefetchCount = 0;
+	bus.busPrefetchCount = 0;
 
 	clockTicks = ct;
-    CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
+	CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
 
 }
 
@@ -2198,11 +2178,11 @@ int armExecute()
 {
 #ifdef USE_CACHE_PREFETCH
 	// cache the clockTicks, it's used during operations and generates LHS without it
-	#ifdef __ANDROID__
-		prefetch(&clockTicks);
-	#else
-		 __dcbt(&clockTicks);
-	#endif
+#ifdef __ANDROID__
+	prefetch(&clockTicks);
+#else
+	__dcbt(&clockTicks);
+#endif
 #endif
 
 	u32 cond1;
@@ -2210,119 +2190,118 @@ int armExecute()
 
 	int ct = 0;
 
-    do {
-		
+	do
+	{
+
 		clockTicks = 0;
-		
+
 #ifdef USE_CHEATS
-		if( cheatsEnabled ) {
+		if( cheatsEnabled )
 			cpuMasterCodeCheck();
-		}
 #endif
 
-        if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
-          bus.busPrefetchCount = 0x100;
+		if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
+			bus.busPrefetchCount = 0x100;
 
-        u32 opcode = cpuPrefetch[0];
-        cpuPrefetch[0] = cpuPrefetch[1];
+		u32 opcode = cpuPrefetch[0];
+		cpuPrefetch[0] = cpuPrefetch[1];
 
-        bus.busPrefetch = false;
-        int32_t busprefetch_mask = ((bus.busPrefetchCount & 0xFFFFFE00) | -(bus.busPrefetchCount & 0xFFFFFE00)) >> 31;
-        bus.busPrefetchCount = (0x100 | (bus.busPrefetchCount & 0xFF) & busprefetch_mask) | (bus.busPrefetchCount & ~busprefetch_mask);
-        #if 0
-        if (bus.busPrefetchCount & 0xFFFFFE00)
-            bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
-        #endif
+		bus.busPrefetch = false;
+		int32_t busprefetch_mask = ((bus.busPrefetchCount & 0xFFFFFE00) | -(bus.busPrefetchCount & 0xFFFFFE00)) >> 31;
+		bus.busPrefetchCount = (0x100 | (bus.busPrefetchCount & 0xFF) & busprefetch_mask) | (bus.busPrefetchCount & ~busprefetch_mask);
+#if 0
+		if (bus.busPrefetchCount & 0xFFFFFE00)
+			bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
+#endif
 
-       
-        int oldArmNextPC = bus.armNextPC;
 
-        bus.armNextPC = bus.reg[15].I;
-        bus.reg[15].I += 4;
-        ARM_PREFETCH_NEXT;
+		int oldArmNextPC = bus.armNextPC;
 
-        int cond = opcode >> 28;
-        bool cond_res = true;
-        if (cond != 0x0E) {  // most opcodes are AL (always)
-            switch(cond) {
-              case 0x00: // EQ
-                cond_res = Z_FLAG;
-                break;
-              case 0x01: // NE
-                cond_res = !Z_FLAG;
-                break;
-              case 0x02: // CS
-                cond_res = C_FLAG;
-                break;
-              case 0x03: // CC
-                cond_res = !C_FLAG;
-                break;
-              case 0x04: // MI
-                cond_res = N_FLAG;
-                break;
-              case 0x05: // PL
-                cond_res = !N_FLAG;
-                break;
-              case 0x06: // VS
-                cond_res = V_FLAG;
-                break;
-              case 0x07: // VC
-                cond_res = !V_FLAG;
-                break;
-              case 0x08: // HI
-                cond_res = C_FLAG && !Z_FLAG;
-                break;
-              case 0x09: // LS
-                cond_res = !C_FLAG || Z_FLAG;
-                break;
-              case 0x0A: // GE
-                cond_res = N_FLAG == V_FLAG;
-                break;
-              case 0x0B: // LT
-                cond_res = N_FLAG != V_FLAG;
-                break;
-              case 0x0C: // GT
-                cond_res = !Z_FLAG &&(N_FLAG == V_FLAG);
-                break;
-              case 0x0D: // LE
-                cond_res = Z_FLAG || (N_FLAG != V_FLAG);
-                break;
-              case 0x0E: // AL (impossible, checked above)
-                cond_res = true;
-                break;
-              case 0x0F:
-              default:
-                // ???
-                cond_res = false;
-                break;
-            }
-        }
+		bus.armNextPC = bus.reg[15].I;
+		bus.reg[15].I += 4;
+		ARM_PREFETCH_NEXT;
 
-        if (cond_res)
+		int cond = opcode >> 28;
+		bool cond_res = true;
+		if (cond != 0x0E) {  // most opcodes are AL (always)
+			switch(cond) {
+				case 0x00: // EQ
+					cond_res = Z_FLAG;
+					break;
+				case 0x01: // NE
+					cond_res = !Z_FLAG;
+					break;
+				case 0x02: // CS
+					cond_res = C_FLAG;
+					break;
+				case 0x03: // CC
+					cond_res = !C_FLAG;
+					break;
+				case 0x04: // MI
+					cond_res = N_FLAG;
+					break;
+				case 0x05: // PL
+					cond_res = !N_FLAG;
+					break;
+				case 0x06: // VS
+					cond_res = V_FLAG;
+					break;
+				case 0x07: // VC
+					cond_res = !V_FLAG;
+					break;
+				case 0x08: // HI
+					cond_res = C_FLAG && !Z_FLAG;
+					break;
+				case 0x09: // LS
+					cond_res = !C_FLAG || Z_FLAG;
+					break;
+				case 0x0A: // GE
+					cond_res = N_FLAG == V_FLAG;
+					break;
+				case 0x0B: // LT
+					cond_res = N_FLAG != V_FLAG;
+					break;
+				case 0x0C: // GT
+					cond_res = !Z_FLAG &&(N_FLAG == V_FLAG);
+					break;
+				case 0x0D: // LE
+					cond_res = Z_FLAG || (N_FLAG != V_FLAG);
+					break;
+				case 0x0E: // AL (impossible, checked above)
+					cond_res = true;
+					break;
+				case 0x0F:
+				default:
+					// ???
+					cond_res = false;
+					break;
+			}
+		}
+
+		if (cond_res)
 		{
 			cond1 = (opcode>>16)&0xFF0;
 			cond2 = (opcode>>4)&0x0F;
 
-            (*armInsnTable[(cond1| cond2)])(opcode);
+			(*armInsnTable[(cond1| cond2)])(opcode);
 
 		}
 		ct = clockTicks;
 
-        if (ct < 0)
-            return 0;
+		if (ct < 0)
+			return 0;
 
 		/// better pipelining
 
-        if (ct == 0)
-            clockTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
+		if (ct == 0)
+			clockTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
 
-        cpuTotalTicks += clockTicks;
+		cpuTotalTicks += clockTicks;
 
 #ifdef USE_SWITICKS
-    } while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
+	} while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
 #else
-    } while ((cpuTotalTicks < cpuNextEvent) & armState & ~holdState);
+} while ((cpuTotalTicks < cpuNextEvent) & armState & ~holdState);
 #endif
-
-    return 1;
+	return 1;
 }

@@ -35,8 +35,6 @@ extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
 
-extern u32 myROM[];
-
 static INLINE u32 CPUReadMemory(u32 address)
 {
 	u32 value;
@@ -291,7 +289,6 @@ unreadable:
 				return CPUReadByteQuick(bus.reg[15].I+(address & 3));
 			else
 				return CPUReadByteQuick(bus.reg[15].I+(address & 1));
-			break;
 	}
 }
 

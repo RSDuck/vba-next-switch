@@ -63,7 +63,6 @@ bool utilIsGBAImage(const char * file)
 
 uint32_t utilFindType(const char *file)
 {
-	char buffer [2048];
 	uint32_t retval;
 
 	if (utilIsGBAImage(file))
@@ -89,7 +88,6 @@ static int utilGetSize(int size)
 uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data, int &size)
 {
 	FILE *fp = NULL;
-	char *buf = NULL;
 
 	fp = fopen(file,"rb");
 	fseek(fp, 0, SEEK_END); /*go to end*/
