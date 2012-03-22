@@ -26,23 +26,6 @@ a Game Boy Advance emulator. */
 	#endif
 #endif
 
-/* blargg_vector - very lightweight vector of POD types (no constructor/destructor) */
-template<class T>
-class blargg_vector {
-	T* begin_;
-	size_t size_;
-public:
-	blargg_vector() : begin_( 0 ), size_( 0 ) { }
-	~blargg_vector() { free( begin_ ); }
-	size_t size() const { return size_; }
-	T* begin() const { return begin_; }
-	T* end() const { return begin_ + size_; }
-	T& operator [] ( size_t n ) const
-	{
-		return begin_ [n];
-	}
-};
-
 // BLARGG_COMPILER_HAS_BOOL: If 0, provides bool support for old compiler. If 1,
 // compiler is assumed to support bool. If undefined, availability is determined.
 #ifndef BLARGG_COMPILER_HAS_BOOL
