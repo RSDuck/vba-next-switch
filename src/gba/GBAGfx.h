@@ -758,7 +758,7 @@ static INLINE void gfxDrawSprites (void)
 			}
 
 			// else ignores OBJ-WIN if OBJWIN is disabled, and ignored disabled OBJ
-			else if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200) || lineOBJpix < 0)
+			else if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200))
 				continue;
 
 			if(a0 & 0x0100)
@@ -820,8 +820,6 @@ static INLINE void gfxDrawSprites (void)
 							{
 								if (x >= startpix)
 									lineOBJpix-=2;
-								if (lineOBJpix<0)
-									continue;
 								unsigned xxx = realX >> 8;
 								unsigned yyy = realY >> 8;
 								if(xxx < sizeX && yyy < sizeY && sx < 240)
@@ -862,8 +860,6 @@ static INLINE void gfxDrawSprites (void)
 							{
 								if (x >= startpix)
 									lineOBJpix-=2;
-								if (lineOBJpix<0)
-									continue;
 								unsigned xxx = realX >> 8;
 								unsigned yyy = realY >> 8;
 								if(xxx < sizeX && yyy < sizeY && sx < 240)
@@ -954,8 +950,6 @@ static INLINE void gfxDrawSprites (void)
 							{
 								if (xx >= startpix)
 									--lineOBJpix;
-								if (lineOBJpix<0)
-									continue;
 								if(sx < 240)
 								{
 									u8 color = vram[address];
