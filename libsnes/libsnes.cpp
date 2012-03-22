@@ -358,7 +358,7 @@ static void gba_init(void)
 	if(flashSize == 0x10000 || flashSize == 0x20000)
 		flashSetSize(flashSize);
 
-	if(rtcEnable)
+	if(enableRtc)
 		rtcEnable(enableRtc);
 	doMirroring(mirroringEnable);
 

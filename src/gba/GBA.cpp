@@ -7235,7 +7235,6 @@ int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
 bool cpuIsMultiBoot = false;
-bool speedHack = true;
 int cpuSaveType = 0;
 bool enableRtc = false;
 bool mirroringEnable = false;

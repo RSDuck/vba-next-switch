@@ -10,7 +10,6 @@ extern bool useBios;
 extern bool skipBios;
 extern int frameSkip;
 extern bool cpuIsMultiBoot;
-extern bool speedHack;
 extern int cpuSaveType;
 extern bool mirroringEnable;
 extern bool enableRtc;
