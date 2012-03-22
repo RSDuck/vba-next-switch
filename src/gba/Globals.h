@@ -26,19 +26,4 @@ extern u8 *pix;
 extern u8 *oam;
 extern u8 *ioMem;
 
-extern u16 VCOUNT;
-extern u16 MOSAIC;
-extern u16 TM0D;
-extern u16 TM0CNT;
-extern u16 TM1D;
-extern u16 TM1CNT;
-extern u16 TM2D;
-extern u16 TM2CNT;
-extern u16 TM3D;
-extern u16 TM3CNT;
-extern u16 P1;
-extern u16 IE;
-extern u16 IF;
-extern u16 IME;
-
 #endif // GLOBALS_H

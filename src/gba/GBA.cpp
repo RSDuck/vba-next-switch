@@ -29,6 +29,8 @@ static const int table [0x40] =
 #include "RTC.h"
 #include "Sound.h"
 
+static memoryMap map[256];
+
 /*============================================================
 	GBA INLINE
 ============================================================ */
@@ -82,6 +84,21 @@ static bool V_FLAG = 0;
 static bool armState = true;
 static bool armIrqEnable = true;
 static int armMode = 0x1f;
+
+static u16 VCOUNT;
+static u16 MOSAIC;
+static u16 TM0D;
+static u16 TM0CNT;
+static u16 TM1D;
+static u16 TM1CNT;
+static u16 TM2D;
+static u16 TM2CNT;
+static u16 TM3D;
+static u16 TM3CNT;
+static uint16_t P1       = 0xFFFF;
+static u16 IE;
+static u16 IF;
+static u16 IME;
 
 // Waitstates when accessing data
 static INLINE int dataTicksAccess(u32 address, u8 bit32) // DATA 8/16bits NON SEQ
@@ -3989,6 +4006,7 @@ int armExecute()
 	return 1;
 }
 
+
 /*============================================================
 	GBA THUMB CORE
 ============================================================ */
@@ -7154,9 +7172,6 @@ static INLINE u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 
 int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
-// GLOBALS.CPP 
-
-memoryMap map[256];
 bool ioReadable[0x400];
 int saveType = 0;
 bool useBios = false;
@@ -7178,7 +7193,6 @@ uint8_t *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
-uint16_t VCOUNT   = 0x0000;
 uint16_t BG0CNT   = 0x0000;
 uint16_t BG1CNT   = 0x0000;
 uint16_t BG2CNT   = 0x0000;
@@ -7213,7 +7227,6 @@ uint16_t WIN0V    = 0x0000;
 uint16_t WIN1V    = 0x0000;
 uint16_t WININ    = 0x0000;
 uint16_t WINOUT   = 0x0000;
-uint16_t MOSAIC   = 0x0000;
 uint16_t BLDMOD   = 0x0000;
 uint16_t COLEV    = 0x0000;
 uint16_t COLY     = 0x0000;
@@ -7241,20 +7254,6 @@ uint16_t DM3DAD_L = 0x0000;
 uint16_t DM3DAD_H = 0x0000;
 uint16_t DM3CNT_L = 0x0000;
 uint16_t DM3CNT_H = 0x0000;
-uint16_t TM0D     = 0x0000;
-uint16_t TM0CNT   = 0x0000;
-uint16_t TM1D     = 0x0000;
-uint16_t TM1CNT   = 0x0000;
-uint16_t TM2D     = 0x0000;
-uint16_t TM2CNT   = 0x0000;
-uint16_t TM3D     = 0x0000;
-uint16_t TM3CNT   = 0x0000;
-uint16_t P1       = 0xFFFF;
-uint16_t IE       = 0x0000;
-uint16_t IF       = 0x0000;
-uint16_t IME      = 0x0000;
-
-//END OF GLOBALS.CPP
 
 #ifdef USE_SWITICKS
 int SWITicks = 0;
@@ -7264,7 +7263,6 @@ int IRQTicks = 0;
 int cpuDmaTicksToUpdate = 0;
 int cpuDmaCount = 0;
 
-
 int gbaSaveType = 0; // used to remember the save type on reset
 bool intState = false;
 bool stopState = false;
@@ -7273,8 +7271,6 @@ bool cpuSramEnabled = true;
 bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
 bool cpuEEPROMSensorEnabled = false;
-
-
 
 uint8_t timerOnOffDelay = 0;
 uint16_t timer0Value = 0;
