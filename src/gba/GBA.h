@@ -103,7 +103,6 @@ typedef struct
 extern bus_t bus;
 extern graphics_t graphics;
 extern memoryMap map[256];
-extern uint8_t biosProtected[4];
 extern uint64_t joy;
 
 extern void (*cpuSaveGameFunc)(uint32_t,uint8_t);

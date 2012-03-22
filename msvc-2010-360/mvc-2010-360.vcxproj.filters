@@ -79,9 +79,6 @@
     <ClInclude Include="..\src\gba\GBA.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gba\GBAinline.h">
-      <Filter>Header Files\gba</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\gba\Globals.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>

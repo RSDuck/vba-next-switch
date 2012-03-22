@@ -5,13 +5,6 @@
 #include "GBA.h"
 
 extern bool ioReadable[0x400];
-extern bool N_FLAG;
-extern bool C_FLAG;
-extern bool Z_FLAG;
-extern bool V_FLAG;
-extern bool armState;
-extern bool armIrqEnable;
-extern int armMode;
 extern int saveType;
 extern bool useBios;
 extern bool skipBios;

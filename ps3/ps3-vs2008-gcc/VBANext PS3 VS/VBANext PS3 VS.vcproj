@@ -609,10 +609,6 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\src\gba\GBAinline.h"
-						>
-					</File>
-					<File
 						RelativePath="..\..\..\src\gba\Globals.h"
 						>
 					</File>

@@ -41,7 +41,6 @@
     <ClInclude Include="..\src\gba\EEprom.h" />
     <ClInclude Include="..\src\gba\Flash.h" />
     <ClInclude Include="..\src\gba\GBA.h" />
-    <ClInclude Include="..\src\gba\GBAinline.h" />
     <ClInclude Include="..\src\gba\Globals.h" />
     <ClInclude Include="..\src\gba\RTC.h" />
     <ClInclude Include="..\src\gba\Sound.h" />
