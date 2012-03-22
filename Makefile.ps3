@@ -50,7 +50,6 @@ SRC_DIR			= ./ps3
 CELL_FRAMEWORK_DIR	= ./ps3/cellframework
 CELL_FRAMEWORK2_DIR	= ./ps3/cellframework2
 VBA_API_DIR		= ./src
-UTILS_DIR		= ./utils
 BUILD_DIR		= ./objs
 
 
@@ -58,22 +57,9 @@ BUILD_DIR		= ./objs
 VBA_CPPSRCS	+=	$(SRC_DIR)/ps3video.cpp \
 			$(SRC_DIR)/emu-ps3.cpp \
 			$(VBA_API_DIR)/Util.cpp \
-			$(VBA_API_DIR)/gb/GB.cpp \
-			$(VBA_API_DIR)/gb/gbCheats.cpp \
-			$(VBA_API_DIR)/gb/gbDis.cpp \
-			$(VBA_API_DIR)/gb/gbGfx.cpp \
-			$(VBA_API_DIR)/gb/gbGlobals.cpp \
-			$(VBA_API_DIR)/gb/gbMemory.cpp \
-			$(VBA_API_DIR)/gb/gbPrinter.cpp \
-			$(VBA_API_DIR)/gb/gbSGB.cpp \
-			$(VBA_API_DIR)/gb/gbSound.cpp \
 			$(VBA_API_DIR)/gba/Sound.cpp \
-			$(VBA_API_DIR)/gba/EEprom.cpp \
-			$(VBA_API_DIR)/gba/Flash.cpp \
-			$(VBA_API_DIR)/gba/RTC.cpp \
-			$(VBA_API_DIR)/gba/Sram.cpp \
+			$(VBA_API_DIR)/gba/Memory.cpp \
 			$(SRC_DIR)/menu.cpp \
-			$(VBA_API_DIR)/apu/Sound_Buffer.cpp \
 			$(VBA_API_DIR)/gba/GBA.cpp
 
 
@@ -83,28 +69,12 @@ VBA_CPPOBJS 	= $(VBA_CPPSRCS:.cpp=.ppu.o)
 VBA_CSRCS	+=  $(SRC_DIR)/ps3input.c \
 		$(CELL_FRAMEWORK2_DIR)/fileio/file_browser.c \
 		$(SRC_DIR)/conf/config_file.c \
-		$(VBA_API_DIR)/common/memgzio.c \
 		$(CELL_FRAMEWORK2_DIR)/audio/audioport.c \
 		$(CELL_FRAMEWORK2_DIR)/audio/librsound.c \
 		$(CELL_FRAMEWORK2_DIR)/audio/rsound.c \
 		$(CELL_FRAMEWORK2_DIR)/input/pad_input.c \
 		$(CELL_FRAMEWORK2_DIR)/input/mouse_input.c \
-		$(CELL_FRAMEWORK2_DIR)/utility/oskutil.c \
-		$(UTILS_DIR)/zlib/deflate.c \
-		$(UTILS_DIR)/zlib/gzlib.c \
-		$(UTILS_DIR)/zlib/uncompr.c \
-		$(UTILS_DIR)/zlib/adler32.c \
-		$(UTILS_DIR)/zlib/zutil.c \
-		$(UTILS_DIR)/zlib/inffast.c \
-		$(UTILS_DIR)/zlib/gzread.c \
-		$(UTILS_DIR)/zlib/crc32.c \
-		$(UTILS_DIR)/zlib/gzwrite.c \
-		$(UTILS_DIR)/zlib/inflate.c \
-		$(UTILS_DIR)/zlib/infback.c \
-		$(UTILS_DIR)/zlib/trees.c \
-		$(UTILS_DIR)/zlib/inftrees.c \
-		$(UTILS_DIR)/zlib/gzclose.c \
-		$(UTILS_DIR)/zlib/compress.c
+		$(CELL_FRAMEWORK2_DIR)/utility/oskutil.c
 
 VBA_COBJS 	= $(VBA_CSRCS:.c=.ppu.o)
 
@@ -120,7 +90,7 @@ OPT_FLAGS	+= -ffast-math --param inline-unit-growth=200 --param large-function-g
 endif
 
 DEFINES		+= -DBLARGG_BIG_ENDIAN=1 -D__CELLOS_LV2__ -DBRANCHLESS_GBA_GFX -D__ppc__ -DSPEEDHAX -D__POWERPC__ -DWORDS_BIGENDIAN -DUSE_CACHE_PREFETCH=1 -DGEKKO -DPSGL -DPATH_MAX=1024  -DHAVE_INTTYPES_H -D_HAVE_STDINT_H -DINLINE=inline
-INCDIRS_FLAGS	+= -I. -I$(VBA_API_DIR) -I$(UTILS_DIR)/zlib
+INCDIRS_FLAGS	+= -I. -I$(VBA_API_DIR)
 
 
 ifeq ($(DEBUG),1)

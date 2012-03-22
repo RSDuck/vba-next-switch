@@ -1,12 +1,3 @@
-// Sets up common environment for Shay Green's libraries.
-
-// Gb_Snd_Emu 0.2.0
-#ifndef BLARGG_COMMON_H
-#define BLARGG_COMMON_H
-
-#include <stdlib.h>
-#include <limits.h>
-
 /* Uncomment to have Gb_Apu run at 4x normal clock rate (16777216 Hz), useful in
 a Game Boy Advance emulator. */
 #define GB_APU_OVERCLOCK 4
@@ -47,10 +38,15 @@ a Game Boy Advance emulator. */
 /* HAVE_STDINT_H: If defined, use <stdint.h> for int8_t etc.*/
 #if defined (HAVE_STDINT_H)
 	#include <stdint.h>
-
 /* HAVE_INTTYPES_H: If defined, use <stdint.h> for int8_t etc.*/
 #elif defined (HAVE_INTTYPES_H)
 	#include <inttypes.h>
 #endif
 
-#endif
+// If expr yields non-NULL error string, returns it from current function,
+// otherwise continues normally.
+#undef  RETURN_ERR
+#define RETURN_ERR( expr ) do {                         \
+		const char * blargg_return_err_ = (expr);               \
+		if ( blargg_return_err_ ) return blargg_return_err_;    \
+	} while ( 0 )
