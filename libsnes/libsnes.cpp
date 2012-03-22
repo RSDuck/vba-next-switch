@@ -370,7 +370,7 @@ static void gba_init(void)
 	soundReset();
 
 	uint8_t * state_buf = (uint8_t*)malloc(2000000);
-	serialize_size = CPUWriteState_libgba(state_buf, 2000000);
+	serialize_size = CPUWriteState(state_buf, 2000000);
 	free(state_buf);
 }
 
@@ -441,12 +441,12 @@ EXPORT unsigned snes_serialize_size(void)
 
 EXPORT bool snes_serialize(uint8_t *data, unsigned size)
 {
-   return CPUWriteState_libgba(data, size);
+   return CPUWriteState(data, size);
 }
 
 EXPORT bool snes_unserialize(const uint8_t *data, unsigned size)
 {
-   return CPUReadState_libgba(data, size);
+   return CPUReadState(data, size);
 }
 
 EXPORT void snes_cheat_reset(void)

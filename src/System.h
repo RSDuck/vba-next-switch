@@ -3,13 +3,6 @@
 
 #include <stdint.h>
 
-// For backwards compatibility with the original VBA defines
-
-#ifdef __CELLOS_LV2__
-extern uint32_t special_action_msg_expired;
-extern char special_action_msg[256];
-#endif
-
 extern void systemDrawScreen (void);
 extern bool systemReadJoypads (void);
 extern uint32_t systemGetClock (void);
@@ -36,7 +29,5 @@ extern int systemSaveUpdateCounter;
 
 #define SYSTEM_SAVE_UPDATED 30
 #define SYSTEM_SAVE_NOT_UPDATED 0
-
-#include "VbaNext.h"
 
 #endif // SYSTEM_H

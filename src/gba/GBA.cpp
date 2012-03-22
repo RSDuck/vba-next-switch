@@ -29,8 +29,6 @@ static const int table [0x40] =
 #include "RTC.h"
 #include "Sound.h"
 
-static memoryMap map[256];
-
 /*============================================================
 	GBA INLINE
 ============================================================ */
@@ -99,6 +97,90 @@ static uint16_t P1       = 0xFFFF;
 static u16 IE;
 static u16 IF;
 static u16 IME;
+
+static uint16_t BG0CNT   = 0x0000;
+static uint16_t BG1CNT   = 0x0000;
+static uint16_t BG2CNT   = 0x0000;
+static uint16_t BG3CNT   = 0x0000;
+static uint16_t BG0HOFS  = 0x0000;
+static uint16_t BG0VOFS  = 0x0000;
+static uint16_t BG1HOFS  = 0x0000;
+static uint16_t BG1VOFS  = 0x0000;
+static uint16_t BG2HOFS  = 0x0000;
+static uint16_t BG2VOFS  = 0x0000;
+static uint16_t BG3HOFS  = 0x0000;
+static uint16_t BG3VOFS  = 0x0000;
+static uint16_t BG2PA    = 0x0100;
+static uint16_t BG2PB    = 0x0000;
+static uint16_t BG2PC    = 0x0000;
+static uint16_t BG2PD    = 0x0100;
+static uint16_t BG2X_L   = 0x0000;
+static uint16_t BG2X_H   = 0x0000;
+static uint16_t BG2Y_L   = 0x0000;
+static uint16_t BG2Y_H   = 0x0000;
+static uint16_t BG3PA    = 0x0100;
+static uint16_t BG3PB    = 0x0000;
+static uint16_t BG3PC    = 0x0000;
+static uint16_t BG3PD    = 0x0100;
+static uint16_t BG3X_L   = 0x0000;
+static uint16_t BG3X_H   = 0x0000;
+static uint16_t BG3Y_L   = 0x0000;
+static uint16_t BG3Y_H   = 0x0000;
+static uint16_t WIN0H    = 0x0000;
+static uint16_t WIN1H    = 0x0000;
+static uint16_t WIN0V    = 0x0000;
+static uint16_t WIN1V    = 0x0000;
+static uint16_t WININ    = 0x0000;
+static uint16_t WINOUT   = 0x0000;
+static uint16_t BLDMOD   = 0x0000;
+static uint16_t COLEV    = 0x0000;
+static uint16_t COLY     = 0x0000;
+static uint16_t DM0SAD_L = 0x0000;
+static uint16_t DM0SAD_H = 0x0000;
+static uint16_t DM0DAD_L = 0x0000;
+static uint16_t DM0DAD_H = 0x0000;
+static uint16_t DM0CNT_L = 0x0000;
+static uint16_t DM0CNT_H = 0x0000;
+static uint16_t DM1SAD_L = 0x0000;
+static uint16_t DM1SAD_H = 0x0000;
+static uint16_t DM1DAD_L = 0x0000;
+static uint16_t DM1DAD_H = 0x0000;
+static uint16_t DM1CNT_L = 0x0000;
+static uint16_t DM1CNT_H = 0x0000;
+static uint16_t DM2SAD_L = 0x0000;
+static uint16_t DM2SAD_H = 0x0000;
+static uint16_t DM2DAD_L = 0x0000;
+static uint16_t DM2DAD_H = 0x0000;
+static uint16_t DM2CNT_L = 0x0000;
+static uint16_t DM2CNT_H = 0x0000;
+static uint16_t DM3SAD_L = 0x0000;
+static uint16_t DM3SAD_H = 0x0000;
+static uint16_t DM3DAD_L = 0x0000;
+static uint16_t DM3DAD_H = 0x0000;
+static uint16_t DM3CNT_L = 0x0000;
+static uint16_t DM3CNT_H = 0x0000;
+
+static bus_t bus;
+static graphics_t graphics;
+
+static memoryMap map[256];
+static int clockTicks;
+
+static int romSize = 0x2000000;
+static uint32_t line[6][240];
+static bool gfxInWin[2][240];
+static int lineOBJpixleft[128];
+uint64_t joy = 0;
+
+static int gfxBG2Changed = 0;
+static int gfxBG3Changed = 0;
+
+static int gfxBG2X = 0;
+static int gfxBG2Y = 0;
+static int gfxBG3X = 0;
+static int gfxBG3Y = 0;
+
+//static int gfxLastVCOUNT = 0;
 
 // Waitstates when accessing data
 static INLINE int dataTicksAccess(u32 address, u8 bit32) // DATA 8/16bits NON SEQ
@@ -235,28 +317,35 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 #define CPUReadHalfWordQuick(addr)	READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 #define CPUReadMemoryQuick(addr)	READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-extern const u32 objTilesAddress[3];
-
-extern bool stopState;
-extern int holdType;
+static bool stopState = false;
+static int holdType = 0;
 extern bool cpuSramEnabled;
 extern bool cpuFlashEnabled;
 extern bool cpuEEPROMEnabled;
 #ifdef USE_MOTION_SENSOR
 extern bool cpuEEPROMSensorEnabled;
 #endif
-extern bool timer0On;
-extern int timer0Ticks;
-extern int timer0ClockReload;
-extern bool timer1On;
-extern int timer1Ticks;
-extern int timer1ClockReload;
-extern bool timer2On;
-extern int timer2Ticks;
-extern int timer2ClockReload;
-extern bool timer3On;
-extern int timer3Ticks;
-extern int timer3ClockReload;
+static bool timer0On = false;
+static int timer0Ticks = 0;
+static int timer0Reload = 0;
+static int timer0ClockReload  = 0;
+static uint16_t timer1Value = 0;
+static bool timer1On = false;
+static int timer1Ticks = 0;
+static int timer1Reload = 0;
+static int timer1ClockReload  = 0;
+static uint16_t timer2Value = 0;
+static bool timer2On = false;
+static int timer2Ticks = 0;
+static int timer2Reload = 0;
+static int timer2ClockReload  = 0;
+static uint16_t timer3Value = 0;
+static bool timer3On = false;
+static int timer3Ticks = 0;
+static int timer3Reload = 0;
+static int timer3ClockReload  = 0;
+
+static const uint32_t  objTilesAddress [3] = {0x010000, 0x014000, 0x014000};
 
 static INLINE u32 CPUReadMemory(u32 address)
 {
@@ -778,7 +867,7 @@ s16 sineTable[256] = {
   (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
 };
 
-static void BIOS_ArcTan()
+static void BIOS_ArcTan (void)
 {
 	s32 a =  -(((s32)(bus.reg[0].I*bus.reg[0].I)) >> 14);
 	s32 b = ((0xA9 * a) >> 14) + 0x390;
@@ -792,7 +881,7 @@ static void BIOS_ArcTan()
 	bus.reg[0].I = a;
 }
 
-static void BIOS_Div()
+static void BIOS_Div (void)
 {
 	int number = bus.reg[0].I;
 	int denom = bus.reg[1].I;
@@ -806,7 +895,7 @@ static void BIOS_Div()
 	}
 }
 
-static void BIOS_ArcTan2()
+static void BIOS_ArcTan2 (void)
 {
 	s32 x = bus.reg[0].I;
 	s32 y = bus.reg[1].I;
@@ -842,7 +931,7 @@ static void BIOS_ArcTan2()
 	bus.reg[0].I = res;
 }
 
-static void BIOS_BitUnPack()
+static void BIOS_BitUnPack (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -895,7 +984,7 @@ static void BIOS_BitUnPack()
 	}
 }
 
-static void BIOS_BgAffineSet()
+static void BIOS_BgAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -944,7 +1033,7 @@ static void BIOS_BgAffineSet()
 	}
 }
 
-static void BIOS_CpuSet()
+static void BIOS_CpuSet (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1002,7 +1091,7 @@ static void BIOS_CpuSet()
 	}
 }
 
-static void BIOS_CpuFastSet()
+static void BIOS_CpuFastSet (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1043,7 +1132,7 @@ static void BIOS_CpuFastSet()
 	}
 }
 
-static void BIOS_Diff8bitUnFilterWram()
+static void BIOS_Diff8bitUnFilterWram (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1069,7 +1158,7 @@ static void BIOS_Diff8bitUnFilterWram()
 	}
 }
 
-static void BIOS_Diff8bitUnFilterVram()
+static void BIOS_Diff8bitUnFilterVram (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1105,7 +1194,7 @@ static void BIOS_Diff8bitUnFilterVram()
 	}
 }
 
-static void BIOS_Diff16bitUnFilter()
+static void BIOS_Diff16bitUnFilter (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1135,8 +1224,7 @@ static void BIOS_Diff16bitUnFilter()
 	}
 }
 
-
-static void BIOS_DivARM()
+static void BIOS_DivARM (void)
 {
 	u32 temp = bus.reg[0].I;
 	bus.reg[0].I = bus.reg[1].I;
@@ -1144,7 +1232,7 @@ static void BIOS_DivARM()
 	BIOS_Div();
 }
 
-static void BIOS_HuffUnComp()
+static void BIOS_HuffUnComp (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1281,7 +1369,7 @@ static void BIOS_HuffUnComp()
 	}
 }
 
-static void BIOS_LZ77UnCompVram()
+static void BIOS_LZ77UnCompVram (void)
 {
 
 	u32 source = bus.reg[0].I;
@@ -1364,7 +1452,7 @@ static void BIOS_LZ77UnCompVram()
 	}
 }
 
-static void BIOS_LZ77UnCompWram()
+static void BIOS_LZ77UnCompWram (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1414,7 +1502,7 @@ static void BIOS_LZ77UnCompWram()
 	}
 }
 
-static void BIOS_ObjAffineSet()
+static void BIOS_ObjAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1524,7 +1612,7 @@ static void BIOS_RegisterRamReset(u32 flags)
 	}
 }
 
-static void BIOS_RLUnCompVram()
+static void BIOS_RLUnCompVram (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1584,7 +1672,7 @@ static void BIOS_RLUnCompVram()
 	}
 }
 
-static void BIOS_RLUnCompWram()
+static void BIOS_RLUnCompWram (void)
 {
 	u32 source = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1622,7 +1710,7 @@ static void BIOS_RLUnCompWram()
 	}
 }
 
-static void BIOS_SoftReset()
+static void BIOS_SoftReset (void)
 {
 	armState = true;
 	armMode = 0x1F;
@@ -1673,10 +1761,6 @@ static void BIOS_SoftReset()
 	}
 
 
-bus_t bus;
-graphics_t graphics;
-
-static int clockTicks;
 
 #define CPU_UPDATE_CPSR() \
 { \
@@ -5651,21 +5735,6 @@ int thumbExecute()
 }
 
 
-static int romSize = 0x2000000;
-uint32_t line[6][240];
-bool gfxInWin[2][240];
-int lineOBJpixleft[128];
-uint64_t joy = 0;
-
-int gfxBG2Changed = 0;
-int gfxBG3Changed = 0;
-
-int gfxBG2X = 0;
-int gfxBG2Y = 0;
-int gfxBG3X = 0;
-int gfxBG3Y = 0;
-
-//int gfxLastVCOUNT = 0;
 //
 /*============================================================
 	GBA GFX
@@ -6096,109 +6165,109 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 				       int changed,
 				       u32 *line)
 {
-  u16 *palette = (u16 *)graphics.paletteRAM;
-  u8 *screenBase = (graphics.DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
-  int prio = ((control & 3) << 25) + 0x1000000;
-  u32 sizeX = 240;
-  u32 sizeY = 160;
+	u16 *palette = (u16 *)graphics.paletteRAM;
+	u8 *screenBase = (graphics.DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
+	int prio = ((control & 3) << 25) + 0x1000000;
+	u32 sizeX = 240;
+	u32 sizeY = 160;
 
-  int startX = (x_l) | ((x_h & 0x07FF)<<16);
-  if(x_h & 0x0800)
-    startX |= 0xF8000000;
-  int startY = (y_l) | ((y_h & 0x07FF)<<16);
-  if(y_h & 0x0800)
-    startY |= 0xF8000000;
+	int startX = (x_l) | ((x_h & 0x07FF)<<16);
+	if(x_h & 0x0800)
+		startX |= 0xF8000000;
+	int startY = (y_l) | ((y_h & 0x07FF)<<16);
+	if(y_h & 0x0800)
+		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-  int dx = pa & 0x7FFF;
-  dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = pa & 0x7FFF;
+	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
 
-  int dmx = pb & 0x7FFF;
-  dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = pb & 0x7FFF;
+	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
 
-  int dy = pc & 0x7FFF;
-  dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = pc & 0x7FFF;
+	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
 
-  int dmy = pd & 0x7FFF;
-  dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = pd & 0x7FFF;
+	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
 #else
-  int dx = pa & 0x7FFF;
-  if(pa & 0x8000)
-    dx |= 0xFFFF8000;
-  int dmx = pb & 0x7FFF;
-  if(pb & 0x8000)
-    dmx |= 0xFFFF8000;
-  int dy = pc & 0x7FFF;
-  if(pc & 0x8000)
-    dy |= 0xFFFF8000;
-  int dmy = pd & 0x7FFF;
-  if(pd & 0x8000)
-    dmy |= 0xFFFF8000;
+	int dx = pa & 0x7FFF;
+	if(pa & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = pb & 0x7FFF;
+	if(pb & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = pc & 0x7FFF;
+	if(pc & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = pd & 0x7FFF;
+	if(pd & 0x8000)
+		dmy |= 0xFFFF8000;
 #endif
 
-  if(VCOUNT == 0)
-    changed = 3;
+	if(VCOUNT == 0)
+		changed = 3;
 
-  currentX += dmx;
-  currentY += dmy;
+	currentX += dmx;
+	currentY += dmy;
 
-  if(changed & 1)
-  {
-    currentX = (x_l) | ((x_h & 0x07FF)<<16);
-    if(x_h & 0x0800)
-      currentX |= 0xF8000000;
-  }
+	if(changed & 1)
+	{
+		currentX = (x_l) | ((x_h & 0x07FF)<<16);
+		if(x_h & 0x0800)
+			currentX |= 0xF8000000;
+	}
 
-  if(changed & 2)
-  {
-    currentY = (y_l) | ((y_h & 0x07FF)<<16);
-    if(y_h & 0x0800)
-      currentY |= 0xF8000000;
-  }
+	if(changed & 2)
+	{
+		currentY = (y_l) | ((y_h & 0x07FF)<<16);
+		if(y_h & 0x0800)
+			currentY |= 0xF8000000;
+	}
 
-  int realX = currentX;
-  int realY = currentY;
+	int realX = currentX;
+	int realY = currentY;
 
-  if(control & 0x40) {
-    int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-    int y = VCOUNT - (VCOUNT % mosaicY);
-    realX = startX + y*dmx;
-    realY = startY + y*dmy;
-  }
+	if(control & 0x40) {
+		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+		int y = VCOUNT - (VCOUNT % mosaicY);
+		realX = startX + y*dmx;
+		realY = startY + y*dmy;
+	}
 
-  int xxx = (realX >> 8);
-  int yyy = (realY >> 8);
+	int xxx = (realX >> 8);
+	int yyy = (realY >> 8);
 
-  memset(line, -1, 240 * sizeof(u32));
-  for(u32 x = 0; x < 240; ++x)
-  {
-	  u8 color = screenBase[yyy * 240 + xxx];
-	  if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
-		  line[x] = (READ16LE(&palette[color])|prio);
-	  realX += dx;
-	  realY += dy;
+	memset(line, -1, 240 * sizeof(u32));
+	for(u32 x = 0; x < 240; ++x)
+	{
+		u8 color = screenBase[yyy * 240 + xxx];
+		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
+			line[x] = (READ16LE(&palette[color])|prio);
+		realX += dx;
+		realY += dy;
 
-	  xxx = (realX >> 8);
-	  yyy = (realY >> 8);
-  }
+		xxx = (realX >> 8);
+		yyy = (realY >> 8);
+	}
 
-  if(control & 0x40)
-  {
-	  int mosaicX = (MOSAIC & 0xF) + 1;
-	  if(mosaicX > 1)
-	  {
-		  int m = 1;
-		  for(u32 i = 0; i < 239u; ++i)
-		  {
-			  line[i+1] = line[i];
-			  if(++m == mosaicX)
-			  {
-				  m = 1;
-				  ++i;
-			  }
-		  }
-	  }
-  }
+	if(control & 0x40)
+	{
+		int mosaicX = (MOSAIC & 0xF) + 1;
+		if(mosaicX > 1)
+		{
+			int m = 1;
+			for(u32 i = 0; i < 239u; ++i)
+			{
+				line[i+1] = line[i];
+				if(++m == mosaicX)
+				{
+					m = 1;
+					++i;
+				}
+			}
+		}
+	}
 }
 
 static INLINE void gfxDrawRotScreen16Bit160(u16 control,
@@ -6210,107 +6279,107 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 					    int changed,
 					    u32 *line)
 {
-  u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
-    (u16 *)&vram[0];
-  int prio = ((control & 3) << 25) + 0x1000000;
-  u32 sizeX = 160;
-  u32 sizeY = 128;
+	u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
+		(u16 *)&vram[0];
+	int prio = ((control & 3) << 25) + 0x1000000;
+	u32 sizeX = 160;
+	u32 sizeY = 128;
 
-  int startX = (x_l) | ((x_h & 0x07FF)<<16);
-  if(x_h & 0x0800)
-    startX |= 0xF8000000;
-  int startY = (y_l) | ((y_h & 0x07FF)<<16);
-  if(y_h & 0x0800)
-    startY |= 0xF8000000;
+	int startX = (x_l) | ((x_h & 0x07FF)<<16);
+	if(x_h & 0x0800)
+		startX |= 0xF8000000;
+	int startY = (y_l) | ((y_h & 0x07FF)<<16);
+	if(y_h & 0x0800)
+		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-  int dx = pa & 0x7FFF;
-  dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = pa & 0x7FFF;
+	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
 
-  int dmx = pb & 0x7FFF;
-  dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = pb & 0x7FFF;
+	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
 
-  int dy = pc & 0x7FFF;
-  dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = pc & 0x7FFF;
+	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
 
-  int dmy = pd & 0x7FFF;
-  dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = pd & 0x7FFF;
+	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
 #else
-  int dx = pa & 0x7FFF;
-  if(pa & 0x8000)
-    dx |= 0xFFFF8000;
-  int dmx = pb & 0x7FFF;
-  if(pb & 0x8000)
-    dmx |= 0xFFFF8000;
-  int dy = pc & 0x7FFF;
-  if(pc & 0x8000)
-    dy |= 0xFFFF8000;
-  int dmy = pd & 0x7FFF;
-  if(pd & 0x8000)
-    dmy |= 0xFFFF8000;
+	int dx = pa & 0x7FFF;
+	if(pa & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = pb & 0x7FFF;
+	if(pb & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = pc & 0x7FFF;
+	if(pc & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = pd & 0x7FFF;
+	if(pd & 0x8000)
+		dmy |= 0xFFFF8000;
 #endif
 
-  if(VCOUNT == 0)
-    changed = 3;
+	if(VCOUNT == 0)
+		changed = 3;
 
-  currentX += dmx;
-  currentY += dmy;
+	currentX += dmx;
+	currentY += dmy;
 
-  if(changed & 1)
-  {
-	  currentX = (x_l) | ((x_h & 0x07FF)<<16);
-	  if(x_h & 0x0800)
-		  currentX |= 0xF8000000;
-  }
+	if(changed & 1)
+	{
+		currentX = (x_l) | ((x_h & 0x07FF)<<16);
+		if(x_h & 0x0800)
+			currentX |= 0xF8000000;
+	}
 
-  if(changed & 2)
-  {
-	  currentY = (y_l) | ((y_h & 0x07FF)<<16);
-	  if(y_h & 0x0800)
-		  currentY |= 0xF8000000;
-  }
+	if(changed & 2)
+	{
+		currentY = (y_l) | ((y_h & 0x07FF)<<16);
+		if(y_h & 0x0800)
+			currentY |= 0xF8000000;
+	}
 
-  int realX = currentX;
-  int realY = currentY;
+	int realX = currentX;
+	int realY = currentY;
 
-  if(control & 0x40) {
-    int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-    int y = VCOUNT - (VCOUNT % mosaicY);
-    realX = startX + y*dmx;
-    realY = startY + y*dmy;
-  }
+	if(control & 0x40) {
+		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+		int y = VCOUNT - (VCOUNT % mosaicY);
+		realX = startX + y*dmx;
+		realY = startY + y*dmy;
+	}
 
-  int xxx = (realX >> 8);
-  int yyy = (realY >> 8);
+	int xxx = (realX >> 8);
+	int yyy = (realY >> 8);
 
-  memset(line, -1, 240 * sizeof(u32));
-  for(u32 x = 0; x < 240u; ++x)
-  {
-	  if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
-		  line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+	memset(line, -1, 240 * sizeof(u32));
+	for(u32 x = 0; x < 240u; ++x)
+	{
+		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
+			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
-	  realX += dx;
-	  realY += dy;
+		realX += dx;
+		realY += dy;
 
-	  xxx = (realX >> 8);
-	  yyy = (realY >> 8);
-  }
+		xxx = (realX >> 8);
+		yyy = (realY >> 8);
+	}
 
 
-  int mosaicX = (MOSAIC & 0xF) + 1;
-  if(control & 0x40 && (mosaicX > 1))
-  {
-	  int m = 1;
-	  for(u32 i = 0; i < 239u; ++i)
-	  {
-		  line[i+1] = line[i];
-		  if(++m == mosaicX)
-		  {
-			  m = 1;
-			  ++i;
-		  }
-	  }
-  }
+	int mosaicX = (MOSAIC & 0xF) + 1;
+	if(control & 0x40 && (mosaicX > 1))
+	{
+		int m = 1;
+		for(u32 i = 0; i < 239u; ++i)
+		{
+			line[i+1] = line[i];
+			if(++m == mosaicX)
+			{
+				m = 1;
+				++i;
+			}
+		}
+	}
 }
 
 /* lineOBJpix is used to keep track of the drawn OBJs
@@ -7193,67 +7262,6 @@ uint8_t *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
-uint16_t BG0CNT   = 0x0000;
-uint16_t BG1CNT   = 0x0000;
-uint16_t BG2CNT   = 0x0000;
-uint16_t BG3CNT   = 0x0000;
-uint16_t BG0HOFS  = 0x0000;
-uint16_t BG0VOFS  = 0x0000;
-uint16_t BG1HOFS  = 0x0000;
-uint16_t BG1VOFS  = 0x0000;
-uint16_t BG2HOFS  = 0x0000;
-uint16_t BG2VOFS  = 0x0000;
-uint16_t BG3HOFS  = 0x0000;
-uint16_t BG3VOFS  = 0x0000;
-uint16_t BG2PA    = 0x0100;
-uint16_t BG2PB    = 0x0000;
-uint16_t BG2PC    = 0x0000;
-uint16_t BG2PD    = 0x0100;
-uint16_t BG2X_L   = 0x0000;
-uint16_t BG2X_H   = 0x0000;
-uint16_t BG2Y_L   = 0x0000;
-uint16_t BG2Y_H   = 0x0000;
-uint16_t BG3PA    = 0x0100;
-uint16_t BG3PB    = 0x0000;
-uint16_t BG3PC    = 0x0000;
-uint16_t BG3PD    = 0x0100;
-uint16_t BG3X_L   = 0x0000;
-uint16_t BG3X_H   = 0x0000;
-uint16_t BG3Y_L   = 0x0000;
-uint16_t BG3Y_H   = 0x0000;
-uint16_t WIN0H    = 0x0000;
-uint16_t WIN1H    = 0x0000;
-uint16_t WIN0V    = 0x0000;
-uint16_t WIN1V    = 0x0000;
-uint16_t WININ    = 0x0000;
-uint16_t WINOUT   = 0x0000;
-uint16_t BLDMOD   = 0x0000;
-uint16_t COLEV    = 0x0000;
-uint16_t COLY     = 0x0000;
-uint16_t DM0SAD_L = 0x0000;
-uint16_t DM0SAD_H = 0x0000;
-uint16_t DM0DAD_L = 0x0000;
-uint16_t DM0DAD_H = 0x0000;
-uint16_t DM0CNT_L = 0x0000;
-uint16_t DM0CNT_H = 0x0000;
-uint16_t DM1SAD_L = 0x0000;
-uint16_t DM1SAD_H = 0x0000;
-uint16_t DM1DAD_L = 0x0000;
-uint16_t DM1DAD_H = 0x0000;
-uint16_t DM1CNT_L = 0x0000;
-uint16_t DM1CNT_H = 0x0000;
-uint16_t DM2SAD_L = 0x0000;
-uint16_t DM2SAD_H = 0x0000;
-uint16_t DM2DAD_L = 0x0000;
-uint16_t DM2DAD_H = 0x0000;
-uint16_t DM2CNT_L = 0x0000;
-uint16_t DM2CNT_H = 0x0000;
-uint16_t DM3SAD_L = 0x0000;
-uint16_t DM3SAD_H = 0x0000;
-uint16_t DM3DAD_L = 0x0000;
-uint16_t DM3DAD_H = 0x0000;
-uint16_t DM3CNT_L = 0x0000;
-uint16_t DM3CNT_H = 0x0000;
 
 #ifdef USE_SWITICKS
 int SWITicks = 0;
@@ -7265,55 +7273,32 @@ int cpuDmaCount = 0;
 
 int gbaSaveType = 0; // used to remember the save type on reset
 bool intState = false;
-bool stopState = false;
-int holdType = 0;
 bool cpuSramEnabled = true;
 bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
 bool cpuEEPROMSensorEnabled = false;
 
-uint8_t timerOnOffDelay = 0;
-uint16_t timer0Value = 0;
-bool timer0On = false;
-int timer0Ticks = 0;
-int timer0Reload = 0;
-int timer0ClockReload  = 0;
-uint16_t timer1Value = 0;
-bool timer1On = false;
-int timer1Ticks = 0;
-int timer1Reload = 0;
-int timer1ClockReload  = 0;
-uint16_t timer2Value = 0;
-bool timer2On = false;
-int timer2Ticks = 0;
-int timer2Reload = 0;
-int timer2ClockReload  = 0;
-uint16_t timer3Value = 0;
-bool timer3On = false;
-int timer3Ticks = 0;
-int timer3Reload = 0;
-int timer3ClockReload  = 0;
-uint32_t dma0Source = 0;
-uint32_t dma0Dest = 0;
-uint32_t dma1Source = 0;
-uint32_t dma1Dest = 0;
-uint32_t dma2Source = 0;
-uint32_t dma2Dest = 0;
-uint32_t dma3Source = 0;
-uint32_t dma3Dest = 0;
+static uint8_t timerOnOffDelay = 0;
+static uint16_t timer0Value = 0;
+static uint32_t dma0Source = 0;
+static uint32_t dma0Dest = 0;
+static uint32_t dma1Source = 0;
+static uint32_t dma1Dest = 0;
+static uint32_t dma2Source = 0;
+static uint32_t dma2Dest = 0;
+static uint32_t dma3Source = 0;
+static uint32_t dma3Dest = 0;
 void (*cpuSaveGameFunc)(uint32_t,uint8_t) = flashSaveDecide;
-bool fxOn = false;
-bool windowOn = false;
-int count = 0;
+static bool fxOn = false;
+static bool windowOn = false;
 
 const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
-const uint32_t  objTilesAddress [3] = {0x010000, 0x014000, 0x014000};
-const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
-const uint8_t gamepakWaitState[4] =  { 4, 3, 2, 8 };
-const uint8_t gamepakWaitState0[2] = { 2, 1 };
-const uint8_t gamepakWaitState1[2] = { 4, 1 };
-const uint8_t gamepakWaitState2[2] = { 8, 1 };
+static const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
+static const uint8_t gamepakWaitState[4] =  { 4, 3, 2, 8 };
+static const uint8_t gamepakWaitState0[2] = { 2, 1 };
+static const uint8_t gamepakWaitState1[2] = { 4, 1 };
+static const uint8_t gamepakWaitState2[2] = { 8, 1 };
 
 
 #ifndef LSB_FIRST
@@ -7707,7 +7692,7 @@ INLINE int CPUUpdateTicks()
 }
 
 
-unsigned CPUWriteState_libgba(uint8_t* data, unsigned size)
+unsigned CPUWriteState(uint8_t* data, unsigned size)
 {
 	uint8_t *orig = data;
 
@@ -10438,8 +10423,7 @@ void (*renderLine)(uint32_t*) = mode0RenderLine;
     break; \
   }
 
-#ifdef __LIBSNES__
-bool CPUReadState_libgba(const uint8_t* data, unsigned size)
+bool CPUReadState(const uint8_t* data, unsigned size)
 {
 	// Don't really care about version.
 	int version = utilReadIntMem(data);
@@ -10530,7 +10514,6 @@ bool CPUReadState_libgba(const uint8_t* data, unsigned size)
 
 	return true;
 }
-#endif
 
 static void CPUUpdateFlags(bool breakLoop)
 {

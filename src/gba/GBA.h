@@ -51,28 +51,28 @@ typedef struct {
 } memoryMap;
 
 typedef union {
-  struct {
+	struct {
 #ifdef LSB_FIRST
-    uint8_t B0;
-    uint8_t B1;
-    uint8_t B2;
-    uint8_t B3;
+		uint8_t B0;
+		uint8_t B1;
+		uint8_t B2;
+		uint8_t B3;
 #else
-    uint8_t B3;
-    uint8_t B2;
-    uint8_t B1;
-    uint8_t B0;
+		uint8_t B3;
+		uint8_t B2;
+		uint8_t B1;
+		uint8_t B0;
 #endif
-  } B;
-  struct {
+	} B;
+	struct {
 #ifdef LSB_FIRST
-    uint16_t W0;
-    uint16_t W1;
+		uint16_t W0;
+		uint16_t W1;
 #else
-    uint16_t W1;
-    uint16_t W0;
+		uint16_t W1;
+		uint16_t W0;
 #endif
-  } W;
+	} W;
 #ifdef LSB_FIRST
 	uint32_t I;
 #else
@@ -100,8 +100,6 @@ typedef struct
 	int lcdTicks;
 } graphics_t;
 
-extern bus_t bus;
-extern graphics_t graphics;
 extern uint64_t joy;
 
 extern void (*cpuSaveGameFunc)(uint32_t,uint8_t);
@@ -114,11 +112,9 @@ extern bool CPUReadBatteryFile(const char *);
 extern bool CPUExportEepromFile(const char *);
 extern bool CPUImportEepromFile(const char *);
 extern bool CPUReadMemState(char *, int);
-extern bool CPUReadState(const char *);
-extern bool CPUReadState_libgba(const uint8_t*, unsigned);
+extern bool CPUReadState(const uint8_t * data, unsigned size);
 extern bool CPUWriteMemState(char *, int);
-extern unsigned CPUWriteState_libgba(uint8_t*, unsigned);
-extern bool CPUWriteState(const char *);
+extern unsigned CPUWriteState(uint8_t* data, unsigned size);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
