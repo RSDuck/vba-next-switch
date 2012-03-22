@@ -32,7 +32,7 @@ else ifeq ($(platform), ps3)
    AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH
-else ifeq ($(platform), snc-ps3)
+else ifeq ($(platform), sncps3)
    TARGET := libsnes.a
    CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
@@ -80,7 +80,7 @@ OBJS := $(VBA_CXXOBJ)
 
 VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
-ifeq ($(platform), snc-ps3)
+ifeq ($(platform), sncps3)
 CODE_DEFINES =
 else
 CODE_DEFINES = -std=gnu99
@@ -95,7 +95,7 @@ LIBS :=
 $(TARGET): $(OBJS)
 ifeq ($(platform), ps3)
 	$(AR) rcs $@ $(OBJS)
-else ifeq ($(platform), snc-ps3)
+else ifeq ($(platform), sncps3)
 	$(AR) rcs $@ $(OBJS)
 else ifeq ($(platform), xenon)
 	$(AR) rcs $@ $(OBJS)

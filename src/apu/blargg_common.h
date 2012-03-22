@@ -11,11 +11,6 @@
 a Game Boy Advance emulator. */
 #define GB_APU_OVERCLOCK 4
 
-#define GB_APU_CUSTOM_STATE 1
-
-/* Uncomment to enable platform-specific (and possibly non-portable) optimizations. */
-#define BLARGG_NONPORTABLE 1
-
 #ifndef STATIC_CAST
 	#if __GNUC__ >= 4
 		#define STATIC_CAST(T,expr) static_cast<T> (expr)

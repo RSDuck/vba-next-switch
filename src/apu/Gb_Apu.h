@@ -23,8 +23,9 @@ struct gb_apu_state_t;
 #define REGISTER_COUNT	48
 #define REGS_SIZE 64
 
-/* Clock rate that sound hardware runs at.*/
-/* 4194304 * 4 */
+/* Clock rate that sound hardware runs at.
+ * formula: 4194304 * 4 
+ * */
 #define CLOCK_RATE 16777216
 
 class Gb_Apu
@@ -93,8 +94,8 @@ class Gb_Apu
 	Blip_Synth   med_synth;
 
 	int calc_output( int osc ) const;
-	void apply_stereo();
-	void apply_volume();
+	void apply_stereo (void);
+	void apply_volume (void);
 	void synth_volume( int );
 	void silence_osc( Gb_Osc& );
 	void write_osc( int index, int reg, int old_data, int data );
@@ -107,15 +108,9 @@ class Gb_Apu
 // room for expansion so the state size shouldn't increase.
 struct gb_apu_state_t
 {
-#if GB_APU_CUSTOM_STATE
 	// Values stored as plain int so your code can read/write them easily.
 	// Structure can NOT be written to disk, since format is not portable.
 	typedef int val_t;
-#else
-	// Values written in portable little-endian format, allowing structure
-	// to be written directly to disk.
-	typedef unsigned char val_t [4];
-#endif
 
 	enum { format0 = 0x50414247 };
 
