@@ -1,10 +1,8 @@
 #include <time.h>
 #include <string.h>
 #include "GBA.h"
-#include "EEprom.h"
 #include "Globals.h"
-#include "Flash.h"
-#include "Sram.h"
+#include "memory.h"
 #include "../Util.h"
 #include "../common/Port.h"
 

@@ -26,7 +26,7 @@ static const int table [0x40] =
 };
 
 #include "GBA.h"
-#include "RTC.h"
+#include "memory.h"
 #include "Sound.h"
 
 /*============================================================
@@ -815,9 +815,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 }
 
 #include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
-#include "Sram.h"
 #include "../NLS.h"
 #ifdef ELF
 #include "elf.h"

@@ -4,8 +4,6 @@
 #include "../System.h"
 
 #include "Globals.h"
-#include "EEprom.h"
-#include "Flash.h"
 
 #define BITS_16 0
 #define BITS_32 1

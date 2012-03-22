@@ -6,10 +6,9 @@
 #include "NLS.h"
 #include "Util.h"
 
-#include "gba/Flash.h"
 #include "gba/GBA.h"
 #include "gba/Globals.h"
-#include "gba/RTC.h"
+#include "gba/memory.h"
 #include "common/Port.h"
 
 extern int systemColorDepth;

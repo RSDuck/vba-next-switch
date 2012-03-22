@@ -19,8 +19,8 @@
 
 #include "../src/Util.h"
 #include "../src/gba/GBA.h"
+#include "../src/gba/memory.h"
 #include "../src/gba/Sound.h"
-#include "../src/gba/RTC.h"
 #include "../src/gba/Globals.h"
 
 static snes_video_refresh_t video_cb;
