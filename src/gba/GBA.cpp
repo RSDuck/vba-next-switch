@@ -2408,7 +2408,7 @@ static  void arm109(u32 opcode)
     u32 temp = CPUReadMemory(address);
     CPUWriteMemory(address, bus.reg[opcode&15].I);
     bus.reg[(opcode >> 12) & 15].I = temp;
-    clockTicks = 4 + dataTicksAccess(address, BITS_32) + dataTicksAccess(address, BITS_32)
+    clockTicks = 4 + (dataTicksAccess(address, BITS_32) << 1)
                    + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
@@ -2419,7 +2419,7 @@ static  void arm149(u32 opcode)
     u32 temp = CPUReadByte(address);
     CPUWriteByte(address, bus.reg[opcode&15].B.B0);
     bus.reg[(opcode>>12)&15].I = temp;
-    clockTicks = 4 + dataTicksAccess(address, BITS_32) + dataTicksAccess(address, BITS_32)
+    clockTicks = 4 + (dataTicksAccess(address, BITS_32)<<1)
                    + codeTicksAccess(bus.armNextPC, BITS_32);
 }
 
@@ -2573,16 +2573,14 @@ static  void arm121(u32 opcode)
             bus.armNextPC = bus.reg[15].I;
             bus.reg[15].I += 4;
             ARM_PREFETCH;
-            clockTicks = 3 + codeTicksAccessSeq32(bus.armNextPC)
-                           + codeTicksAccessSeq32(bus.armNextPC)
+            clockTicks = 3 + (codeTicksAccessSeq32(bus.armNextPC)<<1)
                            + codeTicksAccess(bus.armNextPC, BITS_32);
         } else {
             bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFE;
             bus.armNextPC = bus.reg[15].I;
             bus.reg[15].I += 2;
             THUMB_PREFETCH;
-            clockTicks = 3 + codeTicksAccessSeq16(bus.armNextPC)
-                           + codeTicksAccessSeq16(bus.armNextPC)
+            clockTicks = 3 + (codeTicksAccessSeq16(bus.armNextPC)<<1)
                            + codeTicksAccess(bus.armNextPC, BITS_16);
         }
     } else {
@@ -5448,7 +5446,7 @@ static  void thumbDC(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = codeTicksAccessSeq16(bus.armNextPC) + codeTicksAccessSeq16(bus.armNextPC) +
+    clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) +
         codeTicksAccess(bus.armNextPC, BITS_16)+3;
     bus.busPrefetchCount=0;
   }
