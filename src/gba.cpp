@@ -73,9 +73,6 @@ static uint8_t biosProtected[4];
 static uint8_t cpuBitsSet[256];
 
 static void CPUSwitchMode(int mode, bool saveState, bool breakLoop);
-static void CPUUpdateFlags(bool breakLoop);
-static void CPUUpdateFlags (void);
-static void CPUSoftwareInterrupt(int comment);
 static bool N_FLAG = 0;
 static bool C_FLAG = 0;
 static bool Z_FLAG = 0;
@@ -1780,6 +1777,256 @@ static void BIOS_SoftReset (void)
 	bus.reg[16].I = CPSR; \
 }
 
+#define CPU_SOFTWARE_INTERRUPT() \
+{ \
+  uint32_t PC = bus.reg[15].I; \
+  bool savedArmState = armState; \
+  if(armMode != 0x13) \
+    CPUSwitchMode(0x13, true, false); \
+  bus.reg[14].I = PC - (savedArmState ? 4 : 2); \
+  bus.reg[15].I = 0x08; \
+  armState = true; \
+  armIrqEnable = false; \
+  bus.armNextPC = 0x08; \
+  ARM_PREFETCH; \
+  bus.reg[15].I += 4; \
+}
+
+static void CPUUpdateFlags(bool breakLoop)
+{
+	uint32_t CPSR = bus.reg[16].I;
+
+	N_FLAG = (CPSR & 0x80000000) ? true: false;
+	Z_FLAG = (CPSR & 0x40000000) ? true: false;
+	C_FLAG = (CPSR & 0x20000000) ? true: false;
+	V_FLAG = (CPSR & 0x10000000) ? true: false;
+	armState = (CPSR & 0x20) ? false : true;
+	armIrqEnable = (CPSR & 0x80) ? false : true;
+	if (breakLoop && armIrqEnable && (IF & IE) && (IME & 1))
+		cpuNextEvent = cpuTotalTicks;
+}
+
+static void CPUSoftwareInterrupt(int comment)
+{
+	if(armState)
+		comment >>= 16;
+
+	if(useBios)
+	{
+		CPU_SOFTWARE_INTERRUPT();
+		return;
+	}
+
+	switch(comment) {
+		case 0x00:
+			BIOS_SoftReset();
+			ARM_PREFETCH;
+			break;
+		case 0x01:
+			BIOS_REGISTER_RAM_RESET();
+			break;
+		case 0x02:
+			holdState = true;
+			holdType = -1;
+			cpuNextEvent = cpuTotalTicks;
+			break;
+		case 0x03:
+			holdState = true;
+			holdType = -1;
+			stopState = true;
+			cpuNextEvent = cpuTotalTicks;
+			break;
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+			CPU_SOFTWARE_INTERRUPT();
+			break;
+		case 0x08:
+			BIOS_SQRT();
+			break;
+		case 0x09:
+			BIOS_ArcTan();
+			break;
+		case 0x0A:
+			BIOS_ArcTan2();
+			break;
+		case 0x0B:
+			{
+#ifdef USE_SWITICKS
+				int len = (bus.reg[2].I & 0x1FFFFF) >>1;
+				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + len) & 0xe000000) == 0))
+				{
+					if ((bus.reg[2].I >> 24) & 1)
+					{
+						if ((bus.reg[2].I >> 26) & 1)
+							SWITicks = (7 + memoryWait32[(bus.reg[1].I>>24) & 0xF]) * (len>>1);
+						else
+							SWITicks = (8 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * (len);
+					}
+					else
+					{
+						if ((bus.reg[2].I >> 26) & 1)
+							SWITicks = (10 + memoryWait32[(bus.reg[0].I>>24) & 0xF] +
+									memoryWait32[(bus.reg[1].I>>24) & 0xF]) * (len>>1);
+						else
+							SWITicks = (11 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
+									memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+					}
+				}
+#endif
+			}
+			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
+				BIOS_CpuSet();
+			break;
+		case 0x0C:
+			{
+#ifdef USE_SWITICKS
+				int len = (bus.reg[2].I & 0x1FFFFF) >>5;
+				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + len) & 0xe000000) == 0))
+				{
+					if ((bus.reg[2].I >> 24) & 1)
+						SWITicks = (6 + memoryWait32[(bus.reg[1].I>>24) & 0xF] +
+								7 * (memoryWaitSeq32[(bus.reg[1].I>>24) & 0xF] + 1)) * len;
+					else
+						SWITicks = (9 + memoryWait32[(bus.reg[0].I>>24) & 0xF] +
+								memoryWait32[(bus.reg[1].I>>24) & 0xF] +
+								7 * (memoryWaitSeq32[(bus.reg[0].I>>24) & 0xF] +
+									memoryWaitSeq32[(bus.reg[1].I>>24) & 0xF] + 2)) * len;
+				}
+#endif
+			}
+			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
+				BIOS_CpuFastSet();
+			break;
+		case 0x0D:
+			BIOS_GET_BIOS_CHECKSUM();
+			break;
+		case 0x0E:
+			BIOS_BgAffineSet();
+			break;
+		case 0x0F:
+			BIOS_ObjAffineSet();
+			break;
+		case 0x10:
+			{
+#ifdef USE_SWITICKS
+				int len = CPUReadHalfWord(bus.reg[2].I);
+				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + len) & 0xe000000) == 0))
+					SWITicks = (32 + memoryWait[(bus.reg[0].I>>24) & 0xF]) * len;
+#endif
+			}
+			BIOS_BitUnPack();
+			break;
+		case 0x11:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (9 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_LZ77UnCompWram();
+			break;
+		case 0x12:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (19 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_LZ77UnCompVram();
+			break;
+		case 0x13:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (29 + (memoryWait[(bus.reg[0].I>>24) & 0xF]<<1)) * len;
+			}
+#endif
+			BIOS_HuffUnComp();
+			break;
+		case 0x14:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (11 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
+							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_RLUnCompWram();
+			break;
+		case 0x15:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (34 + (memoryWait[(bus.reg[0].I>>24) & 0xF] << 1) +
+							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_RLUnCompVram();
+			break;
+		case 0x16:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (13 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
+							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_Diff8bitUnFilterWram();
+			break;
+		case 0x17:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (39 + (memoryWait[(bus.reg[0].I>>24) & 0xF]<<1) +
+							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_Diff8bitUnFilterVram();
+			break;
+		case 0x18:
+#ifdef USE_SWITICKS
+			{
+				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
+				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
+							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
+					SWITicks = (13 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
+							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
+			}
+#endif
+			BIOS_Diff16bitUnFilter();
+			break;
+		case 0x19:
+			break;
+		case 0x1F:
+			BIOS_MIDI_KEY_2_FREQ();
+			break;
+		case 0x2A:
+			BIOS_SND_DRIVER_JMP_TABLE_COPY();
+			// let it go, because we don't really emulate this function
+		default:
+			break;
+	}
+}
+
 
 /*============================================================
 	GBA ARM CORE
@@ -2477,7 +2724,7 @@ static  void arm120(u32 opcode)
 	    if(armMode != (newValue & 0x1F))
 		    CPUSwitchMode(newValue & 0x1F, false, true);
 	    bus.reg[16].I = newValue;
-	    CPUUpdateFlags();
+	    CPUUpdateFlags(1);
 	    if (!armState) {  // this should not be allowed, but it seems to work
 		    THUMB_PREFETCH;
 		    bus.reg[15].I = bus.armNextPC + 2;
@@ -2537,7 +2784,7 @@ static  void arm320(u32 opcode)
 		if(armMode != (newValue & 0x1F))
 			CPUSwitchMode(newValue & 0x1F, false, true);
 		bus.reg[16].I = newValue;
-		CPUUpdateFlags();
+		CPUUpdateFlags(1);
 		if (!armState) {  // this should not be allowed, but it seems to work
 			THUMB_PREFETCH;
 			bus.reg[15].I = bus.armNextPC + 2;
@@ -7640,20 +7887,6 @@ static INLINE int CPUUpdateTicks (void)
           graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT; \
   }
 
-#define CPUSoftwareInterrupt_() \
-{ \
-  uint32_t PC = bus.reg[15].I; \
-  bool savedArmState = armState; \
-  if(armMode != 0x13) \
-    CPUSwitchMode(0x13, true, false); \
-  bus.reg[14].I = PC - (savedArmState ? 4 : 2); \
-  bus.reg[15].I = 0x08; \
-  armState = true; \
-  armIrqEnable = false; \
-  bus.armNextPC = 0x08; \
-  ARM_PREFETCH; \
-  bus.reg[15].I += 4; \
-}
 
 unsigned CPUWriteState(uint8_t* data, unsigned size)
 {
@@ -10482,36 +10715,6 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 	return true;
 }
 
-static void CPUUpdateFlags(bool breakLoop)
-{
-	uint32_t CPSR = bus.reg[16].I;
-
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
-	if(breakLoop)
-	{
-		if (armIrqEnable && (IF & IE) && (IME & 1))
-			cpuNextEvent = cpuTotalTicks;
-	}
-}
-
-static void CPUUpdateFlags(void)
-{
-	uint32_t CPSR = bus.reg[16].I;
-
-	N_FLAG = (CPSR & 0x80000000) ? true: false;
-	Z_FLAG = (CPSR & 0x40000000) ? true: false;
-	C_FLAG = (CPSR & 0x20000000) ? true: false;
-	V_FLAG = (CPSR & 0x10000000) ? true: false;
-	armState = (CPSR & 0x20) ? false : true;
-	armIrqEnable = (CPSR & 0x80) ? false : true;
-	if (armIrqEnable && (IF & IE) && (IME & 1))
-		cpuNextEvent = cpuTotalTicks;
-}
 
 #define CPUSwap(a, b) \
 a ^= b; \
@@ -10627,226 +10830,6 @@ static void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 	CPU_UPDATE_CPSR();
 }
 
-static void CPUSoftwareInterrupt(int comment)
-{
-	if(armState)
-		comment >>= 16;
-
-	if(useBios)
-	{
-		CPUSoftwareInterrupt_();
-		return;
-	}
-
-	switch(comment) {
-		case 0x00:
-			BIOS_SoftReset();
-			ARM_PREFETCH;
-			break;
-		case 0x01:
-			BIOS_REGISTER_RAM_RESET();
-			break;
-		case 0x02:
-			holdState = true;
-			holdType = -1;
-			cpuNextEvent = cpuTotalTicks;
-			break;
-		case 0x03:
-			holdState = true;
-			holdType = -1;
-			stopState = true;
-			cpuNextEvent = cpuTotalTicks;
-			break;
-		case 0x04:
-		case 0x05:
-		case 0x06:
-		case 0x07:
-			CPUSoftwareInterrupt_();
-			break;
-		case 0x08:
-			BIOS_SQRT();
-			break;
-		case 0x09:
-			BIOS_ArcTan();
-			break;
-		case 0x0A:
-			BIOS_ArcTan2();
-			break;
-		case 0x0B:
-			{
-#ifdef USE_SWITICKS
-				int len = (bus.reg[2].I & 0x1FFFFF) >>1;
-				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + len) & 0xe000000) == 0))
-				{
-					if ((bus.reg[2].I >> 24) & 1)
-					{
-						if ((bus.reg[2].I >> 26) & 1)
-							SWITicks = (7 + memoryWait32[(bus.reg[1].I>>24) & 0xF]) * (len>>1);
-						else
-							SWITicks = (8 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * (len);
-					}
-					else
-					{
-						if ((bus.reg[2].I >> 26) & 1)
-							SWITicks = (10 + memoryWait32[(bus.reg[0].I>>24) & 0xF] +
-									memoryWait32[(bus.reg[1].I>>24) & 0xF]) * (len>>1);
-						else
-							SWITicks = (11 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
-									memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-					}
-				}
-#endif
-			}
-			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
-				BIOS_CpuSet();
-			break;
-		case 0x0C:
-			{
-#ifdef USE_SWITICKS
-				int len = (bus.reg[2].I & 0x1FFFFF) >>5;
-				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + len) & 0xe000000) == 0))
-				{
-					if ((bus.reg[2].I >> 24) & 1)
-						SWITicks = (6 + memoryWait32[(bus.reg[1].I>>24) & 0xF] +
-								7 * (memoryWaitSeq32[(bus.reg[1].I>>24) & 0xF] + 1)) * len;
-					else
-						SWITicks = (9 + memoryWait32[(bus.reg[0].I>>24) & 0xF] +
-								memoryWait32[(bus.reg[1].I>>24) & 0xF] +
-								7 * (memoryWaitSeq32[(bus.reg[0].I>>24) & 0xF] +
-									memoryWaitSeq32[(bus.reg[1].I>>24) & 0xF] + 2)) * len;
-				}
-#endif
-			}
-			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
-				BIOS_CpuFastSet();
-			break;
-		case 0x0D:
-			BIOS_GET_BIOS_CHECKSUM();
-			break;
-		case 0x0E:
-			BIOS_BgAffineSet();
-			break;
-		case 0x0F:
-			BIOS_ObjAffineSet();
-			break;
-		case 0x10:
-			{
-#ifdef USE_SWITICKS
-				int len = CPUReadHalfWord(bus.reg[2].I);
-				if (!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + len) & 0xe000000) == 0))
-					SWITicks = (32 + memoryWait[(bus.reg[0].I>>24) & 0xF]) * len;
-#endif
-			}
-			BIOS_BitUnPack();
-			break;
-		case 0x11:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (9 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_LZ77UnCompWram();
-			break;
-		case 0x12:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (19 + memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_LZ77UnCompVram();
-			break;
-		case 0x13:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (29 + (memoryWait[(bus.reg[0].I>>24) & 0xF]<<1)) * len;
-			}
-#endif
-			BIOS_HuffUnComp();
-			break;
-		case 0x14:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (11 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
-							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_RLUnCompWram();
-			break;
-		case 0x15:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (34 + (memoryWait[(bus.reg[0].I>>24) & 0xF] << 1) +
-							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_RLUnCompVram();
-			break;
-		case 0x16:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 8;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (13 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
-							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_Diff8bitUnFilterWram();
-			break;
-		case 0x17:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (39 + (memoryWait[(bus.reg[0].I>>24) & 0xF]<<1) +
-							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_Diff8bitUnFilterVram();
-			break;
-		case 0x18:
-#ifdef USE_SWITICKS
-			{
-				uint32_t len = CPUReadMemory(bus.reg[0].I) >> 9;
-				if(!(((bus.reg[0].I & 0xe000000) == 0) ||
-							((bus.reg[0].I + (len & 0x1fffff)) & 0xe000000) == 0))
-					SWITicks = (13 + memoryWait[(bus.reg[0].I>>24) & 0xF] +
-							memoryWait[(bus.reg[1].I>>24) & 0xF]) * len;
-			}
-#endif
-			BIOS_Diff16bitUnFilter();
-			break;
-		case 0x19:
-			break;
-		case 0x1F:
-			BIOS_MIDI_KEY_2_FREQ();
-			break;
-		case 0x2A:
-			BIOS_SND_DRIVER_JMP_TABLE_COPY();
-			// let it go, because we don't really emulate this function
-		default:
-			break;
-	}
-}
 
 
 void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int transfer32)
