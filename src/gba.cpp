@@ -6283,47 +6283,45 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	}
 }
 
-static INLINE void gfxDrawRotScreen16Bit(u16 control, u16 x_l, u16 x_h, 
-u16 y_l, u16 y_h, u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, 
-int& currentY, int changed, u32 *line)
+static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int changed)
 {
 	u16 *screenBase = (u16 *)&vram[0];
-	int prio = ((control & 3) << 25) + 0x1000000;
+	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
 
 	u32 sizeX = 240;
 	u32 sizeY = 160;
 
-	int startX = (x_l) | ((x_h & 0x07FF)<<16);
-	if(x_h & 0x0800)
+	int startX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+	if(BG2X_H & 0x0800)
 		startX |= 0xF8000000;
-	int startY = (y_l) | ((y_h & 0x07FF)<<16);
-	if(y_h & 0x0800)
+	int startY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+	if(BG2Y_H & 0x0800)
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = pa & 0x7FFF;
-	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = BG2PA & 0x7FFF;
+	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = pb & 0x7FFF;
-	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = BG2PB & 0x7FFF;
+	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
 
-	int dy = pc & 0x7FFF;
-	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = BG2PC & 0x7FFF;
+	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = pd & 0x7FFF;
-	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = BG2PD & 0x7FFF;
+	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = pa & 0x7FFF;
-	if(pa & 0x8000)
+	int dx = BG2PA & 0x7FFF;
+	if(BG2PA & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = pb & 0x7FFF;
-	if(pb & 0x8000)
+	int dmx = BG2PB & 0x7FFF;
+	if(BG2PB & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = pc & 0x7FFF;
-	if(pc & 0x8000)
+	int dy = BG2PC & 0x7FFF;
+	if(BG2PC & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = pd & 0x7FFF;
-	if(pd & 0x8000)
+	int dmy = BG2PD & 0x7FFF;
+	if(BG2PD & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -6335,22 +6333,22 @@ int& currentY, int changed, u32 *line)
 
 	if(changed & 1)
 	{
-		currentX = (x_l) | ((x_h & 0x07FF)<<16);
-		if(x_h & 0x0800)
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
 			currentX |= 0xF8000000;
 	}
 
 	if(changed & 2)
 	{
-		currentY = (y_l) | ((y_h & 0x07FF)<<16);
-		if(y_h & 0x0800)
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
 			currentY |= 0xF8000000;
 	}
 
 	int realX = currentX;
 	int realY = currentY;
 
-	if(control & 0x40) {
+	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = (VCOUNT % mosaicY);
 		realX -= y*dmx;
@@ -6360,11 +6358,11 @@ int& currentY, int changed, u32 *line)
 	unsigned xxx = (realX >> 8);
 	unsigned yyy = (realY >> 8);
 
-	memset(line, -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(xxx < sizeX && yyy < sizeY)
-			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6373,13 +6371,13 @@ int& currentY, int changed, u32 *line)
 		yyy = (realY >> 8);
 	}
 
-	if(control & 0x40) {
+	if(BG2CNT & 0x40) {
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1) {
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[i+1] = line[i];
+				line[2][i+1] = line[2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6390,52 +6388,45 @@ int& currentY, int changed, u32 *line)
 	}
 }
 
-static INLINE void gfxDrawRotScreen256(u16 control,
-				       u16 x_l, u16 x_h,
-				       u16 y_l, u16 y_h,
-				       u16 pa,  u16 pb,
-				       u16 pc,  u16 pd,
-				       int &currentX, int& currentY,
-				       int changed,
-				       u32 *line)
+static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
 {
 	u16 *palette = (u16 *)graphics.paletteRAM;
 	u8 *screenBase = (graphics.DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
-	int prio = ((control & 3) << 25) + 0x1000000;
+	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
 	u32 sizeX = 240;
 	u32 sizeY = 160;
 
-	int startX = (x_l) | ((x_h & 0x07FF)<<16);
-	if(x_h & 0x0800)
+	int startX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+	if(BG2X_H & 0x0800)
 		startX |= 0xF8000000;
-	int startY = (y_l) | ((y_h & 0x07FF)<<16);
-	if(y_h & 0x0800)
+	int startY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+	if(BG2Y_H & 0x0800)
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = pa & 0x7FFF;
-	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = BG2PA & 0x7FFF;
+	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = pb & 0x7FFF;
-	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = BG2PB & 0x7FFF;
+	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
 
-	int dy = pc & 0x7FFF;
-	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = BG2PC & 0x7FFF;
+	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = pd & 0x7FFF;
-	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = BG2PD & 0x7FFF;
+	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = pa & 0x7FFF;
-	if(pa & 0x8000)
+	int dx = BG2PA & 0x7FFF;
+	if(BG2PA & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = pb & 0x7FFF;
-	if(pb & 0x8000)
+	int dmx = BG2PB & 0x7FFF;
+	if(BG2PB & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = pc & 0x7FFF;
-	if(pc & 0x8000)
+	int dy = BG2PC & 0x7FFF;
+	if(BG2PC & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = pd & 0x7FFF;
-	if(pd & 0x8000)
+	int dmy = BG2PD & 0x7FFF;
+	if(BG2PD & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -6447,22 +6438,22 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 
 	if(changed & 1)
 	{
-		currentX = (x_l) | ((x_h & 0x07FF)<<16);
-		if(x_h & 0x0800)
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
 			currentX |= 0xF8000000;
 	}
 
 	if(changed & 2)
 	{
-		currentY = (y_l) | ((y_h & 0x07FF)<<16);
-		if(y_h & 0x0800)
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
 			currentY |= 0xF8000000;
 	}
 
 	int realX = currentX;
 	int realY = currentY;
 
-	if(control & 0x40) {
+	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = VCOUNT - (VCOUNT % mosaicY);
 		realX = startX + y*dmx;
@@ -6472,12 +6463,12 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line, -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240; ++x)
 	{
 		u8 color = screenBase[yyy * 240 + xxx];
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
-			line[x] = (READ16LE(&palette[color])|prio);
+			line[2][x] = (READ16LE(&palette[color])|prio);
 		realX += dx;
 		realY += dy;
 
@@ -6485,7 +6476,7 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 		yyy = (realY >> 8);
 	}
 
-	if(control & 0x40)
+	if(BG2CNT & 0x40)
 	{
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1)
@@ -6493,7 +6484,7 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[i+1] = line[i];
+				line[2][i+1] = line[2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6504,52 +6495,45 @@ static INLINE void gfxDrawRotScreen256(u16 control,
 	}
 }
 
-static INLINE void gfxDrawRotScreen16Bit160(u16 control,
-					    u16 x_l, u16 x_h,
-					    u16 y_l, u16 y_h,
-					    u16 pa,  u16 pb,
-					    u16 pc,  u16 pd,
-					    int& currentX, int& currentY,
-					    int changed,
-					    u32 *line)
+static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int changed)
 {
 	u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
 		(u16 *)&vram[0];
-	int prio = ((control & 3) << 25) + 0x1000000;
+	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
 	u32 sizeX = 160;
 	u32 sizeY = 128;
 
-	int startX = (x_l) | ((x_h & 0x07FF)<<16);
-	if(x_h & 0x0800)
+	int startX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+	if(BG2X_H & 0x0800)
 		startX |= 0xF8000000;
-	int startY = (y_l) | ((y_h & 0x07FF)<<16);
-	if(y_h & 0x0800)
+	int startY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+	if(BG2Y_H & 0x0800)
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = pa & 0x7FFF;
-	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+	int dx = BG2PA & 0x7FFF;
+	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = pb & 0x7FFF;
-	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+	int dmx = BG2PB & 0x7FFF;
+	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
 
-	int dy = pc & 0x7FFF;
-	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+	int dy = BG2PC & 0x7FFF;
+	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = pd & 0x7FFF;
-	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+	int dmy = BG2PD & 0x7FFF;
+	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = pa & 0x7FFF;
-	if(pa & 0x8000)
+	int dx = BG2PA & 0x7FFF;
+	if(BG2PA & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = pb & 0x7FFF;
-	if(pb & 0x8000)
+	int dmx = BG2PB & 0x7FFF;
+	if(BG2PB & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = pc & 0x7FFF;
-	if(pc & 0x8000)
+	int dy = BG2PC & 0x7FFF;
+	if(BG2PC & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = pd & 0x7FFF;
-	if(pd & 0x8000)
+	int dmy = BG2PD & 0x7FFF;
+	if(BG2PD & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -6561,22 +6545,22 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 
 	if(changed & 1)
 	{
-		currentX = (x_l) | ((x_h & 0x07FF)<<16);
-		if(x_h & 0x0800)
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
 			currentX |= 0xF8000000;
 	}
 
 	if(changed & 2)
 	{
-		currentY = (y_l) | ((y_h & 0x07FF)<<16);
-		if(y_h & 0x0800)
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
 			currentY |= 0xF8000000;
 	}
 
 	int realX = currentX;
 	int realY = currentY;
 
-	if(control & 0x40) {
+	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = VCOUNT - (VCOUNT % mosaicY);
 		realX = startX + y*dmx;
@@ -6586,11 +6570,11 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line, -1, 240 * sizeof(u32));
+	memset(line[2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
-			line[x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6601,12 +6585,12 @@ static INLINE void gfxDrawRotScreen16Bit160(u16 control,
 
 
 	int mosaicX = (MOSAIC & 0xF) + 1;
-	if(control & 0x40 && (mosaicX > 1))
+	if(BG2CNT & 0x40 && (mosaicX > 1))
 	{
 		int m = 1;
 		for(u32 i = 0; i < 239u; ++i)
 		{
-			line[i+1] = line[i];
+			line[2][i+1] = line[2][i];
 			if(++m == mosaicX)
 			{
 				m = 1;
@@ -9703,11 +9687,7 @@ static void mode3RenderLine (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -9762,11 +9742,7 @@ static void mode3RenderLineNoWindow (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -9892,11 +9868,7 @@ static void mode3RenderLineAll (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10014,10 +9986,7 @@ static void mode4RenderLine (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen256(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10074,10 +10043,7 @@ static void mode4RenderLineNoWindow (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen256(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10206,10 +10172,7 @@ static void mode4RenderLineAll (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen256(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10328,11 +10291,7 @@ static void mode5RenderLine (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10389,11 +10348,7 @@ static void mode5RenderLineNoWindow (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
@@ -10488,11 +10443,7 @@ static void mode5RenderLineAll (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen16Bit160(BG2CNT, BG2X_L, BG2X_H,
-				BG2Y_L, BG2Y_H, BG2PA, BG2PB,
-				BG2PC, BG2PD,
-				gfxBG2X, gfxBG2Y, changed,
-				line[2]);
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
