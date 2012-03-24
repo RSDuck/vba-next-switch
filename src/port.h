@@ -11,6 +11,16 @@
 #define strcasecmp _stricmp
 #endif
 
+#ifdef USE_CACHE_PREFETCH
+#ifdef __ANDROID__
+#define CACHE_PREFETCH(prefetch) prefetch(&prefetch);
+#else
+#define CACHE_PREFETCH(prefetch) __dcbt(&prefetch);
+#endif
+#else
+#define CACHE_PREFETCH(prefetch)
+#endif
+
 #ifndef LSB_FIRST
 #if defined(__SNC__)
 #include <ppu_intrinsics.h>
