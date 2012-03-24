@@ -12,7 +12,6 @@ extern void systemUpdateMotionSensor (void);
 extern int  systemGetSensorX (void);
 extern int  systemGetSensorY (void);
 #endif
-extern bool systemCanChangeSoundQuality (void);
 
 // sound functions
 extern void systemOnWriteDataToSoundBuffer(int16_t * finalWave, int length);

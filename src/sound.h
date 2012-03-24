@@ -106,7 +106,6 @@ struct blip_buffer_state_t
 
 
 void soundSetVolume( float );
-float soundGetVolume (void);
 
 // Manages muting bitmask. The bits control the following channels:
 // 0x001 Pulse 1
@@ -115,11 +114,8 @@ float soundGetVolume (void);
 // 0x008 Noise
 // 0x100 PCM 1
 // 0x200 PCM 2
-void soundSetEnable( int mask );
-int  soundGetEnable (void);
 void soundPause (void);
 void soundResume (void);
-long soundGetSampleRate (void);
 void soundSetSampleRate(long sampleRate);
 void soundReset (void);
 void soundEvent_u8( int gb_addr, uint32_t addr, uint8_t  data );

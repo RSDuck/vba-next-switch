@@ -3,17 +3,16 @@
 
 #include "types.h"
 
-extern bool ioReadable[0x400];
 extern int saveType;
 extern bool useBios;
 extern bool skipBios;
-extern int frameSkip;
 extern bool cpuIsMultiBoot;
 extern int cpuSaveType;
 extern bool mirroringEnable;
 extern bool enableRtc;
 extern bool skipSaveGameBattery; // skip battery data when reading save states
-extern bool skipSaveGameCheats;  // skip cheat list data when reading save states
+
+extern int cpuDmaCount;
 
 extern u8 *bios;
 extern u8 *rom;

@@ -112,7 +112,6 @@ extern unsigned CPUWriteState(uint8_t* data, unsigned size);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
-extern void applyTimer (void);
 extern void CPUInit(const char *,bool);
 extern void CPUReset (void);
 extern void CPULoop(void);

@@ -2015,17 +2015,6 @@ static void remake_stereo_buffer (void)
 	pcm_synth.volume( 0.66 / 256 * SOUNDVOLUME_ );
 }
 
-float soundGetVolume (void)
-{
-	return SOUNDVOLUME;
-}
-
-
-int soundGetEnable (void)
-{
-	return (soundEnableFlag & 0x30f);
-}
-
 void soundReset (void)
 {
 	remake_stereo_buffer();

@@ -580,13 +580,6 @@ int  systemGetSensorY()
 }
 #endif
 
-
-bool systemCanChangeSoundQuality()
-{
-	return true;
-}
-
-
 void systemShowSpeed(int speed)
 {
 	systemSpeed = speed;

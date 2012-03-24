@@ -12,19 +12,6 @@
 #endif
 
 #include "port.h"
-
-static const int table [0x40] =
-{
-		0xFF10,     0,0xFF11,0xFF12,0xFF13,0xFF14,     0,     0,
-		0xFF16,0xFF17,     0,     0,0xFF18,0xFF19,     0,     0,
-		0xFF1A,     0,0xFF1B,0xFF1C,0xFF1D,0xFF1E,     0,     0,
-		0xFF20,0xFF21,     0,     0,0xFF22,0xFF23,     0,     0,
-		0xFF24,0xFF25,     0,     0,0xFF26,     0,     0,     0,
-		     0,     0,     0,     0,     0,     0,     0,     0,
-		0xFF30,0xFF31,0xFF32,0xFF33,0xFF34,0xFF35,0xFF36,0xFF37,
-		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
-};
-
 #include "gba.h"
 #include "memory.h"
 #include "sound.h"
@@ -64,6 +51,23 @@ static uint8_t memoryWaitSeq[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 4, 4, 8, 8, 4, 0 };
 static uint8_t memoryWaitSeq32[16] =
   { 0, 0, 5, 0, 0, 1, 1, 0, 5, 5, 9, 9, 17, 17, 4, 0 };
+
+static const int table [0x40] =
+{
+		0xFF10,     0,0xFF11,0xFF12,0xFF13,0xFF14,     0,     0,
+		0xFF16,0xFF17,     0,     0,0xFF18,0xFF19,     0,     0,
+		0xFF1A,     0,0xFF1B,0xFF1C,0xFF1D,0xFF1E,     0,     0,
+		0xFF20,0xFF21,     0,     0,0xFF22,0xFF23,     0,     0,
+		0xFF24,0xFF25,     0,     0,0xFF26,     0,     0,     0,
+		     0,     0,     0,     0,     0,     0,     0,     0,
+		0xFF30,0xFF31,0xFF32,0xFF33,0xFF34,0xFF35,0xFF36,0xFF37,
+		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
+};
+
+static int coeff[32] = {0,1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
+			11, 12, 13, 14, 15, 16, 16, 16, 16,
+			16, 16, 16, 16, 16, 16, 16, 16, 16,
+			16, 16, 16};
 
 static uint8_t biosProtected[4];
 static uint8_t cpuBitsSet[256];
@@ -157,6 +161,29 @@ static uint16_t DM3DAD_H = 0x0000;
 static uint16_t DM3CNT_L = 0x0000;
 static uint16_t DM3CNT_H = 0x0000;
 
+static uint8_t timerOnOffDelay = 0;
+static uint16_t timer0Value = 0;
+static uint32_t dma0Source = 0;
+static uint32_t dma0Dest = 0;
+static uint32_t dma1Source = 0;
+static uint32_t dma1Dest = 0;
+static uint32_t dma2Source = 0;
+static uint32_t dma2Dest = 0;
+static uint32_t dma3Source = 0;
+static uint32_t dma3Dest = 0;
+void (*cpuSaveGameFunc)(uint32_t,uint8_t) = flashSaveDecide;
+static bool fxOn = false;
+static bool windowOn = false;
+
+static int cpuDmaTicksToUpdate = 0;
+
+static const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
+
+static const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
+
+static int IRQTicks = 0;
+static bool intState = false;
+
 static bus_t bus;
 static graphics_t graphics;
 
@@ -176,6 +203,9 @@ static int gfxBG2X = 0;
 static int gfxBG2Y = 0;
 static int gfxBG3X = 0;
 static int gfxBG3Y = 0;
+
+static bool ioReadable[0x400];
+static int gbaSaveType = 0; // used to remember the save type on reset
 
 //static int gfxLastVCOUNT = 0;
 
@@ -426,7 +456,6 @@ unreadable:
 	return value;
 }
 
-
 static INLINE u32 CPUReadHalfWord(u32 address)
 {
 	u32 value;
@@ -500,13 +529,11 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
-				return  eepromRead();	// no need to swap this
+				return  eepromRead();		// no need to swap this
 			goto unreadable;
 		case 14:
 			if(cpuFlashEnabled | cpuSramEnabled)
-				// no need to swap this
-				return flashRead(address);
-			// default
+				return flashRead(address);	// no need to swap this
 		default:
 unreadable:
 			{
@@ -591,7 +618,6 @@ static INLINE u8 CPUReadByte(u32 address)
 				}
 			}
 #endif
-			// default
 		default:
 unreadable:
 			if(armState)
@@ -1031,10 +1057,6 @@ static void BIOS_CpuSet (void)
 	u32 dest = bus.reg[1].I;
 	u32 cnt = bus.reg[2].I;
 
-	if(((source & 0xe000000) == 0) ||
-			((source + (((cnt << 11)>>9) & 0x1fffff)) & 0xe000000) == 0)
-		return;
-
 	int count = cnt & 0x1FFFFF;
 
 	// 32-bit ?
@@ -1089,10 +1111,6 @@ static void BIOS_CpuFastSet (void)
 	u32 dest = bus.reg[1].I;
 	u32 cnt = bus.reg[2].I;
 
-	if(((source & 0xe000000) == 0) ||
-			((source + (((cnt << 11)>>9) & 0x1fffff)) & 0xe000000) == 0)
-		return;
-
 	// needed for 32-bit mode!
 	source &= 0xFFFFFFFC;
 	dest &= 0xFFFFFFFC;
@@ -1133,7 +1151,7 @@ static void BIOS_Diff8bitUnFilterWram (void)
 	source += 4;
 
 	if(((source & 0xe000000) == 0) ||
-			(((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0))
+	(((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0))
 		return;
 
 	int len = header >> 8;
@@ -1225,7 +1243,7 @@ static void BIOS_HuffUnComp (void)
 	source += 4;
 
 	if(((source & 0xe000000) == 0) ||
-			((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0)
+	((source + ((header >> 8) & 0x1fffff)) & 0xe000000) == 0)
 		return;
 
 	u8 treeSize = CPUReadByte(source++);
@@ -1527,27 +1545,22 @@ static void BIOS_RegisterRamReset(u32 flags)
 
 	CPUUpdateRegister(0x0, 0x80);
 
-	if(flags) {
-		if(flags & 0x01) {
-			// clear work RAM
-			memset(workRAM, 0, 0x40000);
-		}
-		if(flags & 0x02) {
-			// clear internal RAM
-			memset(internalRAM, 0, 0x7e00); // don't clear 0x7e00-0x7fff
-		}
-		if(flags & 0x04) {
-			// clear palette RAM
-			memset(graphics.paletteRAM, 0, 0x400);
-		}
-		if(flags & 0x08) {
-			// clear VRAM
-			memset(vram, 0, 0x18000);
-		}
-		if(flags & 0x10) {
-			// clean OAM
-			memset(oam, 0, 0x400);
-		}
+	if(flags)
+	{
+		if(flags & 0x01)
+			memset(workRAM, 0, 0x40000);		// clear work RAM
+
+		if(flags & 0x02)
+			memset(internalRAM, 0, 0x7e00);		// don't clear 0x7e00-0x7fff, clear internal RAM
+
+		if(flags & 0x04)
+			memset(graphics.paletteRAM, 0, 0x400);	// clear palette RAM
+
+		if(flags & 0x08)
+			memset(vram, 0, 0x18000);		// clear VRAM
+
+		if(flags & 0x10)
+			memset(oam, 0, 0x400);			// clean OAM
 
 		if(flags & 0x80) {
 			int i;
@@ -1613,7 +1626,8 @@ static void BIOS_RLUnCompVram (void)
 	int byteShift = 0;
 	u32 writeValue = 0;
 
-	while(len > 0) {
+	while(len > 0)
+	{
 		u8 d = CPUReadByte(source++);
 		int l = d & 0x7F;
 		if(d & 0x80) {
@@ -1779,20 +1793,19 @@ static void BIOS_SoftReset (void)
  #define offset offset_
 #endif
 
-static  void armUnknownInsn(u32 opcode)
+static void armUnknownInsn(u32 opcode)
 {
-    // CPU Undefined Exception - ghetto inline
-  u32 PC = bus.reg[15].I;
-  bool savedArmState = armState;
-  CPUSwitchMode(0x1b, true, false);
-  bus.reg[14].I = PC - (savedArmState ? 4 : 2);
-  bus.reg[15].I = 0x04;
-  armState = true;
-  armIrqEnable = false;
-  bus.armNextPC = 0x04;
-  ARM_PREFETCH;
-  bus.reg[15].I += 4;
-    // CPU Undefined Exception - end of ghetto inline
+	u32 PC = bus.reg[15].I;
+	bool savedArmState = armState;
+	if(armMode != 0x1b )
+		CPUSwitchMode(0x1b, true, false);
+	bus.reg[14].I = PC - (savedArmState ? 4 : 2);
+	bus.reg[15].I = 0x04;
+	armState = true;
+	armIrqEnable = false;
+	bus.armNextPC = 0x04;
+	ARM_PREFETCH;
+	bus.reg[15].I += 4;
 }
 
 // Common macros //////////////////////////////////////////////////////////
@@ -2228,7 +2241,7 @@ static  void armUnknownInsn(u32 opcode)
     }
 
 #define MODECHANGE_NO  /*nothing*/
-#define MODECHANGE_YES CPUSwitchMode(bus.reg[17].I & 0x1f, false, true);
+#define MODECHANGE_YES if(armMode != (bus.reg[17].I & 0x1f)) CPUSwitchMode(bus.reg[17].I & 0x1f, false, true);
 
 #define DEFINE_ALU_INSN_C(CODE1, CODE2, OP, MODECHANGE) \
   static  void arm##CODE1##0(u32 opcode) { ALU_INSN(ALU_INIT_C, VALUE_LSL_IMM_C, OP_##OP, MODECHANGE_##MODECHANGE, 0); }\
@@ -2424,25 +2437,22 @@ static  void arm149(u32 opcode)
 // MRS Rd, CPSR
 static  void arm100(u32 opcode)
 {
-    if ((opcode & 0x0FFF0FFF) == 0x010F0000)
-    {
-	    CPU_UPDATE_CPSR();
-	    bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[16].I;
-    }
-    else
-    {
-        armUnknownInsn(opcode);
-    }
+	if ((opcode & 0x0FFF0FFF) == 0x010F0000)
+	{
+		CPU_UPDATE_CPSR();
+		bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[16].I;
+	}
+	else
+		armUnknownInsn(opcode);
 }
 
 // MRS Rd, SPSR
 static  void arm140(u32 opcode)
 {
-    if ((opcode & 0x0FFF0FFF) == 0x014F0000) {
-        bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[17].I;
-    } else {
-        armUnknownInsn(opcode);
-    }
+	if ((opcode & 0x0FFF0FFF) == 0x014F0000)
+		bus.reg[(opcode >> 12) & 0x0F].I = bus.reg[17].I;
+	else
+		armUnknownInsn(opcode);
 }
 
 // MSR CPSR_fields, Rm
@@ -2464,7 +2474,8 @@ static  void arm120(u32 opcode)
 	    if (opcode & 0x00080000)
 		    newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
 	    newValue |= 0x10;
-	    CPUSwitchMode(newValue & 0x1F, false, true);
+	    if(armMode != (newValue & 0x1F))
+		    CPUSwitchMode(newValue & 0x1F, false, true);
 	    bus.reg[16].I = newValue;
 	    CPUUpdateFlags();
 	    if (!armState) {  // this should not be allowed, but it seems to work
@@ -2473,117 +2484,118 @@ static  void arm120(u32 opcode)
 	    }
     }
     else
-    {
 	    armUnknownInsn(opcode);
-    }
 }
 
 // MSR SPSR_fields, Rm
 static  void arm160(u32 opcode)
 {
-    if ((opcode & 0x0FF0FFF0) == 0x0160F000) {
-        u32 value = bus.reg[opcode & 15].I;
-        if (armMode > 0x10 && armMode < 0x1F) {
-            if (opcode & 0x00010000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
-            if (opcode & 0x00020000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
-            if (opcode & 0x00040000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
-            if (opcode & 0x00080000)
-                bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
-        }
-    } else {
-        armUnknownInsn(opcode);
-    }
+	if ((opcode & 0x0FF0FFF0) == 0x0160F000)
+	{
+		u32 value = bus.reg[opcode & 15].I;
+		if (armMode > 0x10 && armMode < 0x1F)
+		{
+			if (opcode & 0x00010000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+			if (opcode & 0x00020000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+			if (opcode & 0x00040000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+			if (opcode & 0x00080000)
+				bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+		}
+	}
+	else
+		armUnknownInsn(opcode);
 }
 
 // MSR CPSR_fields, #
 static  void arm320(u32 opcode)
 {
-    if ((opcode & 0x0FF0F000) == 0x0320F000)
-    {
-	    CPU_UPDATE_CPSR();
-	    u32 value = opcode & 0xFF;
-	    int shift = (opcode & 0xF00) >> 7;
-	    if (shift) {
-		    ROR_IMM_MSR;
-	    }
-	    u32 newValue = bus.reg[16].I;
-	    if (armMode > 0x10) {
-		    if (opcode & 0x00010000)
-			    newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
-		    if (opcode & 0x00020000)
-			    newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
-		    if (opcode & 0x00040000)
-			    newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
-	    }
-	    if (opcode & 0x00080000)
-		    newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
+	if ((opcode & 0x0FF0F000) == 0x0320F000)
+	{
+		CPU_UPDATE_CPSR();
+		u32 value = opcode & 0xFF;
+		int shift = (opcode & 0xF00) >> 7;
+		if (shift) {
+			ROR_IMM_MSR;
+		}
+		u32 newValue = bus.reg[16].I;
+		if (armMode > 0x10) {
+			if (opcode & 0x00010000)
+				newValue = (newValue & 0xFFFFFF00) | (value & 0x000000FF);
+			if (opcode & 0x00020000)
+				newValue = (newValue & 0xFFFF00FF) | (value & 0x0000FF00);
+			if (opcode & 0x00040000)
+				newValue = (newValue & 0xFF00FFFF) | (value & 0x00FF0000);
+		}
+		if (opcode & 0x00080000)
+			newValue = (newValue & 0x00FFFFFF) | (value & 0xFF000000);
 
-	    newValue |= 0x10;
+		newValue |= 0x10;
 
-	    CPUSwitchMode(newValue & 0x1F, false, true);
-	    bus.reg[16].I = newValue;
-	    CPUUpdateFlags();
-	    if (!armState) {  // this should not be allowed, but it seems to work
-		    THUMB_PREFETCH;
-		    bus.reg[15].I = bus.armNextPC + 2;
-	    }
-    } else {
-        armUnknownInsn(opcode);
-    }
+		if(armMode != (newValue & 0x1F))
+			CPUSwitchMode(newValue & 0x1F, false, true);
+		bus.reg[16].I = newValue;
+		CPUUpdateFlags();
+		if (!armState) {  // this should not be allowed, but it seems to work
+			THUMB_PREFETCH;
+			bus.reg[15].I = bus.armNextPC + 2;
+		}
+	}
+	else
+		armUnknownInsn(opcode);
 }
 
 // MSR SPSR_fields, #
 static  void arm360(u32 opcode)
 {
-    if ((opcode & 0x0FF0F000) == 0x0360F000) {
-        if (armMode > 0x10 && armMode < 0x1F) {
-            u32 value = opcode & 0xFF;
-            int shift = (opcode & 0xF00) >> 7;
-            if (shift) {
-                ROR_IMM_MSR;
-            }
-            if (opcode & 0x00010000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
-            if (opcode & 0x00020000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
-            if (opcode & 0x00040000)
-                bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
-            if (opcode & 0x00080000)
-                bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
-        }
-    } else {
-        armUnknownInsn(opcode);
-    }
+	if ((opcode & 0x0FF0F000) == 0x0360F000) {
+		if (armMode > 0x10 && armMode < 0x1F) {
+			u32 value = opcode & 0xFF;
+			int shift = (opcode & 0xF00) >> 7;
+			if (shift) {
+				ROR_IMM_MSR;
+			}
+			if (opcode & 0x00010000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFFFFFF00) | (value & 0x000000FF);
+			if (opcode & 0x00020000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFFFF00FF) | (value & 0x0000FF00);
+			if (opcode & 0x00040000)
+				bus.reg[17].I = (bus.reg[17].I & 0xFF00FFFF) | (value & 0x00FF0000);
+			if (opcode & 0x00080000)
+				bus.reg[17].I = (bus.reg[17].I & 0x00FFFFFF) | (value & 0xFF000000);
+		}
+	}
+	else
+		armUnknownInsn(opcode);
 }
 
 // BX Rm
 static  void arm121(u32 opcode)
 {
-    if ((opcode & 0x0FFFFFF0) == 0x012FFF10) {
-        int base = opcode & 0x0F;
-        bus.busPrefetchCount = 0;
-        armState = bus.reg[base].I & 1 ? false : true;
-        if (armState) {
-            bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFC;
-            bus.armNextPC = bus.reg[15].I;
-            bus.reg[15].I += 4;
-            ARM_PREFETCH;
-            clockTicks = 3 + (codeTicksAccessSeq32(bus.armNextPC)<<1)
-                           + codeTicksAccess(bus.armNextPC, BITS_32);
-        } else {
-            bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFE;
-            bus.armNextPC = bus.reg[15].I;
-            bus.reg[15].I += 2;
-            THUMB_PREFETCH;
-            clockTicks = 3 + (codeTicksAccessSeq16(bus.armNextPC)<<1)
-                           + codeTicksAccess(bus.armNextPC, BITS_16);
-        }
-    } else {
-        armUnknownInsn(opcode);
-    }
+	if ((opcode & 0x0FFFFFF0) == 0x012FFF10) {
+		int base = opcode & 0x0F;
+		bus.busPrefetchCount = 0;
+		armState = bus.reg[base].I & 1 ? false : true;
+		if (armState) {
+			bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFC;
+			bus.armNextPC = bus.reg[15].I;
+			bus.reg[15].I += 4;
+			ARM_PREFETCH;
+			clockTicks = 3 + (codeTicksAccessSeq32(bus.armNextPC)<<1)
+				+ codeTicksAccess(bus.armNextPC, BITS_32);
+		} else {
+			bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFE;
+			bus.armNextPC = bus.reg[15].I;
+			bus.reg[15].I += 2;
+			THUMB_PREFETCH;
+			clockTicks = 3 + (codeTicksAccessSeq16(bus.armNextPC)<<1)
+				+ codeTicksAccess(bus.armNextPC, BITS_16);
+		}
+	}
+	else
+		armUnknownInsn(opcode);
 }
 
 // Load/store /////////////////////////////////////////////////////////////
@@ -3218,7 +3230,8 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
     }
 #define LDM_ALL_2B \
     if (opcode & (1U<<15)) {                            \
-        CPUSwitchMode(bus.reg[17].I & 0x1F, false, true);   \
+	if(armMode != (bus.reg[17].I & 0x1F)) \
+	    CPUSwitchMode(bus.reg[17].I & 0x1F, false, true);   \
         if (armState) {                                 \
             bus.armNextPC = bus.reg[15].I & 0xFFFFFFFC;         \
             bus.reg[15].I = bus.armNextPC + 4;                  \
@@ -4081,7 +4094,8 @@ static  void thumbUnknownInsn(u32 opcode)
 {
 	u32 PC = bus.reg[15].I;
 	bool savedArmState = armState;
-	CPUSwitchMode(0x1b, true, false);
+	if(armMode != 0x1b)
+		CPUSwitchMode(0x1b, true, false);
 	bus.reg[14].I = PC - (savedArmState ? 4 : 2);
 	bus.reg[15].I = 0x04;
 	armState = true;
@@ -5717,7 +5731,6 @@ int thumbExecute()
 }
 
 
-//
 /*============================================================
 	GBA GFX
 ============================================================ */
@@ -6900,21 +6913,23 @@ static INLINE void gfxDrawOBJWin (void)
 			{
 				int fieldX = sizeX;
 				int fieldY = sizeY;
-				if(a0 & 0x0200) {
+				if(a0 & 0x0200)
+				{
 					fieldX <<= 1;
 					fieldY <<= 1;
 				}
 				if((sy+fieldY) > 256)
 					sy -= 256;
 				int t = VCOUNT - sy;
-				if((t >= 0) && (t < fieldY)) {
+				if((t >= 0) && (t < fieldY))
+				{
 					int sx = (a1 & 0x1FF);
 					int startpix = 0;
 					if ((sx+fieldX)> 512)
-					{
 						startpix=512-sx;
-					}
-					if((sx < 240) || startpix) {
+
+					if((sx < 240) || startpix)
+					{
 						lineOBJpix-=8;
 						// int t2 = t - (fieldY >> 1);
 						int rot = (a1 >> 9) & 0x1F;
@@ -7058,11 +7073,11 @@ static INLINE void gfxDrawOBJWin (void)
 									lineOBJpix--;
 								if (lineOBJpix<0)
 									continue;
-								if(sx < 240) {
+								if(sx < 240)
+								{
 									u8 color = vram[address];
-									if(color) {
+									if(color)
 										line[5][sx] = 1;
-									}
 								}
 
 								sx = (sx+1) & 511;
@@ -7220,10 +7235,6 @@ static INLINE u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 /*============================================================
 	GBA.CPP
 ============================================================ */
-
-int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
-
-bool ioReadable[0x400];
 int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
@@ -7232,7 +7243,8 @@ int cpuSaveType = 0;
 bool enableRtc = false;
 bool mirroringEnable = false;
 bool skipSaveGameBattery = false;
-bool skipSaveGameCheats = false;
+
+int cpuDmaCount = 0;
 
 uint8_t *bios = 0;
 uint8_t *rom = 0;
@@ -7243,39 +7255,14 @@ uint8_t *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
-
 #ifdef USE_SWITICKS
 int SWITicks = 0;
 #endif
-int IRQTicks = 0;
 
-int cpuDmaTicksToUpdate = 0;
-int cpuDmaCount = 0;
-
-int gbaSaveType = 0; // used to remember the save type on reset
-bool intState = false;
 bool cpuSramEnabled = true;
 bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
 bool cpuEEPROMSensorEnabled = false;
-
-static uint8_t timerOnOffDelay = 0;
-static uint16_t timer0Value = 0;
-static uint32_t dma0Source = 0;
-static uint32_t dma0Dest = 0;
-static uint32_t dma1Source = 0;
-static uint32_t dma1Dest = 0;
-static uint32_t dma2Source = 0;
-static uint32_t dma2Dest = 0;
-static uint32_t dma3Source = 0;
-static uint32_t dma3Dest = 0;
-void (*cpuSaveGameFunc)(uint32_t,uint8_t) = flashSaveDecide;
-static bool fxOn = false;
-static bool windowOn = false;
-
-const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
-
-static const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
 
 #ifndef LSB_FIRST
 bool cpuBiosSwapped = false;
@@ -7457,126 +7444,126 @@ uint32_t myROM[] = {
 0x03007FE0
 };
 
-variable_desc saveGameStruct[] = {
-  { &graphics.DISPCNT  , sizeof(uint16_t) },
-  { &graphics.DISPSTAT , sizeof(uint16_t) },
-  { &VCOUNT   , sizeof(uint16_t) },
-  { &BG0CNT   , sizeof(uint16_t) },
-  { &BG1CNT   , sizeof(uint16_t) },
-  { &BG2CNT   , sizeof(uint16_t) },
-  { &BG3CNT   , sizeof(uint16_t) },
-  { &BG0HOFS  , sizeof(uint16_t) },
-  { &BG0VOFS  , sizeof(uint16_t) },
-  { &BG1HOFS  , sizeof(uint16_t) },
-  { &BG1VOFS  , sizeof(uint16_t) },
-  { &BG2HOFS  , sizeof(uint16_t) },
-  { &BG2VOFS  , sizeof(uint16_t) },
-  { &BG3HOFS  , sizeof(uint16_t) },
-  { &BG3VOFS  , sizeof(uint16_t) },
-  { &BG2PA    , sizeof(uint16_t) },
-  { &BG2PB    , sizeof(uint16_t) },
-  { &BG2PC    , sizeof(uint16_t) },
-  { &BG2PD    , sizeof(uint16_t) },
-  { &BG2X_L   , sizeof(uint16_t) },
-  { &BG2X_H   , sizeof(uint16_t) },
-  { &BG2Y_L   , sizeof(uint16_t) },
-  { &BG2Y_H   , sizeof(uint16_t) },
-  { &BG3PA    , sizeof(uint16_t) },
-  { &BG3PB    , sizeof(uint16_t) },
-  { &BG3PC    , sizeof(uint16_t) },
-  { &BG3PD    , sizeof(uint16_t) },
-  { &BG3X_L   , sizeof(uint16_t) },
-  { &BG3X_H   , sizeof(uint16_t) },
-  { &BG3Y_L   , sizeof(uint16_t) },
-  { &BG3Y_H   , sizeof(uint16_t) },
-  { &WIN0H    , sizeof(uint16_t) },
-  { &WIN1H    , sizeof(uint16_t) },
-  { &WIN0V    , sizeof(uint16_t) },
-  { &WIN1V    , sizeof(uint16_t) },
-  { &WININ    , sizeof(uint16_t) },
-  { &WINOUT   , sizeof(uint16_t) },
-  { &MOSAIC   , sizeof(uint16_t) },
-  { &BLDMOD   , sizeof(uint16_t) },
-  { &COLEV    , sizeof(uint16_t) },
-  { &COLY     , sizeof(uint16_t) },
-  { &DM0SAD_L , sizeof(uint16_t) },
-  { &DM0SAD_H , sizeof(uint16_t) },
-  { &DM0DAD_L , sizeof(uint16_t) },
-  { &DM0DAD_H , sizeof(uint16_t) },
-  { &DM0CNT_L , sizeof(uint16_t) },
-  { &DM0CNT_H , sizeof(uint16_t) },
-  { &DM1SAD_L , sizeof(uint16_t) },
-  { &DM1SAD_H , sizeof(uint16_t) },
-  { &DM1DAD_L , sizeof(uint16_t) },
-  { &DM1DAD_H , sizeof(uint16_t) },
-  { &DM1CNT_L , sizeof(uint16_t) },
-  { &DM1CNT_H , sizeof(uint16_t) },
-  { &DM2SAD_L , sizeof(uint16_t) },
-  { &DM2SAD_H , sizeof(uint16_t) },
-  { &DM2DAD_L , sizeof(uint16_t) },
-  { &DM2DAD_H , sizeof(uint16_t) },
-  { &DM2CNT_L , sizeof(uint16_t) },
-  { &DM2CNT_H , sizeof(uint16_t) },
-  { &DM3SAD_L , sizeof(uint16_t) },
-  { &DM3SAD_H , sizeof(uint16_t) },
-  { &DM3DAD_L , sizeof(uint16_t) },
-  { &DM3DAD_H , sizeof(uint16_t) },
-  { &DM3CNT_L , sizeof(uint16_t) },
-  { &DM3CNT_H , sizeof(uint16_t) },
-  { &TM0D     , sizeof(uint16_t) },
-  { &TM0CNT   , sizeof(uint16_t) },
-  { &TM1D     , sizeof(uint16_t) },
-  { &TM1CNT   , sizeof(uint16_t) },
-  { &TM2D     , sizeof(uint16_t) },
-  { &TM2CNT   , sizeof(uint16_t) },
-  { &TM3D     , sizeof(uint16_t) },
-  { &TM3CNT   , sizeof(uint16_t) },
-  { &P1       , sizeof(uint16_t) },
-  { &IE       , sizeof(uint16_t) },
-  { &IF       , sizeof(uint16_t) },
-  { &IME      , sizeof(uint16_t) },
-  { &holdState, sizeof(bool) },
-  { &holdType, sizeof(int) },
-  { &graphics.lcdTicks, sizeof(int) },
-  { &timer0On , sizeof(bool) },
-  { &timer0Ticks , sizeof(int) },
-  { &timer0Reload , sizeof(int) },
-  { &timer0ClockReload  , sizeof(int) },
-  { &timer1On , sizeof(bool) },
-  { &timer1Ticks , sizeof(int) },
-  { &timer1Reload , sizeof(int) },
-  { &timer1ClockReload  , sizeof(int) },
-  { &timer2On , sizeof(bool) },
-  { &timer2Ticks , sizeof(int) },
-  { &timer2Reload , sizeof(int) },
-  { &timer2ClockReload  , sizeof(int) },
-  { &timer3On , sizeof(bool) },
-  { &timer3Ticks , sizeof(int) },
-  { &timer3Reload , sizeof(int) },
-  { &timer3ClockReload  , sizeof(int) },
-  { &dma0Source , sizeof(uint32_t) },
-  { &dma0Dest , sizeof(uint32_t) },
-  { &dma1Source , sizeof(uint32_t) },
-  { &dma1Dest , sizeof(uint32_t) },
-  { &dma2Source , sizeof(uint32_t) },
-  { &dma2Dest , sizeof(uint32_t) },
-  { &dma3Source , sizeof(uint32_t) },
-  { &dma3Dest , sizeof(uint32_t) },
-  { &fxOn, sizeof(bool) },
-  { &windowOn, sizeof(bool) },
-  { &N_FLAG , sizeof(bool) },
-  { &C_FLAG , sizeof(bool) },
-  { &Z_FLAG , sizeof(bool) },
-  { &V_FLAG , sizeof(bool) },
-  { &armState , sizeof(bool) },
-  { &armIrqEnable , sizeof(bool) },
-  { &bus.armNextPC , sizeof(uint32_t) },
-  { &armMode , sizeof(int) },
-  { &saveType , sizeof(int) },
-  { NULL, 0 }
+static variable_desc saveGameStruct[] = {
+	{ &graphics.DISPCNT  , sizeof(uint16_t) },
+	{ &graphics.DISPSTAT , sizeof(uint16_t) },
+	{ &VCOUNT   , sizeof(uint16_t) },
+	{ &BG0CNT   , sizeof(uint16_t) },
+	{ &BG1CNT   , sizeof(uint16_t) },
+	{ &BG2CNT   , sizeof(uint16_t) },
+	{ &BG3CNT   , sizeof(uint16_t) },
+	{ &BG0HOFS  , sizeof(uint16_t) },
+	{ &BG0VOFS  , sizeof(uint16_t) },
+	{ &BG1HOFS  , sizeof(uint16_t) },
+	{ &BG1VOFS  , sizeof(uint16_t) },
+	{ &BG2HOFS  , sizeof(uint16_t) },
+	{ &BG2VOFS  , sizeof(uint16_t) },
+	{ &BG3HOFS  , sizeof(uint16_t) },
+	{ &BG3VOFS  , sizeof(uint16_t) },
+	{ &BG2PA    , sizeof(uint16_t) },
+	{ &BG2PB    , sizeof(uint16_t) },
+	{ &BG2PC    , sizeof(uint16_t) },
+	{ &BG2PD    , sizeof(uint16_t) },
+	{ &BG2X_L   , sizeof(uint16_t) },
+	{ &BG2X_H   , sizeof(uint16_t) },
+	{ &BG2Y_L   , sizeof(uint16_t) },
+	{ &BG2Y_H   , sizeof(uint16_t) },
+	{ &BG3PA    , sizeof(uint16_t) },
+	{ &BG3PB    , sizeof(uint16_t) },
+	{ &BG3PC    , sizeof(uint16_t) },
+	{ &BG3PD    , sizeof(uint16_t) },
+	{ &BG3X_L   , sizeof(uint16_t) },
+	{ &BG3X_H   , sizeof(uint16_t) },
+	{ &BG3Y_L   , sizeof(uint16_t) },
+	{ &BG3Y_H   , sizeof(uint16_t) },
+	{ &WIN0H    , sizeof(uint16_t) },
+	{ &WIN1H    , sizeof(uint16_t) },
+	{ &WIN0V    , sizeof(uint16_t) },
+	{ &WIN1V    , sizeof(uint16_t) },
+	{ &WININ    , sizeof(uint16_t) },
+	{ &WINOUT   , sizeof(uint16_t) },
+	{ &MOSAIC   , sizeof(uint16_t) },
+	{ &BLDMOD   , sizeof(uint16_t) },
+	{ &COLEV    , sizeof(uint16_t) },
+	{ &COLY     , sizeof(uint16_t) },
+	{ &DM0SAD_L , sizeof(uint16_t) },
+	{ &DM0SAD_H , sizeof(uint16_t) },
+	{ &DM0DAD_L , sizeof(uint16_t) },
+	{ &DM0DAD_H , sizeof(uint16_t) },
+	{ &DM0CNT_L , sizeof(uint16_t) },
+	{ &DM0CNT_H , sizeof(uint16_t) },
+	{ &DM1SAD_L , sizeof(uint16_t) },
+	{ &DM1SAD_H , sizeof(uint16_t) },
+	{ &DM1DAD_L , sizeof(uint16_t) },
+	{ &DM1DAD_H , sizeof(uint16_t) },
+	{ &DM1CNT_L , sizeof(uint16_t) },
+	{ &DM1CNT_H , sizeof(uint16_t) },
+	{ &DM2SAD_L , sizeof(uint16_t) },
+	{ &DM2SAD_H , sizeof(uint16_t) },
+	{ &DM2DAD_L , sizeof(uint16_t) },
+	{ &DM2DAD_H , sizeof(uint16_t) },
+	{ &DM2CNT_L , sizeof(uint16_t) },
+	{ &DM2CNT_H , sizeof(uint16_t) },
+	{ &DM3SAD_L , sizeof(uint16_t) },
+	{ &DM3SAD_H , sizeof(uint16_t) },
+	{ &DM3DAD_L , sizeof(uint16_t) },
+	{ &DM3DAD_H , sizeof(uint16_t) },
+	{ &DM3CNT_L , sizeof(uint16_t) },
+	{ &DM3CNT_H , sizeof(uint16_t) },
+	{ &TM0D     , sizeof(uint16_t) },
+	{ &TM0CNT   , sizeof(uint16_t) },
+	{ &TM1D     , sizeof(uint16_t) },
+	{ &TM1CNT   , sizeof(uint16_t) },
+	{ &TM2D     , sizeof(uint16_t) },
+	{ &TM2CNT   , sizeof(uint16_t) },
+	{ &TM3D     , sizeof(uint16_t) },
+	{ &TM3CNT   , sizeof(uint16_t) },
+	{ &P1       , sizeof(uint16_t) },
+	{ &IE       , sizeof(uint16_t) },
+	{ &IF       , sizeof(uint16_t) },
+	{ &IME      , sizeof(uint16_t) },
+	{ &holdState, sizeof(bool) },
+	{ &holdType, sizeof(int) },
+	{ &graphics.lcdTicks, sizeof(int) },
+	{ &timer0On , sizeof(bool) },
+	{ &timer0Ticks , sizeof(int) },
+	{ &timer0Reload , sizeof(int) },
+	{ &timer0ClockReload  , sizeof(int) },
+	{ &timer1On , sizeof(bool) },
+	{ &timer1Ticks , sizeof(int) },
+	{ &timer1Reload , sizeof(int) },
+	{ &timer1ClockReload  , sizeof(int) },
+	{ &timer2On , sizeof(bool) },
+	{ &timer2Ticks , sizeof(int) },
+	{ &timer2Reload , sizeof(int) },
+	{ &timer2ClockReload  , sizeof(int) },
+	{ &timer3On , sizeof(bool) },
+	{ &timer3Ticks , sizeof(int) },
+	{ &timer3Reload , sizeof(int) },
+	{ &timer3ClockReload  , sizeof(int) },
+	{ &dma0Source , sizeof(uint32_t) },
+	{ &dma0Dest , sizeof(uint32_t) },
+	{ &dma1Source , sizeof(uint32_t) },
+	{ &dma1Dest , sizeof(uint32_t) },
+	{ &dma2Source , sizeof(uint32_t) },
+	{ &dma2Dest , sizeof(uint32_t) },
+	{ &dma3Source , sizeof(uint32_t) },
+	{ &dma3Dest , sizeof(uint32_t) },
+	{ &fxOn, sizeof(bool) },
+	{ &windowOn, sizeof(bool) },
+	{ &N_FLAG , sizeof(bool) },
+	{ &C_FLAG , sizeof(bool) },
+	{ &Z_FLAG , sizeof(bool) },
+	{ &V_FLAG , sizeof(bool) },
+	{ &armState , sizeof(bool) },
+	{ &armIrqEnable , sizeof(bool) },
+	{ &bus.armNextPC , sizeof(uint32_t) },
+	{ &armMode , sizeof(int) },
+	{ &saveType , sizeof(int) },
+	{ NULL, 0 }
 };
 
-INLINE int CPUUpdateTicks()
+static INLINE int CPUUpdateTicks (void)
 {
 	int cpuLoopTicks = graphics.lcdTicks;
 
@@ -7657,7 +7644,8 @@ INLINE int CPUUpdateTicks()
 { \
   uint32_t PC = bus.reg[15].I; \
   bool savedArmState = armState; \
-  CPUSwitchMode(0x13, true, false); \
+  if(armMode != 0x13) \
+    CPUSwitchMode(0x13, true, false); \
   bus.reg[14].I = PC - (savedArmState ? 4 : 2); \
   bus.reg[15].I = 0x08; \
   armState = true; \
@@ -7666,7 +7654,6 @@ INLINE int CPUUpdateTicks()
   ARM_PREFETCH; \
   bus.reg[15].I += 4; \
 }
-
 
 unsigned CPUWriteState(uint8_t* data, unsigned size)
 {
@@ -7698,7 +7685,7 @@ unsigned CPUWriteState(uint8_t* data, unsigned size)
 	return (ptrdiff_t)data - (ptrdiff_t)orig;
 }
 
-bool CPUExportEepromFile(const char *fileName)
+bool CPUExportEepromFile (const char *fileName)
 {
 	if(eepromInUse) {
 		FILE *file = fopen(fileName, "wb");
@@ -7724,20 +7711,24 @@ bool CPUExportEepromFile(const char *fileName)
 
 bool CPUWriteBatteryFile(const char *fileName)
 {
-	if(gbaSaveType == 0) {
+	if(gbaSaveType == 0)
+	{
 		if(eepromInUse)
 			gbaSaveType = 3;
-		else switch(saveType) {
-			case 1:
-				gbaSaveType = 1;
-				break;
-			case 2:
-				gbaSaveType = 2;
-				break;
-		}
+		else
+			switch(saveType)
+			{
+				case 1:
+					gbaSaveType = 1;
+					break;
+				case 2:
+					gbaSaveType = 2;
+					break;
+			}
 	}
 
-	if((gbaSaveType) && (gbaSaveType!=5)) {
+	if((gbaSaveType) && (gbaSaveType!=5))
+	{
 		FILE *file = fopen(fileName, "wb");
 
 		if(!file) {
@@ -7769,19 +7760,17 @@ bool CPUWriteBatteryFile(const char *fileName)
 	return true;
 }
 
-bool CPUReadGSASnapshot(const char *fileName)
+bool CPUReadGSASnapshot (const char *fileName)
 {
 	int i;
 	FILE *file = fopen(fileName, "rb");
 
-	if(!file) {
+	if(!file)
 		return false;
-	}
 
 	// check file size to know what we should read
 	fseek(file, 0, SEEK_END);
 
-	// long size = ftell(file);
 	fseek(file, 0x0, SEEK_SET);
 	fread(&i, 1, 4, file);
 	fseek(file, i, SEEK_CUR); // Skip SharkPortSave
@@ -7835,9 +7824,8 @@ bool CPUReadGSASPSnapshot(const char *fileName)
 	char footer[footersz+1], romname[namesz+1], savename[namesz+1];;
 	FILE *file = fopen(fileName, "rb");
 
-	if(!file) {
+	if(!file)
 		return false;
-	}
 
 	// read save name
 	fseek(file, namepos, SEEK_SET);
@@ -7874,9 +7862,8 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 {
 	FILE *file = fopen(fileName, "wb");
 
-	if(!file) {
+	if(!file)
 		return false;
-	}
 
 	uint8_t buffer[17];
 
@@ -7902,7 +7889,7 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 	utilPutDword(buffer, totalSize); // length of remainder of save - CRC
 	fwrite(buffer, 1, 4, file);
 
-	char *temp = new char[0x2001c];
+	char *temp = (char*)malloc(0x2001c);
 	memset(temp, 0, 28);
 	memcpy(temp, &rom[0xa0], 16); // copy internal name
 	temp[0x10] = rom[0xbe]; // reserved area (old checksum)
@@ -7922,7 +7909,7 @@ bool CPUWriteGSASnapshot(const char *fileName, const char *title, const char *de
 	fwrite(buffer, 1, 4, file); // CRC?
 
 	fclose(file);
-	delete [] temp;
+	free(temp);
 	return true;
 }
 
@@ -8008,12 +7995,14 @@ bool CPUReadBatteryFile(const char *fileName)
 	return true;
 }
 
-bool CPUIsGBABios(const char * file)
+static bool CPUIsGBABios(const char * file)
 {
-	if(strlen(file) > 4) {
+	if(strlen(file) > 4)
+	{
 		const char * p = strrchr(file,'.');
 
-		if(p != NULL) {
+		if(p != NULL)
+		{
 			if(strcasecmp(p, ".gba") == 0)
 				return true;
 			if(strcasecmp(p, ".agb") == 0)
@@ -8030,23 +8019,27 @@ bool CPUIsGBABios(const char * file)
 	return false;
 }
 
-bool CPUIsELF(const char *file)
+#ifdef ELF
+static bool CPUIsELF(const char *file)
 {
 	if(file == NULL)
 		return false;
 
-	if(strlen(file) > 4) {
+	if(strlen(file) > 4)
+	{
 		const char * p = strrchr(file,'.');
 
-		if(p != NULL) {
+		if(p != NULL)
+		{
 			if(strcasecmp(p, ".elf") == 0)
 				return true;
 		}
 	}
 	return false;
 }
+#endif
 
-static void CPUCleanUp()
+static void CPUCleanUp (void)
 {
 	if(rom != NULL) {
 		free(rom);
@@ -8095,33 +8088,31 @@ static void CPUCleanUp()
 
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	//emulating = 0;
 }
 
-int CPULoadRom(const char *szFile)
+int CPULoadRom(const char * file)
 {
 	romSize = 0x2000000;
-	if(rom != NULL) {
+	if(rom != NULL)
 		CPUCleanUp();
-	}
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	rom = (uint8_t *)malloc(0x2000000);
-	if(rom == NULL) {
+
+	if(rom == NULL)
 		return 0;
-	}
+
 	workRAM = (uint8_t *)calloc(1, 0x40000);
-	if(workRAM == NULL) {
+
+	if(workRAM == NULL)
 		return 0;
-	}
 
 	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
-		if(szFile!=NULL)
+		if(file != NULL)
 		{
-			if(!utilLoad(szFile,
+			if(!utilLoad(file,
 						utilIsGBAImage,
 						whereToLoad,
 						romSize)) {
@@ -10529,9 +10520,6 @@ a ^= b;
 
 static void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 {
-	//  if(armMode == mode)
-	//    return;
-
 	CPU_UPDATE_CPSR();
 
 	switch(armMode) {
@@ -10641,16 +10629,14 @@ static void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 
 static void CPUSoftwareInterrupt(int comment)
 {
-	//static bool disableMessage = false;
-	if(armState) comment >>= 16;
-	if(useBios) {
+	if(armState)
+		comment >>= 16;
+
+	if(useBios)
+	{
 		CPUSoftwareInterrupt_();
 		return;
 	}
-	// This would be correct, but it causes problems if uncommented
-	//  else {
-	//    biosProtected = 0xe3a02004;
-	//  }
 
 	switch(comment) {
 		case 0x00:
@@ -10712,7 +10698,8 @@ static void CPUSoftwareInterrupt(int comment)
 				}
 #endif
 			}
-			BIOS_CpuSet();
+			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
+				BIOS_CpuSet();
 			break;
 		case 0x0C:
 			{
@@ -10732,7 +10719,8 @@ static void CPUSoftwareInterrupt(int comment)
 				}
 #endif
 			}
-			BIOS_CpuFastSet();
+			if(!(((bus.reg[0].I & 0xe000000) == 0) || ((bus.reg[0].I + (((bus.reg[2].I << 11)>>9) & 0x1fffff)) & 0xe000000) == 0))
+				BIOS_CpuFastSet();
 			break;
 		case 0x0D:
 			BIOS_GET_BIOS_CHECKSUM();
@@ -11811,7 +11799,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	graphics.lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 }
 
-void CPUReset()
+void CPUReset (void)
 {
 	if(gbaSaveType == 0)
 	{
@@ -11829,18 +11817,12 @@ void CPUReset()
 			}
 	}
 	rtcReset();
-	// clean registers
-	memset(&bus.reg[0], 0, sizeof(bus.reg));
-	// clean OAM
-	memset(oam, 0, 0x400);
-	// clean palette
-	memset(graphics.paletteRAM, 0, 0x400);
-	// clean picture
-	memset(pix, 0, 4*160*240);
-	// clean vram
-	memset(vram, 0, 0x20000);
-	// clean io memory
-	memset(ioMem, 0, 0x400);
+	memset(&bus.reg[0], 0, sizeof(bus.reg));	// clean registers
+	memset(oam, 0, 0x400);				// clean OAM
+	memset(graphics.paletteRAM, 0, 0x400);		// clean palette
+	memset(pix, 0, 4*160*240);			// clean picture
+	memset(vram, 0, 0x20000);			// clean vram
+	memset(ioMem, 0, 0x400);			// clean io memory
 
 	graphics.DISPCNT  = 0x0080;
 	graphics.DISPSTAT = 0x0000;
@@ -12120,11 +12102,14 @@ void CPUReset()
 #endif
 }
 
-void CPUInterrupt()
+static void CPUInterrupt(void)
 {
 	uint32_t PC = bus.reg[15].I;
 	bool savedState = armState;
-	CPUSwitchMode(0x12, true, false);
+
+	if(armMode != 0x12 )
+		CPUSwitchMode(0x12, true, false);
+
 	bus.reg[14].I = PC;
 	if(!savedState)
 		bus.reg[14].I += 2;

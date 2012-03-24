@@ -235,8 +235,6 @@ void flashWrite(uint32_t address, uint8_t byte)
 /*============================================================
 	EEPROM
 ============================================================ */
-extern int cpuDmaCount;
-
 int eepromMode = EEPROM_IDLE;
 int eepromByte = 0;
 int eepromBits = 0;
