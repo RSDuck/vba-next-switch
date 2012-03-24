@@ -1,10 +1,6 @@
 #ifndef GBA_H
 #define GBA_H
 
-#include "../System.h"
-
-#include "Globals.h"
-
 #define BITS_16 0
 #define BITS_32 1
 

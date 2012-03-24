@@ -1,7 +1,6 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include "../System.h"
 #include "sound_blargg.h"
 
 #define SGCNT0_H 0x82

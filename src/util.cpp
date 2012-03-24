@@ -2,14 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "System.h"
-#include "NLS.h"
-#include "Util.h"
+#include "system.h"
+#include "port.h"
+#include "types.h"
+#include "nls.h"
+#include "util.h"
 
-#include "gba/GBA.h"
-#include "gba/Globals.h"
-#include "gba/memory.h"
-#include "common/Port.h"
+#include "gba.h"
+#include "globals.h"
+#include "memory.h"
 
 extern int systemColorDepth;
 extern int systemRedShift;

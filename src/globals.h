@@ -1,8 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "../common/Types.h"
-#include "GBA.h"
+#include "types.h"
 
 extern bool ioReadable[0x400];
 extern int saveType;

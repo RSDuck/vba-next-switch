@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-#ifdef __LIBSNES__
 #include <stddef.h>
-#endif
+
+#include "system.h"
+#include "globals.h"
 
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
 #endif
 
-#include "../common/Port.h"
+#include "port.h"
 
 static const int table [0x40] =
 {
@@ -25,9 +25,9 @@ static const int table [0x40] =
 		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
 };
 
-#include "GBA.h"
+#include "gba.h"
 #include "memory.h"
-#include "Sound.h"
+#include "sound.h"
 
 /*============================================================
 	GBA INLINE
@@ -814,13 +814,11 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 	}
 }
 
-#include "Globals.h"
-#include "../NLS.h"
+#include "nls.h"
 #ifdef ELF
 #include "elf.h"
 #endif
-#include "../Util.h"
-#include "../System.h"
+#include "util.h"
 
 /*============================================================
 	BIOS

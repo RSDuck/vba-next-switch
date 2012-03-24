@@ -15,14 +15,14 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 #include <limits.h>
 #include <math.h>
 
-#include "Sound.h"
+#include "sound.h"
 
-#include "GBA.h"
-#include "Globals.h"
+#include "gba.h"
+#include "globals.h"
 
-#include "../Util.h"
-#include "../common/Port.h"
-#include "../System.h"
+#include "util.h"
+#include "port.h"
+#include "system.h"
 
 #define NR10 0x60
 #define NR11 0x62

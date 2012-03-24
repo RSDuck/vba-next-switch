@@ -16,10 +16,10 @@
 #include <string>
 #include "sys/types.h"
 
-#include "../src/gba/GBA.h"
-#include "../src/gba/Sound.h"
-#include "../src/gba/RTC.h"
-#include "../src/gba/Globals.h"
+#include "../src/gba.h"
+#include "../src/sound.h"
+#include "../src/memory.h"
+#include "../src/globals.h"
 #include "emu-ps3.hpp"
 
 #include "menu.hpp"

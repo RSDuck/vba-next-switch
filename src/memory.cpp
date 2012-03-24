@@ -1,10 +1,11 @@
 #include <time.h>
 #include <string.h>
-#include "GBA.h"
-#include "Globals.h"
+
+#include "gba.h"
+#include "globals.h"
 #include "memory.h"
-#include "../Util.h"
-#include "../common/Port.h"
+#include "util.h"
+#include "port.h"
 
 /*============================================================
 	FLASH

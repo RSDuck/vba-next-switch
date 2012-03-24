@@ -17,11 +17,14 @@
 
 #include "libsnes.hpp"
 
-#include "../src/Util.h"
-#include "../src/gba/GBA.h"
-#include "../src/gba/memory.h"
-#include "../src/gba/Sound.h"
-#include "../src/gba/Globals.h"
+#include "system.h"
+#include "port.h"
+#include "types.h"
+#include "util.h"
+#include "gba.h"
+#include "memory.h"
+#include "sound.h"
+#include "globals.h"
 
 static snes_video_refresh_t video_cb;
 static snes_audio_sample_t audio_cb;
