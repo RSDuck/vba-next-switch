@@ -16,8 +16,6 @@
 #include "memory.h"
 #include "sound.h" 
 
-#define REPORT_VIDEO_MODES 0
-
 /*============================================================
 	GBA INLINE
 ============================================================ */
@@ -7407,30 +7405,27 @@ static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
 	return (color >> 16) | color;
 }
 
-static INLINE u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
+static u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 {
-	if(color < 0x80000000) {
-		color&=0xffff;
-		color2&=0xffff;
+	color &= 0xffff;
+	color2 &= 0xffff;
 
-		color = ((color << 16) | color) & 0x03E07C1F;
-		color2 = ((color2 << 16) | color2) & 0x03E07C1F;
-		color = ((color * ca) + (color2 * cb)) >> 4;
+	color = ((color << 16) | color) & 0x03E07C1F;
+	color2 = ((color2 << 16) | color2) & 0x03E07C1F;
+	color = ((color * ca) + (color2 * cb)) >> 4;
 
-		if ((ca + cb)>16)
-		{
-			if (color & 0x20)
-				color |= 0x1f;
-			if (color & 0x8000)
-				color |= 0x7C00;
-			if (color & 0x4000000)
-				color |= 0x03E00000;
-		}
-
-		color &= 0x03E07C1F;
-		color = (color >> 16) | color;
+	if ((ca + cb)>16)
+	{
+		if (color & 0x20)
+			color |= 0x1f;
+		if (color & 0x8000)
+			color |= 0x7C00;
+		if (color & 0x4000000)
+			color |= 0x03E00000;
 	}
-	return color;
+
+	color &= 0x03E07C1F;
+	return ((color >> 16) | color);
 }
 
 /*============================================================
@@ -8394,7 +8389,7 @@ void doMirroring (bool b)
       }
 
 #define alpha_blend_brightness_switch() \
-      if(top2 & (BLDMOD>>8)) \
+      if(top2 & (BLDMOD>>8) && color < 0x80000000) \
         color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
       else if(BLDMOD & top) \
       { \
@@ -8591,10 +8586,8 @@ static void mode0RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 
 						}
 					}
@@ -8736,7 +8729,8 @@ static void mode0RenderLineAll (void)
 			top = 0x10;
 		}
 
-		if(color & 0x00010000) {
+		if(color & 0x00010000)
+		{
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
@@ -8762,9 +8756,12 @@ static void mode0RenderLineAll (void)
 			}
 
 			alpha_blend_brightness_switch();
-		} else if((mask & 32) && (top & BLDMOD)) {
+		}
+		else if((mask & 32) && (top & BLDMOD))
+		{
 			// special FX on in the window
-			switch((BLDMOD >> 6) & 3) {
+			switch((BLDMOD >> 6) & 3)
+			{
 				case 0:
 					break;
 				case 1:
@@ -8800,10 +8797,8 @@ static void mode0RenderLineAll (void)
 							top2 = 0x10;
 						}
 
-						if(top2 & (BLDMOD>>8))
-							color = gfxAlphaBlend(color, back,
-									coeff[COLEV & 0x1F],
-									coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+							color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 					}
 					break;
 				case 2:
@@ -9028,10 +9023,8 @@ static void mode1RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9248,10 +9241,8 @@ static void mode1RenderLineAll (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9467,10 +9458,8 @@ static void mode2RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9664,10 +9653,8 @@ static void mode2RenderLineAll (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9814,10 +9801,8 @@ static void mode3RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 
 						}
 					}
@@ -9972,10 +9957,8 @@ static void mode3RenderLineAll (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -10125,10 +10108,8 @@ static void mode4RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 
 						}
 					}
@@ -10286,10 +10267,8 @@ static void mode4RenderLineAll (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -10439,10 +10418,8 @@ static void mode5RenderLineNoWindow (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 
 						}
 					}
@@ -10600,10 +10577,8 @@ static void mode5RenderLineAll (void)
 								top2 = 0x10;
 							}
 
-							if(top2 & (BLDMOD>>8))
-								color = gfxAlphaBlend(color, back,
-										coeff[COLEV & 0x1F],
-										coeff[(COLEV >> 8) & 0x1F]);
+							if(top2 & (BLDMOD>>8) && color < 0x80000000)
+								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 
 						}
 					}
