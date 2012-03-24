@@ -188,7 +188,15 @@ static memoryMap map[256];
 static int clockTicks;
 
 static int romSize = 0x2000000;
+
+#define GBA_LINE0_OFFSET	0
+#define GBA_LINE0_END		240
+#define GBA_LINE1_OFFSET	240
+#define GBA_LINE1_END		480
+
 static uint32_t line[6][240];
+static uint32_t gba_lines[480];
+
 static bool gfxInWin[2][240];
 static int lineOBJpixleft[128];
 uint64_t joy = 0;
@@ -5968,7 +5976,7 @@ static int thumbExecute (void)
 	GBA GFX
 ============================================================ */
 
-static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
+static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line, u32 line_offset, u32 line_end)
 {
 	u16 *palette = (u16 *)graphics.paletteRAM;
 	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
@@ -6024,7 +6032,7 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
 	if((control) & 0x80)
 	{
-		for(u32 x = 0; x < 240u; x++)
+		for(u32 x = line_offset; x < line_end; x++)
 		{
 			u16 data = READ16LE(screenSource);
 
@@ -6061,7 +6069,7 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	}
 	else
 	{ 
-		for(u32 x = 0; x < 240u; ++x)
+		for(u32 x = line_offset; x < line_end; ++x)
 		{
 			u16 data = READ16LE(screenSource);
 
@@ -6107,7 +6115,7 @@ static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 	if(mosaicOn && (mosaicX > 1))
 	{
 		int m = 1;
-		for(u32 i = 0; i < 239u; ++i)
+		for(u32 i = line_offset; i < (line_end-1); ++i)
 		{
 			line[i+1] = line[i];
 			++m;
@@ -8375,8 +8383,7 @@ int CPULoadRom(const char * file)
 	flashInit();
 	eepromInit();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
+	memset(gba_lines, -1, 480 * sizeof(u32));
 	memset(line[2], -1, 240 * sizeof(u32));
 	memset(line[3], -1, 240 * sizeof(u32));
 
@@ -8429,16 +8436,16 @@ static void mode0RenderLine (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
 	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if(graphics.layerEnable & 0x0400)
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
+		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2], 0, 240);
 
 	if(graphics.layerEnable & 0x0800)
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3], 0, 240);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8451,13 +8458,13 @@ static void mode0RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
+		if(gba_lines[GBA_LINE0_OFFSET+x] < color) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
-		if((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
+		if((uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24) < (uint8_t)(color >> 24)) {
+			color = gba_lines[GBA_LINE1_OFFSET+x];
 			top = 0x02;
 		}
 
@@ -8481,13 +8488,13 @@ static void mode0RenderLine (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[0][x];
+			if((uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24) < (uint8_t)(back >> 24)) {
+				back = gba_lines[GBA_LINE0_OFFSET+x];
 				top2 = 0x01;
 			}
 
-			if((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[1][x];
+			if((uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24) < (uint8_t)(back >> 24)) {
+				back = gba_lines[GBA_LINE1_OFFSET+x];
 				top2 = 0x02;
 			}
 
@@ -8516,16 +8523,16 @@ static void mode0RenderLineNoWindow (void)
 
 
 	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
 	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if(graphics.layerEnable & 0x0400)
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
+		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2], 0, 240);
 
 	if(graphics.layerEnable & 0x0800)
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3], 0, 240);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8539,13 +8546,13 @@ static void mode0RenderLineNoWindow (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
+		if(gba_lines[GBA_LINE0_OFFSET+x] < color) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
-		if(line[1][x] < (color & 0xFF000000)) {
-			color = line[1][x];
+		if(gba_lines[GBA_LINE1_OFFSET+x] < (color & 0xFF000000)) {
+			color = gba_lines[GBA_LINE1_OFFSET+x];
 			top = 0x02;
 		}
 
@@ -8573,15 +8580,15 @@ static void mode0RenderLineNoWindow (void)
 						if(top & BLDMOD) {
 							uint32_t back = backdrop;
 							uint8_t top2 = 0x20;
-							if((line[0][x] < back) && (top != 0x01))
+							if((gba_lines[GBA_LINE0_OFFSET+x] < back) && (top != 0x01))
 							{
-								back = line[0][x];
+								back = gba_lines[GBA_LINE0_OFFSET+x];
 								top2 = 0x01;
 							}
 
-							if((line[1][x] < (back & 0xFF000000)) && (top != 0x02))
+							if((gba_lines[GBA_LINE1_OFFSET+x] < (back & 0xFF000000)) && (top != 0x02))
 							{
-								back = line[1][x];
+								back = gba_lines[GBA_LINE1_OFFSET+x];
 								top2 = 0x02;
 							}
 
@@ -8625,13 +8632,13 @@ static void mode0RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if(line[0][x] < back) {
-				back = line[0][x];
+			if(gba_lines[GBA_LINE0_OFFSET+x] < back) {
+				back = gba_lines[GBA_LINE0_OFFSET+x];
 				top2 = 0x01;
 			}
 
-			if(line[1][x] < (back & 0xFF000000)) {
-				back = line[1][x];
+			if(gba_lines[GBA_LINE1_OFFSET+x] < (back & 0xFF000000)) {
+				back = gba_lines[GBA_LINE1_OFFSET+x];
 				top2 = 0x02;
 			}
 
@@ -8681,16 +8688,16 @@ static void mode0RenderLineAll (void)
 	}
 
 	if((graphics.layerEnable & 0x0100))
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
 	if((graphics.layerEnable & 0x0200))
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if((graphics.layerEnable & 0x0400))
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
+		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2], 0, 240);
 
 	if((graphics.layerEnable & 0x0800))
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3], 0, 240);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8720,13 +8727,13 @@ static void mode0RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 1) && (line[0][x] < color)) {
-			color = line[0][x];
+		if((mask & 1) && (gba_lines[GBA_LINE0_OFFSET+x] < color)) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
-		if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[1][x];
+		if((mask & 2) && ((uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24) < (uint8_t)(color >> 24))) {
+			color = gba_lines[GBA_LINE1_OFFSET + x];
 			top = 0x02;
 		}
 
@@ -8750,13 +8757,13 @@ static void mode0RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 1) && ((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[0][x];
+			if((mask & 1) && ((uint8_t)(gba_lines[GBA_LINE0_OFFSET + x]>>24) < (uint8_t)(back >> 24))) {
+				back = gba_lines[GBA_LINE0_OFFSET+x];
 				top2 = 0x01;
 			}
 
-			if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[1][x];
+			if((mask & 2) && ((uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24) < (uint8_t)(back >> 24))) {
+				back = gba_lines[GBA_LINE1_OFFSET + x];
 				top2 = 0x02;
 			}
 
@@ -8780,15 +8787,15 @@ static void mode0RenderLineAll (void)
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
-						if(((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
+						if(((mask & 1) && (uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
 						{
-							back = line[0][x];
+							back = gba_lines[GBA_LINE0_OFFSET+x];
 							top2 = 0x01;
 						}
 
-						if(((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
+						if(((mask & 2) && (uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
 						{
-							back = line[1][x];
+							back = gba_lines[GBA_LINE1_OFFSET + x];
 							top2 = 0x02;
 						}
 
@@ -8844,13 +8851,11 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0100) {
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
-	}
+	if(graphics.layerEnable & 0x0100)
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
-	if(graphics.layerEnable & 0x0200) {
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-	}
+	if(graphics.layerEnable & 0x0200)
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8873,7 +8878,7 @@ static void mode1RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
+		uint8_t li1 = (uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24);
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
 		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
@@ -8883,14 +8888,14 @@ static void mode1RenderLine (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
+		if(gba_lines[GBA_LINE0_OFFSET+x] < backdrop) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
+				color = gba_lines[GBA_LINE1_OFFSET+x];
 				top = 0x02;
 			}else if(r == li2){
 				color = line[2][x];
@@ -8906,8 +8911,8 @@ static void mode1RenderLine (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			uint8_t li0 = (uint8_t)(line[0][x]>>24);
-			uint8_t li1 = (uint8_t)(line[1][x]>>24);
+			uint8_t li0 = (uint8_t)(gba_lines[GBA_LINE0_OFFSET + x]>>24);
+			uint8_t li1 = (uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24);
 			uint8_t li2 = (uint8_t)(line[2][x]>>24);
 			uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
@@ -8917,10 +8922,10 @@ static void mode1RenderLine (void)
 
 			if(r < (uint8_t)(back >> 24)) {
 				if(r == li0){
-					back = line[0][x];
+					back = gba_lines[GBA_LINE0_OFFSET + x];
 					top2 = 0x01;
 				}else if(r == li1){
-					back = line[1][x];
+					back = gba_lines[GBA_LINE1_OFFSET + x];
 					top2 = 0x02;
 				}else if(r == li2){
 					back = line[2][x];
@@ -8943,14 +8948,11 @@ static void mode1RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0100) {
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
-	}
+	if(graphics.layerEnable & 0x0100)
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
-
-	if(graphics.layerEnable & 0x0200) {
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-	}
+	if(graphics.layerEnable & 0x0200)
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8973,7 +8975,7 @@ static void mode1RenderLineNoWindow (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
+		uint8_t li1 = (uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24);
 		uint8_t li2 = (uint8_t)(line[2][x]>>24);
 		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
 
@@ -8983,14 +8985,14 @@ static void mode1RenderLineNoWindow (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
+		if(gba_lines[GBA_LINE0_OFFSET+x] < backdrop) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
+				color = gba_lines[GBA_LINE1_OFFSET + x];
 				top = 0x02;
 			}else if(r == li2){
 				color = line[2][x];
@@ -9011,13 +9013,13 @@ static void mode1RenderLineNoWindow (void)
 							uint32_t back = backdrop;
 							uint8_t top2 = 0x20;
 
-							if((top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[0][x];
+							if((top != 0x01) && (uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24) < (uint8_t)(back >> 24)) {
+								back = gba_lines[GBA_LINE0_OFFSET+x];
 								top2 = 0x01;
 							}
 
-							if((top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[1][x];
+							if((top != 0x02) && (uint8_t)(gba_lines[GBA_LINE1_OFFSET + x]>>24) < (uint8_t)(back >> 24)) {
+								back = gba_lines[GBA_LINE1_OFFSET + x];
 								top2 = 0x02;
 							}
 
@@ -9052,8 +9054,8 @@ static void mode1RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			uint8_t li0 = (uint8_t)(line[0][x]>>24);
-			uint8_t li1 = (uint8_t)(line[1][x]>>24);
+			uint8_t li0 = (uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24);
+			uint8_t li1 = (uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24);
 			uint8_t li2 = (uint8_t)(line[2][x]>>24);	
 
 			uint8_t r = 	(li1 < li0) ? (li1) : (li0);
@@ -9066,12 +9068,12 @@ static void mode1RenderLineNoWindow (void)
 			{
 				if(r == li0)
 				{
-					back = line[0][x];
+					back = gba_lines[GBA_LINE0_OFFSET+x];
 					top2 = 0x01;
 				}
 				else if(r == li1)
 				{
-					back = line[1][x];
+					back = gba_lines[GBA_LINE1_OFFSET+x];
 					top2 = 0x02;
 				}
 				else if(r == li2)
@@ -9131,10 +9133,10 @@ static void mode1RenderLineAll (void)
 	}
 
 	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, gba_lines, GBA_LINE0_OFFSET, GBA_LINE0_END);
 
 	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, gba_lines, GBA_LINE1_OFFSET, GBA_LINE1_END);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -9176,13 +9178,13 @@ static void mode1RenderLineAll (void)
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
-		if((mask & 1) && line[0][x] < backdrop) {
-			color = line[0][x];
+		if((mask & 1) && gba_lines[GBA_LINE0_OFFSET+x] < backdrop) {
+			color = gba_lines[GBA_LINE0_OFFSET+x];
 			top = 0x01;
 		}
 
-		if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
+		if((mask & 2) && (uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24) < (uint8_t)(color >> 24)) {
+			color = gba_lines[GBA_LINE1_OFFSET+x];
 			top = 0x02;
 		}
 
@@ -9201,13 +9203,13 @@ static void mode1RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-				back = line[0][x];
+			if((mask & 1) && (uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24) < (uint8_t)(backdrop >> 24)) {
+				back = gba_lines[GBA_LINE0_OFFSET+x];
 				top2 = 0x01;
 			}
 
-			if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[1][x];
+			if((mask & 2) && (uint8_t)(gba_lines[GBA_LINE1_OFFSET + x] >>24) < (uint8_t)(back >> 24)) {
+				back = gba_lines[GBA_LINE1_OFFSET+x];
 				top2 = 0x02;
 			}
 
@@ -9228,13 +9230,13 @@ static void mode1RenderLineAll (void)
 							uint32_t back = backdrop;
 							uint8_t top2 = 0x20;
 
-							if((mask & 1) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-								back = line[0][x];
+							if((mask & 1) && (top != 0x01) && (uint8_t)(gba_lines[GBA_LINE0_OFFSET+x]>>24) < (uint8_t)(backdrop >> 24)) {
+								back = gba_lines[GBA_LINE0_OFFSET+x];
 								top2 = 0x01;
 							}
 
-							if((mask & 2) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[1][x];
+							if((mask & 2) && (top != 0x02) && (uint8_t)(gba_lines[GBA_LINE1_OFFSET+x]>>24) < (uint8_t)(back >> 24)) {
+								back = gba_lines[GBA_LINE1_OFFSET+x];
 								top2 = 0x02;
 							}
 
@@ -10726,8 +10728,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	CPUUpdateRender();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
+	memset(gba_lines, -1, 480 * sizeof(u32));
 	memset(line[2], -1, 240 * sizeof(u32));
 	memset(line[3], -1, 240 * sizeof(u32));
 
@@ -11232,13 +11233,13 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				graphics.DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
 				UPDATE_REG(0x00, graphics.DISPCNT);
 
-				if(changeBGon) {
+				if(changeBGon)
+				{
 					graphics.layerEnableDelay = 4;
 					graphics.layerEnable = graphics.layerSettings & value & (~changeBGon);
-				} else {
-					graphics.layerEnable = graphics.layerSettings & value;
-					// CPUUpdateTicks();
 				}
+				else
+					graphics.layerEnable = graphics.layerSettings & value;
 
 				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
 				if(change && !((value & 0x80)))
@@ -11254,12 +11255,12 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				CPUUpdateRender();
 				// we only care about changes in BG0-BG3
 				if(changeBG) {
-					// CPU Update Render Buffers set to false
-					//CPUUpdateRenderBuffers(false);
 					if(!(graphics.layerEnable & 0x0100))
-						memset(line[0], -1, 240 * sizeof(u32));
+						for(int i = 0; i < 240; i++)
+							gba_lines[i] = -1;
 					if(!(graphics.layerEnable & 0x0200))
-						memset(line[1], -1, 240 * sizeof(u32));
+						for(int i = 240; i < 480; i++)
+							gba_lines[i] = -1;
 					if(!(graphics.layerEnable & 0x0400))
 						memset(line[2], -1, 240 * sizeof(u32));
 					if(!(graphics.layerEnable & 0x0800))
@@ -12022,8 +12023,7 @@ void CPUReset (void)
 	saveType = 0;
 	graphics.layerEnable = graphics.DISPCNT & graphics.layerSettings;
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
+	memset(gba_lines, -1, 480 * sizeof(u32));
 	memset(line[2], -1, 240 * sizeof(u32));
 	memset(line[3], -1, 240 * sizeof(u32));
 
