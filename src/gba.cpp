@@ -14,7 +14,9 @@
 #include "port.h"
 #include "gba.h"
 #include "memory.h"
-#include "sound.h"
+#include "sound.h" 
+
+#define REPORT_VIDEO_MODES 0
 
 /*============================================================
 	GBA INLINE
@@ -8404,6 +8406,9 @@ void doMirroring (bool b)
 
 static void mode0RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 0: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -8490,6 +8495,9 @@ static void mode0RenderLine (void)
 
 static void mode0RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 0: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -8634,6 +8642,9 @@ static void mode0RenderLineNoWindow (void)
 
 static void mode0RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 0: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -8820,6 +8831,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode1RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 1: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -8919,6 +8933,9 @@ static void mode1RenderLine (void)
 
 static void mode1RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 1: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -9072,6 +9089,9 @@ static void mode1RenderLineNoWindow (void)
 
 static void mode1RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 1: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -9263,6 +9283,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode2RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 2: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -9355,6 +9378,9 @@ static void mode2RenderLine (void)
 
 static void mode2RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 2: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -9488,6 +9514,9 @@ static void mode2RenderLineNoWindow (void)
 
 static void mode2RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 2: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -9670,6 +9699,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode3RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 3: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -9725,6 +9757,9 @@ static void mode3RenderLine (void)
 
 static void mode3RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 3: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -9817,6 +9852,9 @@ static void mode3RenderLineNoWindow (void)
 
 static void mode3RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 3: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -9968,6 +10006,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode4RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 4: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -10025,6 +10066,9 @@ static void mode4RenderLine (void)
 
 static void mode4RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 4: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -10119,6 +10163,9 @@ static void mode4RenderLineNoWindow (void)
 
 static void mode4RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 4: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -10274,6 +10321,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode5RenderLine (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 5: Render Line\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
@@ -10330,6 +10380,9 @@ static void mode5RenderLine (void)
 
 static void mode5RenderLineNoWindow (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 5: Render Line No Window\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
@@ -10424,6 +10477,9 @@ static void mode5RenderLineNoWindow (void)
 
 static void mode5RenderLineAll (void)
 {
+#ifdef REPORT_VIDEO_MODES
+	fprintf(stderr, "MODE 5: Render Line All\n");
+#endif
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
