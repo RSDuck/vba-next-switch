@@ -1,6 +1,16 @@
 #ifndef PORT_H
 #define PORT_H
 
+#ifdef __CELLOS_LV2__
+/* PlayStation3 */
+#include <ppu_intrinsics.h>
+#endif
+
+#ifdef _XBOX
+/* XBox 360 */
+#include <ppcintrinsics.h>
+#endif
+
 #include "Types.h"
 
 /* if a >= 0 return x else y*/
@@ -12,8 +22,10 @@
 #endif
 
 #ifdef USE_CACHE_PREFETCH
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 #define CACHE_PREFETCH(prefetch) prefetch(&prefetch);
+#elif defined(_XBOX)
+#define CACHE_PREFETCH(prefetch) __dcbt(0, &prefetch);
 #else
 #define CACHE_PREFETCH(prefetch) __dcbt(&prefetch);
 #endif
@@ -23,7 +35,6 @@
 
 #ifndef LSB_FIRST
 #if defined(__SNC__)
-#include <ppu_intrinsics.h>
 #define READ16LE( base )        (__builtin_lhbrx(base, 0))
 #define READ32LE( base )        (__builtin_lwbrx(base, 0))
 #define WRITE16LE( base, value )    (__builtin_sthbrx(value, base, 0))
