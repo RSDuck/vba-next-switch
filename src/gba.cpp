@@ -8683,15 +8683,13 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	bool	process_layers[4];
+	bool	process_layers[2];
 
 	process_layers[0] = graphics.layerEnable & 0x0100;
 	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = false;
-	process_layers[3] = false;
 
 	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
+		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8786,15 +8784,13 @@ static void mode1RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
-	bool	process_layers[4];
+	bool	process_layers[2];
 
 	process_layers[0] = graphics.layerEnable & 0x0100;
 	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = false;
-	process_layers[3] = false;
 
 	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
+		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8974,15 +8970,13 @@ static void mode1RenderLineAll (void)
 			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	bool	process_layers[4];
+	bool	process_layers[2];
 
 	process_layers[0] = graphics.layerEnable & 0x0100;
 	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = false;
-	process_layers[3] = false;
 
 	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
+		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
