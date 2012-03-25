@@ -11,7 +11,7 @@
 #include <ppcintrinsics.h>
 #endif
 
-#include "Types.h"
+#include "types.h"
 
 /* if a >= 0 return x else y*/
 #define isel(a, x, y) ((x & (~(a >> 31))) + (y & (a >> 31)))

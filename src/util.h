@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "System.h"
+#include "system.h"
 
 enum {
 	IMAGE_UNKNOWN,
