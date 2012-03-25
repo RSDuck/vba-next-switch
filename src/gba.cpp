@@ -12016,15 +12016,18 @@ updateLoop:
 				}
 				else
 				{
+					bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
+					bool draw_sprites = graphics.layerEnable & 0x1000;
 					memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 
-					if(graphics.layerEnable & 0x1000)
+					if(draw_sprites)
 						gfxDrawSprites();
 
-					if(render_line_all_enabled && (graphics.layerEnable & 0x9000) == 0x9000)
+					if(render_line_all_enabled)
 					{
 						memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-						gfxDrawOBJWin();
+						if(draw_objwin)
+							gfxDrawOBJWin();
 					}
 
 					(*renderLine)();
