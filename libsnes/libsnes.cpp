@@ -531,7 +531,7 @@ void systemDrawScreen()
    for (unsigned y = 0; y < 160; y++)
    {
       uint16_t *dst = pix_buf + y * 256;
-      const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1);
+      const uint32_t *src = (const uint32_t*)pix + 240 * y;
 
       for (unsigned x = 0; x < 240; x += 8)
       {
@@ -557,7 +557,7 @@ void systemDrawScreen()
    for (unsigned y = 0; y < 160; y++)
    {
       uint16_t *dst = pix_buf + y * 256;
-      const uint32_t *src = (const uint32_t*)pix + 241 * (y + 1); // Don't ask why ... :(
+      const uint32_t *src = (const uint32_t*)pix + 240 * y;
       for (unsigned x = 0; x < 240; x++)
          dst[x] = (uint16_t)(src[x] & 0x7fff);
    }
