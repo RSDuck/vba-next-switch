@@ -100,7 +100,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 		image = (uint8_t *)malloc(utilGetSize(size));
 		if(image == NULL)
 		{
-			systemMessage("Failed to allocate memory for data.\n");
+			systemMessage("Failed to allocate memory for data");
 			return NULL;
 		}
 	}
