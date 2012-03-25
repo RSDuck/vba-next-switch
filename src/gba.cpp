@@ -8233,9 +8233,6 @@ static void mode0RenderLine (void)
 	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
 		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -8319,10 +8316,6 @@ static void mode0RenderLineNoWindow (void)
 
 	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
 		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -8483,10 +8476,6 @@ static void mode0RenderLineAll (void)
 
 	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
 		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
@@ -8660,10 +8649,6 @@ static void mode1RenderLine (void)
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(uint32_t x = 0; x < 240u; ++x) {
@@ -8760,10 +8745,6 @@ static void mode1RenderLineNoWindow (void)
 				BG2PA, BG2PB, BG2PC, BG2PD,
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -8947,10 +8928,6 @@ static void mode1RenderLineAll (void)
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
 		gfxDrawOBJWin();
@@ -9112,10 +9089,6 @@ static void mode2RenderLine (void)
 				changed, line[3]);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
@@ -9206,10 +9179,6 @@ static void mode2RenderLineNoWindow (void)
 				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9375,10 +9344,6 @@ static void mode2RenderLineAll (void)
 				changed, line[3]);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
 		gfxDrawOBJWin();
@@ -9510,10 +9475,6 @@ static void mode3RenderLine (void)
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	uint32_t background = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
@@ -9567,10 +9528,6 @@ static void mode3RenderLineNoWindow (void)
 
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t background = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9695,10 +9652,6 @@ static void mode3RenderLineAll (void)
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
 		gfxDrawOBJWin();
@@ -9814,10 +9767,6 @@ static void mode4RenderLine (void)
 		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x)
@@ -9873,10 +9822,6 @@ static void mode4RenderLineNoWindow (void)
 
 		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -10004,10 +9949,6 @@ static void mode4RenderLineAll (void)
 		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
 		gfxDrawOBJWin();
@@ -10124,10 +10065,6 @@ static void mode5RenderLine (void)
 		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
-
 	uint32_t background;
 	background = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -10183,10 +10120,6 @@ static void mode5RenderLineNoWindow (void)
 
 		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
-
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	uint32_t background;
 	background = (READ16LE(&palette[0]) | 0x30000000);
@@ -10280,9 +10213,6 @@ static void mode5RenderLineAll (void)
 		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-	if(graphics.layerEnable & 0x1000)
-		gfxDrawSprites();
 
 	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 	if((graphics.layerEnable & 0x9000) == 0x9000)
@@ -12081,6 +12011,9 @@ updateLoop:
 						CPUCompareVCOUNT();
 
 					} else {
+						memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
+						if(graphics.layerEnable & 0x1000)
+							gfxDrawSprites();
 						(*renderLine)();
 
 						// entering H-Blank
