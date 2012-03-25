@@ -5964,153 +5964,170 @@ static int thumbExecute (void)
 	GBA GFX
 ============================================================ */
 
-static INLINE void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
+static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, bool process_layer2, bool process_layer3)
 {
-	u16 *palette = (u16 *)graphics.paletteRAM;
-	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
-	u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) << 11];
-	u32 prio = ((control & 3)<<25) + 0x1000000;
-	int sizeX = 256;
-	int sizeY = 256;
+	bool	process_layers[4] = {process_layer0, process_layer1, process_layer2, process_layer3};
+	u16	control_layers[4] = {BG0CNT, BG1CNT, BG2CNT, BG3CNT};
+	u16	hofs_layers[4]	  = {BG0HOFS, BG1HOFS, BG2HOFS, BG3HOFS};
+	u16	vofs_layers[4]	  = {BG0VOFS, BG1VOFS, BG2VOFS, BG3VOFS};
+	u32 *	line_layers[4]	  = {line[0], line[1], line[2], line[3]};
+	
+	for(int i = 0; i < 4; i++)
+	{
+		if(!process_layers[i])
+			continue;
+
+		u16 control	= control_layers[i];
+		u16 hofs	= hofs_layers[i];
+		u16 vofs	= vofs_layers[i];
+		u32 * line	= line_layers[i];
+
+		u16 *palette = (u16 *)graphics.paletteRAM;
+		u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
+		u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) << 11];
+		u32 prio = ((control & 3)<<25) + 0x1000000;
+		int sizeX = 256;
+		int sizeY = 256;
 #ifdef BRANCHLESS_GBA_GFX
-	int tileXOdd = 0;
+		int tileXOdd = 0;
 #endif
 
-	switch((control >> 14) & 3)
-	{
-		case 0:
-			break;
-		case 1:
-			sizeX = 512;
-			break;
-		case 2:
-			sizeY = 512;
-			break;
-		case 3:
-			sizeX = 512;
-			sizeY = 512;
-			break;
-	}
+		switch((control >> 14) & 3)
+		{
+			case 0:
+				break;
+			case 1:
+				sizeX = 512;
+				break;
+			case 2:
+				sizeY = 512;
+				break;
+			case 3:
+				sizeX = 512;
+				sizeY = 512;
+				break;
+		}
 
-	int maskX = sizeX-1;
-	int maskY = sizeY-1;
+		int maskX = sizeX-1;
+		int maskY = sizeY-1;
 
-	int xxx = hofs & maskX;
-	int yyy = (vofs + VCOUNT) & maskY;
-	int mosaicX = (MOSAIC & 0x000F)+1;
-	int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
+		int xxx = hofs & maskX;
+		int yyy = (vofs + VCOUNT) & maskY;
+		int mosaicX = (MOSAIC & 0x000F)+1;
+		int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
-	bool mosaicOn = (control & 0x40) ? true : false;
+		bool mosaicOn = (control & 0x40) ? true : false;
 
-	if(mosaicOn && ((VCOUNT % mosaicY) != 0))
-	{
-		mosaicY = VCOUNT - (VCOUNT % mosaicY);
-		yyy = (vofs + mosaicY) & maskY;
-	}
+		if(mosaicOn && ((VCOUNT % mosaicY) != 0))
+		{
+			mosaicY = VCOUNT - (VCOUNT % mosaicY);
+			yyy = (vofs + mosaicY) & maskY;
+		}
 
-	if(yyy > 255 && sizeY > 256)
-	{
-		yyy &= 255;
-		screenBase += 0x400;
-		if(sizeX > 256)
+		if(yyy > 255 && sizeY > 256)
+		{
+			yyy &= 255;
 			screenBase += 0x400;
-	}
+			if(sizeX > 256)
+				screenBase += 0x400;
+		}
 
-	int yshift = ((yyy>>3)<<5);
-	u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
-	if((control) & 0x80)
-	{
-		for(u32 x = 0; x < 240u; x++)
+		int yshift = ((yyy>>3)<<5);
+		u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
+		if((control) & 0x80)
 		{
-			u16 data = READ16LE(screenSource);
-
-			int tile = data & 0x3FF;
-			int tileX = (xxx & 7);
-			int tileY = yyy & 7;
-
-			if(tileX == 7)
-				++screenSource;
-
-			if(data & 0x0400)
-				tileX = 7 - tileX;
-			if(data & 0x0800)
-				tileY = 7 - tileY;
-
-			u8 color = charBase[(tile<<6)  + (tileY<<3) + tileX];
-
-			line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
-
-			if(++xxx == 256)
+			for(u32 x = 0; x < 240u; x++)
 			{
-				screenSource = screenBase + yshift;
-				if(sizeX > 256)
-					screenSource += 0x400;
-				else
+				u16 data = READ16LE(screenSource);
+
+				int tile = data & 0x3FF;
+				int tileX = (xxx & 7);
+				int tileY = yyy & 7;
+
+				if(tileX == 7)
+					++screenSource;
+
+				if(data & 0x0400)
+					tileX = 7 - tileX;
+				if(data & 0x0800)
+					tileY = 7 - tileY;
+
+				u8 color = charBase[(tile<<6)  + (tileY<<3) + tileX];
+
+				line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
+
+				if(++xxx == 256)
+				{
+					screenSource = screenBase + yshift;
+					if(sizeX > 256)
+						screenSource += 0x400;
+					else
+						xxx = 0;
+				}
+				else if(xxx >= sizeX)
+				{
 					xxx = 0;
-			}
-			else if(xxx >= sizeX)
-			{
-				xxx = 0;
-				screenSource = screenBase + yshift;
+					screenSource = screenBase + yshift;
+				}
 			}
 		}
-	}
-	else
-	{ 
-		for(u32 x = 0; x < 240u; ++x)
-		{
-			u16 data = READ16LE(screenSource);
+		else
+		{ 
+			for(u32 x = 0; x < 240u; ++x)
+			{
+				u16 data = READ16LE(screenSource);
 
-			int tile = data & 0x3FF;
-			int tileX = (xxx & 7);
-			int tileY = yyy & 7;
+				int tile = data & 0x3FF;
+				int tileX = (xxx & 7);
+				int tileY = yyy & 7;
 
-			if(tileX == 7)
-				++screenSource;
+				if(tileX == 7)
+					++screenSource;
 
-			if(data & 0x0400)
-				tileX = 7 - tileX;
-			if(data & 0x0800)
-				tileY = 7 - tileY;
+				if(data & 0x0400)
+					tileX = 7 - tileX;
+				if(data & 0x0800)
+					tileY = 7 - tileY;
 
-			u8 color = charBase[(tile<<5) + (tileY<<2) + (tileX>>1)];
+				u8 color = charBase[(tile<<5) + (tileY<<2) + (tileX>>1)];
 
 #ifdef BRANCHLESS_GBA_GFX
-			tileXOdd = (tileX & 1) - 1; 
-			color = isel(tileXOdd, color >> 4, color & 0x0F);
+				tileXOdd = (tileX & 1) - 1; 
+				color = isel(tileXOdd, color >> 4, color & 0x0F);
 #else
-			(tileX & 1) ? color >>= 4 : color &= 0x0F;
+				(tileX & 1) ? color >>= 4 : color &= 0x0F;
 #endif
 
-			int pal = (data>>8) & 0xF0;
-			line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
+				int pal = (data>>8) & 0xF0;
+				line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
 
-			if(++xxx == 256)
-			{
-				screenSource = screenBase + yshift;
-				if(sizeX > 256)
-					screenSource += 0x400;
-				else
+				if(++xxx == 256)
+				{
+					screenSource = screenBase + yshift;
+					if(sizeX > 256)
+						screenSource += 0x400;
+					else
+						xxx = 0;
+				}
+				else if(xxx >= sizeX)
+				{
 					xxx = 0;
-			}
-			else if(xxx >= sizeX)
-			{
-				xxx = 0;
-				screenSource = screenBase + yshift;
+					screenSource = screenBase + yshift;
+				}
 			}
 		}
-	}
-	if(mosaicOn && (mosaicX > 1))
-	{
-		int m = 1;
-		for(u32 i = 0; i < 239u; ++i)
+		if(mosaicOn && (mosaicX > 1))
 		{
-			line[i+1] = line[i];
-			++m;
-			if(m == mosaicX)
+			int m = 1;
+			for(u32 i = 0; i < 239u; ++i)
 			{
-				m = 1;
-				++i;
+				line[i+1] = line[i];
+				++m;
+				if(m == mosaicX)
+				{
+					m = 1;
+					++i;
+				}
 			}
 		}
 	}
@@ -8248,18 +8265,15 @@ static void mode0RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
+	bool	process_layers[4];
 
-	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = graphics.layerEnable & 0x0400;
+	process_layers[3] = graphics.layerEnable & 0x0800;
 
-	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-
-	if(graphics.layerEnable & 0x0400)
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
-
-	if(graphics.layerEnable & 0x0800)
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8338,18 +8352,15 @@ static void mode0RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
+	bool	process_layers[4];
 
-	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = graphics.layerEnable & 0x0400;
+	process_layers[3] = graphics.layerEnable & 0x0800;
 
-	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-
-	if(graphics.layerEnable & 0x0400)
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
-
-	if(graphics.layerEnable & 0x0800)
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8505,17 +8516,15 @@ static void mode0RenderLineAll (void)
 			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
 	}
 
-	if((graphics.layerEnable & 0x0100))
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+	bool	process_layers[4];
 
-	if((graphics.layerEnable & 0x0200))
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = graphics.layerEnable & 0x0400;
+	process_layers[3] = graphics.layerEnable & 0x0800;
 
-	if((graphics.layerEnable & 0x0400))
-		gfxDrawTextScreen(BG2CNT, BG2HOFS, BG2VOFS, line[2]);
-
-	if((graphics.layerEnable & 0x0800))
-		gfxDrawTextScreen(BG3CNT, BG3HOFS, BG3VOFS, line[3]);
+	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 	if(graphics.layerEnable & 0x1000)
@@ -8674,13 +8683,15 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0100) {
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
-	}
+	bool	process_layers[4];
 
-	if(graphics.layerEnable & 0x0200) {
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-	}
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = false;
+	process_layers[3] = false;
+
+	if(process_layers[0] || process_layers[1])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8775,15 +8786,15 @@ static void mode1RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
+	bool	process_layers[4];
 
-	if(graphics.layerEnable & 0x0100) {
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
-	}
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = false;
+	process_layers[3] = false;
 
-
-	if(graphics.layerEnable & 0x0200) {
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
-	}
+	if(process_layers[0] || process_layers[1])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8963,12 +8974,15 @@ static void mode1RenderLineAll (void)
 			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
+	bool	process_layers[4];
 
-	if(graphics.layerEnable & 0x0100)
-		gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line[0]);
+	process_layers[0] = graphics.layerEnable & 0x0100;
+	process_layers[1] = graphics.layerEnable & 0x0200;
+	process_layers[2] = false;
+	process_layers[3] = false;
 
-	if(graphics.layerEnable & 0x0200)
-		gfxDrawTextScreen(BG1CNT, BG1HOFS, BG1VOFS, line[1]);
+	if(process_layers[0] || process_layers[1])
+		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
