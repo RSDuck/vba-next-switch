@@ -20,7 +20,6 @@
 #include "system.h"
 #include "port.h"
 #include "types.h"
-#include "util.h"
 #include "gba.h"
 #include "memory.h"
 #include "sound.h"

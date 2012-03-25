@@ -19,7 +19,6 @@
 #ifdef ELF
 #include "elf.h"
 #endif
-#include "util.h"
 
 /*============================================================
 	GBA INLINE

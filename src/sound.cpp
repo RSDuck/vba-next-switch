@@ -20,7 +20,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 #include "gba.h"
 #include "globals.h"
 
-#include "util.h"
+#include "memory.h"
 #include "port.h"
 #include "system.h"
 

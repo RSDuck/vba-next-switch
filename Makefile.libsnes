@@ -72,7 +72,7 @@ endif
 VBA_DIR := src
 LIBSNES_DIR := libsnes
 
-VBA_CXXSRCS := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBSNES_DIR)/libsnes.cpp $(VBA_DIR)/util.cpp  
+VBA_CXXSRCS := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBSNES_DIR)/libsnes.cpp
 
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 

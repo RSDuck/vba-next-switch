@@ -9,6 +9,17 @@
 #define EEPROM_READDATA2      3
 #define EEPROM_WRITEDATA      4
 
+enum {
+	IMAGE_UNKNOWN,
+	IMAGE_GBA
+};
+
+/* save game */
+typedef struct {
+	void *address;
+	int size;
+} variable_desc;
+
 extern int flashSize;
 
 extern bool eepromInUse;
@@ -51,5 +62,16 @@ extern bool rtcIsEnabled (void);
 extern void rtcReset (void);
 extern void rtcReadGameMem(const uint8_t *& data);
 extern void rtcSaveGameMem(uint8_t *& data);
+
+bool utilIsGBAImage(const char *);
+uint8_t *utilLoad(const char *, bool (*)(const char*), uint8_t *, int &);
+
+void utilWriteIntMem(uint8_t *& data, int);
+void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
+void utilWriteDataMem(uint8_t *& data, variable_desc *);
+
+int utilReadIntMem(const uint8_t *& data);
+void utilReadMem(void *buf, const uint8_t *& data, unsigned size);
+void utilReadDataMem(const uint8_t *& data, variable_desc *);
 
 #endif // GBA_MEMORY_H
