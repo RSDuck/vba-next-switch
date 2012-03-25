@@ -16,6 +16,11 @@
 #include "memory.h"
 #include "sound.h" 
 
+#ifdef ELF
+#include "elf.h"
+#endif
+#include "util.h"
+
 /*============================================================
 	GBA INLINE
 ============================================================ */
@@ -807,11 +812,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 	}
 }
 
-#include "nls.h"
-#ifdef ELF
-#include "elf.h"
-#endif
-#include "util.h"
 
 /*============================================================
 	BIOS
@@ -7873,7 +7873,7 @@ bool CPUExportEepromFile (const char *fileName)
 		FILE *file = fopen(fileName, "wb");
 
 		if(!file) {
-			systemMessage(MSG_ERROR_CREATING_FILE, "Error creating file %s", fileName);
+			systemMessage("Error creating file %s", fileName);
 			return false;
 		}
 
@@ -7914,7 +7914,7 @@ bool CPUWriteBatteryFile(const char *fileName)
 		FILE *file = fopen(fileName, "wb");
 
 		if(!file) {
-			systemMessage(MSG_ERROR_CREATING_FILE, "Error creating file %s", fileName);
+			systemMessage("Error creating file %s", fileName);
 			return false;
 		}
 

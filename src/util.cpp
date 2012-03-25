@@ -5,7 +5,6 @@
 #include "system.h"
 #include "port.h"
 #include "types.h"
-#include "nls.h"
 #include "util.h"
 
 #include "gba.h"
@@ -101,8 +100,7 @@ uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data,
 		image = (uint8_t *)malloc(utilGetSize(size));
 		if(image == NULL)
 		{
-			systemMessage(MSG_OUT_OF_MEMORY, "Failed to allocate memory for %s",
-					"data");
+			systemMessage("Failed to allocate memory for data.\n");
 			return NULL;
 		}
 	}

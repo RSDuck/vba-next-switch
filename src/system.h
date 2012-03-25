@@ -6,7 +6,7 @@
 extern void systemDrawScreen (void);
 extern bool systemReadJoypads (void);
 extern uint32_t systemGetClock (void);
-extern void systemMessage(int, const char *, ...);
+extern void systemMessage(const char *, ...);
 #ifdef USE_MOTION_SENSOR
 extern void systemUpdateMotionSensor (void);
 extern int  systemGetSensorX (void);

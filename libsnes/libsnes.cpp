@@ -567,7 +567,7 @@ void systemDrawScreen()
 #endif
 
 
-void systemMessage(int, const char* str, ...)
+void systemMessage(const char* str, ...)
 {
 	fprintf(stderr, str);
 }
