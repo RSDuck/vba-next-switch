@@ -11,12 +11,6 @@
 #include "globals.h"
 #include "memory.h"
 
-extern int systemRedShift;
-extern int systemGreenShift;
-extern int systemBlueShift;
-
-extern uint16_t systemColorMap[0x10000];
-
 extern bool cpuIsMultiBoot;
 
 void utilPutDword(uint8_t *p, uint32_t value)
@@ -154,19 +148,6 @@ void utilGBAFindSave(const uint8_t *data, const int size)
 	rtcEnable(rtcFound);
 	cpuSaveType = saveType;
 	flashSetSize(flashSize);
-}
-
-/* 16-bit color depth only */
-void utilUpdateSystemColorMaps (void)
-{
-	int i;
-
-	for( i = 0; i < 0x10000; i++)
-	{
-		systemColorMap[i] = ((i & 0x1f) << systemRedShift) |
-			(((i & 0x3e0) >> 5) << systemGreenShift) |
-			(((i & 0x7c00) >> 10) << systemBlueShift);
-	}
 }
 
 /* Check for existence of file.*/

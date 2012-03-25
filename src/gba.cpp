@@ -8325,7 +8325,7 @@ static void mode0RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 }
 
@@ -8470,7 +8470,7 @@ static void mode0RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 }
 
@@ -8651,7 +8651,7 @@ static void mode0RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 }
 
@@ -8761,7 +8761,7 @@ static void mode1RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -8915,7 +8915,7 @@ static void mode1RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9098,7 +9098,7 @@ static void mode1RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9201,7 +9201,7 @@ static void mode2RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -9335,7 +9335,7 @@ static void mode2RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -9510,7 +9510,7 @@ static void mode2RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
@@ -9577,7 +9577,7 @@ static void mode3RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9670,7 +9670,7 @@ static void mode3RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9814,7 +9814,7 @@ static void mode3RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9882,7 +9882,7 @@ static void mode4RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -9977,7 +9977,7 @@ static void mode4RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -10124,7 +10124,7 @@ static void mode4RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -10192,7 +10192,7 @@ static void mode5RenderLine (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -10287,7 +10287,7 @@ static void mode5RenderLineNoWindow (void)
 			alpha_blend_brightness_switch();
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;
@@ -10435,7 +10435,7 @@ static void mode5RenderLineAll (void)
 			}
 		}
 
-		lineMix[x] = systemColorMap[color & 0x7FFF];
+		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
 	//gfxLastVCOUNT = VCOUNT;

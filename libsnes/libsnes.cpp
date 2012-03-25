@@ -32,10 +32,6 @@ static snes_input_poll_t poll_cb;
 static snes_input_state_t input_cb;
 extern uint64_t joy;
 
-u16 systemColorMap[0x10000];
-int systemRedShift = 10;
-int systemGreenShift = 5;
-int systemBlueShift = 0;
 uint8_t libsnes_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
 
 static unsigned libsnes_save_size = sizeof(libsnes_save_buf);
@@ -348,8 +344,6 @@ static void gba_init(void)
 	mirroringEnable = false;
 
 	LoadImagePreferences();
-
-	utilUpdateSystemColorMaps();
 
 	if(flashSize == 0x10000 || flashSize == 0x20000)
 		flashSetSize(flashSize);

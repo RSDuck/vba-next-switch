@@ -16,6 +16,8 @@
 /* if a >= 0 return x else y*/
 #define isel(a, x, y) ((x & (~(a >> 31))) + (y & (a >> 31)))
 
+#define CONVERT_COLOR(color) (((color & 0x1f) << 10) | (((color & 0x3e0) >> 5) << 5) | (((color & 0x7c00) >> 10)))
+
 #ifdef _MSC_VER
 #include <stdlib.h>
 #define strcasecmp _stricmp

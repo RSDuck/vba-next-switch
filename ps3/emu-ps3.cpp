@@ -80,16 +80,6 @@ static int gbaRomSize = 0;
 
 bool audio_net;
 
-uint16_t systemColorMap[0x10000];
-int systemRedShift = 0;
-int systemBlueShift = 0;
-int systemGreenShift = 0;
-int systemDebug = 0;
-int systemVerbose = 0;
-int systemFrameSkip = 0;
-int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-int systemSpeed = 0;
-
 extern void get_zipfilename(char * filename, char * outfilename);
 
 //FIXME - Replace this with macro equivalent
@@ -166,19 +156,6 @@ extern void log(const char * fmt,...)
 	va_list args;
 	va_start(args,fmt);
 	va_end(args);
-}
-
-void system_init()
-{
-	systemRedShift    = 10;
-	systemGreenShift  = 5;
-	systemBlueShift   = 0;
-
-	utilUpdateSystemColorMaps();
-}
-
-void systemGbPrint(uint8_t *data,int pages,int feed,int palette, int contrast)
-{
 }
 
 // updates the joystick data
