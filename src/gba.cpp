@@ -6631,7 +6631,7 @@ static INLINE void gfxDrawSprites (void)
 
 		lineOBJpix-=2;
 		if (lineOBJpix<=0)
-			continue;
+			return;
 
 		if ((a0 & 0x0c00) == 0x0c00)
 			a0 &=0xF3FF;
