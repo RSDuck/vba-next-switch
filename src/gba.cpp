@@ -8151,7 +8151,6 @@ bool CPUReadBatteryFile(const char *fileName)
 
 	long size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	if(size == 512 || size == 0x2000) {
 		if(fread(eepromData, 1, size, file) != (size_t)size) {
@@ -8267,9 +8266,6 @@ static void CPUCleanUp (void)
 		free(ioMem);
 		ioMem = NULL;
 	}
-
-
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 }
 
 int CPULoadRom(const char * file)
@@ -8277,8 +8273,6 @@ int CPULoadRom(const char * file)
 	romSize = 0x2000000;
 	if(rom != NULL)
 		CPUCleanUp();
-
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	rom = (uint8_t *)malloc(0x2000000);
 
@@ -10735,7 +10729,6 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 	if(eepromInUse)
 		gbaSaveType = 3;
 
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 	if(armState) {
 		ARM_PREFETCH;
 	} else {
@@ -12108,9 +12101,6 @@ void CPUReset (void)
 	}
 
 	ARM_PREFETCH;
-
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
 
 #ifdef USE_SWITICKS
 	SWITicks = 0;

@@ -193,12 +193,10 @@ void flashWrite(uint32_t address, uint8_t byte)
 				memset(&flashSaveMemory[(flashBank << 16) + (address & 0xF000)],
 						0,
 						0x1000);
-				systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
 				flashReadState = FLASH_ERASE_COMPLETE;
 			} else if(byte == 0x10) {
 				// CHIP ERASE
 				memset(flashSaveMemory, 0, flashSize);
-				systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
 				flashReadState = FLASH_ERASE_COMPLETE;
 			} else {
 				flashState = FLASH_READ_ARRAY;
@@ -218,7 +216,6 @@ void flashWrite(uint32_t address, uint8_t byte)
 			break;
 		case FLASH_PROGRAM:
 			flashSaveMemory[(flashBank<<16)+address] = byte;
-			systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
 			flashState = FLASH_READ_ARRAY;
 			flashReadState = FLASH_READ_ARRAY;
 			break;
@@ -408,7 +405,6 @@ void eepromWrite(u8 value)
 				// write data;
 				for(int i = 0; i < 8; i++)
 					eepromData[(eepromAddress << 3) + i] = eepromBuffer[i];
-				systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
 			}
 			else if(eepromBits == 0x41)
 			{
@@ -439,7 +435,6 @@ void sramDelayedWrite(u32 address, u8 byte)
 void sramWrite(u32 address, u8 byte)
 {
 	flashSaveMemory[address & 0xFFFF] = byte;
-	systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
 }
 
 /*============================================================

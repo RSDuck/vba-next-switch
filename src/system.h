@@ -24,9 +24,5 @@ extern int systemGreenShift;
 extern int systemBlueShift;
 
 extern int systemColorDepth;
-extern int systemSaveUpdateCounter;
-
-#define SYSTEM_SAVE_UPDATED 30
-#define SYSTEM_SAVE_NOT_UPDATED 0
 
 #endif // SYSTEM_H
