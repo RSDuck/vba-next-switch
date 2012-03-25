@@ -7067,7 +7067,6 @@ static INLINE void gfxDrawSprites (void)
 static INLINE void gfxDrawOBJWin (void)
 {
 	u16 *sprites = (u16 *)oam;
-	// u16 *spritePalette = &((u16 *)graphics.paletteRAM)[256];
 	for(int x = 0; x < 128 ; x++)
 	{
 		int lineOBJpix = lineOBJpixleft[x];
@@ -7077,7 +7076,7 @@ static INLINE void gfxDrawOBJWin (void)
 		sprites++;
 
 		if (lineOBJpix<=0)
-			continue;
+			return;
 
 		// ignores non OBJ-WIN and disabled OBJ-WIN
 		if(((a0 & 0x0c00) != 0x0800) || ((a0 & 0x0300) == 0x0200))
@@ -8477,9 +8476,6 @@ static void mode0RenderLineAll (void)
 	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
 		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
 
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -8879,7 +8875,8 @@ static void mode1RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000)
+	{
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -8894,7 +8891,8 @@ static void mode1RenderLineAll (void)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000)
+	{
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -8927,10 +8925,6 @@ static void mode1RenderLineAll (void)
 				BG2PA, BG2PB, BG2PC, BG2PD,
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
-
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9289,7 +9283,8 @@ static void mode2RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000)
+	{
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -9304,7 +9299,8 @@ static void mode2RenderLineAll (void)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000) {
+	if(graphics.layerEnable & 0x4000)
+	{
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -9343,10 +9339,6 @@ static void mode2RenderLineAll (void)
 				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
-
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9610,7 +9602,8 @@ static void mode3RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000)
+	{
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -9625,7 +9618,9 @@ static void mode3RenderLineAll (void)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000) {
+
+	if(graphics.layerEnable & 0x4000)
+	{
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -9651,10 +9646,6 @@ static void mode3RenderLineAll (void)
 
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
-
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	uint8_t inWin0Mask = WININ & 0xFF;
 	uint8_t inWin1Mask = WININ >> 8;
@@ -9905,7 +9896,8 @@ static void mode4RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000)
+	{
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -9920,6 +9912,7 @@ static void mode4RenderLineAll (void)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
+
 	if(graphics.layerEnable & 0x4000)
 	{
 		uint8_t v0 = WIN1V >> 8;
@@ -9948,10 +9941,6 @@ static void mode4RenderLineAll (void)
 
 		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
-
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -10214,14 +10203,12 @@ static void mode5RenderLineAll (void)
 	}
 
 
-	memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-	if((graphics.layerEnable & 0x9000) == 0x9000)
-		gfxDrawOBJWin();
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(graphics.layerEnable & 0x2000)
+	{
 		uint8_t v0 = WIN0V >> 8;
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -10236,7 +10223,9 @@ static void mode5RenderLineAll (void)
 			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000) {
+
+	if(graphics.layerEnable & 0x4000)
+	{
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -10338,58 +10327,70 @@ static void mode5RenderLineAll (void)
 }
 
 static void (*renderLine)(void) = mode0RenderLine;
+static bool render_line_all_enabled = false;
 
 #define CPUUpdateRender() \
+  render_line_all_enabled = false; \
   switch(graphics.DISPCNT & 7) { \
   case 0: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode0RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode0RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode0RenderLineAll; \
+      render_line_all_enabled = true; \
+    } \
     break; \
   case 1: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode1RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode1RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode1RenderLineAll; \
+      render_line_all_enabled = true; \
+    } \
     break; \
   case 2: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode2RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode2RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode2RenderLineAll; \
+      render_line_all_enabled = true; \
+    } \
     break; \
   case 3: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode3RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode3RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode3RenderLineAll; \
+      render_line_all_enabled = true; \
+    } \
     break; \
   case 4: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode4RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode4RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode4RenderLineAll; \
+      render_line_all_enabled = true; \
+    } \
     break; \
   case 5: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode5RenderLine; \
     else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
       renderLine = mode5RenderLineNoWindow; \
-    else \
+    else { \
       renderLine = mode5RenderLineAll; \
-  default: \
-    break; \
+      render_line_all_enabled = true; \
+    } \
   }
 
 bool CPUReadState(const uint8_t* data, unsigned size)
@@ -11931,100 +11932,112 @@ updateLoop:
 			graphics.lcdTicks -= clockTicks;
 
 
-			if(graphics.lcdTicks <= 0) {
-				if(graphics.DISPSTAT & 1) { // V-BLANK
+			if(graphics.lcdTicks <= 0)
+			{
+				if(graphics.DISPSTAT & 1)
+				{ // V-BLANK
 					// if in V-Blank mode, keep computing...
-					if(graphics.DISPSTAT & 2) {
+					if(graphics.DISPSTAT & 2)
+					{
 						graphics.lcdTicks += 1008;
 						VCOUNT++;
 						UPDATE_REG(0x06, VCOUNT);
 						graphics.DISPSTAT &= 0xFFFD;
 						UPDATE_REG(0x04, graphics.DISPSTAT);
 						CPUCompareVCOUNT();
-					} else {
+					}
+					else
+					{
 						graphics.lcdTicks += 224;
 						graphics.DISPSTAT |= 2;
 						UPDATE_REG(0x04, graphics.DISPSTAT);
-						if(graphics.DISPSTAT & 16) {
+						if(graphics.DISPSTAT & 16)
+						{
 							IF |= 2;
 							UPDATE_REG(0x202, IF);
 						}
 					}
 
-					if(VCOUNT >= 228) { //Reaching last line
+					if(VCOUNT >= 228)
+					{
+						//Reaching last line
 						graphics.DISPSTAT &= 0xFFFC;
 						UPDATE_REG(0x04, graphics.DISPSTAT);
 						VCOUNT = 0;
 						UPDATE_REG(0x06, VCOUNT);
 						CPUCompareVCOUNT();
 					}
-				} else {
+				}
+				else if(graphics.DISPSTAT & 2)
+				{
+					// if in H-Blank, leave it and move to drawing mode
+					VCOUNT++;
+					UPDATE_REG(0x06, VCOUNT);
 
-					if(graphics.DISPSTAT & 2) {
-						// if in H-Blank, leave it and move to drawing mode
-						VCOUNT++;
-						UPDATE_REG(0x06, VCOUNT);
-
-						graphics.lcdTicks += 1008;
-						graphics.DISPSTAT &= 0xFFFD;
-						if(VCOUNT == 160)
-						{
-							/* update joystick information */
-							P1 = 0x03FF ^ (joy & 0x3FF);
+					graphics.lcdTicks += 1008;
+					graphics.DISPSTAT &= 0xFFFD;
+					if(VCOUNT == 160)
+					{
+						/* update joystick information */
+						P1 = 0x03FF ^ (joy & 0x3FF);
 #if 0
-							if(cpuEEPROMSensorEnabled)
-								systemUpdateMotionSensor();
+						if(cpuEEPROMSensorEnabled)
+							systemUpdateMotionSensor();
 #endif
-							UPDATE_REG(0x130, P1);
-							uint16_t P1CNT = READ16LE(((uint16_t *)&ioMem[0x132]));
-							// this seems wrong, but there are cases where the game
-							// can enter the stop state without requesting an IRQ from
-							// the joypad.
-							if((P1CNT & 0x4000) || stopState) {
-								uint16_t p1 = (0x3FF ^ P1) & 0x3FF;
-								if(P1CNT & 0x8000) {
-									if(p1 == (P1CNT & 0x3FF)) {
-										IF |= 0x1000;
-										UPDATE_REG(0x202, IF);
-									}
-								} else {
-									if(p1 & P1CNT) {
-										IF |= 0x1000;
-										UPDATE_REG(0x202, IF);
-									}
-								}
-							}
+						UPDATE_REG(0x130, P1);
+						uint16_t p1 = (0x3FF ^ P1) & 0x3FF;
+						uint16_t P1CNT = READ16LE(((uint16_t *)&ioMem[0x132]));
+						// this seems wrong, but there are cases where the game
+						// can enter the stop state without requesting an IRQ from
+						// the joypad.
+						uint32_t condition_bool = (((P1CNT & 0x4000) || stopState) && (((P1CNT & 0x8000) && (p1 == (P1CNT & 0x3FF))) || (p1 & P1CNT)));
 
-
-							graphics.DISPSTAT |= 1;
-							graphics.DISPSTAT &= 0xFFFD;
-							UPDATE_REG(0x04, graphics.DISPSTAT);
-							if(graphics.DISPSTAT & 0x0008) {
-								IF |= 1;
-								UPDATE_REG(0x202, IF);
-							}
-							CPUCheckDMA(1, 0x0f);
-								systemDrawScreen();
-						}
-
-						UPDATE_REG(0x04, graphics.DISPSTAT);
-						CPUCompareVCOUNT();
-
-					} else {
-						memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
-						if(graphics.layerEnable & 0x1000)
-							gfxDrawSprites();
-						(*renderLine)();
-
-						// entering H-Blank
-						graphics.DISPSTAT |= 2;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
-						graphics.lcdTicks += 224;
-						CPUCheckDMA(2, 0x0f);
-						if(graphics.DISPSTAT & 16) {
-							IF |= 2;
+						if(condition_bool)
+						{
+							IF |= 0x1000;
 							UPDATE_REG(0x202, IF);
 						}
+
+
+						graphics.DISPSTAT |= 1;
+						graphics.DISPSTAT &= 0xFFFD;
+						UPDATE_REG(0x04, graphics.DISPSTAT);
+						if(graphics.DISPSTAT & 0x0008)
+						{
+							IF |= 1;
+							UPDATE_REG(0x202, IF);
+						}
+						CPUCheckDMA(1, 0x0f);
+						systemDrawScreen();
+					}
+
+					UPDATE_REG(0x04, graphics.DISPSTAT);
+					CPUCompareVCOUNT();
+				}
+				else
+				{
+					memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
+
+					if(graphics.layerEnable & 0x1000)
+						gfxDrawSprites();
+
+					if(render_line_all_enabled && (graphics.layerEnable & 0x9000) == 0x9000)
+					{
+						memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+						gfxDrawOBJWin();
+					}
+
+					(*renderLine)();
+
+					// entering H-Blank
+					graphics.DISPSTAT |= 2;
+					UPDATE_REG(0x04, graphics.DISPSTAT);
+					graphics.lcdTicks += 224;
+					CPUCheckDMA(2, 0x0f);
+					if(graphics.DISPSTAT & 16)
+					{
+						IF |= 2;
+						UPDATE_REG(0x202, IF);
 					}
 				}
 			}
