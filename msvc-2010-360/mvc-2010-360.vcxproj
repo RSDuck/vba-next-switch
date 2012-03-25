@@ -28,23 +28,23 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\libsnes\libsnes.cpp" />
-    <ClCompile Include="..\src\gba\GBA.cpp" />
-    <ClCompile Include="..\src\gba\Memory.cpp" />
-    <ClCompile Include="..\src\gba\Sound.cpp" />
-    <ClCompile Include="..\src\Util.cpp" />
+    <ClCompile Include="..\src\gba.cpp" />
+    <ClCompile Include="..\src\memory.cpp" />
+    <ClCompile Include="..\src\sound.cpp" />
+    <ClCompile Include="..\src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libsnes\libsnes.hpp" />
-    <ClInclude Include="..\src\gba\sound_blargg.h" />
-    <ClInclude Include="..\src\common\Port.h" />
-    <ClInclude Include="..\src\common\Types.h" />
-    <ClInclude Include="..\src\gba\memory.h" />
-    <ClInclude Include="..\src\gba\GBA.h" />
-    <ClInclude Include="..\src\gba\Globals.h" />
-    <ClInclude Include="..\src\gba\Sound.h" />
-    <ClInclude Include="..\src\NLS.h" />
-    <ClInclude Include="..\src\System.h" />
-    <ClInclude Include="..\src\Util.h" />
+    <ClInclude Include="..\src\gba.h" />
+    <ClInclude Include="..\src\globals.h" />
+    <ClInclude Include="..\src\memory.h" />
+    <ClInclude Include="..\src\nls.h" />
+    <ClInclude Include="..\src\port.h" />
+    <ClInclude Include="..\src\sound.h" />
+    <ClInclude Include="..\src\sound_blargg.h" />
+    <ClInclude Include="..\src\system.h" />
+    <ClInclude Include="..\src\types.h" />
+    <ClInclude Include="..\src\util.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DB17AF79-EB79-4062-ACA8-F82864712DA0}</ProjectGuid>
@@ -71,6 +71,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>

@@ -219,7 +219,7 @@ static int gbaSaveType = 0; // used to remember the save type on reset
 	{ \
 		int waitState = value; \
 		waitState = (1 & ~waitState) | (waitState & waitState); \
-		bus.busPrefetchCount = ((bus.busPrefetchCount+1)<<waitState) - 1; \ 
+		bus.busPrefetchCount = ((bus.busPrefetchCount+1)<<waitState) - 1; \
 	}
 
 /* Waitstates when accessing data */

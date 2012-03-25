@@ -1,6 +1,8 @@
 #ifndef GBA_H
 #define GBA_H
 
+#include <stdint.h>
+
 #define BITS_16 0
 #define BITS_32 1
 
