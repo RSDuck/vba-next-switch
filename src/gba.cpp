@@ -7833,7 +7833,7 @@ static INLINE int CPUUpdateTicks (void)
   { \
       graphics.layerEnableDelay--; \
       if (graphics.layerEnableDelay == 1) \
-          graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT; \
+          graphics.layerEnable = graphics.DISPCNT; \
   }
 
 
@@ -10694,7 +10694,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	//// Copypasta stuff ...
 	// set pointers!
-	graphics.layerEnable = graphics.layerSettings & graphics.DISPCNT;
+	graphics.layerEnable = graphics.DISPCNT;
 
 	CPUUpdateRender();
 
@@ -11203,12 +11203,12 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				graphics.DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
 				UPDATE_REG(0x00, graphics.DISPCNT);
 
-				if(changeBGon) {
+				graphics.layerEnable = value;
+
+				if(changeBGon)
+				{
 					graphics.layerEnableDelay = 4;
-					graphics.layerEnable = graphics.layerSettings & value & (~changeBGon);
-				} else {
-					graphics.layerEnable = graphics.layerSettings & value;
-					// CPUUpdateTicks();
+					graphics.layerEnable &= ~changeBGon;
 				}
 
 				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
@@ -11799,7 +11799,6 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 		*((uint16_t *)&rom[0x1fe209e]) = 0x4770; // BX LR
 	}
 
-	graphics.layerSettings = 0xff00;
 	graphics.layerEnable = 0xff00;
 	graphics.layerEnableDelay = 1;
 	graphics.DISPCNT = 0x0080;
@@ -11991,7 +11990,7 @@ void CPUReset (void)
 	fxOn = false;
 	windowOn = false;
 	saveType = 0;
-	graphics.layerEnable = graphics.DISPCNT & graphics.layerSettings;
+	graphics.layerEnable = graphics.DISPCNT;
 
 	memset(line[0], -1, 240 * sizeof(u32));
 	memset(line[1], -1, 240 * sizeof(u32));

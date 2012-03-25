@@ -90,7 +90,6 @@ typedef struct
 	uint8_t * paletteRAM;
 	uint16_t DISPCNT;
 	uint16_t DISPSTAT;
-	int layerSettings;
 	int layerEnable;
 	int layerEnableDelay;
 	int lcdTicks;
