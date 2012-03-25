@@ -32,13 +32,7 @@ static snes_input_poll_t poll_cb;
 static snes_input_state_t input_cb;
 extern uint64_t joy;
 
-u16 systemColorMap16[0x10000];
-u32 systemColorMap32[0x10000];
-int systemColorDepth = 32;
-int systemDebug = 0;
-int systemVerbose = 0;
-int systemFrameSkip = 0;
-int systemSpeed = 0;
+u16 systemColorMap[0x10000];
 int systemRedShift = 10;
 int systemGreenShift = 5;
 int systemBlueShift = 0;
@@ -531,7 +525,7 @@ void systemDrawScreen()
    for (unsigned y = 0; y < 160; y++)
    {
       uint16_t *dst = pix_buf + y * 256;
-      const uint32_t *src = (const uint32_t*)pix + 240 * y;
+      const uint16_t *src = (const uint16_t*)pix + 240 * y;
 
       for (unsigned x = 0; x < 240; x += 8)
       {
@@ -557,7 +551,7 @@ void systemDrawScreen()
    for (unsigned y = 0; y < 160; y++)
    {
       uint16_t *dst = pix_buf + y * 256;
-      const uint32_t *src = (const uint32_t*)pix + 240 * y;
+      const uint16_t *src = (const uint16_t*)pix + 240 * y;
       for (unsigned x = 0; x < 240; x++)
          dst[x] = (uint16_t)(src[x] & 0x7fff);
    }

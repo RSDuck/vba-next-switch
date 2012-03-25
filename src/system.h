@@ -16,13 +16,10 @@ extern int  systemGetSensorY (void);
 // sound functions
 extern void systemOnWriteDataToSoundBuffer(int16_t * finalWave, int length);
 
-extern uint16_t systemColorMap16[0x10000];
-extern uint32_t systemColorMap32[0x10000];
+extern uint16_t systemColorMap[0x10000];
 
 extern int systemRedShift;
 extern int systemGreenShift;
 extern int systemBlueShift;
-
-extern int systemColorDepth;
 
 #endif // SYSTEM_H

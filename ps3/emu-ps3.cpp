@@ -80,15 +80,10 @@ static int gbaRomSize = 0;
 
 bool audio_net;
 
-int RGB_LOW_BITS_MASK = 0;
-
-uint16_t systemColorMap16[0x10000];
-uint32_t systemColorMap32[0x10000];
-uint16_t systemGbPalette[24];
+uint16_t systemColorMap[0x10000];
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
-int systemColorDepth = 32;
 int systemDebug = 0;
 int systemVerbose = 0;
 int systemFrameSkip = 0;
@@ -175,27 +170,9 @@ extern void log(const char * fmt,...)
 
 void system_init()
 {
-	// Build GBPalette
-	int i = 0;
-	for( i = 0; i < 24; )
-	{
-		systemGbPalette[i++] = (0x1f) | (0x1f << 5) | (0x1f << 10);
-		systemGbPalette[i++] = (0x15) | (0x15 << 5) | (0x15 << 10);
-		systemGbPalette[i++] = (0x0c) | (0x0c << 5) | (0x0c << 10);
-		systemGbPalette[i++] = 0;
-	}
-
-	//systemColorDepth = 32;
-
-	// GL_RGBA
-	//systemRedShift    = 27;
-	//systemGreenShift  = 19;
-	//systemBlueShift   = 11;
-
-	// GL_ARGB
-	systemRedShift    = 19;
-	systemGreenShift  = 11;
-	systemBlueShift   = 3;
+	systemRedShift    = 10;
+	systemGreenShift  = 5;
+	systemBlueShift   = 0;
 
 	utilUpdateSystemColorMaps();
 }

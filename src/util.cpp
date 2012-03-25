@@ -11,13 +11,11 @@
 #include "globals.h"
 #include "memory.h"
 
-extern int systemColorDepth;
 extern int systemRedShift;
 extern int systemGreenShift;
 extern int systemBlueShift;
 
-extern uint16_t systemColorMap16[0x10000];
-extern uint32_t systemColorMap32[0x10000];
+extern uint16_t systemColorMap[0x10000];
 
 extern bool cpuIsMultiBoot;
 
@@ -158,29 +156,16 @@ void utilGBAFindSave(const uint8_t *data, const int size)
 	flashSetSize(flashSize);
 }
 
+/* 16-bit color depth only */
 void utilUpdateSystemColorMaps (void)
 {
 	int i;
 
-	switch(systemColorDepth)
+	for( i = 0; i < 0x10000; i++)
 	{
-		case 16:
-			for( i = 0; i < 0x10000; i++)
-			{
-				systemColorMap16[i] = ((i & 0x1f) << systemRedShift) |
-					(((i & 0x3e0) >> 5) << systemGreenShift) |
-					(((i & 0x7c00) >> 10) << systemBlueShift);
-			}
-			break;
-		case 24:
-		case 32:
-			for( i = 0; i < 0x10000; i++)
-			{
-				systemColorMap32[i] = ((i & 0x1f) << systemRedShift) |
-					(((i & 0x3e0) >> 5) << systemGreenShift) |
-					(((i & 0x7c00) >> 10) << systemBlueShift);
-			}
-			break;
+		systemColorMap[i] = ((i & 0x1f) << systemRedShift) |
+			(((i & 0x3e0) >> 5) << systemGreenShift) |
+			(((i & 0x7c00) >> 10) << systemBlueShift);
 	}
 }
 
