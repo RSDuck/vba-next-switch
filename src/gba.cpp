@@ -7082,10 +7082,12 @@ static INLINE void gfxDrawOBJWin (void)
 		if(((a0 & 0x0c00) != 0x0800) || ((a0 & 0x0300) == 0x0200))
 			continue;
 
+		u16 a0val = a0>>14;
+
 		if ((a0 & 0x0c00) == 0x0c00)
 			a0 &=0xF3FF;
 
-		if ((a0>>14) == 3)
+		if (a0val == 3)
 		{
 			a0 &= 0x3FFF;
 			a1 &= 0x3FFF;
@@ -7094,19 +7096,30 @@ static INLINE void gfxDrawOBJWin (void)
 		int sizeX = 8<<(a1>>14);
 		int sizeY = sizeX;
 
-		if ((a0>>14) & 1)
+		if (a0val & 1)
 		{
+#ifdef BRANCHLESS_GBA_GFX
+			sizeX <<= isel(-(sizeX & (~31u)), 1, 0);
+			sizeY >>= isel(-(sizeY>8), 0, 1);
+#else
 			if (sizeX<32)
 				sizeX<<=1;
 			if (sizeY>8)
 				sizeY>>=1;
+#endif
 		}
-		else if ((a0>>14) & 2)
+		else if (a0val & 2)
 		{
+#ifdef BRANCHLESS_GBA_GFX
+			sizeX >>= isel(-(sizeX>8), 0, 1);
+			sizeY <<= isel(-(sizeY & (~31u)), 1, 0);
+#else
 			if (sizeX>8)
 				sizeX>>=1;
 			if (sizeY<32)
 				sizeY<<=1;
+#endif
+
 		}
 
 		int sy = (a0 & 255);
