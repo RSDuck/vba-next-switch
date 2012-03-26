@@ -19,7 +19,7 @@ extern u8 *rom;
 extern u8 *internalRAM;
 extern u8 *workRAM;
 extern u8 *vram;
-extern u8 *pix;
+extern u16 *pix;
 extern u8 *oam;
 extern u8 *ioMem;
 

@@ -7429,7 +7429,7 @@ uint8_t *rom = 0;
 uint8_t *internalRAM = 0;
 uint8_t *workRAM = 0;
 uint8_t *vram = 0;
-uint8_t *pix = 0;
+u16 *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
@@ -8092,7 +8092,7 @@ int CPULoadRom(const char * file)
 		CPUCleanUp();
 		return 0;
 	}
-	pix = (uint8_t *)calloc(1, 4 * 240 * 160);
+	pix = (u16 *)calloc(1, 4 * 240 * 160);
 	if(pix == NULL) {
 		CPUCleanUp();
 		return 0;
@@ -8151,7 +8151,7 @@ void doMirroring (bool b)
       }
 
 /* we only use 16bit color depth */
-#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = ((uint16_t *)pix + 240 * VCOUNT)
+#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + 240 * VCOUNT)
 
 static void mode0RenderLine (void)
 {
