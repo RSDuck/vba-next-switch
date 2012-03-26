@@ -29,16 +29,10 @@
     <ClCompile Include="..\src\sound.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\util.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libsnes\libsnes.hpp">
       <Filter>Header Files\libsnes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\util.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba.h">
       <Filter>Header Files</Filter>
@@ -47,9 +41,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\nls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\port.h">

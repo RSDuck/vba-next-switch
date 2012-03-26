@@ -31,20 +31,17 @@
     <ClCompile Include="..\src\gba.cpp" />
     <ClCompile Include="..\src\memory.cpp" />
     <ClCompile Include="..\src\sound.cpp" />
-    <ClCompile Include="..\src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libsnes\libsnes.hpp" />
     <ClInclude Include="..\src\gba.h" />
     <ClInclude Include="..\src\globals.h" />
     <ClInclude Include="..\src\memory.h" />
-    <ClInclude Include="..\src\nls.h" />
     <ClInclude Include="..\src\port.h" />
     <ClInclude Include="..\src\sound.h" />
     <ClInclude Include="..\src\sound_blargg.h" />
     <ClInclude Include="..\src\system.h" />
     <ClInclude Include="..\src\types.h" />
-    <ClInclude Include="..\src\util.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DB17AF79-EB79-4062-ACA8-F82864712DA0}</ProjectGuid>
