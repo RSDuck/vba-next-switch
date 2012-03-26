@@ -316,7 +316,6 @@ static INLINE int codeTicksAccessSeq32(u32 address) // ARM SEQ
 #define CPUReadMemoryQuick(addr)	READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
 static bool stopState = false;
-static int holdType = 0;
 extern bool cpuSramEnabled;
 extern bool cpuFlashEnabled;
 extern bool cpuEEPROMEnabled;
@@ -757,7 +756,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 						if(b == 0x80)
 							stopState = true;
 						holdState = 1;
-						holdType = -1;
 						cpuNextEvent = cpuTotalTicks;
 						break;
 					default: // every other register
@@ -1796,12 +1794,10 @@ static void CPUSoftwareInterrupt(int comment)
 			break;
 		case 0x02:
 			holdState = true;
-			holdType = -1;
 			cpuNextEvent = cpuTotalTicks;
 			break;
 		case 0x03:
 			holdState = true;
-			holdType = -1;
 			stopState = true;
 			cpuNextEvent = cpuTotalTicks;
 			break;
@@ -8118,7 +8114,6 @@ static variable_desc saveGameStruct[] = {
 	{ &IF       , sizeof(uint16_t) },
 	{ &IME      , sizeof(uint16_t) },
 	{ &holdState, sizeof(bool) },
-	{ &holdType, sizeof(int) },
 	{ &graphics.lcdTicks, sizeof(int) },
 	{ &timer0On , sizeof(bool) },
 	{ &timer0Ticks , sizeof(int) },
@@ -12053,7 +12048,6 @@ void CPUReset (void)
 
 	// reset internal state
 	holdState = false;
-	holdType = 0;
 
 	biosProtected[0] = 0x00;
 	biosProtected[1] = 0xf0;
@@ -12550,7 +12544,6 @@ updateLoop:
 							intState = false;
 							holdState = false;
 							stopState = false;
-							holdType = 0;
 						}
 					}
 					else
@@ -12567,13 +12560,12 @@ updateLoop:
 							CPUInterrupt();
 							holdState = false;
 							stopState = false;
-							holdType = 0;
 						}
 					}
 
+#ifdef USE_SWITICKS
 					// Stops the SWI Ticks emulation if an IRQ is executed
 					//(to avoid problems with nested IRQ/SWI)
-#ifdef USE_SWITICKS
 					if (SWITicks)
 						SWITicks = 0;
 #endif
