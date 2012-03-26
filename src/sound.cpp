@@ -2067,15 +2067,6 @@ static struct {
 	uint8_t soundDSAValue;
 } state;
 
-variable_desc old_gba_state2 [] =
-{
-	LOAD( uint8_t [0x20], state.apu.regs [0x20] ),
-	SKIP( int, sound3Bank ),
-	SKIP( int, sound3DataSize ),
-	SKIP( int, sound3ForcedOutput ),
-	{ NULL, 0 }
-};
-
 // New state format
 static variable_desc gba_state [] =
 {

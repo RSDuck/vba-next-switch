@@ -396,21 +396,16 @@ void eepromReset (void)
 
 void eepromSaveGameMem(uint8_t *& data)
 {
-   utilWriteDataMem(data, eepromSaveData);
-   utilWriteIntMem(data, eepromSize);
-   utilWriteMem(data, eepromData, 0x2000);
+	utilWriteDataMem(data, eepromSaveData);
+	utilWriteIntMem(data, eepromSize);
+	utilWriteMem(data, eepromData, 0x2000);
 }
 
 void eepromReadGameMem(const uint8_t *& data, int version)
 {
 	utilReadDataMem(data, eepromSaveData);
-	if (version >= SAVE_GAME_VERSION_3) {
-		eepromSize = utilReadIntMem(data);
-		utilReadMem(eepromData, data, 0x2000);
-	} else {
-		// prior to 0.7.1, only 4K EEPROM was supported
-		eepromSize = 512;
-	}
+	eepromSize = utilReadIntMem(data);
+	utilReadMem(eepromData, data, 0x2000);
 }
 
 int eepromRead (void)
