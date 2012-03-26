@@ -101,11 +101,7 @@ extern void (*cpuSaveGameFunc)(uint32_t,uint8_t);
 
 extern bool CPUWriteBatteryFile(const char *);
 extern bool CPUReadBatteryFile(const char *);
-extern bool CPUExportEepromFile(const char *);
-extern bool CPUImportEepromFile(const char *);
-extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const uint8_t * data, unsigned size);
-extern bool CPUWriteMemState(char *, int);
 extern unsigned CPUWriteState(uint8_t* data, unsigned size);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
