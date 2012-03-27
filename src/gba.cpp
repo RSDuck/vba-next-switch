@@ -146,7 +146,6 @@ typedef enum
 
 static uint16_t io_registers[1024 * 16];
 
-static u16 VCOUNT;
 static u16 MOSAIC;
 static u16 TM0D;
 static u16 TM0CNT;
@@ -6059,15 +6058,15 @@ static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, b
 		int maskY = sizeY-1;
 
 		int xxx = hofs & maskX;
-		int yyy = (vofs + VCOUNT) & maskY;
+		int yyy = (vofs + io_registers[REG_VCOUNT]) & maskY;
 		int mosaicX = (MOSAIC & 0x000F)+1;
 		int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
 		bool mosaicOn = (control & 0x40) ? true : false;
 
-		if(mosaicOn && ((VCOUNT % mosaicY) != 0))
+		if(mosaicOn && ((io_registers[REG_VCOUNT] % mosaicY) != 0))
 		{
-			mosaicY = VCOUNT - (VCOUNT % mosaicY);
+			mosaicY = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
 			yyy = (vofs + mosaicY) & maskY;
 		}
 
@@ -6227,7 +6226,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(VCOUNT == 0)
+	if(io_registers[REG_VCOUNT] == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6253,7 +6252,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	if(control & 0x40)
 	{
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = (VCOUNT % mosaicY);
+		int y = (io_registers[REG_VCOUNT] % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
@@ -6366,7 +6365,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(VCOUNT == 0)
+	if(io_registers[REG_VCOUNT] == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6391,7 +6390,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 
 	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = (VCOUNT % mosaicY);
+		int y = (io_registers[REG_VCOUNT] % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
@@ -6471,7 +6470,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(VCOUNT == 0)
+	if(io_registers[REG_VCOUNT] == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6496,7 +6495,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 
 	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = VCOUNT - (VCOUNT % mosaicY);
+		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
 	}
@@ -6578,7 +6577,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(VCOUNT == 0)
+	if(io_registers[REG_VCOUNT] == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6603,7 +6602,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 
 	if(BG2CNT & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = VCOUNT - (VCOUNT % mosaicY);
+		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
 	}
@@ -6741,7 +6740,7 @@ static INLINE void gfxDrawSprites (void)
 			else if ((sx+sizeX)>240)
 				sizeX=240-sx;
 
-			if ((VCOUNT>=sy) && (VCOUNT<sy+sizeY) && (sx<240))
+			if ((io_registers[REG_VCOUNT]>=sy) && (io_registers[REG_VCOUNT]<sy+sizeY) && (sx<240))
 			{
 				lineOBJpix -= (sizeX-2);
 
@@ -6766,7 +6765,7 @@ static INLINE void gfxDrawSprites (void)
 			}
 			if((sy+fieldY) > 256)
 				sy -= 256;
-			int t = VCOUNT - sy;
+			int t = io_registers[REG_VCOUNT] - sy;
 			if(unsigned(t) < fieldY)
 			{
 				u32 startpix = 0;
@@ -6899,7 +6898,7 @@ static INLINE void gfxDrawSprites (void)
 		{
 			if(sy+sizeY > 256)
 				sy -= 256;
-			int t = VCOUNT - sy;
+			int t = io_registers[REG_VCOUNT] - sy;
 			if(unsigned(t) < sizeY)
 			{
 				u32 startpix = 0;
@@ -7171,7 +7170,7 @@ static INLINE void gfxDrawOBJWin (void)
 			}
 			if((sy+fieldY) > 256)
 				sy -= 256;
-			int t = VCOUNT - sy;
+			int t = io_registers[REG_VCOUNT] - sy;
 			if((t >= 0) && (t < fieldY))
 			{
 				int sx = (a1 & 0x1FF);
@@ -7258,7 +7257,7 @@ static INLINE void gfxDrawOBJWin (void)
 		{
 			if((sy+sizeY) > 256)
 				sy -= 256;
-			int t = VCOUNT - sy;
+			int t = io_registers[REG_VCOUNT] - sy;
 			if((t >= 0) && (t < sizeY))
 			{
 				int sx = (a1 & 0x1FF);
@@ -7666,7 +7665,7 @@ uint32_t myROM[] = {
 static variable_desc saveGameStruct[] = {
 	{ &io_registers[REG_DISPCNT]  , sizeof(uint16_t) },
 	{ &io_registers[REG_DISPSTAT] , sizeof(uint16_t) },
-	{ &VCOUNT   , sizeof(uint16_t) },
+	{ &io_registers[REG_VCOUNT]   , sizeof(uint16_t) },
 	{ &BG0CNT   , sizeof(uint16_t) },
 	{ &BG1CNT   , sizeof(uint16_t) },
 	{ &BG2CNT   , sizeof(uint16_t) },
@@ -7836,7 +7835,7 @@ static INLINE int CPUUpdateTicks (void)
 }
 
 #define CPUCompareVCOUNT() \
-  if(VCOUNT == (io_registers[REG_DISPSTAT] >> 8)) \
+  if(io_registers[REG_VCOUNT] == (io_registers[REG_DISPSTAT] >> 8)) \
   { \
     io_registers[REG_DISPSTAT] |= 4; \
     UPDATE_REG(0x04, io_registers[REG_DISPSTAT]); \
@@ -8194,7 +8193,7 @@ void doMirroring (bool b)
       }
 
 /* we only use 16bit color depth */
-#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * VCOUNT)
+#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * io_registers[REG_VCOUNT])
 
 static void mode0RenderLine (void)
 {
@@ -8434,18 +8433,18 @@ static void mode0RenderLineAll (void)
 		uint8_t v1 = WIN0V & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 	if(graphics.layerEnable & 0x4000) {
 		uint8_t v0 = WIN1V >> 8;
 		uint8_t v1 = WIN1V & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 
 	bool	process_layers[4];
@@ -8619,7 +8618,7 @@ static void mode1RenderLine (void)
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -8694,7 +8693,7 @@ static void mode1RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode1RenderLineNoWindow (void)
@@ -8716,7 +8715,7 @@ static void mode1RenderLineNoWindow (void)
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -8842,7 +8841,7 @@ static void mode1RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode1RenderLineAll (void)
@@ -8865,12 +8864,12 @@ static void mode1RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow0 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 	if(graphics.layerEnable & 0x4000)
@@ -8881,12 +8880,12 @@ static void mode1RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow1 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 	bool	process_layers[2];
@@ -8900,7 +8899,7 @@ static void mode1RenderLineAll (void)
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -9020,7 +9019,7 @@ static void mode1RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 /*
@@ -9044,7 +9043,7 @@ static void mode2RenderLine (void)
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9056,7 +9055,7 @@ static void mode2RenderLine (void)
 	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9120,7 +9119,7 @@ static void mode2RenderLine (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode2RenderLineNoWindow (void)
@@ -9135,7 +9134,7 @@ static void mode2RenderLineNoWindow (void)
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9147,7 +9146,7 @@ static void mode2RenderLineNoWindow (void)
 	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9250,7 +9249,7 @@ static void mode2RenderLineNoWindow (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode2RenderLineAll (void)
@@ -9273,12 +9272,12 @@ static void mode2RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow0 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 	if(graphics.layerEnable & 0x4000)
@@ -9289,19 +9288,19 @@ static void mode2RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow1 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9313,7 +9312,7 @@ static void mode2RenderLineAll (void)
 	if(graphics.layerEnable & 0x0800) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9419,7 +9418,7 @@ static void mode2RenderLineAll (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 /*
@@ -9442,7 +9441,7 @@ static void mode3RenderLine (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9481,7 +9480,7 @@ static void mode3RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode3RenderLineNoWindow (void)
@@ -9496,7 +9495,7 @@ static void mode3RenderLineNoWindow (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9570,7 +9569,7 @@ static void mode3RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode3RenderLineAll (void)
@@ -9592,12 +9591,12 @@ static void mode3RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow0 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -9609,12 +9608,12 @@ static void mode3RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow1 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -9622,7 +9621,7 @@ static void mode3RenderLineAll (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9709,7 +9708,7 @@ static void mode3RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 /*
@@ -9733,7 +9732,7 @@ static void mode4RenderLine (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9773,7 +9772,7 @@ static void mode4RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode4RenderLineNoWindow (void)
@@ -9789,7 +9788,7 @@ static void mode4RenderLineNoWindow (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -9864,7 +9863,7 @@ static void mode4RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode4RenderLineAll (void)
@@ -9886,12 +9885,12 @@ static void mode4RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow0 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -9903,12 +9902,12 @@ static void mode4RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow1 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -9917,7 +9916,7 @@ static void mode4RenderLineAll (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -10005,7 +10004,7 @@ static void mode4RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 /*
@@ -10029,7 +10028,7 @@ static void mode5RenderLine (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -10069,7 +10068,7 @@ static void mode5RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode5RenderLineNoWindow (void)
@@ -10085,7 +10084,7 @@ static void mode5RenderLineNoWindow (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -10160,7 +10159,7 @@ static void mode5RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void mode5RenderLineAll (void)
@@ -10177,7 +10176,7 @@ static void mode5RenderLineAll (void)
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > VCOUNT)
+		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
 
@@ -10197,12 +10196,12 @@ static void mode5RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow0 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow0 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow0 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -10214,12 +10213,12 @@ static void mode5RenderLineAll (void)
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
 		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (VCOUNT >= v0 && VCOUNT < v1)) & condition_mask) | (((inWindow1 | (VCOUNT >= v0 || VCOUNT < v1)) & ~(condition_mask))));
+		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
 #else
 		if(v1 >= v0)
-			inWindow1 |= (VCOUNT >= v0 && VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
 		else
-			inWindow1 |= (VCOUNT >= v0 || VCOUNT < v1);
+			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
 
@@ -10305,7 +10304,7 @@ static void mode5RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = VCOUNT;
+	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
 }
 
 static void (*renderLine)(void) = mode0RenderLine;
@@ -11455,7 +11454,7 @@ void CPUReset (void)
 
 	io_registers[REG_DISPCNT]  = 0x0080;
 	io_registers[REG_DISPSTAT] = 0x0000;
-	VCOUNT   = (useBios && !skipBios) ? 0 :0x007E;
+	io_registers[REG_VCOUNT]   = (useBios && !skipBios) ? 0 :0x007E;
 	BG0CNT   = 0x0000;
 	BG1CNT   = 0x0000;
 	BG2CNT   = 0x0000;
@@ -11564,7 +11563,7 @@ void CPUReset (void)
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
 	UPDATE_REG(0x00, io_registers[REG_DISPCNT]);
-	UPDATE_REG(0x06, VCOUNT);
+	UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
 	UPDATE_REG(0x20, BG2PA);
 	UPDATE_REG(0x26, BG2PD);
 	UPDATE_REG(0x30, BG3PA);
@@ -11816,8 +11815,8 @@ updateLoop:
 					if(io_registers[REG_DISPSTAT] & 2)
 					{
 						graphics.lcdTicks += 1008;
-						VCOUNT++;
-						UPDATE_REG(0x06, VCOUNT);
+						io_registers[REG_VCOUNT] += 1;
+						UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
 						io_registers[REG_DISPSTAT] &= 0xFFFD;
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						CPUCompareVCOUNT();
@@ -11834,25 +11833,25 @@ updateLoop:
 						}
 					}
 
-					if(VCOUNT >= 228)
+					if(io_registers[REG_VCOUNT] >= 228)
 					{
 						//Reaching last line
 						io_registers[REG_DISPSTAT] &= 0xFFFC;
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
-						VCOUNT = 0;
-						UPDATE_REG(0x06, VCOUNT);
+						io_registers[REG_VCOUNT] = 0;
+						UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
 						CPUCompareVCOUNT();
 					}
 				}
 				else if(io_registers[REG_DISPSTAT] & 2)
 				{
 					// if in H-Blank, leave it and move to drawing mode
-					VCOUNT++;
-					UPDATE_REG(0x06, VCOUNT);
+					io_registers[REG_VCOUNT] += 1;
+					UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
 
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
-					if(VCOUNT == 160)
+					if(io_registers[REG_VCOUNT] == 160)
 					{
 						/* update joystick information */
 						P1 = 0x03FF ^ (joy & 0x3FF);
