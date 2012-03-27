@@ -41,6 +41,12 @@
 #define R14_FIQ  43
 #define SPSR_FIQ 44
 
+#ifdef __LIBSNES__
+#define PIX_BUFFER_SCREEN_WIDTH 256
+#else
+#define PIX_BUFFER_SCREEN_WIDTH 240
+#endif
+
 typedef struct {
 	uint8_t *address;
 	uint32_t mask;
