@@ -156,9 +156,6 @@ static u16 TM2CNT;
 static u16 TM3D;
 static u16 TM3CNT;
 static uint16_t P1       = 0xFFFF;
-static u16 IE;
-static u16 IF;
-static u16 IME;
 
 static uint16_t BG2X_L   = 0x0000;
 static uint16_t BG2X_H   = 0x0000;
@@ -1813,7 +1810,7 @@ static void CPUUpdateFlags(bool breakLoop)
 	V_FLAG = (CPSR & 0x10000000) ? true: false;
 	armState = (CPSR & 0x20) ? false : true;
 	armIrqEnable = (CPSR & 0x80) ? false : true;
-	if (breakLoop && armIrqEnable && (IF & IE) && (IME & 1))
+	if (breakLoop && armIrqEnable && (io_registers[REG_IF] & io_registers[REG_IE]) && (io_registers[REG_IME] & 1))
 		cpuNextEvent = cpuTotalTicks;
 }
 
@@ -7721,9 +7718,9 @@ static variable_desc saveGameStruct[] = {
 	{ &TM3D     , sizeof(uint16_t) },
 	{ &TM3CNT   , sizeof(uint16_t) },
 	{ &P1       , sizeof(uint16_t) },
-	{ &IE       , sizeof(uint16_t) },
-	{ &IF       , sizeof(uint16_t) },
-	{ &IME      , sizeof(uint16_t) },
+	{ &io_registers[REG_IE]       , sizeof(uint16_t) },
+	{ &io_registers[REG_IF]       , sizeof(uint16_t) },
+	{ &io_registers[REG_IME]      , sizeof(uint16_t) },
 	{ &holdState, sizeof(bool) },
 	{ &graphics.lcdTicks, sizeof(int) },
 	{ &timer0On , sizeof(bool) },
@@ -7825,8 +7822,8 @@ static INLINE int CPUUpdateTicks (void)
     UPDATE_REG(0x04, io_registers[REG_DISPSTAT]); \
     if(io_registers[REG_DISPSTAT] & 0x20) \
     { \
-      IF |= 4; \
-      UPDATE_REG(0x202, IF); \
+      io_registers[REG_IF] |= 4; \
+      UPDATE_REG(0x202, io_registers[REG_IF]); \
     } \
   } \
   else \
@@ -10662,8 +10659,8 @@ void CPUCheckDMA(int reason, int dmamask)
 
 			if(DM0CNT_H & 0x4000)
 			{
-				IF |= 0x0100;
-				UPDATE_REG(0x202, IF);
+				io_registers[REG_IF] |= 0x0100;
+				UPDATE_REG(0x202, io_registers[REG_IF]);
 				cpuNextEvent = cpuTotalTicks;
 			}
 
@@ -10702,8 +10699,8 @@ void CPUCheckDMA(int reason, int dmamask)
 			doDMA(dma1Source, dma1Dest, sourceIncrement, di_value, c_value, transfer_value);
 
 			if(DM1CNT_H & 0x4000) {
-				IF |= 0x0200;
-				UPDATE_REG(0x202, IF);
+				io_registers[REG_IF] |= 0x0200;
+				UPDATE_REG(0x202, io_registers[REG_IF]);
 				cpuNextEvent = cpuTotalTicks;
 			}
 
@@ -10742,8 +10739,8 @@ void CPUCheckDMA(int reason, int dmamask)
 			doDMA(dma2Source, dma2Dest, sourceIncrement, di_value, c_value, transfer_value);
 
 			if(DM2CNT_H & 0x4000) {
-				IF |= 0x0400;
-				UPDATE_REG(0x202, IF);
+				io_registers[REG_IF] |= 0x0400;
+				UPDATE_REG(0x202, io_registers[REG_IF]);
 				cpuNextEvent = cpuTotalTicks;
 			}
 
@@ -10770,8 +10767,8 @@ void CPUCheckDMA(int reason, int dmamask)
 					DM3CNT_L ? DM3CNT_L : 0x10000,
 					DM3CNT_H & 0x0400);
 			if(DM3CNT_H & 0x4000) {
-				IF |= 0x0800;
-				UPDATE_REG(0x202, IF);
+				io_registers[REG_IF] |= 0x0800;
+				UPDATE_REG(0x202, io_registers[REG_IF]);
 				cpuNextEvent = cpuTotalTicks;
 			}
 
@@ -11204,14 +11201,14 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 
 
 		case 0x200:
-			IE = value & 0x3FFF;
-			UPDATE_REG(0x200, IE);
-			if ((IME & 1) && (IF & IE) && armIrqEnable)
+			io_registers[REG_IE] = value & 0x3FFF;
+			UPDATE_REG(0x200, io_registers[REG_IE]);
+			if ((io_registers[REG_IME] & 1) && (io_registers[REG_IF] & io_registers[REG_IE]) && armIrqEnable)
 				cpuNextEvent = cpuTotalTicks;
 			break;
 		case 0x202:
-			IF ^= (value & IF);
-			UPDATE_REG(0x202, IF);
+			io_registers[REG_IF] ^= (value & io_registers[REG_IF]);
+			UPDATE_REG(0x202, io_registers[REG_IF]);
 			break;
 		case 0x204:
 			{
@@ -11260,9 +11257,9 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			}
 			break;
 		case 0x208:
-			IME = value & 1;
-			UPDATE_REG(0x208, IME);
-			if ((IME & 1) && (IF & IE) && armIrqEnable)
+			io_registers[REG_IME] = value & 1;
+			UPDATE_REG(0x208, io_registers[REG_IME]);
+			if ((io_registers[REG_IME] & 1) && (io_registers[REG_IF] & io_registers[REG_IE]) && armIrqEnable)
 				cpuNextEvent = cpuTotalTicks;
 			break;
 		case 0x300:
@@ -11494,9 +11491,9 @@ void CPUReset (void)
 	TM3D     = 0x0000;
 	TM3CNT   = 0x0000;
 	P1       = 0x03FF;
-	IE       = 0x0000;
-	IF       = 0x0000;
-	IME      = 0x0000;
+	io_registers[REG_IE]       = 0x0000;
+	io_registers[REG_IF]       = 0x0000;
+	io_registers[REG_IME]      = 0x0000;
 
 	armMode = 0x1F;
 
@@ -11796,8 +11793,8 @@ updateLoop:
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						if(io_registers[REG_DISPSTAT] & 16)
 						{
-							IF |= 2;
-							UPDATE_REG(0x202, IF);
+							io_registers[REG_IF] |= 2;
+							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 					}
 
@@ -11829,16 +11826,16 @@ updateLoop:
 #endif
 						UPDATE_REG(0x130, P1);
 						uint16_t p1 = (0x3FF ^ P1) & 0x3FF;
-						uint16_t P1CNT = READ16LE(((uint16_t *)&ioMem[0x132]));
+						io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));
 						// this seems wrong, but there are cases where the game
 						// can enter the stop state without requesting an IRQ from
 						// the joypad.
-						uint32_t condition_bool = (((P1CNT & 0x4000) || stopState) && (((P1CNT & 0x8000) && (p1 == (P1CNT & 0x3FF))) || (p1 & P1CNT)));
+						uint32_t condition_bool = (((io_registers[REG_P1CNT] & 0x4000) || stopState) && (((io_registers[REG_P1CNT] & 0x8000) && (p1 == (io_registers[REG_P1CNT] & 0x3FF))) || (p1 & io_registers[REG_P1CNT])));
 
 						if(condition_bool)
 						{
-							IF |= 0x1000;
-							UPDATE_REG(0x202, IF);
+							io_registers[REG_IF] |= 0x1000;
+							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 
 
@@ -11847,8 +11844,8 @@ updateLoop:
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						if(io_registers[REG_DISPSTAT] & 0x0008)
 						{
-							IF |= 1;
-							UPDATE_REG(0x202, IF);
+							io_registers[REG_IF] |= 1;
+							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 						CPUCheckDMA(1, 0x0f);
 						systemDrawScreen();
@@ -11882,8 +11879,8 @@ updateLoop:
 					CPUCheckDMA(2, 0x0f);
 					if(io_registers[REG_DISPSTAT] & 16)
 					{
-						IF |= 2;
-						UPDATE_REG(0x202, IF);
+						io_registers[REG_IF] |= 2;
+						UPDATE_REG(0x202, io_registers[REG_IF]);
 					}
 				}
 			}
@@ -11905,8 +11902,8 @@ updateLoop:
 						timerOverflow |= 1;
 						soundTimerOverflow(0);
 						if(TM0CNT & 0x40) {
-							IF |= 0x08;
-							UPDATE_REG(0x202, IF);
+							io_registers[REG_IF] |= 0x08;
+							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 					}
 					TM0D = 0xFFFF - (timer0Ticks >> timer0ClockReload);
@@ -11922,8 +11919,8 @@ updateLoop:
 								timerOverflow |= 2;
 								soundTimerOverflow(1);
 								if(TM1CNT & 0x40) {
-									IF |= 0x10;
-									UPDATE_REG(0x202, IF);
+									io_registers[REG_IF] |= 0x10;
+									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
 							UPDATE_REG(0x104, TM1D);
@@ -11935,8 +11932,8 @@ updateLoop:
 							timerOverflow |= 2;
 							soundTimerOverflow(1);
 							if(TM1CNT & 0x40) {
-								IF |= 0x10;
-								UPDATE_REG(0x202, IF);
+								io_registers[REG_IF] |= 0x10;
+								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
 						TM1D = 0xFFFF - (timer1Ticks >> timer1ClockReload);
@@ -11952,8 +11949,8 @@ updateLoop:
 								TM2D += timer2Reload;
 								timerOverflow |= 4;
 								if(TM2CNT & 0x40) {
-									IF |= 0x20;
-									UPDATE_REG(0x202, IF);
+									io_registers[REG_IF] |= 0x20;
+									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
 							UPDATE_REG(0x108, TM2D);
@@ -11964,8 +11961,8 @@ updateLoop:
 							timer2Ticks += (0x10000 - timer2Reload) << timer2ClockReload;
 							timerOverflow |= 4;
 							if(TM2CNT & 0x40) {
-								IF |= 0x20;
-								UPDATE_REG(0x202, IF);
+								io_registers[REG_IF] |= 0x20;
+								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
 						TM2D = 0xFFFF - (timer2Ticks >> timer2ClockReload);
@@ -11980,8 +11977,8 @@ updateLoop:
 							if(TM3D == 0) {
 								TM3D += timer3Reload;
 								if(TM3CNT & 0x40) {
-									IF |= 0x40;
-									UPDATE_REG(0x202, IF);
+									io_registers[REG_IF] |= 0x40;
+									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
 							UPDATE_REG(0x10C, TM3D);
@@ -11991,8 +11988,8 @@ updateLoop:
 						if(timer3Ticks <= 0) {
 							timer3Ticks += (0x10000 - timer3Reload) << timer3ClockReload;
 							if(TM3CNT & 0x40) {
-								IF |= 0x40;
-								UPDATE_REG(0x202, IF);
+								io_registers[REG_IF] |= 0x40;
+								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
 						TM3D = 0xFFFF - (timer3Ticks >> timer3ClockReload);
@@ -12016,8 +12013,8 @@ updateLoop:
 				goto updateLoop;
 			}
 
-			if(IF && (IME & 1) && armIrqEnable) {
-				int res = IF & IE;
+			if(io_registers[REG_IF] && (io_registers[REG_IME] & 1) && armIrqEnable) {
+				int res = io_registers[REG_IF] & io_registers[REG_IE];
 				if(stopState)
 					res &= 0x3080;
 				if(res) {
