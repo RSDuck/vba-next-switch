@@ -1778,11 +1778,13 @@ static void CPUSoftwareInterrupt(int comment)
 	if(armState)
 		comment >>= 16;
 
+#ifdef HAVE_HLE_BIOS
 	if(useBios)
 	{
 		CPU_SOFTWARE_INTERRUPT();
 		return;
 	}
+#endif
 
 	switch(comment) {
 		case 0x00:
@@ -7936,6 +7938,7 @@ bool CPUReadBatteryFile(const char *fileName)
 	return true;
 }
 
+#ifdef HAVE_HLE_BIOS
 static bool CPUIsGBABios(const char * file)
 {
 	if(strlen(file) > 4)
@@ -7959,6 +7962,7 @@ static bool CPUIsGBABios(const char * file)
 
 	return false;
 }
+#endif
 
 #ifdef ELF
 static bool CPUIsELF(const char *file)
@@ -11408,6 +11412,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	saveType = 0;
 	useBios = false;
 
+#ifdef HAVE_HLE_BIOS
 	if(useBiosFile)
 	{
 		int size = 0x4000;
@@ -11417,8 +11422,11 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 				useBios = true;
 		}
 	}
+#endif
 
+#ifdef HAVE_HLE_BIOS
 	if(!useBios)
+#endif
 		memcpy(bios, myROM, sizeof(myROM));
 
 	int i = 0;
@@ -11602,18 +11610,25 @@ void CPUReset (void)
 		bus.reg[R13_SVC].I = 0x03007FE0;
 		armIrqEnable = true;
 	} else {
-		if(useBios && !skipBios) {
+#ifdef HAVE_HLE_BIOS
+		if(useBios && !skipBios)
+		{
 			bus.reg[15].I = 0x00000000;
 			armMode = 0x13;
 			armIrqEnable = false;
-		} else {
+		}
+		else
+		{
+#endif
 			bus.reg[13].I = 0x03007F00;
 			bus.reg[15].I = 0x08000000;
 			bus.reg[16].I = 0x00000000;
 			bus.reg[R13_IRQ].I = 0x03007FA0;
 			bus.reg[R13_SVC].I = 0x03007FE0;
 			armIrqEnable = true;
+#ifdef HAVE_HLE_BIOS
 		}
+#endif
 	}
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
@@ -11718,19 +11733,11 @@ void CPUReset (void)
 	CPUUpdateWindow1();
 
 	// make sure registers are correctly initialized if not using BIOS
-	if(!useBios)
-	{
-		if(cpuIsMultiBoot)
-			BIOS_RegisterRamReset(0xfe);
-		else
-			BIOS_RegisterRamReset(0xff);
-	}
-	else
-	{
-		if(cpuIsMultiBoot)
-			BIOS_RegisterRamReset(0xfe);
-	}
-
+	if(cpuIsMultiBoot)
+		BIOS_RegisterRamReset(0xfe);
+	else if(!useBios && !cpuIsMultiBoot)
+		BIOS_RegisterRamReset(0xff);
+		
 	switch(cpuSaveType) {
 		case 0: // automatic
 			cpuSramEnabled = true;
