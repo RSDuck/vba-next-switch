@@ -160,10 +160,6 @@ static u16 IE;
 static u16 IF;
 static u16 IME;
 
-static uint16_t BG0CNT   = 0x0000;
-static uint16_t BG1CNT   = 0x0000;
-static uint16_t BG2CNT   = 0x0000;
-static uint16_t BG3CNT   = 0x0000;
 static uint16_t BG0HOFS  = 0x0000;
 static uint16_t BG0VOFS  = 0x0000;
 static uint16_t BG1HOFS  = 0x0000;
@@ -6027,7 +6023,7 @@ static u32 map_heights[] = { 256, 256, 512, 512 };
 static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, bool process_layer2, bool process_layer3)
 {
 	bool	process_layers[4] = {process_layer0, process_layer1, process_layer2, process_layer3};
-	u16	control_layers[4] = {BG0CNT, BG1CNT, BG2CNT, BG3CNT};
+	u16	control_layers[4] = {io_registers[REG_BG0CNT], io_registers[REG_BG1CNT], io_registers[REG_BG2CNT], io_registers[REG_BG3CNT]};
 	u16	hofs_layers[4]	  = {BG0HOFS, BG1HOFS, BG2HOFS, BG3HOFS};
 	u16	vofs_layers[4]	  = {BG0VOFS, BG1VOFS, BG2VOFS, BG3VOFS};
 	u32 *	line_layers[4]	  = {line[0], line[1], line[2], line[3]};
@@ -6326,7 +6322,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int changed)
 {
 	u16 *screenBase = (u16 *)&vram[0];
-	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
+	int prio = ((io_registers[REG_BG2CNT] & 3) << 25) + 0x1000000;
 
 	u32 sizeX = 240;
 	u32 sizeY = 160;
@@ -6388,7 +6384,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 	int realX = currentX;
 	int realY = currentY;
 
-	if(BG2CNT & 0x40) {
+	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = (io_registers[REG_VCOUNT] % mosaicY);
 		realX -= y*dmx;
@@ -6411,7 +6407,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 		yyy = (realY >> 8);
 	}
 
-	if(BG2CNT & 0x40) {
+	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1) {
 			int m = 1;
@@ -6432,7 +6428,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 {
 	u16 *palette = (u16 *)graphics.paletteRAM;
 	u8 *screenBase = (io_registers[REG_DISPCNT] & 0x0010) ? &vram[0xA000] : &vram[0x0000];
-	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
+	int prio = ((io_registers[REG_BG2CNT] & 3) << 25) + 0x1000000;
 	u32 sizeX = 240;
 	u32 sizeY = 160;
 
@@ -6493,7 +6489,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 	int realX = currentX;
 	int realY = currentY;
 
-	if(BG2CNT & 0x40) {
+	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
 		realX = startX + y*dmx;
@@ -6516,7 +6512,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		yyy = (realY >> 8);
 	}
 
-	if(BG2CNT & 0x40)
+	if(io_registers[REG_BG2CNT] & 0x40)
 	{
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1)
@@ -6539,7 +6535,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 {
 	u16 *screenBase = (io_registers[REG_DISPCNT] & 0x0010) ? (u16 *)&vram[0xa000] :
 		(u16 *)&vram[0];
-	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
+	int prio = ((io_registers[REG_BG2CNT] & 3) << 25) + 0x1000000;
 	u32 sizeX = 160;
 	u32 sizeY = 128;
 
@@ -6600,7 +6596,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 	int realX = currentX;
 	int realY = currentY;
 
-	if(BG2CNT & 0x40) {
+	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
 		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
 		realX = startX + y*dmx;
@@ -6625,7 +6621,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 
 
 	int mosaicX = (MOSAIC & 0xF) + 1;
-	if(BG2CNT & 0x40 && (mosaicX > 1))
+	if(io_registers[REG_BG2CNT] & 0x40 && (mosaicX > 1))
 	{
 		int m = 1;
 		for(u32 i = 0; i < 239u; ++i)
@@ -7666,10 +7662,10 @@ static variable_desc saveGameStruct[] = {
 	{ &io_registers[REG_DISPCNT]  , sizeof(uint16_t) },
 	{ &io_registers[REG_DISPSTAT] , sizeof(uint16_t) },
 	{ &io_registers[REG_VCOUNT]   , sizeof(uint16_t) },
-	{ &BG0CNT   , sizeof(uint16_t) },
-	{ &BG1CNT   , sizeof(uint16_t) },
-	{ &BG2CNT   , sizeof(uint16_t) },
-	{ &BG3CNT   , sizeof(uint16_t) },
+	{ &io_registers[REG_BG0CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_BG1CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3CNT]   , sizeof(uint16_t) },
 	{ &BG0HOFS  , sizeof(uint16_t) },
 	{ &BG0VOFS  , sizeof(uint16_t) },
 	{ &BG1HOFS  , sizeof(uint16_t) },
@@ -8621,7 +8617,7 @@ static void mode1RenderLine (void)
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD,
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
@@ -8718,7 +8714,7 @@ static void mode1RenderLineNoWindow (void)
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD,
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
@@ -8902,7 +8898,7 @@ static void mode1RenderLineAll (void)
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
 			changed = 3;
 #endif
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD,
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
@@ -9047,7 +9043,7 @@ static void mode2RenderLine (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
@@ -9059,7 +9055,7 @@ static void mode2RenderLine (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG3CNT, BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
@@ -9138,7 +9134,7 @@ static void mode2RenderLineNoWindow (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
@@ -9150,7 +9146,7 @@ static void mode2RenderLineNoWindow (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG3CNT, BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
@@ -9304,7 +9300,7 @@ static void mode2RenderLineAll (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG2CNT, BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
@@ -9316,7 +9312,7 @@ static void mode2RenderLineAll (void)
 			changed = 3;
 #endif
 
-		gfxDrawRotScreen(BG3CNT, BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
@@ -10803,6 +10799,8 @@ void CPUCheckDMA(int reason, int dmamask)
 	}
 }
 
+static uint16_t *address_lut[0x300];
+
 void CPUUpdateRegister(uint32_t address, uint16_t value)
 {
 	switch(address)
@@ -10863,20 +10861,14 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			// not writable
 			break;
 		case 0x08:
-			BG0CNT = (value & 0xDFCF);
-			UPDATE_REG(0x08, BG0CNT);
-			break;
 		case 0x0A:
-			BG1CNT = (value & 0xDFCF);
-			UPDATE_REG(0x0A, BG1CNT);
+			*address_lut[address] = (value & 0xDFCF);
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x0C:
-			BG2CNT = (value & 0xFFCF);
-			UPDATE_REG(0x0C, BG2CNT);
-			break;
 		case 0x0E:
-			BG3CNT = (value & 0xFFCF);
-			UPDATE_REG(0x0E, BG3CNT);
+			*address_lut[address] = (value & 0xFFCF);
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x10:
 			BG0HOFS = value & 511;
@@ -11425,6 +11417,12 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	io_registers[REG_DISPCNT] = 0x0080;
 	io_registers[REG_DISPSTAT] = 0;
 	graphics.lcdTicks = (useBios && !skipBios) ? 1008 : 208;
+
+	/* address lut for use in CPUUpdateRegister */
+	address_lut[0x08] = &io_registers[REG_BG0CNT];
+	address_lut[0x0A] = &io_registers[REG_BG1CNT];
+	address_lut[0x0C] = &io_registers[REG_BG2CNT];
+	address_lut[0x0E] = &io_registers[REG_BG3CNT];
 }
 
 void CPUReset (void)
@@ -11455,10 +11453,10 @@ void CPUReset (void)
 	io_registers[REG_DISPCNT]  = 0x0080;
 	io_registers[REG_DISPSTAT] = 0x0000;
 	io_registers[REG_VCOUNT]   = (useBios && !skipBios) ? 0 :0x007E;
-	BG0CNT   = 0x0000;
-	BG1CNT   = 0x0000;
-	BG2CNT   = 0x0000;
-	BG3CNT   = 0x0000;
+	io_registers[REG_BG0CNT]   = 0x0000;
+	io_registers[REG_BG1CNT]   = 0x0000;
+	io_registers[REG_BG2CNT]   = 0x0000;
+	io_registers[REG_BG3CNT]   = 0x0000;
 	BG0HOFS  = 0x0000;
 	BG0VOFS  = 0x0000;
 	BG1HOFS  = 0x0000;
