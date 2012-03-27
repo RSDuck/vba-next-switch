@@ -94,8 +94,6 @@ typedef struct
 typedef struct
 {
 	uint8_t * paletteRAM;
-	uint16_t DISPCNT;
-	uint16_t DISPSTAT;
 	int layerEnable;
 	int layerEnableDelay;
 	int lcdTicks;

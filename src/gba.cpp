@@ -85,6 +85,67 @@ static bool armState = true;
 static bool armIrqEnable = true;
 static int armMode = 0x1f;
 
+typedef enum
+{
+  REG_DISPCNT = 0x000,
+  REG_DISPSTAT = 0x002,
+  REG_VCOUNT = 0x003,
+  REG_BG0CNT = 0x004,
+  REG_BG1CNT = 0x005,
+  REG_BG2CNT = 0x006,
+  REG_BG3CNT = 0x007,
+  REG_BG0HOFS = 0x08,
+  REG_BG0VOFS = 0x09,
+  REG_BG1HOFS = 0x0A,
+  REG_BG1VOFS = 0x0B,
+  REG_BG2HOFS = 0x0C,
+  REG_BG2VOFS = 0x0D,
+  REG_BG3HOFS = 0x0E,
+  REG_BG3VOFS = 0x0F,
+  REG_BG2PA = 0x10,
+  REG_BG2PB = 0x11,
+  REG_BG2PC = 0x12,
+  REG_BG2PD = 0x13,
+  REG_BG2X_L = 0x14,
+  REG_BG2X_H = 0x15,
+  REG_BG2Y_L = 0x16,
+  REG_BG2Y_H = 0x17,
+  REG_BG3PA = 0x18,
+  REG_BG3PB = 0x19,
+  REG_BG3PC = 0x1A,
+  REG_BG3PD = 0x1B,
+  REG_BG3X_L = 0x1C,
+  REG_BG3X_H = 0x1D,
+  REG_BG3Y_L = 0x1E,
+  REG_BG3Y_H = 0x1F,
+  REG_WIN0H = 0x20,
+  REG_WIN1H = 0x21,
+  REG_WIN0V = 0x22,
+  REG_WIN1V = 0x23,
+  REG_WININ = 0x24,
+  REG_WINOUT = 0x25,
+  REG_BLDCNT = 0x28,
+  REG_BLDALPHA = 0x29,
+  REG_BLDY = 0x2A,
+  REG_TM0D = 0x80,
+  REG_TM0CNT = 0x81,
+  REG_TM1D = 0x82,
+  REG_TM1CNT = 0x83,
+  REG_TM2D = 0x84,
+  REG_TM2CNT = 0x85,
+  REG_TM3D = 0x86,
+  REG_TM3CNT = 0x87,
+  REG_P1 = 0x098,
+  REG_P1CNT = 0x099,
+  REG_RCNT = 0x9A,
+  REG_IE = 0x100,
+  REG_IF = 0x101,
+  REG_IME = 0x104,
+  REG_HALTCNT = 0x180
+} hardware_register;
+
+static uint16_t io_registers[1024 * 16];
+
 static u16 VCOUNT;
 static u16 MOSAIC;
 static u16 TM0D;
@@ -381,7 +442,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 			break;
 		case 6:
 			address = (address & 0x1fffc);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -475,7 +536,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -554,7 +615,7 @@ static INLINE u8 CPUReadByte(u32 address)
 			return graphics.paletteRAM[address & 0x3ff];
 		case 6:
 			address = (address & 0x1ffff);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return 0;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -619,7 +680,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -664,7 +725,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -779,14 +840,14 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((graphics.DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
 
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
-			if ((address) < objTilesAddress[((graphics.DISPCNT&7)+1)>>2])
+			if ((address) < objTilesAddress[((io_registers[REG_DISPCNT] & 7)+1)>>2])
 				*((u16 *)&vram[address]) = (b << 8) | b;
 			break;
 		case 7:
@@ -6371,7 +6432,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
 {
 	u16 *palette = (u16 *)graphics.paletteRAM;
-	u8 *screenBase = (graphics.DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
+	u8 *screenBase = (io_registers[REG_DISPCNT] & 0x0010) ? &vram[0xA000] : &vram[0x0000];
 	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
 	u32 sizeX = 240;
 	u32 sizeY = 160;
@@ -6477,7 +6538,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 
 static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int changed)
 {
-	u16 *screenBase = (graphics.DISPCNT & 0x0010) ? (u16 *)&vram[0xa000] :
+	u16 *screenBase = (io_registers[REG_DISPCNT] & 0x0010) ? (u16 *)&vram[0xa000] :
 		(u16 *)&vram[0];
 	int prio = ((BG2CNT & 3) << 25) + 0x1000000;
 	u32 sizeX = 160;
@@ -6588,7 +6649,7 @@ static INLINE void gfxDrawSprites (void)
 {
 	unsigned lineOBJpix, m;
 
-	lineOBJpix = (graphics.DISPCNT & 0x20) ? 954 : 1226;
+	lineOBJpix = (io_registers[REG_DISPCNT] & 0x20) ? 954 : 1226;
 	m = 0;
 
 	u16 *sprites = (u16 *)oam;
@@ -6739,13 +6800,13 @@ static INLINE void gfxDrawSprites (void)
 					u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
 					int c = (a2 & 0x3FF);
-					if((graphics.DISPCNT & 7) > 2 && (c < 512))
+					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
 						continue;
 
 					if(a0 & 0x2000)
 					{
 						int inc = 32;
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 2;
 						else
 							c &= 0x3FE;
@@ -6785,7 +6846,7 @@ static INLINE void gfxDrawSprites (void)
 					else
 					{
 						int inc = 32;
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 3;
 						int palette = (a2 >> 8) & 0xF0;
 						for(u32 x = 0; x < fieldX; ++x)
@@ -6853,7 +6914,7 @@ static INLINE void gfxDrawSprites (void)
 						t = sizeY - t - 1;
 
 					int c = (a2 & 0x3FF);
-					if((graphics.DISPCNT & 7) > 2 && (c < 512))
+					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
@@ -6866,7 +6927,7 @@ static INLINE void gfxDrawSprites (void)
 
 					if(a0 & 0x2000)
 					{
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 2;
 						else
 							c &= 0x3FE;
@@ -6930,7 +6991,7 @@ static INLINE void gfxDrawSprites (void)
 					}
 					else
 					{
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 3;
 
 						int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
@@ -7143,13 +7204,13 @@ static INLINE void gfxDrawOBJWin (void)
 						+ t * dmy;
 
 					int c = (a2 & 0x3FF);
-					if((graphics.DISPCNT & 7) > 2 && (c < 512))
+					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
 					bool condition1 = a0 & 0x2000;
 
-					if(graphics.DISPCNT & 0x40)
+					if(io_registers[REG_DISPCNT] & 0x40)
 						inc = sizeX >> 3;
 
 					for(int x = 0; x < fieldX; x++)
@@ -7211,13 +7272,13 @@ static INLINE void gfxDrawOBJWin (void)
 					if(a1 & 0x2000)
 						t = sizeY - t - 1;
 					int c = (a2 & 0x3FF);
-					if((graphics.DISPCNT & 7) > 2 && (c < 512))
+					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
 						continue;
 					if(a0 & 0x2000)
 					{
 
 						int inc = 32;
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 2;
 						else
 							c &= 0x3FE;
@@ -7267,7 +7328,7 @@ static INLINE void gfxDrawOBJWin (void)
 					else
 					{
 						int inc = 32;
-						if(graphics.DISPCNT & 0x40)
+						if(io_registers[REG_DISPCNT] & 0x40)
 							inc = sizeX >> 3;
 						int xxx = 0;
 						if(a1 & 0x1000)
@@ -7603,8 +7664,8 @@ uint32_t myROM[] = {
 };
 
 static variable_desc saveGameStruct[] = {
-	{ &graphics.DISPCNT  , sizeof(uint16_t) },
-	{ &graphics.DISPSTAT , sizeof(uint16_t) },
+	{ &io_registers[REG_DISPCNT]  , sizeof(uint16_t) },
+	{ &io_registers[REG_DISPSTAT] , sizeof(uint16_t) },
 	{ &VCOUNT   , sizeof(uint16_t) },
 	{ &BG0CNT   , sizeof(uint16_t) },
 	{ &BG1CNT   , sizeof(uint16_t) },
@@ -7775,11 +7836,11 @@ static INLINE int CPUUpdateTicks (void)
 }
 
 #define CPUCompareVCOUNT() \
-  if(VCOUNT == (graphics.DISPSTAT >> 8)) \
+  if(VCOUNT == (io_registers[REG_DISPSTAT] >> 8)) \
   { \
-    graphics.DISPSTAT |= 4; \
-    UPDATE_REG(0x04, graphics.DISPSTAT); \
-    if(graphics.DISPSTAT & 0x20) \
+    io_registers[REG_DISPSTAT] |= 4; \
+    UPDATE_REG(0x04, io_registers[REG_DISPSTAT]); \
+    if(io_registers[REG_DISPSTAT] & 0x20) \
     { \
       IF |= 4; \
       UPDATE_REG(0x202, IF); \
@@ -7787,14 +7848,14 @@ static INLINE int CPUUpdateTicks (void)
   } \
   else \
   { \
-    graphics.DISPSTAT &= 0xFFFB; \
-    UPDATE_REG(0x4, graphics.DISPSTAT); \
+    io_registers[REG_DISPSTAT] &= 0xFFFB; \
+    UPDATE_REG(0x4, io_registers[REG_DISPSTAT]); \
   } \
   if (graphics.layerEnableDelay > 0) \
   { \
       graphics.layerEnableDelay--; \
       if (graphics.layerEnableDelay == 1) \
-          graphics.layerEnable = graphics.DISPCNT; \
+          graphics.layerEnable = io_registers[REG_DISPCNT]; \
   }
 
 
@@ -10252,7 +10313,7 @@ static bool render_line_all_enabled = false;
 
 #define CPUUpdateRender() \
   render_line_all_enabled = false; \
-  switch(graphics.DISPCNT & 7) { \
+  switch(io_registers[REG_DISPCNT] & 7) { \
   case 0: \
     if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
       renderLine = mode0RenderLine; \
@@ -10359,7 +10420,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	//// Copypasta stuff ...
 	// set pointers!
-	graphics.layerEnable = graphics.DISPCNT;
+	graphics.layerEnable = io_registers[REG_DISPCNT];
 
 	CPUUpdateRender();
 
@@ -10538,7 +10599,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	dm = ((((15) & dm_gt_15_mask) | ((((dm) & ~(dm_gt_15_mask))))));
 
 	//if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-	//    blank = (((graphics.DISPSTAT | ((graphics.DISPSTAT>>1)&1))==1) ?  true : false);
+	//    blank = (((io_registers[REG_DISPSTAT] | ((io_registers[REG_DISPSTAT] >> 1)&1))==1) ?  true : false);
 
 	if(transfer32)
 	{
@@ -10751,14 +10812,14 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			{ // we need to place the following code in { } because we declare & initialize variables in a case statement
 
 				if((value & 7) > 5) // display modes above 0-5 are prohibited
-					graphics.DISPCNT = (value & 7);
+					io_registers[REG_DISPCNT] = (value & 7);
 
-				bool change = (0 != ((graphics.DISPCNT ^ value) & 0x80));
-				bool changeBG = (0 != ((graphics.DISPCNT ^ value) & 0x0F00));
-				uint16_t changeBGon = ((~graphics.DISPCNT) & value) & 0x0F00; // these layers are being activated
+				bool change = (0 != ((io_registers[REG_DISPCNT] ^ value) & 0x80));
+				bool changeBG = (0 != ((io_registers[REG_DISPCNT] ^ value) & 0x0F00));
+				uint16_t changeBGon = ((~io_registers[REG_DISPCNT]) & value) & 0x0F00; // these layers are being activated
 
-				graphics.DISPCNT = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
-				UPDATE_REG(0x00, graphics.DISPCNT);
+				io_registers[REG_DISPCNT] = (value & 0xFFF7); // bit 3 can only be accessed by the BIOS to enable GBC mode
+				UPDATE_REG(0x00, io_registers[REG_DISPCNT]);
 
 				graphics.layerEnable = value;
 
@@ -10771,11 +10832,11 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
 				if(change && !((value & 0x80)))
 				{
-					if(!(graphics.DISPSTAT & 1))
+					if(!(io_registers[REG_DISPSTAT] & 1))
 					{
 						graphics.lcdTicks = 1008;
-						graphics.DISPSTAT &= 0xFFFC;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
+						io_registers[REG_DISPSTAT] &= 0xFFFC;
+						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						CPUCompareVCOUNT();
 					}
 				}
@@ -10796,8 +10857,8 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				break;
 			}
 		case 0x04:
-			graphics.DISPSTAT = (value & 0xFF38) | (graphics.DISPSTAT & 7);
-			UPDATE_REG(0x04, graphics.DISPSTAT);
+			io_registers[REG_DISPSTAT] = (value & 0xFF38) | (io_registers[REG_DISPSTAT] & 7);
+			UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 			break;
 		case 0x06:
 			// not writable
@@ -11362,8 +11423,8 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 
 	graphics.layerEnable = 0xff00;
 	graphics.layerEnableDelay = 1;
-	graphics.DISPCNT = 0x0080;
-	graphics.DISPSTAT = 0;
+	io_registers[REG_DISPCNT] = 0x0080;
+	io_registers[REG_DISPSTAT] = 0;
 	graphics.lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 }
 
@@ -11392,8 +11453,8 @@ void CPUReset (void)
 	memset(vram, 0, 0x20000);			// clean vram
 	memset(ioMem, 0, 0x400);			// clean io memory
 
-	graphics.DISPCNT  = 0x0080;
-	graphics.DISPSTAT = 0x0000;
+	io_registers[REG_DISPCNT]  = 0x0080;
+	io_registers[REG_DISPSTAT] = 0x0000;
 	VCOUNT   = (useBios && !skipBios) ? 0 :0x007E;
 	BG0CNT   = 0x0000;
 	BG1CNT   = 0x0000;
@@ -11502,7 +11563,7 @@ void CPUReset (void)
 	}
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
-	UPDATE_REG(0x00, graphics.DISPCNT);
+	UPDATE_REG(0x00, io_registers[REG_DISPCNT]);
 	UPDATE_REG(0x06, VCOUNT);
 	UPDATE_REG(0x20, BG2PA);
 	UPDATE_REG(0x26, BG2PD);
@@ -11557,7 +11618,7 @@ void CPUReset (void)
 	fxOn = false;
 	windowOn = false;
 	saveType = 0;
-	graphics.layerEnable = graphics.DISPCNT;
+	graphics.layerEnable = io_registers[REG_DISPCNT];
 
 	memset(line[0], -1, 240 * sizeof(u32));
 	memset(line[1], -1, 240 * sizeof(u32));
@@ -11749,24 +11810,24 @@ updateLoop:
 
 			if(graphics.lcdTicks <= 0)
 			{
-				if(graphics.DISPSTAT & 1)
+				if(io_registers[REG_DISPSTAT] & 1)
 				{ // V-BLANK
 					// if in V-Blank mode, keep computing...
-					if(graphics.DISPSTAT & 2)
+					if(io_registers[REG_DISPSTAT] & 2)
 					{
 						graphics.lcdTicks += 1008;
 						VCOUNT++;
 						UPDATE_REG(0x06, VCOUNT);
-						graphics.DISPSTAT &= 0xFFFD;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
+						io_registers[REG_DISPSTAT] &= 0xFFFD;
+						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						CPUCompareVCOUNT();
 					}
 					else
 					{
 						graphics.lcdTicks += 224;
-						graphics.DISPSTAT |= 2;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
-						if(graphics.DISPSTAT & 16)
+						io_registers[REG_DISPSTAT] |= 2;
+						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
+						if(io_registers[REG_DISPSTAT] & 16)
 						{
 							IF |= 2;
 							UPDATE_REG(0x202, IF);
@@ -11776,21 +11837,21 @@ updateLoop:
 					if(VCOUNT >= 228)
 					{
 						//Reaching last line
-						graphics.DISPSTAT &= 0xFFFC;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
+						io_registers[REG_DISPSTAT] &= 0xFFFC;
+						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						VCOUNT = 0;
 						UPDATE_REG(0x06, VCOUNT);
 						CPUCompareVCOUNT();
 					}
 				}
-				else if(graphics.DISPSTAT & 2)
+				else if(io_registers[REG_DISPSTAT] & 2)
 				{
 					// if in H-Blank, leave it and move to drawing mode
 					VCOUNT++;
 					UPDATE_REG(0x06, VCOUNT);
 
 					graphics.lcdTicks += 1008;
-					graphics.DISPSTAT &= 0xFFFD;
+					io_registers[REG_DISPSTAT] &= 0xFFFD;
 					if(VCOUNT == 160)
 					{
 						/* update joystick information */
@@ -11814,10 +11875,10 @@ updateLoop:
 						}
 
 
-						graphics.DISPSTAT |= 1;
-						graphics.DISPSTAT &= 0xFFFD;
-						UPDATE_REG(0x04, graphics.DISPSTAT);
-						if(graphics.DISPSTAT & 0x0008)
+						io_registers[REG_DISPSTAT] |= 1;
+						io_registers[REG_DISPSTAT] &= 0xFFFD;
+						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
+						if(io_registers[REG_DISPSTAT] & 0x0008)
 						{
 							IF |= 1;
 							UPDATE_REG(0x202, IF);
@@ -11826,7 +11887,7 @@ updateLoop:
 						systemDrawScreen();
 					}
 
-					UPDATE_REG(0x04, graphics.DISPSTAT);
+					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 					CPUCompareVCOUNT();
 				}
 				else
@@ -11848,11 +11909,11 @@ updateLoop:
 					(*renderLine)();
 
 					// entering H-Blank
-					graphics.DISPSTAT |= 2;
-					UPDATE_REG(0x04, graphics.DISPSTAT);
+					io_registers[REG_DISPSTAT] |= 2;
+					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 					graphics.lcdTicks += 224;
 					CPUCheckDMA(2, 0x0f);
-					if(graphics.DISPSTAT & 16)
+					if(io_registers[REG_DISPSTAT] & 16)
 					{
 						IF |= 2;
 						UPDATE_REG(0x202, IF);
