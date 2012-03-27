@@ -7837,7 +7837,7 @@ unsigned CPUWriteState(uint8_t* data, unsigned size)
 	utilWriteMem(data, workRAM, 0x40000);
 	utilWriteMem(data, vram, 0x20000);
 	utilWriteMem(data, oam, 0x400);
-	utilWriteMem(data, pix, 4 * 240 * 160);
+	utilWriteMem(data, pix, 4 * 256 * 160);
 	utilWriteMem(data, ioMem, 0x400);
 
 	eepromSaveGameMem(data);
@@ -8092,7 +8092,7 @@ int CPULoadRom(const char * file)
 		CPUCleanUp();
 		return 0;
 	}
-	pix = (u16 *)calloc(1, 4 * 240 * 160);
+	pix = (u16 *)calloc(1, 4 * 256 * 160);
 	if(pix == NULL) {
 		CPUCleanUp();
 		return 0;
@@ -8151,7 +8151,7 @@ void doMirroring (bool b)
       }
 
 /* we only use 16bit color depth */
-#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + 240 * VCOUNT)
+#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + 256 * VCOUNT)
 
 static void mode0RenderLine (void)
 {
@@ -10367,7 +10367,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 	utilReadMem(workRAM, data, 0x40000);
 	utilReadMem(vram, data, 0x20000);
 	utilReadMem(oam, data, 0x400);
-	utilReadMem(pix, data, 4* 240 * 160);
+	utilReadMem(pix, data, 4* 256 * 160);
 	utilReadMem(ioMem, data, 0x400);
 
 	eepromReadGameMem(data, version);

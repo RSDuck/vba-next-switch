@@ -507,54 +507,13 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
       audio_cb(finalWave[i + 0], finalWave[i + 1]);
 }
 
-static uint16_t pix_buf[160 * 256];
-
-#if __SSE2__
-#include <emmintrin.h>
 void systemDrawScreen()
 {
    screen_drawn = true;
-
-   for (unsigned y = 0; y < 160; y++)
-   {
-      uint16_t *dst = pix_buf + y * 256;
-      const uint16_t *src = pix + 240 * y;
-
-      for (unsigned x = 0; x < 240; x += 8)
-      {
-         __m128i input[2] = {
-            _mm_loadu_si128((const __m128i*)(src + 0)),
-            _mm_loadu_si128((const __m128i*)(src + 4)),
-         };
-         src += 8;
-
-         __m128i output = _mm_packs_epi32(input[0], input[1]);
-
-         _mm_store_si128((__m128i*)dst, output);
-         dst += 8;
-      }
-   }
-
-   video_cb(pix_buf, 240, 160);
+   video_cb(pix, 240, 160);
 }
-#else
-void systemDrawScreen()
-{
-   screen_drawn = true;
-   for (unsigned y = 0; y < 160; y++)
-   {
-      uint16_t *dst = pix_buf + y * 256;
-      const uint16_t *src = pix + 240 * y;
-      for (unsigned x = 0; x < 240; x++)
-         dst[x] = src[x];
-   }
-
-   video_cb(pix_buf, 240, 160);
-}
-#endif
-
 
 void systemMessage(const char* str, ...)
 {
-	fprintf(stderr, str);
+   fprintf(stderr, str);
 }
