@@ -160,14 +160,6 @@ static u16 IE;
 static u16 IF;
 static u16 IME;
 
-static uint16_t BG0HOFS  = 0x0000;
-static uint16_t BG0VOFS  = 0x0000;
-static uint16_t BG1HOFS  = 0x0000;
-static uint16_t BG1VOFS  = 0x0000;
-static uint16_t BG2HOFS  = 0x0000;
-static uint16_t BG2VOFS  = 0x0000;
-static uint16_t BG3HOFS  = 0x0000;
-static uint16_t BG3VOFS  = 0x0000;
 static uint16_t BG2PA    = 0x0100;
 static uint16_t BG2PB    = 0x0000;
 static uint16_t BG2PC    = 0x0000;
@@ -6024,8 +6016,8 @@ static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, b
 {
 	bool	process_layers[4] = {process_layer0, process_layer1, process_layer2, process_layer3};
 	u16	control_layers[4] = {io_registers[REG_BG0CNT], io_registers[REG_BG1CNT], io_registers[REG_BG2CNT], io_registers[REG_BG3CNT]};
-	u16	hofs_layers[4]	  = {BG0HOFS, BG1HOFS, BG2HOFS, BG3HOFS};
-	u16	vofs_layers[4]	  = {BG0VOFS, BG1VOFS, BG2VOFS, BG3VOFS};
+	u16	hofs_layers[4]	  = {io_registers[REG_BG0HOFS], io_registers[REG_BG1HOFS], io_registers[REG_BG2HOFS], io_registers[REG_BG3HOFS]};
+	u16	vofs_layers[4]	  = {io_registers[REG_BG0VOFS], io_registers[REG_BG1VOFS], io_registers[REG_BG2VOFS], io_registers[REG_BG3VOFS]};
 	u32 *	line_layers[4]	  = {line[0], line[1], line[2], line[3]};
 	
 	for(int i = 0; i < 4; i++)
@@ -7666,14 +7658,14 @@ static variable_desc saveGameStruct[] = {
 	{ &io_registers[REG_BG1CNT]   , sizeof(uint16_t) },
 	{ &io_registers[REG_BG2CNT]   , sizeof(uint16_t) },
 	{ &io_registers[REG_BG3CNT]   , sizeof(uint16_t) },
-	{ &BG0HOFS  , sizeof(uint16_t) },
-	{ &BG0VOFS  , sizeof(uint16_t) },
-	{ &BG1HOFS  , sizeof(uint16_t) },
-	{ &BG1VOFS  , sizeof(uint16_t) },
-	{ &BG2HOFS  , sizeof(uint16_t) },
-	{ &BG2VOFS  , sizeof(uint16_t) },
-	{ &BG3HOFS  , sizeof(uint16_t) },
-	{ &BG3VOFS  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG0HOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG0VOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG1HOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG1VOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2HOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2VOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3HOFS]  , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3VOFS]  , sizeof(uint16_t) },
 	{ &BG2PA    , sizeof(uint16_t) },
 	{ &BG2PB    , sizeof(uint16_t) },
 	{ &BG2PC    , sizeof(uint16_t) },
@@ -10860,47 +10852,26 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 		case 0x06:
 			// not writable
 			break;
-		case 0x08:
-		case 0x0A:
+		case 0x08: /* BG0CNT */
+		case 0x0A: /* BG1CNT */
 			*address_lut[address] = (value & 0xDFCF);
 			UPDATE_REG(address, *address_lut[address]);
 			break;
-		case 0x0C:
-		case 0x0E:
+		case 0x0C: /* BG2CNT */
+		case 0x0E: /* BG3CNT */
 			*address_lut[address] = (value & 0xFFCF);
 			UPDATE_REG(address, *address_lut[address]);
 			break;
-		case 0x10:
-			BG0HOFS = value & 511;
-			UPDATE_REG(0x10, BG0HOFS);
-			break;
-		case 0x12:
-			BG0VOFS = value & 511;
-			UPDATE_REG(0x12, BG0VOFS);
-			break;
-		case 0x14:
-			BG1HOFS = value & 511;
-			UPDATE_REG(0x14, BG1HOFS);
-			break;
-		case 0x16:
-			BG1VOFS = value & 511;
-			UPDATE_REG(0x16, BG1VOFS);
-			break;
-		case 0x18:
-			BG2HOFS = value & 511;
-			UPDATE_REG(0x18, BG2HOFS);
-			break;
-		case 0x1A:
-			BG2VOFS = value & 511;
-			UPDATE_REG(0x1A, BG2VOFS);
-			break;
-		case 0x1C:
-			BG3HOFS = value & 511;
-			UPDATE_REG(0x1C, BG3HOFS);
-			break;
-		case 0x1E:
-			BG3VOFS = value & 511;
-			UPDATE_REG(0x1E, BG3VOFS);
+		case 0x10: /* BG0HOFS */
+		case 0x12: /* BG0VOFS */
+		case 0x14: /* BG1HOFS */
+		case 0x16: /* BG1VOFS */
+		case 0x18: /* BG2HOFS */
+		case 0x1A: /* BG2VOFS */
+		case 0x1C: /* BG3HOFS */
+		case 0x1E: /* BG3VOFS */
+			*address_lut[address] = value & 511;
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x20:
 			BG2PA = value;
@@ -11423,6 +11394,14 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	address_lut[0x0A] = &io_registers[REG_BG1CNT];
 	address_lut[0x0C] = &io_registers[REG_BG2CNT];
 	address_lut[0x0E] = &io_registers[REG_BG3CNT];
+	address_lut[0x10] = &io_registers[REG_BG0HOFS];
+	address_lut[0x12] = &io_registers[REG_BG0VOFS];
+	address_lut[0x14] = &io_registers[REG_BG1HOFS];
+	address_lut[0x16] = &io_registers[REG_BG1VOFS];
+	address_lut[0x18] = &io_registers[REG_BG2HOFS];
+	address_lut[0x1A] = &io_registers[REG_BG2VOFS];
+	address_lut[0x1C] = &io_registers[REG_BG3HOFS];
+	address_lut[0x1E] = &io_registers[REG_BG3VOFS];
 }
 
 void CPUReset (void)
@@ -11457,14 +11436,14 @@ void CPUReset (void)
 	io_registers[REG_BG1CNT]   = 0x0000;
 	io_registers[REG_BG2CNT]   = 0x0000;
 	io_registers[REG_BG3CNT]   = 0x0000;
-	BG0HOFS  = 0x0000;
-	BG0VOFS  = 0x0000;
-	BG1HOFS  = 0x0000;
-	BG1VOFS  = 0x0000;
-	BG2HOFS  = 0x0000;
-	BG2VOFS  = 0x0000;
-	BG3HOFS  = 0x0000;
-	BG3VOFS  = 0x0000;
+	io_registers[REG_BG0HOFS]  = 0x0000;
+	io_registers[REG_BG0VOFS]  = 0x0000;
+	io_registers[REG_BG1HOFS]  = 0x0000;
+	io_registers[REG_BG1VOFS]  = 0x0000;
+	io_registers[REG_BG2HOFS]  = 0x0000;
+	io_registers[REG_BG2VOFS]  = 0x0000;
+	io_registers[REG_BG3HOFS]  = 0x0000;
+	io_registers[REG_BG3VOFS]  = 0x0000;
 	BG2PA    = 0x0100;
 	BG2PB    = 0x0000;
 	BG2PC    = 0x0000;
