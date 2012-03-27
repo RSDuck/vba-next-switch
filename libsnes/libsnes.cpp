@@ -375,8 +375,21 @@ EXPORT void snes_reset(void)
    CPUReset();
 }
 
-static void systemReadJoypadGBA(void)
+static bool can_dupe;
+
+EXPORT void snes_run(void)
 {
+   static bool first = true;
+   if (first)
+   {
+      adjust_save_ram();
+      if (environ_cb)
+         environ_cb(SNES_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
+      first = false;
+   }
+
+   CPULoop();
+
    poll_cb();
 
    u32 J = 0;
@@ -398,28 +411,6 @@ static void systemReadJoypadGBA(void)
       J |= input_cb(SNES_PORT_1, SNES_DEVICE_JOYPAD, 0, binds[i]) << i;
 
    joy = J;
-}
-
-static bool can_dupe;
-static bool screen_drawn;
-
-EXPORT void snes_run(void)
-{
-   static bool first = true;
-   if (first)
-   {
-      adjust_save_ram();
-      if (environ_cb)
-         environ_cb(SNES_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
-      first = false;
-   }
-
-   screen_drawn = false;
-   while (!screen_drawn)
-   {
-      CPULoop();
-      systemReadJoypadGBA();
-   }
 }
 
 
@@ -509,7 +500,6 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 
 void systemDrawScreen()
 {
-   screen_drawn = true;
    video_cb(pix, 240, 160);
 }
 
