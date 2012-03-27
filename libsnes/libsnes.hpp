@@ -94,37 +94,42 @@ extern "C" {
                                                 // Implementation must then use SNES_ENVIRONMENT_GET_FULLPATH.
                                                 // This is useful for implementations with very large roms,
                                                 // which are impractical to load fully into RAM.
-						                              //
+                                                //
 #define SNES_ENVIRONMENT_GET_CAN_REWIND 7       // bool * --
                                                 // Boolean value telling if SSNES is able to rewind.
                                                 // Some implementations might need to take extra precautions
                                                 // to allow this as smoothly as possible.
-#define SNES_ENVIRONMENT_GET_VARIABLE 8 // struct snes_variable * --
+                                                //
+#define SNES_ENVIRONMENT_GET_VARIABLE 8         // struct snes_variable * --
                                                 // Interface to aquire user-defined information from environment
                                                 // that cannot feasibly be supported in a multi-system way.
                                                 // Mostly used for obscure,
                                                 // specific features that the user can tap into when neseccary.
                                                 //
-#define SNES_ENVIRONMENT_SET_VARIABLES 9 // const struct snes_variable * --
+#define SNES_ENVIRONMENT_SET_VARIABLES 9        // const struct snes_variable * --
                                                 // Allows an implementation to signal the environment
                                                 // which variables it might want to check for later using GET_VARIABLE.
                                                 // 'data' points to an array of snes_variable structs terminated by a { NULL, NULL } element.
                                                 // snes_variable::value should contain a human readable description of the key.
                                                 //
-#define SNES_ENVIRONMENT_SET_BATCH_LOAD 10 // const bool * --
+#define SNES_ENVIRONMENT_SET_BATCH_LOAD 10      // const bool * --
                                                 // If true, the implementation will load several roms in batch.
                                                 // This means the rom must be provided exactly as is, i.e. it cannot be extracted.
                                                 // If supported, this must be called directly when snes_set_environment() is called.
                                                 // (Used on consoles).
                                                 //
-#define SNES_ENVIRONMENT_SET_ROM_FORMATS 11 // const char * --
+#define SNES_ENVIRONMENT_SET_ROM_FORMATS 11     // const char * --
                                                 // Sets rom extensions the core generally supports.
                                                 // If supported, this must be called directly when snes_set_environment() is called.
                                                 // Formats are delimited with '|', i.e. "foo|bar|baz".
                                                 // (Used on consoles).
                                                 //
-#define SNES_ENVIRONMENT_SET_MESSAGE 12 // const struct snes_message * --
+#define SNES_ENVIRONMENT_SET_MESSAGE 12         // const struct snes_message * --
                                                 // Sets a message to be displayed in implementation-specific manner for a certain amount of 'frames'.
+                                                //
+#define SNES_ENVIRONMENT_GET_AUDIO_BATCH_CB 13  // snes_audio_sample_batch_t * --
+                                                // Retrieves callback to a more optimized audio callback.
+
 
 
 struct snes_message
@@ -132,6 +137,16 @@ struct snes_message
    const char *msg;
    unsigned frames;
 };
+
+struct snes_variable
+{
+   const char *key;        // Variable to query in SNES_ENVIRONMENT_GET_VARIABLE.
+                           // If NULL, obtains the complete environment string if more complex parsing is necessary.
+                           // The environment string is formatted as key-value pairs delimited by semicolons as so:
+                           // "key1=value1;key2=value2;..."
+   const char *value;      // Value to be obtained. If key does not exist, it is set to NULL.
+};
+
 struct snes_geometry
 {
    unsigned base_width;    // Nominal video width of system.
@@ -148,70 +163,75 @@ struct snes_system_timing
 
 typedef bool (*snes_environment_t)(unsigned cmd, void *data);
 
-/* Must be called before calling snes_init(). */
-EXPORT void snes_set_environment(snes_environment_t);
+// Must be called before calling snes_init().
+void snes_set_environment(snes_environment_t);
+////
 
 typedef void (*snes_video_refresh_t)(const uint16_t *data, unsigned width, unsigned height);
 typedef void (*snes_audio_sample_t)(uint16_t left, uint16_t right);
+
+// Performance extension. Retrieved from environ callback.
+typedef unsigned (*snes_audio_sample_batch_t)(const int16_t *data, unsigned frames);
+
 typedef void (*snes_input_poll_t)(void);
 typedef int16_t (*snes_input_state_t)(bool port, unsigned device, unsigned index, unsigned id);
 
-EXPORT unsigned snes_library_revision_major(void);
-EXPORT unsigned snes_library_revision_minor(void);
+unsigned snes_library_revision_major(void);
+unsigned snes_library_revision_minor(void);
 
-EXPORT const char *snes_library_id(void);
+const char *snes_library_id(void);
 
-EXPORT void snes_set_video_refresh(snes_video_refresh_t);
-EXPORT void snes_set_audio_sample(snes_audio_sample_t);
-EXPORT void snes_set_input_poll(snes_input_poll_t);
-EXPORT void snes_set_input_state(snes_input_state_t);
+void snes_set_video_refresh(snes_video_refresh_t);
+void snes_set_audio_sample(snes_audio_sample_t);
+void snes_set_input_poll(snes_input_poll_t);
+void snes_set_input_state(snes_input_state_t);
 
-EXPORT void snes_set_controller_port_device(bool port, unsigned device);
-EXPORT void snes_set_cartridge_basename(const char *basename);
+void snes_set_controller_port_device(bool port, unsigned device);
+void snes_set_cartridge_basename(const char *basename);
 
-EXPORT void snes_init(void);
-EXPORT void snes_term(void);
-EXPORT void snes_power(void);
-EXPORT void snes_reset(void);
-EXPORT void snes_run(void);
+void snes_init(void);
+void snes_term(void);
+void snes_power(void);
+void snes_reset(void);
+void snes_run(void);
 
-EXPORT unsigned snes_serialize_size(void);
-EXPORT bool snes_serialize(uint8_t *data, unsigned size);
-EXPORT bool snes_unserialize(const uint8_t *data, unsigned size);
+unsigned snes_serialize_size(void);
+bool snes_serialize(uint8_t *data, unsigned size);
+bool snes_unserialize(const uint8_t *data, unsigned size);
 
-EXPORT void snes_cheat_reset(void);
-EXPORT void snes_cheat_set(unsigned index, bool enabled, const char *code);
+void snes_cheat_reset(void);
+void snes_cheat_set(unsigned index, bool enabled, const char *code);
 
-EXPORT bool snes_load_cartridge_normal(
+bool snes_load_cartridge_normal(
   const char *rom_xml, const uint8_t *rom_data, unsigned rom_size
 );
 
-EXPORT bool snes_load_cartridge_bsx_slotted(
+bool snes_load_cartridge_bsx_slotted(
   const char *rom_xml, const uint8_t *rom_data, unsigned rom_size,
   const char *bsx_xml, const uint8_t *bsx_data, unsigned bsx_size
 );
 
-EXPORT bool snes_load_cartridge_bsx(
+bool snes_load_cartridge_bsx(
   const char *rom_xml, const uint8_t *rom_data, unsigned rom_size,
   const char *bsx_xml, const uint8_t *bsx_data, unsigned bsx_size
 );
 
-EXPORT bool snes_load_cartridge_sufami_turbo(
+bool snes_load_cartridge_sufami_turbo(
   const char *rom_xml, const uint8_t *rom_data, unsigned rom_size,
   const char *sta_xml, const uint8_t *sta_data, unsigned sta_size,
   const char *stb_xml, const uint8_t *stb_data, unsigned stb_size
 );
 
-EXPORT bool snes_load_cartridge_super_game_boy(
+bool snes_load_cartridge_super_game_boy(
   const char *rom_xml, const uint8_t *rom_data, unsigned rom_size,
   const char *dmg_xml, const uint8_t *dmg_data, unsigned dmg_size
 );
 
-EXPORT void snes_unload_cartridge(void);
+void snes_unload_cartridge(void);
 
-EXPORT bool snes_get_region(void);
-EXPORT uint8_t* snes_get_memory_data(unsigned id);
-EXPORT unsigned snes_get_memory_size(unsigned id);
+bool snes_get_region(void);
+uint8_t* snes_get_memory_data(unsigned id);
+unsigned snes_get_memory_size(unsigned id);
 
 #ifdef __cplusplus
 }

@@ -29,6 +29,7 @@ static snes_video_refresh_t video_cb;
 static snes_audio_sample_t audio_cb;
 static snes_input_poll_t poll_cb;
 static snes_input_state_t input_cb;
+static snes_audio_sample_batch_t audio_batch_cb;
 extern uint64_t joy;
 
 uint8_t libsnes_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
@@ -169,6 +170,7 @@ EXPORT void snes_init(void)
       timing.sample_rate = 32000.0;
 
       environ_cb(SNES_ENVIRONMENT_SET_TIMING, &timing);
+      environ_cb(SNES_ENVIRONMENT_GET_AUDIO_BATCH_CB, &audio_batch_cb);
    }
 }
 
@@ -494,8 +496,13 @@ EXPORT bool snes_get_region(void)
 
 void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 {
-   for (int i = 0; i < length; i += 2)
-      audio_cb(finalWave[i + 0], finalWave[i + 1]);
+   if (audio_batch_cb)
+      audio_batch_cb(finalWave, length >> 1);
+   else
+   {
+      for (int i = 0; i < length; i += 2)
+         audio_cb(finalWave[i + 0], finalWave[i + 1]);
+   }
 }
 
 void systemDrawScreen()
