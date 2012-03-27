@@ -5961,6 +5961,9 @@ static int thumbExecute (void)
 	GBA GFX
 ============================================================ */
 
+static u32 map_widths[] = { 256, 512, 256, 512 };
+static u32 map_heights[] = { 256, 256, 512, 512 };
+
 static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, bool process_layer2, bool process_layer3)
 {
 	bool	process_layers[4] = {process_layer0, process_layer1, process_layer2, process_layer3};
@@ -5983,27 +5986,13 @@ static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, b
 		u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
 		u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) << 11];
 		u32 prio = ((control & 3)<<25) + 0x1000000;
-		int sizeX = 256;
-		int sizeY = 256;
 #ifdef BRANCHLESS_GBA_GFX
 		int tileXOdd = 0;
 #endif
 
-		switch((control >> 14) & 3)
-		{
-			case 0:
-				break;
-			case 1:
-				sizeX = 512;
-				break;
-			case 2:
-				sizeY = 512;
-				break;
-			case 3:
-				sizeX = 512;
-				sizeY = 512;
-				break;
-		}
+		u32 map_size = (control >> 14) & 3;
+		u32 sizeX = map_widths[map_size];
+		u32 sizeY = map_heights[map_size];
 
 		int maskX = sizeX-1;
 		int maskY = sizeY-1;
@@ -6130,6 +6119,8 @@ static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, b
 	}
 }
 
+static u32 map_sizes_rot[] = { 128, 128, 256, 512, 1024 };
+
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
 {
@@ -6138,22 +6129,9 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	u8 *screenBase = (u8 *)&vram[((control >> 8) & 0x1f) << 11];
 	int prio = ((control & 3) << 25) + 0x1000000;
 
-	u32 sizeX = 128;
-	u32 sizeY = 128;
-	switch((control >> 14) & 3)
-	{
-		case 0:
-			break;
-		case 1:
-			sizeX = sizeY = 256;
-			break;
-		case 2:
-			sizeX = sizeY = 512;
-			break;
-		case 3:
-			sizeX = sizeY = 1024;
-			break;
-	}
+	u32 map_size = (control >> 14) & 3;
+	u32 sizeX = map_sizes_rot[map_size];
+	u32 sizeY = map_sizes_rot[map_size];
 
 	int maskX = sizeX-1;
 	int maskY = sizeY-1;
@@ -10620,47 +10598,20 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	cpuDmaTicksToUpdate += totalTicks;
 }
 
+
 void CPUCheckDMA(int reason, int dmamask)
 {
+	uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 	// DMA 0
 	if((DM0CNT_H & 0x8000) && (dmamask & 1))
 	{
 		if(((DM0CNT_H >> 12) & 3) == reason)
 		{
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
 			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM0CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM0CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM0CNT_H >> 7) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM0CNT_H >> 5) & 3)
-			{
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			doDMA(dma0Source, dma0Dest, sourceIncrement, destIncrement,
 					DM0CNT_L ? DM0CNT_L : 0x4000,
 					DM0CNT_H & 0x0400);
@@ -10686,38 +10637,11 @@ void CPUCheckDMA(int reason, int dmamask)
 	// DMA 1
 	if((DM1CNT_H & 0x8000) && (dmamask & 2)) {
 		if(((DM1CNT_H >> 12) & 3) == reason) {
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
 			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM1CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM1CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM1CNT_H >> 7) & 3) {
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM1CNT_H >> 5) & 3) {
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			uint32_t di_value, c_value, transfer_value;
 			if(reason == 3)
 			{
@@ -10753,38 +10677,11 @@ void CPUCheckDMA(int reason, int dmamask)
 	// DMA 2
 	if((DM2CNT_H & 0x8000) && (dmamask & 4)) {
 		if(((DM2CNT_H >> 12) & 3) == reason) {
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
 			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM2CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM2CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM2CNT_H >> 7) & 3) {
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM2CNT_H >> 5) & 3) {
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			uint32_t di_value, c_value, transfer_value;
 			if(reason == 3)
 			{
@@ -10820,38 +10717,11 @@ void CPUCheckDMA(int reason, int dmamask)
 	// DMA 3
 	if((DM3CNT_H & 0x8000) && (dmamask & 8)) {
 		if(((DM3CNT_H >> 12) & 3) == reason) {
-#ifdef SWITCH_TO_ARRAYVAL
-			//TODO - Which is faster?
 			uint32_t sourceIncrement, destIncrement;
-			uint32_t arrayval[] = {4, (uint32_t)-4, 0, 4};
 			uint32_t condition1 = ((DM3CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM3CNT_H >> 5) & 3);
 			sourceIncrement = arrayval[condition1];
 			destIncrement = arrayval[condition2];
-#else
-			uint32_t sourceIncrement = 4;
-			uint32_t destIncrement = 4;
-			switch((DM3CNT_H >> 7) & 3) {
-				case 0:
-					break;
-				case 1:
-					sourceIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					sourceIncrement = 0;
-					break;
-			}
-			switch((DM3CNT_H >> 5) & 3) {
-				case 0:
-					break;
-				case 1:
-					destIncrement = (uint32_t)-4;
-					break;
-				case 2:
-					destIncrement = 0;
-					break;
-			}
-#endif
 			doDMA(dma3Source, dma3Dest, sourceIncrement, destIncrement,
 					DM3CNT_L ? DM3CNT_L : 0x10000,
 					DM3CNT_H & 0x0400);
