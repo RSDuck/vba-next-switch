@@ -6180,7 +6180,7 @@ static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, b
 	}
 }
 
-static u32 map_sizes_rot[] = { 128, 128, 256, 512, 1024 };
+static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
