@@ -160,10 +160,6 @@ static u16 IE;
 static u16 IF;
 static u16 IME;
 
-static uint16_t BG2PA    = 0x0100;
-static uint16_t BG2PB    = 0x0000;
-static uint16_t BG2PC    = 0x0000;
-static uint16_t BG2PD    = 0x0100;
 static uint16_t BG2X_L   = 0x0000;
 static uint16_t BG2X_H   = 0x0000;
 static uint16_t BG2Y_L   = 0x0000;
@@ -6327,29 +6323,29 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = BG2PA & 0x7FFF;
-	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = BG2PB & 0x7FFF;
-	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
 
-	int dy = BG2PC & 0x7FFF;
-	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = BG2PD & 0x7FFF;
-	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = BG2PA & 0x7FFF;
-	if(BG2PA & 0x8000)
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = BG2PB & 0x7FFF;
-	if(BG2PB & 0x8000)
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = BG2PC & 0x7FFF;
-	if(BG2PC & 0x8000)
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = BG2PD & 0x7FFF;
-	if(BG2PD & 0x8000)
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -6432,29 +6428,29 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = BG2PA & 0x7FFF;
-	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = BG2PB & 0x7FFF;
-	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
 
-	int dy = BG2PC & 0x7FFF;
-	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = BG2PD & 0x7FFF;
-	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = BG2PA & 0x7FFF;
-	if(BG2PA & 0x8000)
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = BG2PB & 0x7FFF;
-	if(BG2PB & 0x8000)
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = BG2PC & 0x7FFF;
-	if(BG2PC & 0x8000)
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = BG2PD & 0x7FFF;
-	if(BG2PD & 0x8000)
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -6539,29 +6535,29 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 		startY |= 0xF8000000;
 
 #ifdef BRANCHLESS_GBA_GFX
-	int dx = BG2PA & 0x7FFF;
-	dx |= isel(-(BG2PA & 0x8000), 0, 0xFFFF8000);
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
 
-	int dmx = BG2PB & 0x7FFF;
-	dmx |= isel(-(BG2PB & 0x8000), 0, 0xFFFF8000);
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
 
-	int dy = BG2PC & 0x7FFF;
-	dy |= isel(-(BG2PC & 0x8000), 0, 0xFFFF8000);
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
 
-	int dmy = BG2PD & 0x7FFF;
-	dmy |= isel(-(BG2PD & 0x8000), 0, 0xFFFF8000);
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
 #else
-	int dx = BG2PA & 0x7FFF;
-	if(BG2PA & 0x8000)
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
 		dx |= 0xFFFF8000;
-	int dmx = BG2PB & 0x7FFF;
-	if(BG2PB & 0x8000)
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
 		dmx |= 0xFFFF8000;
-	int dy = BG2PC & 0x7FFF;
-	if(BG2PC & 0x8000)
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
 		dy |= 0xFFFF8000;
-	int dmy = BG2PD & 0x7FFF;
-	if(BG2PD & 0x8000)
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
 		dmy |= 0xFFFF8000;
 #endif
 
@@ -7666,10 +7662,10 @@ static variable_desc saveGameStruct[] = {
 	{ &io_registers[REG_BG2VOFS]  , sizeof(uint16_t) },
 	{ &io_registers[REG_BG3HOFS]  , sizeof(uint16_t) },
 	{ &io_registers[REG_BG3VOFS]  , sizeof(uint16_t) },
-	{ &BG2PA    , sizeof(uint16_t) },
-	{ &BG2PB    , sizeof(uint16_t) },
-	{ &BG2PC    , sizeof(uint16_t) },
-	{ &BG2PD    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2PA]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2PB]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2PC]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG2PD]    , sizeof(uint16_t) },
 	{ &BG2X_L   , sizeof(uint16_t) },
 	{ &BG2X_H   , sizeof(uint16_t) },
 	{ &BG2Y_L   , sizeof(uint16_t) },
@@ -8610,7 +8606,7 @@ static void mode1RenderLine (void)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
 
@@ -8707,7 +8703,7 @@ static void mode1RenderLineNoWindow (void)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
 
@@ -8891,7 +8887,7 @@ static void mode1RenderLineAll (void)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
 				gfxBG2X, gfxBG2Y, changed, line[2]);
 	}
 
@@ -9036,7 +9032,7 @@ static void mode2RenderLine (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
 
@@ -9127,7 +9123,7 @@ static void mode2RenderLineNoWindow (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
 
@@ -9293,7 +9289,7 @@ static void mode2RenderLineAll (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				BG2PA, BG2PB, BG2PC, BG2PD, gfxBG2X, gfxBG2Y,
+				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
 				changed, line[2]);
 	}
 
@@ -10873,21 +10869,12 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			*address_lut[address] = value & 511;
 			UPDATE_REG(address, *address_lut[address]);
 			break;
-		case 0x20:
-			BG2PA = value;
-			UPDATE_REG(0x20, BG2PA);
-			break;
-		case 0x22:
-			BG2PB = value;
-			UPDATE_REG(0x22, BG2PB);
-			break;
-		case 0x24:
-			BG2PC = value;
-			UPDATE_REG(0x24, BG2PC);
-			break;
-		case 0x26:
-			BG2PD = value;
-			UPDATE_REG(0x26, BG2PD);
+		case 0x20: /* BG2PA */
+		case 0x22: /* BG2PB */
+		case 0x24: /* BG2PC */
+		case 0x26: /* BG2PD */
+			*address_lut[address] = value;
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x28:
 			BG2X_L = value;
@@ -11402,6 +11389,10 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	address_lut[0x1A] = &io_registers[REG_BG2VOFS];
 	address_lut[0x1C] = &io_registers[REG_BG3HOFS];
 	address_lut[0x1E] = &io_registers[REG_BG3VOFS];
+	address_lut[0x20] = &io_registers[REG_BG2PA];
+	address_lut[0x22] = &io_registers[REG_BG2PB];
+	address_lut[0x24] = &io_registers[REG_BG2PC];
+	address_lut[0x26] = &io_registers[REG_BG2PD];
 }
 
 void CPUReset (void)
@@ -11444,10 +11435,10 @@ void CPUReset (void)
 	io_registers[REG_BG2VOFS]  = 0x0000;
 	io_registers[REG_BG3HOFS]  = 0x0000;
 	io_registers[REG_BG3VOFS]  = 0x0000;
-	BG2PA    = 0x0100;
-	BG2PB    = 0x0000;
-	BG2PC    = 0x0000;
-	BG2PD    = 0x0100;
+	io_registers[REG_BG2PA]    = 0x0100;
+	io_registers[REG_BG2PB]    = 0x0000;
+	io_registers[REG_BG2PC]    = 0x0000;
+	io_registers[REG_BG2PD]    = 0x0100;
 	BG2X_L   = 0x0000;
 	BG2X_H   = 0x0000;
 	BG2Y_L   = 0x0000;
@@ -11541,8 +11532,8 @@ void CPUReset (void)
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
 	UPDATE_REG(0x00, io_registers[REG_DISPCNT]);
 	UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
-	UPDATE_REG(0x20, BG2PA);
-	UPDATE_REG(0x26, BG2PD);
+	UPDATE_REG(0x20, io_registers[REG_BG2PA]);
+	UPDATE_REG(0x26, io_registers[REG_BG2PD]);
 	UPDATE_REG(0x30, BG3PA);
 	UPDATE_REG(0x36, BG3PD);
 	UPDATE_REG(0x130, P1);
