@@ -173,8 +173,6 @@ static uint16_t WIN0H    = 0x0000;
 static uint16_t WIN1H    = 0x0000;
 static uint16_t WIN0V    = 0x0000;
 static uint16_t WIN1V    = 0x0000;
-static uint16_t WININ    = 0x0000;
-static uint16_t WINOUT   = 0x0000;
 static uint16_t BLDMOD   = 0x0000;
 static uint16_t COLEV    = 0x0000;
 static uint16_t COLY     = 0x0000;
@@ -7679,8 +7677,8 @@ static variable_desc saveGameStruct[] = {
 	{ &WIN1H    , sizeof(uint16_t) },
 	{ &WIN0V    , sizeof(uint16_t) },
 	{ &WIN1V    , sizeof(uint16_t) },
-	{ &WININ    , sizeof(uint16_t) },
-	{ &WINOUT   , sizeof(uint16_t) },
+	{ &io_registers[REG_WININ]    , sizeof(uint16_t) },
+	{ &io_registers[REG_WINOUT]   , sizeof(uint16_t) },
 	{ &MOSAIC   , sizeof(uint16_t) },
 	{ &BLDMOD   , sizeof(uint16_t) },
 	{ &COLEV    , sizeof(uint16_t) },
@@ -8441,9 +8439,9 @@ static void mode0RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -8451,7 +8449,7 @@ static void mode0RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -8890,9 +8888,9 @@ static void mode1RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -8900,7 +8898,7 @@ static void mode1RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9304,9 +9302,9 @@ static void mode2RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -9314,7 +9312,7 @@ static void mode2RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9609,9 +9607,9 @@ static void mode3RenderLineAll (void)
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	uint32_t background = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9621,7 +9619,7 @@ static void mode3RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9906,9 +9904,9 @@ static void mode4RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -9916,7 +9914,7 @@ static void mode4RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000))
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
 		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
@@ -10203,9 +10201,9 @@ static void mode5RenderLineAll (void)
 #endif
 	}
 
-	uint8_t inWin0Mask = WININ & 0xFF;
-	uint8_t inWin1Mask = WININ >> 8;
-	uint8_t outMask = WINOUT & 0xFF;
+	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
+	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
+	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
 
 	uint32_t background;
 	background = (READ16LE(&palette[0]) | 0x30000000);
@@ -10216,7 +10214,7 @@ static void mode5RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = WINOUT >> 8;
+			mask = io_registers[REG_WINOUT] >> 8;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -10947,13 +10945,10 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			WIN1V = value;
 			UPDATE_REG(0x46, WIN1V);
 			break;
-		case 0x48:
-			WININ = value & 0x3F3F;
-			UPDATE_REG(0x48, WININ);
-			break;
-		case 0x4A:
-			WINOUT = value & 0x3F3F;
-			UPDATE_REG(0x4A, WINOUT);
+		case 0x48: /* WININ */
+		case 0x4A: /* WINOUT */
+			*address_lut[address] = value & 0x3F3F;
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x4C:
 			MOSAIC = value;
@@ -11390,6 +11385,8 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	address_lut[0x22] = &io_registers[REG_BG2PB];
 	address_lut[0x24] = &io_registers[REG_BG2PC];
 	address_lut[0x26] = &io_registers[REG_BG2PD];
+	address_lut[0x48] = &io_registers[REG_WININ];
+	address_lut[0x4A] = &io_registers[REG_WINOUT];
 }
 
 void CPUReset (void)
@@ -11452,8 +11449,8 @@ void CPUReset (void)
 	WIN1H    = 0x0000;
 	WIN0V    = 0x0000;
 	WIN1V    = 0x0000;
-	WININ    = 0x0000;
-	WINOUT   = 0x0000;
+	io_registers[REG_WININ]    = 0x0000;
+	io_registers[REG_WINOUT]   = 0x0000;
 	MOSAIC   = 0x0000;
 	BLDMOD   = 0x0000;
 	COLEV    = 0x0000;
