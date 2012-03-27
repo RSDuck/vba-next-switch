@@ -155,16 +155,11 @@ static u16 TM2D;
 static u16 TM2CNT;
 static u16 TM3D;
 static u16 TM3CNT;
-static uint16_t P1       = 0xFFFF;
 
 static uint16_t BG2X_L   = 0x0000;
 static uint16_t BG2X_H   = 0x0000;
 static uint16_t BG2Y_L   = 0x0000;
 static uint16_t BG2Y_H   = 0x0000;
-static uint16_t BG3PA    = 0x0100;
-static uint16_t BG3PB    = 0x0000;
-static uint16_t BG3PC    = 0x0000;
-static uint16_t BG3PD    = 0x0100;
 static uint16_t BG3X_L   = 0x0000;
 static uint16_t BG3X_H   = 0x0000;
 static uint16_t BG3Y_L   = 0x0000;
@@ -7665,10 +7660,10 @@ static variable_desc saveGameStruct[] = {
 	{ &BG2X_H   , sizeof(uint16_t) },
 	{ &BG2Y_L   , sizeof(uint16_t) },
 	{ &BG2Y_H   , sizeof(uint16_t) },
-	{ &BG3PA    , sizeof(uint16_t) },
-	{ &BG3PB    , sizeof(uint16_t) },
-	{ &BG3PC    , sizeof(uint16_t) },
-	{ &BG3PD    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3PA]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3PB]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3PC]    , sizeof(uint16_t) },
+	{ &io_registers[REG_BG3PD]    , sizeof(uint16_t) },
 	{ &BG3X_L   , sizeof(uint16_t) },
 	{ &BG3X_H   , sizeof(uint16_t) },
 	{ &BG3Y_L   , sizeof(uint16_t) },
@@ -7715,7 +7710,7 @@ static variable_desc saveGameStruct[] = {
 	{ &TM2CNT   , sizeof(uint16_t) },
 	{ &TM3D     , sizeof(uint16_t) },
 	{ &TM3CNT   , sizeof(uint16_t) },
-	{ &P1       , sizeof(uint16_t) },
+	{ &io_registers[REG_P1]       , sizeof(uint16_t) },
 	{ &io_registers[REG_IE]       , sizeof(uint16_t) },
 	{ &io_registers[REG_IF]       , sizeof(uint16_t) },
 	{ &io_registers[REG_IME]      , sizeof(uint16_t) },
@@ -9039,7 +9034,7 @@ static void mode2RenderLine (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
-				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
+				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
 
@@ -9130,7 +9125,7 @@ static void mode2RenderLineNoWindow (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
-				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
+				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
 
@@ -9296,7 +9291,7 @@ static void mode2RenderLineAll (void)
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
-				BG3PA, BG3PB, BG3PC, BG3PD, gfxBG3X, gfxBG3Y,
+				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
 				changed, line[3]);
 	}
 
@@ -10891,21 +10886,12 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x2E, BG2Y_H);
 			gfxBG2Changed |= 2;
 			break;
-		case 0x30:
-			BG3PA = value;
-			UPDATE_REG(0x30, BG3PA);
-			break;
-		case 0x32:
-			BG3PB = value;
-			UPDATE_REG(0x32, BG3PB);
-			break;
-		case 0x34:
-			BG3PC = value;
-			UPDATE_REG(0x34, BG3PC);
-			break;
-		case 0x36:
-			BG3PD = value;
-			UPDATE_REG(0x36, BG3PD);
+		case 0x30: /* BG3PA */
+		case 0x32: /* BG3PB */
+		case 0x34: /* BG3PC */
+		case 0x36: /* BG3PD */
+			*address_lut[address] = value;
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x38:
 			BG3X_L = value;
@@ -11182,14 +11168,10 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			timerOnOffDelay|=8;
 			cpuNextEvent = cpuTotalTicks;
 			break;
-
-
-
 		case 0x130:
-			P1 |= (value & 0x3FF);
-			UPDATE_REG(0x130, P1);
+			io_registers[REG_P1] |= (value & 0x3FF);
+			UPDATE_REG(0x130, io_registers[REG_P1]);
 			break;
-
 		case 0x132:
 			UPDATE_REG(0x132, value & 0xC3FF);
 			break;
@@ -11387,6 +11369,10 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	address_lut[0x26] = &io_registers[REG_BG2PD];
 	address_lut[0x48] = &io_registers[REG_WININ];
 	address_lut[0x4A] = &io_registers[REG_WINOUT];
+	address_lut[0x30] = &io_registers[REG_BG3PA];
+	address_lut[0x32] = &io_registers[REG_BG3PB];
+	address_lut[0x34] = &io_registers[REG_BG3PC];
+	address_lut[0x36] = &io_registers[REG_BG3PD];
 }
 
 void CPUReset (void)
@@ -11437,10 +11423,10 @@ void CPUReset (void)
 	BG2X_H   = 0x0000;
 	BG2Y_L   = 0x0000;
 	BG2Y_H   = 0x0000;
-	BG3PA    = 0x0100;
-	BG3PB    = 0x0000;
-	BG3PC    = 0x0000;
-	BG3PD    = 0x0100;
+	io_registers[REG_BG3PA]    = 0x0100;
+	io_registers[REG_BG3PB]    = 0x0000;
+	io_registers[REG_BG3PC]    = 0x0000;
+	io_registers[REG_BG3PD]    = 0x0100;
 	BG3X_L   = 0x0000;
 	BG3X_H   = 0x0000;
 	BG3Y_L   = 0x0000;
@@ -11487,7 +11473,7 @@ void CPUReset (void)
 	TM2CNT   = 0x0000;
 	TM3D     = 0x0000;
 	TM3CNT   = 0x0000;
-	P1       = 0x03FF;
+	io_registers[REG_P1]       = 0x03FF;
 	io_registers[REG_IE]       = 0x0000;
 	io_registers[REG_IF]       = 0x0000;
 	io_registers[REG_IME]      = 0x0000;
@@ -11528,9 +11514,9 @@ void CPUReset (void)
 	UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
 	UPDATE_REG(0x20, io_registers[REG_BG2PA]);
 	UPDATE_REG(0x26, io_registers[REG_BG2PD]);
-	UPDATE_REG(0x30, BG3PA);
-	UPDATE_REG(0x36, BG3PD);
-	UPDATE_REG(0x130, P1);
+	UPDATE_REG(0x30, io_registers[REG_BG3PA]);
+	UPDATE_REG(0x36, io_registers[REG_BG3PD]);
+	UPDATE_REG(0x130, io_registers[REG_P1]);
 	UPDATE_REG(0x88, 0x200);
 
 	// disable FIQ
@@ -11816,13 +11802,13 @@ updateLoop:
 					if(io_registers[REG_VCOUNT] == 160)
 					{
 						/* update joystick information */
-						P1 = 0x03FF ^ (joy & 0x3FF);
+						io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
 #if 0
 						if(cpuEEPROMSensorEnabled)
 							systemUpdateMotionSensor();
 #endif
-						UPDATE_REG(0x130, P1);
-						uint16_t p1 = (0x3FF ^ P1) & 0x3FF;
+						UPDATE_REG(0x130, io_registers[REG_P1]);
+						uint16_t p1 = (0x3FF ^ io_registers[REG_P1]) & 0x3FF;
 						io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));
 						// this seems wrong, but there are cases where the game
 						// can enter the stop state without requesting an IRQ from
