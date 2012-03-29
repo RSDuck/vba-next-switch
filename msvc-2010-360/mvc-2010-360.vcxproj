@@ -217,6 +217,7 @@
       <PreprocessorDefinitions>NDEBUG;_XBOX;_LIB;__LIBSNES__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreschedulingOptimization>true</PreschedulingOptimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

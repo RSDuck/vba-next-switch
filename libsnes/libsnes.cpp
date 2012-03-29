@@ -9,7 +9,7 @@
 
 #define LIBSNES_CORE 1
 
-#if defined(_MSC_VER) && defined(LIBSNES_CORE)
+#if defined(_MSC_VER) && defined(LIBSNES_CORE) && !defined(_XBOX)
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT
