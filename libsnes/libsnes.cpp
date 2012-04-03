@@ -150,6 +150,7 @@ EXPORT void snes_set_environment(snes_environment_t cb)
 	dummy = 0;
 	cb(SNES_ENVIRONMENT_SET_BATCH_LOAD, &dummy);
 	cb(SNES_ENVIRONMENT_SET_ROM_FORMATS, (void*)"gba|GBA|zip|ZIP");
+	cb(SNES_ENVIRONMENT_SET_CORE_VERSION, (void*)"1.0.2");
 }
 static const char *full_path;
 
