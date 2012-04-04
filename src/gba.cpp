@@ -7382,19 +7382,16 @@ static INLINE void gfxDrawOBJWin (void)
 
 static INLINE u32 gfxIncreaseBrightness(u32 color, int coeff)
 {
-	color &= 0xffff;
-	color = ((color << 16) | color) & 0x3E07C1F;
+	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
 
-	color += (((0x3E07C1F - color) * coeff) >> 4);
-	color &= 0x3E07C1F;
+	color += ((((0x3E07C1F - color) * coeff) >> 4) & 0x3E07C1F);
 
 	return (color >> 16) | color;
 }
 
 static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
 {
-	color &= 0xffff;
-	color = ((color << 16) | color) & 0x3E07C1F;
+	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
 
 	color -= (((color * coeff) >> 4) & 0x3E07C1F);
 
@@ -7403,12 +7400,7 @@ static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
 
 static u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 {
-	color &= 0xffff;
-	color2 &= 0xffff;
-
-	color = ((color << 16) | color) & 0x03E07C1F;
-	color2 = ((color2 << 16) | color2) & 0x03E07C1F;
-	color = ((color * ca) + (color2 * cb)) >> 4;
+	color = ((((((color & 0xffff) << 16) | (color & 0xffff)) & 0x03E07C1F) * ca) + (((((color2 & 0xffff) << 16) | (color2 & 0xffff)) & 0x03E07C1F) * cb)) >> 4;
 
 	if ((ca + cb)>16)
 	{
@@ -7420,8 +7412,7 @@ static u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 			color |= 0x03E00000;
 	}
 
-	color &= 0x03E07C1F;
-	return ((color >> 16) | color);
+	return (((color & 0x03E07C1F) >> 16) | (color & 0x03E07C1F));
 }
 
 /*============================================================
