@@ -13,51 +13,52 @@ else ifneq ($(findstring win,$(shell uname -a)),)
 endif
 endif
 
-LIBSNES_DIR := libsnes
+LIBRETRO_DIR := libretro
+VBA_DIR := src
 
 ifeq ($(platform), unix)
-   TARGET := libsnes.so
+   TARGET := libretro.so
    fpic := -fPIC
-   SHARED := -shared -Wl,-version-script=$(LIBSNES_DIR)/link.T -Wl,-no-undefined
+   SHARED := -shared -Wl,-version-script=$(LIBRETRO_DIR)/link.T -Wl,-no-undefined
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), osx)
-   TARGET := libsnes.dylib
+   TARGET := libretro.dylib
    fpic := -fPIC
    SHARED := -dynamiclib
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), ps3)
-   TARGET := libsnes.a
+   TARGET := libretro.a
    CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), sncps3)
-   TARGET := libsnes.a
+   TARGET := libretro.a
    CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), xenon)
-   TARGET := libsnes.a
+   TARGET := libretro.a
    CC = xenon-gcc
    CXX = xenon-g++
    AR = xenon-ar
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), wii)
-   TARGET := libsnes.a
+   TARGET := libretro.a
    CC = powerpc-eabi-gcc
    CXX = powerpc-eabi-g++
    AR = powerpc-eabi-ar
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
-   TARGET := snes.dll
+   TARGET := libretro.dll
    CC = gcc
    CXX = g++
-   SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=$(LIBSNES_DIR)/link.T
+   SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=$(LIBRETRO_DIR)/link.T
    ENDIANNESS_DEFINES = -DLSB_FIRST
 endif
 
@@ -69,16 +70,14 @@ else
 	CXXFLAGS += -O3
 endif
 
-VBA_DIR := src
-LIBSNES_DIR := libsnes
 
-VBA_CXXSRCS := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBSNES_DIR)/libsnes.cpp
+VBA_CXXSRCS := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBRETRO_DIR)/libretro.cpp
 
 VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
 
 OBJS := $(VBA_CXXOBJ)
 
-VBA_DEFINES := -D__LIBSNES__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
+VBA_DEFINES := -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
 ifeq ($(platform), sncps3)
 CODE_DEFINES =

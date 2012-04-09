@@ -9,16 +9,16 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Source Files\libsnes">
+    <Filter Include="Source Files\libretro">
       <UniqueIdentifier>{d19de43b-0337-4673-9b9e-1892d348647d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\libsnes">
+    <Filter Include="Header Files\libretro">
       <UniqueIdentifier>{becd444c-3df5-4a9e-9885-8a181058095d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\libsnes\libsnes.cpp">
-      <Filter>Source Files\libsnes</Filter>
+    <ClCompile Include="..\libretro\libretro.cpp">
+      <Filter>Source Files\libretro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gba.cpp">
       <Filter>Source Files</Filter>
@@ -31,8 +31,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\libsnes\libsnes.hpp">
-      <Filter>Header Files\libsnes</Filter>
+    <ClInclude Include="..\libretro\libretro.hpp">
+      <Filter>Header Files\libretro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba.h">
       <Filter>Header Files</Filter>

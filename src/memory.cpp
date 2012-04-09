@@ -138,9 +138,9 @@ void utilReadDataMem(const uint8_t *& data, variable_desc *desc)
 #define FLASH_PROGRAM            8
 #define FLASH_SETBANK            9
 
-#ifdef __LIBSNES__
-extern uint8_t libsnes_save_buf[0x20000 + 0x2000];
-uint8_t *flashSaveMemory = libsnes_save_buf;
+#ifdef __LIBRETRO__
+extern uint8_t libretro_save_buf[0x20000 + 0x2000];
+uint8_t *flashSaveMemory = libretro_save_buf;
 #else
 uint8_t flashSaveMemory[FLASH_128K_SZ];
 #endif
@@ -161,9 +161,9 @@ static variable_desc flashSaveData3[] = {
   { NULL, 0 }
 };
 
-void flashInit()
+void flashInit (void)
 {
-#ifdef __LIBSNES__
+#ifdef __LIBRETRO__
 	memset(flashSaveMemory, 0xff, 0x20000);
 #else
 	memset(flashSaveMemory, 0xff, sizeof(flashSaveMemory));
@@ -352,10 +352,10 @@ int eepromByte = 0;
 int eepromBits = 0;
 int eepromAddress = 0;
 
-#ifdef __LIBSNES__
+#ifdef __LIBRETRO__
 // Workaround for broken-by-design GBA save semantics.
-extern u8 libsnes_save_buf[0x20000 + 0x2000];
-u8 *eepromData = libsnes_save_buf + 0x20000;
+extern u8 libretro_save_buf[0x20000 + 0x2000];
+u8 *eepromData = libretro_save_buf + 0x20000;
 #else
 u8 eepromData[0x2000];
 #endif
@@ -375,9 +375,9 @@ variable_desc eepromSaveData[] = {
   { NULL, 0 }
 };
 
-void eepromInit()
+void eepromInit (void)
 {
-#ifdef __LIBSNES__
+#ifdef __LIBRETRO__
 	memset(eepromData, 255, 0x2000);
 #else
 	memset(eepromData, 255, sizeof(eepromData));

@@ -27,13 +27,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\libsnes\libsnes.cpp" />
+    <ClCompile Include="..\libretro\libretro.cpp" />
     <ClCompile Include="..\src\gba.cpp" />
     <ClCompile Include="..\src\memory.cpp" />
     <ClCompile Include="..\src\sound.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\libsnes\libsnes.hpp" />
+    <ClInclude Include="..\libretro\libretro.hpp" />
     <ClInclude Include="..\src\gba.h" />
     <ClInclude Include="..\src\globals.h" />
     <ClInclude Include="..\src\memory.h" />
@@ -46,7 +46,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DB17AF79-EB79-4062-ACA8-F82864712DA0}</ProjectGuid>
     <Keyword>Xbox360Proj</Keyword>
-    <ProjectName>vba-next-libsnes-360</ProjectName>
+    <ProjectName>vba-next-libretro-360</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'" Label="Configuration">
@@ -98,22 +98,22 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CodeAnalysis|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile_FastCap|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
-    <OutputFile>$(OutDir)libsnes$(TargetExt)</OutputFile>
+    <OutputFile>$(OutDir)libretro$(TargetExt)</OutputFile>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">
     <ClCompile>
@@ -126,9 +126,9 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>_DEBUG;_XBOX;_LIB;;__LIBSNES__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_XBOX;_LIB;;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallAttributedProfiling>Callcap</CallAttributedProfiling>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -148,7 +148,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_DEBUG;_XBOX;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallAttributedProfiling>Callcap</CallAttributedProfiling>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -169,7 +169,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_XBOX;PROFILE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CallAttributedProfiling>Callcap</CallAttributedProfiling>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -193,7 +193,7 @@
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_XBOX;PROFILE;FASTCAP;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -214,8 +214,8 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>NDEBUG;_XBOX;_LIB;__LIBSNES__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_XBOX;_LIB;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreschedulingOptimization>true</PreschedulingOptimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
@@ -238,8 +238,8 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>NDEBUG;_XBOX;LTCG;_LIB;__LIBSNES__;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\libsnes;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_XBOX;LTCG;_LIB;__LIBRETRO__;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

@@ -13,13 +13,13 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\libsnes">
+    <Filter Include="Source Files\libretro">
       <UniqueIdentifier>{3ed03eb4-3d22-42ca-b2ab-1058e771db27}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\gba">
       <UniqueIdentifier>{b72b4e4d-41cc-47ac-ae75-05fc547fd36d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\libsnes">
+    <Filter Include="Header Files\libretro">
       <UniqueIdentifier>{01290b17-a062-4772-8a90-1fb347398419}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\gba">
@@ -30,8 +30,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\libsnes\libsnes.cpp">
-      <Filter>Source Files\libsnes</Filter>
+    <ClCompile Include="..\libretro\libretro.cpp">
+      <Filter>Source Files\libretro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gba\GBA.cpp">
       <Filter>Source Files\gba</Filter>
@@ -68,8 +68,8 @@
     <ClInclude Include="..\src\gba\Sound.h">
       <Filter>Header Files\gba</Filter>
     </ClInclude>
-    <ClInclude Include="..\libsnes\libsnes.hpp">
-      <Filter>Header Files\libsnes</Filter>
+    <ClInclude Include="..\libretro\libretro.hpp">
+      <Filter>Header Files\libretro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gba\sound_blargg.h">
       <Filter>Header Files\gba</Filter>

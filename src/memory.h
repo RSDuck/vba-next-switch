@@ -25,7 +25,7 @@ extern int flashSize;
 extern bool eepromInUse;
 extern int eepromSize;
 
-#ifdef __LIBSNES__
+#ifdef __LIBRETRO__
 extern uint8_t *flashSaveMemory;
 extern u8 *eepromData;
 #else

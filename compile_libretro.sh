@@ -1,5 +1,5 @@
 #!/bin/sh
-FORMAT=libsnes
+FORMAT=libretro
 START_DIR=`pwd`
 BUILD_DIR_EXECUTABLES=`pwd`/wii/pkg
 
@@ -9,17 +9,17 @@ BUILD_DIR_EXECUTABLES=`pwd`/wii/pkg
 
 function clean()
 {
-	make -f Makefile.libsnes clean
+	make -f Makefile.libretro clean
 }
 
-function make_libsnes()
+function make_libretro()
 {
-	make -f Makefile.libsnes
+	make -f Makefile.libretro
 }
 
-function make_libsnes_debug()
+function make_libretro_debug()
 {
-	make -f Makefile.libsnes DEBUG=1
+	make -f Makefile.libretro DEBUG=1
 }
 
 #******************
@@ -41,13 +41,13 @@ function display_clean()
 
 function display_make()
 {
-	echo "make           Compile libsnes library"
+	echo "make           Compile libretro library"
 }
 
 
 function display_make_debug()
 {
-	echo "make_debug     Compile DEBUG libsnes library "
+	echo "make_debug     Compile DEBUG libretro library "
 }
 
 function display_all_options()
@@ -59,7 +59,7 @@ function display_all_options()
 
 function display_usage()
 {
-	echo "Usage: compile_libsnes.sh [options]"
+	echo "Usage: compile_libretro.sh [options]"
 	echo "Options:"
 	display_all_options
 }
@@ -91,7 +91,7 @@ else
 			echo "DOING:"
 			display_make
 			echo "*************************************"
-			make_libsnes
+			make_libretro
 		fi
 		if [ "$i" = "make_debug" ]; then
 			echo ""
@@ -99,7 +99,7 @@ else
 			echo "DOING:"
 			display_make_debug
 			echo "*************************************"
-			make_libsnes_debug
+			make_libretro_debug
 		fi
 	done
 fi
