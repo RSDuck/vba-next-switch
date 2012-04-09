@@ -8209,35 +8209,36 @@ static void mode0RenderLine (void)
 		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[4][x];
 			top = 0x10;
+
+			if(color & 0x00010000) {
+				// semi-transparent OBJ
+				uint32_t back = backdrop;
+				uint8_t top2 = 0x20;
+
+				if((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[0][x];
+					top2 = 0x01;
+				}
+
+				if((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[1][x];
+					top2 = 0x02;
+				}
+
+				if((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[2][x];
+					top2 = 0x04;
+				}
+
+				if((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[3][x];
+					top2 = 0x08;
+				}
+
+				alpha_blend_brightness_switch();
+			}
 		}
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
-
-			if((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[0][x];
-				top2 = 0x01;
-			}
-
-			if((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[1][x];
-				top2 = 0x02;
-			}
-
-			if((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[2][x];
-				top2 = 0x04;
-			}
-
-			if((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[3][x];
-				top2 = 0x08;
-			}
-
-			alpha_blend_brightness_switch();
-		}
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
@@ -8625,38 +8626,39 @@ static void mode1RenderLine (void)
 			}else if(r == li4){
 				color = line[4][x];
 				top = 0x10;
-			}
-		}
+				if((color & 0x00010000))
+				{
+					// semi-transparent OBJ
+					uint32_t back = backdrop;
+					uint8_t top2 = 0x20;
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+					uint8_t li0 = (uint8_t)(line[0][x]>>24);
+					uint8_t li1 = (uint8_t)(line[1][x]>>24);
+					uint8_t li2 = (uint8_t)(line[2][x]>>24);
+					uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
-			uint8_t li0 = (uint8_t)(line[0][x]>>24);
-			uint8_t li1 = (uint8_t)(line[1][x]>>24);
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);
-			uint8_t r = 	(li1 < li0) ? (li1) : (li0);
+					if(li2 < r) {
+						r =  (li2);
+					}
 
-			if(li2 < r) {
-				r =  (li2);
-			}
+					if(r < (uint8_t)(back >> 24)) {
+						if(r == li0){
+							back = line[0][x];
+							top2 = 0x01;
+						}else if(r == li1){
+							back = line[1][x];
+							top2 = 0x02;
+						}else if(r == li2){
+							back = line[2][x];
+							top2 = 0x04;
+						}
+					}
 
-			if(r < (uint8_t)(back >> 24)) {
-				if(r == li0){
-					back = line[0][x];
-					top2 = 0x01;
-				}else if(r == li1){
-					back = line[1][x];
-					top2 = 0x02;
-				}else if(r == li2){
-					back = line[2][x];
-					top2 = 0x04;
+					alpha_blend_brightness_switch();
 				}
 			}
-
-			alpha_blend_brightness_switch();
 		}
+
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
@@ -9060,30 +9062,31 @@ static void mode2RenderLine (void)
 			}else if(r == li4){
 				color = line[4][x];
 				top = 0x10;
-			}
-		}
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+				if(color & 0x00010000) {
+					// semi-transparent OBJ
+					uint32_t back = backdrop;
+					uint8_t top2 = 0x20;
 
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);
-			uint8_t li3 = (uint8_t)(line[3][x]>>24);
-			uint8_t r = 	(li3 < li2) ? (li3) : (li2);
+					uint8_t li2 = (uint8_t)(line[2][x]>>24);
+					uint8_t li3 = (uint8_t)(line[3][x]>>24);
+					uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
-			if(r < (uint8_t)(back >> 24)) {
-				if(r == li2){
-					back = line[2][x];
-					top2 = 0x04;
-				}else if(r == li3){
-					back = line[3][x];
-					top2 = 0x08;
+					if(r < (uint8_t)(back >> 24)) {
+						if(r == li2){
+							back = line[2][x];
+							top2 = 0x04;
+						}else if(r == li3){
+							back = line[3][x];
+							top2 = 0x08;
+						}
+					}
+
+					alpha_blend_brightness_switch();
 				}
 			}
-
-			alpha_blend_brightness_switch();
 		}
+
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
@@ -9434,20 +9437,21 @@ static void mode3RenderLine (void)
 		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[4][x];
 			top = 0x10;
-		}
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			if(color & 0x00010000) {
+				// semi-transparent OBJ
+				uint32_t back = background;
+				uint8_t top2 = 0x20;
 
-			if(line[2][x] < background) {
-				back = line[2][x];
-				top2 = 0x04;
+				if(line[2][x] < background) {
+					back = line[2][x];
+					top2 = 0x04;
+				}
+
+				alpha_blend_brightness_switch();
 			}
-
-			alpha_blend_brightness_switch();
 		}
+
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
@@ -9728,20 +9732,21 @@ static void mode4RenderLine (void)
 		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[4][x];
 			top = 0x10;
-		}
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			if(color & 0x00010000) {
+				// semi-transparent OBJ
+				uint32_t back = backdrop;
+				uint8_t top2 = 0x20;
 
-			if(line[2][x] < backdrop) {
-				back = line[2][x];
-				top2 = 0x04;
+				if(line[2][x] < backdrop) {
+					back = line[2][x];
+					top2 = 0x04;
+				}
+
+				alpha_blend_brightness_switch();
 			}
-
-			alpha_blend_brightness_switch();
 		}
+
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
@@ -10025,20 +10030,21 @@ static void mode5RenderLine (void)
 		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[4][x];
 			top = 0x10;
-		}
 
-		if((top & 0x10) && (color & 0x00010000)) {
-			// semi-transparent OBJ
-			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			if(color & 0x00010000) {
+				// semi-transparent OBJ
+				uint32_t back = background;
+				uint8_t top2 = 0x20;
 
-			if(line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+				if(line[2][x] < back) {
+					back = line[2][x];
+					top2 = 0x04;
+				}
+
+				alpha_blend_brightness_switch();
 			}
-
-			alpha_blend_brightness_switch();
 		}
+
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
