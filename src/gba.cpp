@@ -7398,22 +7398,19 @@ static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
 	return (color >> 16) | color;
 }
 
-static u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
+static u32 AlphaClampLUT[64] = 
 {
-	color = ((((((color & 0xffff) << 16) | (color & 0xffff)) & 0x03E07C1F) * ca) + (((((color2 & 0xffff) << 16) | (color2 & 0xffff)) & 0x03E07C1F) * cb)) >> 4;
+ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+ 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+ 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,
+ 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F
+};  
 
-	if ((ca + cb)>16)
-	{
-		if (color & 0x20)
-			color |= 0x1f;
-		if (color & 0x8000)
-			color |= 0x7C00;
-		if (color & 0x4000000)
-			color |= 0x03E00000;
-	}
-
-	return (((color & 0x03E07C1F) >> 16) | (color & 0x03E07C1F));
-}
+#define GFX_ALPHA_BLEND(color, color2, ca, cb) \
+	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)]; \
+	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)]; \
+	int b = AlphaClampLUT[((((color >> 10) & 0x1F) * ca) >> 4) + ((((color2 >> 10) & 0x1F) * cb) >> 4)]; \
+	color = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
 
 /*============================================================
 	GBA.CPP
@@ -8150,8 +8147,11 @@ void doMirroring (bool b)
       }
 
 #define alpha_blend_brightness_switch() \
-      if(top2 & (BLDMOD>>8) && color < 0x80000000) \
-        color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
+      if(top2 & (BLDMOD>>8)) \
+	if(color < 0x80000000) \
+	{ \
+		GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
+	} \
       else if(BLDMOD & top) \
       { \
          brightness_switch(); \
@@ -8300,44 +8300,45 @@ static void mode0RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
-							if((line[0][x] < back) && (top != 0x01))
-							{
-								back = line[0][x];
-								top2 = 0x01;
-							}
-
-							if((line[1][x] < (back & 0xFF000000)) && (top != 0x02))
-							{
-								back = line[1][x];
-								top2 = 0x02;
-							}
-
-							if((line[2][x] < (back & 0xFF000000)) && (top != 0x04))
-							{
-								back = line[2][x];
-								top2 = 0x04;
-							}
-
-							if((line[3][x] < (back & 0xFF000000)) && (top != 0x08))
-							{
-								back = line[3][x];
-								top2 = 0x08;
-							}
-
-							if((line[4][x] < (back & 0xFF000000)) && (top != 0x10))
-							{
-								back = line[4][x];
-								top2 = 0x10;
-							}
-
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
-
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
+						if((line[0][x] < back) && (top != 0x01))
+						{
+							back = line[0][x];
+							top2 = 0x01;
 						}
+
+						if((line[1][x] < (back & 0xFF000000)) && (top != 0x02))
+						{
+							back = line[1][x];
+							top2 = 0x02;
+						}
+
+						if((line[2][x] < (back & 0xFF000000)) && (top != 0x04))
+						{
+							back = line[2][x];
+							top2 = 0x04;
+						}
+
+						if((line[3][x] < (back & 0xFF000000)) && (top != 0x08))
+						{
+							back = line[3][x];
+							top2 = 0x08;
+						}
+
+						if((line[4][x] < (back & 0xFF000000)) && (top != 0x10))
+						{
+							back = line[4][x];
+							top2 = 0x10;
+						}
+
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						}
+
 					}
 					break;
 				case 2:
@@ -8537,7 +8538,9 @@ static void mode0RenderLineAll (void)
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
-							color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						}
 					}
 					break;
 				case 2:
@@ -8727,33 +8730,34 @@ static void mode1RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[0][x];
-								top2 = 0x01;
-							}
+						if((top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[0][x];
+							top2 = 0x01;
+						}
 
-							if((top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[1][x];
-								top2 = 0x02;
-							}
+						if((top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[1][x];
+							top2 = 0x02;
+						}
 
-							if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -8940,33 +8944,34 @@ static void mode1RenderLineAll (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((mask & 1) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-								back = line[0][x];
-								top2 = 0x01;
-							}
+						if((mask & 1) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+							back = line[0][x];
+							top2 = 0x01;
+						}
 
-							if((mask & 2) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[1][x];
-								top2 = 0x02;
-							}
+						if((mask & 2) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[1][x];
+							top2 = 0x02;
+						}
 
-							if((mask & 4) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((mask & 4) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9154,28 +9159,29 @@ static void mode2RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[3][x];
-								top2 = 0x08;
-							}
+						if((top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[3][x];
+							top2 = 0x08;
+						}
 
-							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9343,28 +9349,29 @@ static void mode2RenderLineAll (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((mask & 4) && (top != 0x04) && line[2][x] < back) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((mask & 8) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[3][x];
-								top2 = 0x08;
-							}
+						if((mask & 8) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[3][x];
+							top2 = 0x08;
+						}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9488,25 +9495,26 @@ static void mode3RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = background;
-							uint8_t top2 = 0x20;
+						uint32_t back = background;
+						uint8_t top2 = 0x20;
 
-							if(top != 0x04 && (line[2][x] < background) ) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
-
-							if(top != 0x10 && ((uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24))) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
-
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
-
+						if(top != 0x04 && (line[2][x] < background) ) {
+							back = line[2][x];
+							top2 = 0x04;
 						}
+
+						if(top != 0x10 && ((uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24))) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
+
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						}
+
 					}
 					break;
 				case 2:
@@ -9639,23 +9647,24 @@ static void mode3RenderLineAll (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = background;
-							uint8_t top2 = 0x20;
+						uint32_t back = background;
+						uint8_t top2 = 0x20;
 
-							if((mask & 4) && (top != 0x04) && line[2][x] < back) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9782,24 +9791,24 @@ static void mode4RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((top != 0x04) && line[2][x] < backdrop) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((top != 0x04) && line[2][x] < backdrop) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
-
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -9935,23 +9944,24 @@ static void mode4RenderLineAll (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = backdrop;
-							uint8_t top2 = 0x20;
+						uint32_t back = backdrop;
+						uint8_t top2 = 0x20;
 
-							if((mask & 4) && (top != 0x04) && (line[2][x] < backdrop)) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((mask & 4) && (top != 0x04) && (line[2][x] < backdrop)) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -10078,25 +10088,26 @@ static void mode5RenderLineNoWindow (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = background;
-							uint8_t top2 = 0x20;
+						uint32_t back = background;
+						uint8_t top2 = 0x20;
 
-							if((top != 0x04) && line[2][x] < background) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
-
-							if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
-
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
-
+						if((top != 0x04) && line[2][x] < background) {
+							back = line[2][x];
+							top2 = 0x04;
 						}
+
+						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
+
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
+						}
+
 					}
 					break;
 				case 2:
@@ -10234,24 +10245,24 @@ static void mode5RenderLineAll (void)
 				case 0:
 					break;
 				case 1:
+					if(top & BLDMOD)
 					{
-						if(top & BLDMOD) {
-							uint32_t back = background;
-							uint8_t top2 = 0x20;
+						uint32_t back = background;
+						uint8_t top2 = 0x20;
 
-							if((mask & 4) && (top != 0x04) && (line[2][x] < background)) {
-								back = line[2][x];
-								top2 = 0x04;
-							}
+						if((mask & 4) && (top != 0x04) && (line[2][x] < background)) {
+							back = line[2][x];
+							top2 = 0x04;
+						}
 
-							if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-								back = line[4][x];
-								top2 = 0x10;
-							}
+						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[4][x];
+							top2 = 0x10;
+						}
 
-							if(top2 & (BLDMOD>>8) && color < 0x80000000)
-								color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
-
+						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						{
+							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
@@ -10613,14 +10624,18 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 
 	cpuDmaCount = 0;
 
-	int totalTicks = 0;
-
-	int32_t transfer32_mask = ((transfer32) | -(transfer32)) >> 31;
-	sw = ((((1+memoryWaitSeq32[sm & 15]) & transfer32_mask) | ((((1+memoryWaitSeq[sm & 15]))))));
-	dw = ((((1+memoryWaitSeq32[dm & 15]) & transfer32_mask) | ((((1+memoryWaitSeq[dm & 15]))))));
-	totalTicks = (((((sw+dw)*(sc-1) + 6 + memoryWait32[sm & 15] + memoryWaitSeq32[dm & 15]) & transfer32_mask)) | (((((sw+dw)*(sc-1) + 6 + memoryWait[sm & 15] + memoryWaitSeq[dm & 15]) & ~(transfer32_mask)))));
-
-	cpuDmaTicksToUpdate += totalTicks;
+	if(transfer32)
+	{
+		sw = 1+memoryWaitSeq32[sm & 15];
+		dw = 1+memoryWaitSeq32[dm & 15];
+		cpuDmaTicksToUpdate += (sw+dw)*(sc-1) + 6 + memoryWait32[sm & 15] + memoryWaitSeq32[dm & 15];
+	}
+	else
+	{
+		sw = 1+memoryWaitSeq[sm & 15];
+		dw = 1+memoryWaitSeq[dm & 15];
+		cpuDmaTicksToUpdate += (sw+dw)*(sc-1) + 6 + memoryWait[sm & 15] + memoryWaitSeq[dm & 15];
+	}
 }
 
 
@@ -10808,9 +10823,8 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				}
 				CPUUpdateRender();
 				// we only care about changes in BG0-BG3
-				if(changeBG) {
-					// CPU Update Render Buffers set to false
-					//CPUUpdateRenderBuffers(false);
+				if(changeBG)
+				{
 					if(!(graphics.layerEnable & 0x0100))
 						memset(line[0], -1, 240 * sizeof(u32));
 					if(!(graphics.layerEnable & 0x0200))
