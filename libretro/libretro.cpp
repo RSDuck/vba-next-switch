@@ -359,6 +359,7 @@ static bool can_dupe;
 
 EXPORT void retro_run(void)
 {
+#if 0
    static bool first = true;
    if (first)
    {
@@ -366,6 +367,7 @@ EXPORT void retro_run(void)
       environ_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
       first = false;
    }
+#endif
 
    CPULoop();
 
