@@ -158,6 +158,8 @@ EXPORT void retro_get_system_av_info(struct retro_system_av_info *info)
 EXPORT void retro_init(void)
 {
    memset(libretro_save_buf, 0xff, sizeof(libretro_save_buf));
+   adjust_save_ram();
+   environ_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
 }
 
 static unsigned serialize_size = 0;
@@ -362,15 +364,6 @@ static bool can_dupe;
 
 EXPORT void retro_run(void)
 {
-#if 0
-   static bool first = true;
-   if (first)
-   {
-      adjust_save_ram();
-      environ_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
-      first = false;
-   }
-#endif
 
    CPULoop();
 
