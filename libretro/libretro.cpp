@@ -29,6 +29,8 @@ static retro_video_refresh_t video_cb;
 static retro_input_poll_t poll_cb;
 static retro_input_state_t input_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
+static retro_environment_t environ_cb;
+
 extern uint64_t joy;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
@@ -128,10 +130,11 @@ EXPORT void retro_set_input_state(retro_input_state_t cb)
 EXPORT void retro_set_controller_port_device(unsigned port, unsigned device)
 { }
 
-static retro_environment_t environ_cb;
 
 EXPORT void retro_set_environment(retro_environment_t cb)
-{ }
+{
+   environ_cb = cb;
+}
 
 EXPORT void retro_get_system_info(struct retro_system_info *info)
 {
