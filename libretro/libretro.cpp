@@ -32,6 +32,7 @@ static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 
 extern uint64_t joy;
+static bool can_dupe;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
 
@@ -45,7 +46,7 @@ EXPORT void *retro_get_memory_data(unsigned id)
    return libretro_save_buf;
 }
 
-EXPORT unsigned retro_get_memory_size(unsigned id)
+EXPORT size_t retro_get_memory_size(unsigned id)
 {
    if (id != RETRO_MEMORY_SAVE_RAM)
       return 0;
@@ -360,7 +361,6 @@ EXPORT void retro_reset(void)
    CPUReset();
 }
 
-static bool can_dupe;
 
 EXPORT void retro_run(void)
 {
@@ -390,8 +390,7 @@ EXPORT void retro_run(void)
    joy = J;
 }
 
-
-EXPORT unsigned retro_serialize_size(void)
+EXPORT size_t retro_serialize_size(void)
 {
    return serialize_size;
 }
