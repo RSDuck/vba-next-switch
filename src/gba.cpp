@@ -5952,15 +5952,19 @@ static int thumbExecute (void)
 
 		clockTicks = 0;
 
-		//if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
-		//    bus.busPrefetchCount=0x100;
+#if 0
+		if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
+		   bus.busPrefetchCount=0x100;
+#endif
 
 		u32 opcode = cpuPrefetch[0];
 		cpuPrefetch[0] = cpuPrefetch[1];
 
 		bus.busPrefetch = false;
+#if 0
 		if (bus.busPrefetchCount & 0xFFFFFF00)
 			bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
+#endif
 
 		u32 oldArmNextPC = bus.armNextPC;
 
