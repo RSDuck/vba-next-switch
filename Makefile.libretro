@@ -55,7 +55,7 @@ else ifeq ($(platform), wii)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
-   TARGET := libretro.dll
+   TARGET := retro.dll
    CC = gcc
    CXX = g++
    SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=$(LIBRETRO_DIR)/link.T
