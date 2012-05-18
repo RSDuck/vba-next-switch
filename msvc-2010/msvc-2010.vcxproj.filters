@@ -16,9 +16,6 @@
     <Filter Include="Source Files\libretro">
       <UniqueIdentifier>{3ed03eb4-3d22-42ca-b2ab-1058e771db27}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\gba">
-      <UniqueIdentifier>{b72b4e4d-41cc-47ac-ae75-05fc547fd36d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\libretro">
       <UniqueIdentifier>{01290b17-a062-4772-8a90-1fb347398419}</UniqueIdentifier>
     </Filter>
@@ -33,17 +30,14 @@
     <ClCompile Include="..\libretro\libretro.cpp">
       <Filter>Source Files\libretro</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gba\GBA.cpp">
-      <Filter>Source Files\gba</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gba\Sound.cpp">
-      <Filter>Source Files\gba</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\Util.cpp">
+    <ClCompile Include="..\src\sound.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gba\Memory.cpp">
-      <Filter>Source Files\gba</Filter>
+    <ClCompile Include="..\src\gba.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\memory.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
