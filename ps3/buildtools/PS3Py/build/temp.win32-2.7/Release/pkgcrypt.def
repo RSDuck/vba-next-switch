@@ -1,3 +1,0 @@
-LIBRARY pkgcrypt.pyd
-EXPORTS
-initpkgcrypt
