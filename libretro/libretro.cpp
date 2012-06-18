@@ -9,13 +9,13 @@
 
 #include "libretro.hpp"
 
-#include "system.h"
-#include "port.h"
-#include "types.h"
-#include "gba.h"
-#include "memory.h"
-#include "sound.h"
-#include "globals.h"
+#include "../src/system.h"
+#include "../src/port.h"
+#include "../src/types.h"
+#include "../src/gba.h"
+#include "../src/memory.h"
+#include "../src/sound.h"
+#include "../src/globals.h"
 
 static retro_video_refresh_t video_cb;
 static retro_input_poll_t poll_cb;
