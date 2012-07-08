@@ -1,242 +1,223 @@
-<?xml version="1.0" encoding="Windows-1252"?>
+<?xml version="1.0" encoding="windows-1250"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.10"
-	Name="vba-next-libretro-xbox1"
-	ProjectGUID="{881F0BE9-3762-4BEC-8706-C0C3F360F5D0}"
-	RootNamespace="vba-next-libretro-xbox1"
+	Name="vbanext-msvc2003-xbox1"
+	ProjectGUID="{BDCB70E0-EEBB-404A-9874-9A2E22A4A2B3}"
 	Keyword="XboxProj">
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Xbox"/>
 	</Platforms>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
+			Name="Debug|Xbox"
 			OutputDirectory="Debug"
 			IntermediateDirectory="Debug"
-			ConfigurationType="1">
+			ConfigurationType="4"
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
-				PreprocessorDefinitions="LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
+				OptimizeForProcessor="2"
+				PreprocessorDefinitions="_DEBUG;_XBOX;_XBOX1;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
 				EnableEnhancedInstructionSet="1"
-				UsePrecompiledHeader="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/$(ProjectName).pch"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="4"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCLinkerTool"
-				GenerateDebugInformation="TRUE"
-				SubSystem="2"
-				TargetMachine="1"/>
-			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)/libretro_xdk.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
-			Name="Profile|Win32"
+			Name="Profile|Xbox"
 			OutputDirectory="Profile"
 			IntermediateDirectory="Profile"
-			ConfigurationType="1">
+			ConfigurationType="4"
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
-				PreprocessorDefinitions="LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
+				OptimizeForProcessor="2"
+				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;PROFILE;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				StringPooling="TRUE"
+				RuntimeLibrary="0"
 				BufferSecurityCheck="TRUE"
 				EnableFunctionLevelLinking="TRUE"
 				EnableEnhancedInstructionSet="1"
-				UsePrecompiledHeader="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/$(ProjectName).pch"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCLinkerTool"
-				GenerateDebugInformation="TRUE"
-				SubSystem="2"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="1"/>
-			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)/libretro_xdk.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
-			Name="Profile_FastCap|Win32"
+			Name="Profile_FastCap|Xbox"
 			OutputDirectory="Profile_FastCap"
 			IntermediateDirectory="Profile_FastCap"
-			ConfigurationType="1">
+			ConfigurationType="4"
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				OmitFramePointers="TRUE"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
-				PreprocessorDefinitions="LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
+				OptimizeForProcessor="2"
+				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;PROFILE;FASTCAP;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				StringPooling="TRUE"
+				RuntimeLibrary="0"
+				BufferSecurityCheck="TRUE"
 				EnableFunctionLevelLinking="TRUE"
 				EnableEnhancedInstructionSet="1"
-				UsePrecompiledHeader="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/$(ProjectName).pch"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"
+				FastCAP="TRUE"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)/libretro_xdk.lib"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Xbox"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="4"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="3"
+				OmitFramePointers="TRUE"
+				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="$(ProjectDir)"
+				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
+				StringPooling="TRUE"
+				RuntimeLibrary="0"
+				BufferSecurityCheck="TRUE"
+				EnableFunctionLevelLinking="TRUE"
+				EnableEnhancedInstructionSet="1"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/$(ProjectName).pch"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCLinkerTool"/>
-			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)/libretro_xdk.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
-			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="4">
+			Name="Release_LTCG|Xbox"
+			OutputDirectory="Release_LTCG"
+			IntermediateDirectory="Release_LTCG"
+			ConfigurationType="4"
+			CharacterSet="2"
+			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
-				PreprocessorDefinitions="LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="/>
+				Optimization="3"
+				OmitFramePointers="TRUE"
+				OptimizeForProcessor="2"
+				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;LTCG;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
+				StringPooling="TRUE"
+				RuntimeLibrary="0"
+				BufferSecurityCheck="TRUE"
+				EnableFunctionLevelLinking="TRUE"
+				EnableEnhancedInstructionSet="1"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/$(ProjectName).pch"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCLibrarianTool"/>
-			<Tool
-				Name="VCMIDLTool"/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="Release_LTCG|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="1">
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
-				PreprocessorDefinitions="LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"/>
-			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)/libretro_xdk.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
 				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 	</Configurations>
 	<References>
 	</References>
 	<Files>
 		<Filter
-			Name="src"
-			Filter="">
-			<File
-				RelativePath="..\src\gba.cpp">
-			</File>
-			<File
-				RelativePath="..\src\memory.cpp">
-			</File>
-			<File
-				RelativePath="..\src\sound.cpp">
-			</File>
+			Name="Source Files"
+			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
+			<Filter
+				Name="libretro"
+				Filter="">
+				<File
+					RelativePath="..\libretro\libretro.cpp">
+				</File>
+			</Filter>
+			<Filter
+				Name="src"
+				Filter="">
+				<File
+					RelativePath="..\src\gba.cpp">
+				</File>
+				<File
+					RelativePath="..\src\memory.cpp">
+				</File>
+				<File
+					RelativePath="..\src\sound.cpp">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
-			Name="libretro"
-			Filter="">
-			<File
-				RelativePath="..\libretro\libretro.cpp">
-			</File>
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 		</Filter>
+		<File
+			RelativePath=".\ReadMe.txt">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
