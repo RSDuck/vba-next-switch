@@ -147,14 +147,6 @@ typedef enum
 static uint16_t io_registers[1024 * 16];
 
 static u16 MOSAIC;
-static u16 TM0D;
-static u16 TM0CNT;
-static u16 TM1D;
-static u16 TM1CNT;
-static u16 TM2D;
-static u16 TM2CNT;
-static u16 TM3D;
-static u16 TM3CNT;
 
 static uint16_t BG2X_L   = 0x0000;
 static uint16_t BG2X_H   = 0x0000;
@@ -164,10 +156,6 @@ static uint16_t BG3X_L   = 0x0000;
 static uint16_t BG3X_H   = 0x0000;
 static uint16_t BG3Y_L   = 0x0000;
 static uint16_t BG3Y_H   = 0x0000;
-static uint16_t WIN0H    = 0x0000;
-static uint16_t WIN1H    = 0x0000;
-static uint16_t WIN0V    = 0x0000;
-static uint16_t WIN1V    = 0x0000;
 static uint16_t BLDMOD   = 0x0000;
 static uint16_t COLEV    = 0x0000;
 static uint16_t COLY     = 0x0000;
@@ -384,6 +372,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 	switch(address >> 24)
 	{
 		case 0:
+			/* BIOS */
 			if(bus.reg[15].I >> 24)
 			{
 				if(address < 0x4000)
@@ -393,13 +382,16 @@ static INLINE u32 CPUReadMemory(u32 address)
 			else
 				value = READ32LE(((u32 *)&bios[address & 0x3FFC]));
 			break;
-		case 2:
+		case 0x02:
+			/* external work RAM */
 			value = READ32LE(((u32 *)&workRAM[address & 0x3FFFC]));
 			break;
-		case 3:
+		case 0x03:
+			/* internal work RAM */
 			value = READ32LE(((u32 *)&internalRAM[address & 0x7ffC]));
 			break;
-		case 4:
+		case 0x04:
+			/* I/O registers */
 			if((address < 0x4000400) && ioReadable[address & 0x3fc])
 			{
 				if(ioReadable[(address & 0x3fc) + 2])
@@ -410,10 +402,12 @@ static INLINE u32 CPUReadMemory(u32 address)
 			else
 				goto unreadable;
 			break;
-		case 5:
+		case 0x05:
+			/* palette RAM */
 			value = READ32LE(((u32 *)&graphics.paletteRAM[address & 0x3fC]));
 			break;
-		case 6:
+		case 0x06:
+			/* VRAM */
 			address = (address & 0x1fffc);
 			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
 			{
@@ -424,17 +418,19 @@ static INLINE u32 CPUReadMemory(u32 address)
 				address &= 0x17fff;
 			value = READ32LE(((u32 *)&vram[address]));
 			break;
-		case 7:
+		case 0x07:
+			/* OAM RAM */
 			value = READ32LE(((u32 *)&oam[address & 0x3FC]));
 			break;
-		case 8:
-		case 9:
-		case 10:
-		case 11:
-		case 12:
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0B: 
+		case 0x0C: 
+			/* gamepak ROM */
 			value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
 			break;
-		case 13:
+		case 0x0D:
 			if(cpuEEPROMEnabled)
 				return eepromRead();	// no need to swap this
 			goto unreadable;
@@ -492,13 +488,13 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 					if (((address & 0x3fe) == 0x100) && timer0On)
 						value = 0xFFFF - ((timer0Ticks-cpuTotalTicks) >> timer0ClockReload);
 					else
-						if (((address & 0x3fe) == 0x104) && timer1On && !(TM1CNT & 4))
+						if (((address & 0x3fe) == 0x104) && timer1On && !(io_registers[REG_TM1CNT] & 4))
 							value = 0xFFFF - ((timer1Ticks-cpuTotalTicks) >> timer1ClockReload);
 						else
-							if (((address & 0x3fe) == 0x108) && timer2On && !(TM2CNT & 4))
+							if (((address & 0x3fe) == 0x108) && timer2On && !(io_registers[REG_TM2CNT] & 4))
 								value = 0xFFFF - ((timer2Ticks-cpuTotalTicks) >> timer2ClockReload);
 							else
-								if (((address & 0x3fe) == 0x10C) && timer3On && !(TM3CNT & 4))
+								if (((address & 0x3fe) == 0x10C) && timer3On && !(io_registers[REG_TM3CNT] & 4))
 									value = 0xFFFF - ((timer3Ticks-cpuTotalTicks) >> timer3ClockReload);
 				}
 			}
@@ -7660,10 +7656,10 @@ static variable_desc saveGameStruct[] = {
 	{ &BG3X_H   , sizeof(uint16_t) },
 	{ &BG3Y_L   , sizeof(uint16_t) },
 	{ &BG3Y_H   , sizeof(uint16_t) },
-	{ &WIN0H    , sizeof(uint16_t) },
-	{ &WIN1H    , sizeof(uint16_t) },
-	{ &WIN0V    , sizeof(uint16_t) },
-	{ &WIN1V    , sizeof(uint16_t) },
+	{ &io_registers[REG_WIN0H]    , sizeof(uint16_t) },
+	{ &io_registers[REG_WIN1H]    , sizeof(uint16_t) },
+	{ &io_registers[REG_WIN0V]    , sizeof(uint16_t) },
+	{ &io_registers[REG_WIN1V]    , sizeof(uint16_t) },
 	{ &io_registers[REG_WININ]    , sizeof(uint16_t) },
 	{ &io_registers[REG_WINOUT]   , sizeof(uint16_t) },
 	{ &MOSAIC   , sizeof(uint16_t) },
@@ -7694,14 +7690,14 @@ static variable_desc saveGameStruct[] = {
 	{ &DM3DAD_H , sizeof(uint16_t) },
 	{ &DM3CNT_L , sizeof(uint16_t) },
 	{ &DM3CNT_H , sizeof(uint16_t) },
-	{ &TM0D     , sizeof(uint16_t) },
-	{ &TM0CNT   , sizeof(uint16_t) },
-	{ &TM1D     , sizeof(uint16_t) },
-	{ &TM1CNT   , sizeof(uint16_t) },
-	{ &TM2D     , sizeof(uint16_t) },
-	{ &TM2CNT   , sizeof(uint16_t) },
-	{ &TM3D     , sizeof(uint16_t) },
-	{ &TM3CNT   , sizeof(uint16_t) },
+	{ &io_registers[REG_TM0D]     , sizeof(uint16_t) },
+	{ &io_registers[REG_TM0CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_TM1D]     , sizeof(uint16_t) },
+	{ &io_registers[REG_TM1CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_TM2D]     , sizeof(uint16_t) },
+	{ &io_registers[REG_TM2CNT]   , sizeof(uint16_t) },
+	{ &io_registers[REG_TM3D]     , sizeof(uint16_t) },
+	{ &io_registers[REG_TM3CNT]   , sizeof(uint16_t) },
 	{ &io_registers[REG_P1]       , sizeof(uint16_t) },
 	{ &io_registers[REG_IE]       , sizeof(uint16_t) },
 	{ &io_registers[REG_IF]       , sizeof(uint16_t) },
@@ -7756,13 +7752,13 @@ static INLINE int CPUUpdateTicks (void)
 	if(timer0On && (timer0Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer0Ticks;
 
-	if(timer1On && !(TM1CNT & 4) && (timer1Ticks < cpuLoopTicks))
+	if(timer1On && !(io_registers[REG_TM1CNT] & 4) && (timer1Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer1Ticks;
 
-	if(timer2On && !(TM2CNT & 4) && (timer2Ticks < cpuLoopTicks))
+	if(timer2On && !(io_registers[REG_TM2CNT] & 4) && (timer2Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer2Ticks;
 
-	if(timer3On && !(TM3CNT & 4) && (timer3Ticks < cpuLoopTicks))
+	if(timer3On && !(io_registers[REG_TM3CNT] & 4) && (timer3Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer3Ticks;
 
 #ifdef USE_SWITICKS
@@ -7784,8 +7780,8 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow0() \
 { \
-  int x00_window0 = WIN0H>>8; \
-  int x01_window0 = WIN0H & 255; \
+  int x00_window0 = io_registers[REG_WIN0H] >>8; \
+  int x01_window0 = io_registers[REG_WIN0H] & 255; \
   int x00_lte_x01 = x00_window0 <= x01_window0; \
   for(int i = 0; i < 240; i++) \
       gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
@@ -7793,8 +7789,8 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow1() \
 { \
-  int x00_window1 = WIN1H>>8; \
-  int x01_window1 = WIN1H & 255; \
+  int x00_window1 = io_registers[REG_WIN1H]>>8; \
+  int x01_window1 = io_registers[REG_WIN1H] & 255; \
   int x00_lte_x01 = x00_window1 <= x01_window1; \
   for(int i = 0; i < 240; i++) \
    gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
@@ -8400,8 +8396,8 @@ static void mode0RenderLineAll (void)
 	bool inWindow1 = false;
 
 	if(graphics.layerEnable & 0x2000) {
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
@@ -8409,8 +8405,8 @@ static void mode0RenderLineAll (void)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 	if(graphics.layerEnable & 0x4000) {
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
 			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
@@ -8833,8 +8829,8 @@ static void mode1RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x2000)
 	{
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -8849,8 +8845,8 @@ static void mode1RenderLineAll (void)
 	}
 	if(graphics.layerEnable & 0x4000)
 	{
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9244,8 +9240,8 @@ static void mode2RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x2000)
 	{
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9260,8 +9256,8 @@ static void mode2RenderLineAll (void)
 	}
 	if(graphics.layerEnable & 0x4000)
 	{
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9566,8 +9562,8 @@ static void mode3RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x2000)
 	{
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9583,8 +9579,8 @@ static void mode3RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x4000)
 	{
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9862,8 +9858,8 @@ static void mode4RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x2000)
 	{
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9879,8 +9875,8 @@ static void mode4RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x4000)
 	{
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10176,8 +10172,8 @@ static void mode5RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x2000)
 	{
-		uint8_t v0 = WIN0V >> 8;
-		uint8_t v1 = WIN0V & 255;
+		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10193,8 +10189,8 @@ static void mode5RenderLineAll (void)
 
 	if(graphics.layerEnable & 0x4000)
 	{
-		uint8_t v0 = WIN1V >> 8;
-		uint8_t v1 = WIN1V & 255;
+		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
+		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10765,8 +10761,10 @@ void CPUCheckDMA(int reason, int dmamask)
 	}
 
 	// DMA 3
-	if((DM3CNT_H & 0x8000) && (dmamask & 8)) {
-		if(((DM3CNT_H >> 12) & 3) == reason) {
+	if((DM3CNT_H & 0x8000) && (dmamask & 8))
+	{
+		if(((DM3CNT_H >> 12) & 3) == reason)
+		{
 			uint32_t sourceIncrement, destIncrement;
 			uint32_t condition1 = ((DM3CNT_H >> 7) & 3);
 			uint32_t condition2 = ((DM3CNT_H >> 5) & 3);
@@ -10800,8 +10798,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 	switch(address)
 	{
 		case 0x00:
-			{ // we need to place the following code in { } because we declare & initialize variables in a case statement
-
+			{
 				if((value & 7) > 5) // display modes above 0-5 are prohibited
 					io_registers[REG_DISPCNT] = (value & 7);
 
@@ -10929,22 +10926,19 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			gfxBG3Changed |= 2;
 			break;
 		case 0x40:
-			WIN0H = value;
-			UPDATE_REG(0x40, WIN0H);
+			io_registers[REG_WIN0H] = value;
+			UPDATE_REG(0x40, io_registers[REG_WIN0H]);
 			CPUUpdateWindow0();
 			break;
 		case 0x42:
-			WIN1H = value;
-			UPDATE_REG(0x42, WIN1H);
+			io_registers[REG_WIN1H] = value;
+			UPDATE_REG(0x42, io_registers[REG_WIN1H]);
 			CPUUpdateWindow1();
 			break;
 		case 0x44:
-			WIN0V = value;
-			UPDATE_REG(0x44, WIN0V);
-			break;
 		case 0x46:
-			WIN1V = value;
-			UPDATE_REG(0x46, WIN1V);
+			*address_lut[address] = value;
+			UPDATE_REG(address, *address_lut[address]);
 			break;
 		case 0x48: /* WININ */
 		case 0x4A: /* WINOUT */
@@ -11388,6 +11382,10 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 	address_lut[0x32] = &io_registers[REG_BG3PB];
 	address_lut[0x34] = &io_registers[REG_BG3PC];
 	address_lut[0x36] = &io_registers[REG_BG3PD];
+        address_lut[0x40] = &io_registers[REG_WIN0H];
+        address_lut[0x42] = &io_registers[REG_WIN1H];
+        address_lut[0x44] = &io_registers[REG_WIN0V];
+        address_lut[0x46] = &io_registers[REG_WIN1V];
 }
 
 void CPUReset (void)
@@ -11446,10 +11444,10 @@ void CPUReset (void)
 	BG3X_H   = 0x0000;
 	BG3Y_L   = 0x0000;
 	BG3Y_H   = 0x0000;
-	WIN0H    = 0x0000;
-	WIN1H    = 0x0000;
-	WIN0V    = 0x0000;
-	WIN1V    = 0x0000;
+	io_registers[REG_WIN0H]    = 0x0000;
+	io_registers[REG_WIN1H]    = 0x0000;
+	io_registers[REG_WIN0V]    = 0x0000;
+	io_registers[REG_WIN1V]    = 0x0000;
 	io_registers[REG_WININ]    = 0x0000;
 	io_registers[REG_WINOUT]   = 0x0000;
 	MOSAIC   = 0x0000;
@@ -11480,14 +11478,14 @@ void CPUReset (void)
 	DM3DAD_H = 0x0000;
 	DM3CNT_L = 0x0000;
 	DM3CNT_H = 0x0000;
-	TM0D     = 0x0000;
-	TM0CNT   = 0x0000;
-	TM1D     = 0x0000;
-	TM1CNT   = 0x0000;
-	TM2D     = 0x0000;
-	TM2CNT   = 0x0000;
-	TM3D     = 0x0000;
-	TM3CNT   = 0x0000;
+	io_registers[REG_TM0D]     = 0x0000;
+	io_registers[REG_TM0CNT]   = 0x0000;
+	io_registers[REG_TM1D]     = 0x0000;
+	io_registers[REG_TM1CNT]   = 0x0000;
+	io_registers[REG_TM2D]     = 0x0000;
+	io_registers[REG_TM2CNT]   = 0x0000;
+	io_registers[REG_TM3D]     = 0x0000;
+	io_registers[REG_TM3CNT]   = 0x0000;
 	io_registers[REG_P1]       = 0x03FF;
 	io_registers[REG_IE]       = 0x0000;
 	io_registers[REG_IF]       = 0x0000;
@@ -11727,17 +11725,23 @@ void CPULoop (void)
 		cpuNextEvent = ticks;
 
 
-	do {
-		if(!holdState) {
-			if(armState) {
+	do
+	{
+		if(!holdState)
+		{
+			if(armState)
+			{
 				if (!armExecute())
 					return;
-			} else {
+			}
+			else
+			{
 				if (!thumbExecute())
 					return;
 			}
 			clockTicks = 0;
-		} else
+		}
+		else
 			clockTicks = CPUUpdateTicks();
 
 		cpuTotalTicks += clockTicks;
@@ -11768,7 +11772,6 @@ updateLoop:
 			}
 
 			graphics.lcdTicks -= clockTicks;
-
 
 			if(graphics.lcdTicks <= 0)
 			{
@@ -11893,7 +11896,8 @@ updateLoop:
 			// if sound is disabled, so in stop state, soundTick will just produce
 			// mute sound
 			soundTicks -= clockTicks;
-			if(!soundTicks) {
+			if(!soundTicks)
+			{
 				process_sound_tick_fn();
 				soundTicks += SOUND_CLOCK_TICKS;
 			}
@@ -11905,29 +11909,29 @@ updateLoop:
 						timer0Ticks += (0x10000 - timer0Reload) << timer0ClockReload;
 						timerOverflow |= 1;
 						soundTimerOverflow(0);
-						if(TM0CNT & 0x40) {
+						if(io_registers[REG_TM0CNT] & 0x40) {
 							io_registers[REG_IF] |= 0x08;
 							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 					}
-					TM0D = 0xFFFF - (timer0Ticks >> timer0ClockReload);
-					UPDATE_REG(0x100, TM0D);
+					io_registers[REG_TM0D] = 0xFFFF - (timer0Ticks >> timer0ClockReload);
+					UPDATE_REG(0x100, io_registers[REG_TM0D]);
 				}
 
 				if(timer1On) {
-					if(TM1CNT & 4) {
+					if(io_registers[REG_TM1CNT] & 4) {
 						if(timerOverflow & 1) {
-							TM1D++;
-							if(TM1D == 0) {
-								TM1D += timer1Reload;
+							io_registers[REG_TM1D]++;
+							if(io_registers[REG_TM1D] == 0) {
+								io_registers[REG_TM1D] += timer1Reload;
 								timerOverflow |= 2;
 								soundTimerOverflow(1);
-								if(TM1CNT & 0x40) {
+								if(io_registers[REG_TM1CNT] & 0x40) {
 									io_registers[REG_IF] |= 0x10;
 									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
-							UPDATE_REG(0x104, TM1D);
+							UPDATE_REG(0x104, io_registers[REG_TM1D]);
 						}
 					} else {
 						timer1Ticks -= clockTicks;
@@ -11935,69 +11939,69 @@ updateLoop:
 							timer1Ticks += (0x10000 - timer1Reload) << timer1ClockReload;
 							timerOverflow |= 2;
 							soundTimerOverflow(1);
-							if(TM1CNT & 0x40) {
+							if(io_registers[REG_TM1CNT] & 0x40) {
 								io_registers[REG_IF] |= 0x10;
 								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
-						TM1D = 0xFFFF - (timer1Ticks >> timer1ClockReload);
-						UPDATE_REG(0x104, TM1D);
+						io_registers[REG_TM1D] = 0xFFFF - (timer1Ticks >> timer1ClockReload);
+						UPDATE_REG(0x104, io_registers[REG_TM1D]);
 					}
 				}
 
 				if(timer2On) {
-					if(TM2CNT & 4) {
+					if(io_registers[REG_TM2CNT] & 4) {
 						if(timerOverflow & 2) {
-							TM2D++;
-							if(TM2D == 0) {
-								TM2D += timer2Reload;
+							io_registers[REG_TM2D]++;
+							if(io_registers[REG_TM2D] == 0) {
+								io_registers[REG_TM2D] += timer2Reload;
 								timerOverflow |= 4;
-								if(TM2CNT & 0x40) {
+								if(io_registers[REG_TM2CNT] & 0x40) {
 									io_registers[REG_IF] |= 0x20;
 									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
-							UPDATE_REG(0x108, TM2D);
+							UPDATE_REG(0x108, io_registers[REG_TM2D]);
 						}
 					} else {
 						timer2Ticks -= clockTicks;
 						if(timer2Ticks <= 0) {
 							timer2Ticks += (0x10000 - timer2Reload) << timer2ClockReload;
 							timerOverflow |= 4;
-							if(TM2CNT & 0x40) {
+							if(io_registers[REG_TM2CNT] & 0x40) {
 								io_registers[REG_IF] |= 0x20;
 								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
-						TM2D = 0xFFFF - (timer2Ticks >> timer2ClockReload);
-						UPDATE_REG(0x108, TM2D);
+						io_registers[REG_TM2D] = 0xFFFF - (timer2Ticks >> timer2ClockReload);
+						UPDATE_REG(0x108, io_registers[REG_TM2D]);
 					}
 				}
 
 				if(timer3On) {
-					if(TM3CNT & 4) {
+					if(io_registers[REG_TM3CNT] & 4) {
 						if(timerOverflow & 4) {
-							TM3D++;
-							if(TM3D == 0) {
-								TM3D += timer3Reload;
-								if(TM3CNT & 0x40) {
+							io_registers[REG_TM3D]++;
+							if(io_registers[REG_TM3D] == 0) {
+								io_registers[REG_TM3D] += timer3Reload;
+								if(io_registers[REG_TM3CNT] & 0x40) {
 									io_registers[REG_IF] |= 0x40;
 									UPDATE_REG(0x202, io_registers[REG_IF]);
 								}
 							}
-							UPDATE_REG(0x10C, TM3D);
+							UPDATE_REG(0x10C, io_registers[REG_TM3D]);
 						}
 					} else {
 						timer3Ticks -= clockTicks;
 						if(timer3Ticks <= 0) {
 							timer3Ticks += (0x10000 - timer3Reload) << timer3ClockReload;
-							if(TM3CNT & 0x40) {
+							if(io_registers[REG_TM3CNT] & 0x40) {
 								io_registers[REG_IF] |= 0x40;
 								UPDATE_REG(0x202, io_registers[REG_IF]);
 							}
 						}
-						TM3D = 0xFFFF - (timer3Ticks >> timer3ClockReload);
-						UPDATE_REG(0x10C, TM3D);
+						io_registers[REG_TM3D] = 0xFFFF - (timer3Ticks >> timer3ClockReload);
+						UPDATE_REG(0x10C, io_registers[REG_TM3D]);
 					}
 				}
 			}
@@ -12006,7 +12010,8 @@ updateLoop:
 			ticks -= clockTicks;
 			cpuNextEvent = CPUUpdateTicks();
 
-			if(cpuDmaTicksToUpdate > 0) {
+			if(cpuDmaTicksToUpdate > 0)
+			{
 				if(cpuDmaTicksToUpdate > cpuNextEvent)
 					clockTicks = cpuNextEvent;
 				else
@@ -12017,11 +12022,13 @@ updateLoop:
 				goto updateLoop;
 			}
 
-			if(io_registers[REG_IF] && (io_registers[REG_IME] & 1) && armIrqEnable) {
+			if(io_registers[REG_IF] && (io_registers[REG_IME] & 1) && armIrqEnable)
+			{
 				int res = io_registers[REG_IF] & io_registers[REG_IE];
 				if(stopState)
 					res &= 0x3080;
-				if(res) {
+				if(res)
+				{
 					if (intState)
 					{
 						if (!IRQTicks)
@@ -12077,53 +12084,52 @@ updateLoop:
 					timer0ClockReload = TIMER_TICKS[timer0Value & 3];
 					if(!timer0On && (timer0Value & 0x80)) {
 						// reload the counter
-						TM0D = timer0Reload;
-						timer0Ticks = (0x10000 - TM0D) << timer0ClockReload;
-						UPDATE_REG(0x100, TM0D);
+						io_registers[REG_TM0D] = timer0Reload;
+						timer0Ticks = (0x10000 - io_registers[REG_TM0D]) << timer0ClockReload;
+						UPDATE_REG(0x100, io_registers[REG_TM0D]);
 					}
 					timer0On = timer0Value & 0x80 ? true : false;
-					TM0CNT = timer0Value & 0xC7;
-					UPDATE_REG(0x102, TM0CNT);
-					//    CPUUpdateTicks();
+					io_registers[REG_TM0CNT] = timer0Value & 0xC7;
+					UPDATE_REG(0x102, io_registers[REG_TM0CNT]);
 				}
 				if (timerOnOffDelay & 2)
 				{
 					timer1ClockReload = TIMER_TICKS[timer1Value & 3];
 					if(!timer1On && (timer1Value & 0x80)) {
 						// reload the counter
-						TM1D = timer1Reload;
-						timer1Ticks = (0x10000 - TM1D) << timer1ClockReload;
-						UPDATE_REG(0x104, TM1D);
+						io_registers[REG_TM1D] = timer1Reload;
+						timer1Ticks = (0x10000 - io_registers[REG_TM1D]) << timer1ClockReload;
+						UPDATE_REG(0x104, io_registers[REG_TM1D]);
 					}
 					timer1On = timer1Value & 0x80 ? true : false;
-					TM1CNT = timer1Value & 0xC7;
-					UPDATE_REG(0x106, TM1CNT);
+					io_registers[REG_TM1CNT] = timer1Value & 0xC7;
+					UPDATE_REG(0x106, io_registers[REG_TM1CNT]);
 				}
 				if (timerOnOffDelay & 4)
 				{
 					timer2ClockReload = TIMER_TICKS[timer2Value & 3];
 					if(!timer2On && (timer2Value & 0x80)) {
 						// reload the counter
-						TM2D = timer2Reload;
-						timer2Ticks = (0x10000 - TM2D) << timer2ClockReload;
-						UPDATE_REG(0x108, TM2D);
+						io_registers[REG_TM2D] = timer2Reload;
+						timer2Ticks = (0x10000 - io_registers[REG_TM2D]) << timer2ClockReload;
+						UPDATE_REG(0x108, io_registers[REG_TM2D]);
 					}
 					timer2On = timer2Value & 0x80 ? true : false;
-					TM2CNT = timer2Value & 0xC7;
-					UPDATE_REG(0x10A, TM2CNT);
+					io_registers[REG_TM2CNT] = timer2Value & 0xC7;
+					UPDATE_REG(0x10A, io_registers[REG_TM2CNT]);
 				}
 				if (timerOnOffDelay & 8)
 				{
 					timer3ClockReload = TIMER_TICKS[timer3Value & 3];
 					if(!timer3On && (timer3Value & 0x80)) {
 						// reload the counter
-						TM3D = timer3Reload;
-						timer3Ticks = (0x10000 - TM3D) << timer3ClockReload;
-						UPDATE_REG(0x10C, TM3D);
+						io_registers[REG_TM3D] = timer3Reload;
+						timer3Ticks = (0x10000 - io_registers[REG_TM3D]) << timer3ClockReload;
+						UPDATE_REG(0x10C, io_registers[REG_TM3D]);
 					}
 					timer3On = timer3Value & 0x80 ? true : false;
-					TM3CNT = timer3Value & 0xC7;
-					UPDATE_REG(0x10E, TM3CNT);
+					io_registers[REG_TM3CNT] = timer3Value & 0xC7;
+					UPDATE_REG(0x10E, io_registers[REG_TM3CNT]);
 				}
 				cpuNextEvent = CPUUpdateTicks();
 				timerOnOffDelay = 0;
