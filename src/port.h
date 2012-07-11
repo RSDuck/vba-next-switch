@@ -46,7 +46,7 @@
 #define READ32LE( base )        ({unsigned ppc_lwbrx_; asm( "lwbrx %0,0,%1" : "=r" (ppc_lwbrx_) : "r" (base), "0" (ppc_lwbrx_) ); ppc_lwbrx_;})
 #define WRITE16LE( base, value )    ({asm( "sthbrx %0,0,%1" : : "r" (value), "r" (base) );})
 #define WRITE32LE( base, value)    ({asm( "stwbrx %0,0,%1" : : "r" (value), "r" (base) );})
-#elif _XBOX360
+#elif defined(_XBOX360)
 #define READ16LE( base)	_byteswap_ushort(*((u16 *)(base)))
 #define READ32LE( base) _byteswap_ulong(*((u32 *)(base)))
 #define WRITE16LE( base, value) *((u16 *)base) = _byteswap_ushort((value))
