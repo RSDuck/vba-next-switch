@@ -132,7 +132,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
    info->need_fullpath = false;
    info->valid_extensions = "gba|GBA|zip|ZIP";
-   info->library_version = "1.0.2";
+   info->library_version = "v1.0.2";
    info->library_name = "VBA Next";
    info->block_extract = false;
 }
