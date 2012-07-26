@@ -81,12 +81,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\libretro\libretro.cpp" />
-    <ClCompile Include="..\src\gba.cpp" />
-    <ClCompile Include="..\src\memory.cpp" />
-    <ClCompile Include="..\src\sound.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\libretro\libretro.hpp" />
     <ClInclude Include="..\src\gba\sound_blargg.h" />
     <ClInclude Include="..\src\common\Port.h" />
@@ -98,6 +92,12 @@
     <ClInclude Include="..\src\NLS.h" />
     <ClInclude Include="..\src\System.h" />
     <ClInclude Include="..\src\Util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\gba.cpp" />
+    <ClCompile Include="..\..\..\src\memory.cpp" />
+    <ClCompile Include="..\..\..\src\sound.cpp" />
+    <ClCompile Include="..\..\libretro.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -17,20 +17,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\libretro\libretro.cpp">
-      <Filter>Source Files\libretro</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gba.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\memory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\sound.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\libretro\libretro.hpp">
       <Filter>Header Files\libretro</Filter>
     </ClInclude>
@@ -58,5 +44,19 @@
     <ClInclude Include="..\src\types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\libretro.cpp">
+      <Filter>Source Files\libretro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\sound.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\gba.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

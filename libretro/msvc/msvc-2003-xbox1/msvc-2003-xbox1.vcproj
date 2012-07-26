@@ -20,6 +20,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="$(ProjectDir)"
 				PreprocessorDefinitions="_DEBUG;_XBOX;_XBOX1;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
@@ -53,6 +54,7 @@
 				Optimization="3"
 				OmitFramePointers="TRUE"
 				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="$(ProjectDir)"
 				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;PROFILE;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
@@ -87,6 +89,7 @@
 				Optimization="3"
 				OmitFramePointers="TRUE"
 				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="$(ProjectDir)"
 				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;PROFILE;FASTCAP;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
@@ -158,6 +161,7 @@
 				Optimization="3"
 				OmitFramePointers="TRUE"
 				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="$(ProjectDir)"
 				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;LTCG;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
@@ -193,20 +197,20 @@
 				Name="libretro"
 				Filter="">
 				<File
-					RelativePath="..\libretro\libretro.cpp">
+					RelativePath="..\..\libretro.cpp">
 				</File>
 			</Filter>
 			<Filter
 				Name="src"
 				Filter="">
 				<File
-					RelativePath="..\src\gba.cpp">
+					RelativePath="..\..\..\src\gba.cpp">
 				</File>
 				<File
-					RelativePath="..\src\memory.cpp">
+					RelativePath="..\..\..\src\memory.cpp">
 				</File>
 				<File
-					RelativePath="..\src\sound.cpp">
+					RelativePath="..\..\..\src\sound.cpp">
 				</File>
 			</Filter>
 		</Filter>
