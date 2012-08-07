@@ -123,7 +123,13 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
+				GlobalOptimizations="TRUE"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="TRUE"
+				ImproveFloatingPointConsistency="TRUE"
+				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
+				EnableFiberSafeOptimizations="TRUE"
 				OptimizeForProcessor="2"
 				AdditionalIncludeDirectories="$(ProjectDir)"
 				PreprocessorDefinitions="NDEBUG;_XBOX;_XBOX1;_LIB;LSB_FIRST;__LIBRETRO__;HAVE_STDINT_H;SPEEDHAX;INLINE=_inline;__restrict="
