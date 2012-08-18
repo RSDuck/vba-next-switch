@@ -16,6 +16,17 @@ endif
 LIBRETRO_DIR := libretro
 VBA_DIR := src
 
+# system platform
+system_platform = unix
+ifeq ($(shell uname -a),)
+EXE_EXT = .exe
+   system_platform = win
+else ifneq ($(findstring Darwin,$(shell uname -a)),)
+   system_platform = osx
+else ifneq ($(findstring MINGW,$(shell uname -a)),)
+   system_platform = win
+endif
+
 ifeq ($(platform), unix)
    TARGET := libretro.so
    fpic := -fPIC
@@ -42,23 +53,23 @@ else ifeq ($(platform), sncps3)
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), psl1ght)
    TARGET := libretro_psl1ght.a
-   CC = $(PS3DEV)/ppu/bin/ppu-gcc
-   CXX = $(PS3DEV)/ppu/bin/ppu-g++
-   AR = $(PS3DEV)/ppu/bin/ppu-ar
+   CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
+   CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
+   AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), xenon)
    TARGET := libretro_xenon360.a
-   CC = xenon-gcc
-   CXX = xenon-g++
-   AR = xenon-ar
+   CC = xenon-gcc$(EXE_EXT)
+   CXX = xenon-g++$(EXE_EXT)
+   AR = xenon-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), wii)
    TARGET := libretro_wii.a
-   CC = powerpc-eabi-gcc
-   CXX = powerpc-eabi-g++
-   AR = powerpc-eabi-ar
+   CC = powerpc-eabi-gcc$(EXE_EXT)
+   CXX = powerpc-eabi-g++$(EXE_EXT)
+   AR = powerpc-eabi-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
