@@ -67,9 +67,9 @@ else ifeq ($(platform), xenon)
    PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), wii)
    TARGET := libretro_wii.a
-   CC = powerpc-eabi-gcc$(EXE_EXT)
-   CXX = powerpc-eabi-g++$(EXE_EXT)
-   AR = powerpc-eabi-ar$(EXE_EXT)
+   CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
+   CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
+   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
