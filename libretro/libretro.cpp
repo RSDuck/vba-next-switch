@@ -353,32 +353,31 @@ void retro_reset(void)
    CPUReset();
 }
 
+static const unsigned binds[] = {
+	RETRO_DEVICE_ID_JOYPAD_A,
+	RETRO_DEVICE_ID_JOYPAD_B,
+	RETRO_DEVICE_ID_JOYPAD_SELECT,
+	RETRO_DEVICE_ID_JOYPAD_START,
+	RETRO_DEVICE_ID_JOYPAD_RIGHT,
+	RETRO_DEVICE_ID_JOYPAD_LEFT,
+	RETRO_DEVICE_ID_JOYPAD_UP,
+	RETRO_DEVICE_ID_JOYPAD_DOWN,
+	RETRO_DEVICE_ID_JOYPAD_R,
+	RETRO_DEVICE_ID_JOYPAD_L
+};
+
 void retro_run(void)
 {
-
-   CPULoop();
-
    poll_cb();
 
    u32 J = 0;
-
-   static const unsigned binds[] = {
-      RETRO_DEVICE_ID_JOYPAD_A,
-      RETRO_DEVICE_ID_JOYPAD_B,
-      RETRO_DEVICE_ID_JOYPAD_SELECT,
-      RETRO_DEVICE_ID_JOYPAD_START,
-      RETRO_DEVICE_ID_JOYPAD_RIGHT,
-      RETRO_DEVICE_ID_JOYPAD_LEFT,
-      RETRO_DEVICE_ID_JOYPAD_UP,
-      RETRO_DEVICE_ID_JOYPAD_DOWN,
-      RETRO_DEVICE_ID_JOYPAD_R,
-      RETRO_DEVICE_ID_JOYPAD_L
-   };
 
    for (unsigned i = 0; i < 10; i++)
       J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, binds[i]) << i;
 
    joy = J;
+
+   CPULoop();
 }
 
 size_t retro_serialize_size(void)
