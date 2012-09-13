@@ -416,8 +416,16 @@ bool retro_load_game_special(
 )
 { return false; }
 
+static unsigned g_audio_frames;
+static unsigned g_video_frames;
+
 void retro_unload_game(void)
-{}
+{
+   fprintf(stderr, "[VBA] Sync stats: Audio frames: %u, Video frames: %u, AF/VF: %.2f\n",
+         g_audio_frames, g_video_frames, (float)g_audio_frames / g_video_frames);
+   g_audio_frames = 0;
+   g_video_frames = 0;
+}
 
 unsigned retro_get_region(void)
 {
@@ -426,12 +434,16 @@ unsigned retro_get_region(void)
 
 void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 {
-   audio_batch_cb(finalWave, length >> 1);
+   int frames = length >> 1;
+   audio_batch_cb(finalWave, frames);
+
+   g_audio_frames += frames;
 }
 
 void systemDrawScreen()
 {
    video_cb(pix, 240, 160, 512); //last arg is pitch
+   g_video_frames++;
 }
 
 void systemMessage(const char* str, ...)
