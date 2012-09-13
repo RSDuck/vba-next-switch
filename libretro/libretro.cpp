@@ -366,6 +366,8 @@ static const unsigned binds[] = {
 	RETRO_DEVICE_ID_JOYPAD_L
 };
 
+static unsigned has_frame;
+
 void retro_run(void)
 {
    poll_cb();
@@ -377,7 +379,8 @@ void retro_run(void)
 
    joy = J;
 
-   CPULoop();
+   has_frame = 0;
+   do { CPULoop(); } while (!has_frame);
 }
 
 size_t retro_serialize_size(void)
@@ -444,6 +447,7 @@ void systemDrawScreen()
 {
    video_cb(pix, 240, 160, 512); //last arg is pitch
    g_video_frames++;
+   has_frame = 1;
 }
 
 void systemMessage(const char* str, ...)
