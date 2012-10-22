@@ -7,7 +7,7 @@
 #define FALSE 0
 #endif
 
-#include "libretro.hpp"
+#include "libretro.h"
 
 #include "../src/system.h"
 #include "../src/port.h"
@@ -134,7 +134,6 @@ void retro_get_system_info(struct retro_system_info *info)
    info->valid_extensions = "gba|GBA|zip|ZIP";
    info->library_version = "v1.0.2";
    info->library_name = "VBA Next";
-   info->nonblock_state = false;
    info->block_extract = false;
 }
 
@@ -153,6 +152,12 @@ void retro_init(void)
    memset(libretro_save_buf, 0xff, sizeof(libretro_save_buf));
    adjust_save_ram();
    environ_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
+
+#ifdef FRONTEND_SUPPORTS_RGB565
+   enum retro_pixel_format rgb565 = RETRO_PIXEL_FORMAT_RGB565;
+   if(environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &rgb565))
+      fprintf(stderr, "Frontend supports RGB565 - will use that instead of XRGB1555.\n");
+#endif
 }
 
 static unsigned serialize_size = 0;

@@ -298,7 +298,7 @@ enum retro_key
                                            // Boolean value whether or not the implementation should use overscan, or crop away overscan.
                                            //
 #define RETRO_ENVIRONMENT_GET_CAN_DUPE  3  // bool * --
-                                           // Boolean value whether or not RetroArch supports frame duping,
+                                           // Boolean value whether or not frontend supports frame duping,
                                            // passing NULL to video frame callback.
                                            //
 #define RETRO_ENVIRONMENT_GET_VARIABLE  4  // struct retro_variable * --
@@ -332,8 +332,9 @@ enum retro_key
                                            // about too demanding implementations.
                                            // 
                                            // The levels are "floating", but roughly defined as:
-                                           // 1: Low-powered devices such as Raspberry Pi, smart phones, tablets, etc.
-                                           // 2: Medium-spec consoles, such as PS3/360, with sub-par CPUs.
+                                           // 0: Low-powered embedded devices such as Raspberry Pi
+                                           // 1: 6th generation consoles, such as Wii/Xbox 1, and phones, tablets, etc.
+                                           // 2: 7th generation consoles, such as PS3/360, with sub-par CPUs.
                                            // 3: Modern desktop/laptops with reasonably powerful CPUs.
                                            // 4: High-end desktops with very powerful CPUs.
                                            //
@@ -353,14 +354,33 @@ enum retro_key
 #define RETRO_ENVIRONMENT_SET_PIXEL_FORMAT 10
                                            // const enum retro_pixel_format * --
                                            // Sets the internal pixel format used by the implementation.
-                                           // The default pixel format is RETRO_PIXEL_FORMAT_XRGB1555.
+                                           // The default pixel format is RETRO_PIXEL_FORMAT_0RGB1555.
+                                           // This pixel format however, is deprecated (see enum retro_pixel_format).
                                            // If the call returns false, the frontend does not support this pixel format.
                                            // This function should be called inside retro_load_game() or retro_get_system_av_info().
+                                           //
+#define RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS 11
+                                           // const struct retro_input_descriptor * --
+                                           // Sets an array of retro_input_descriptors.
+                                           // It is up to the frontend to present this in a usable way.
+                                           // The array is terminated by retro_input_descriptor::description being set to NULL.
+                                           // This function can be called at any time, but it is recommended to call it as early as possible.
+
 
 enum retro_pixel_format
 {
-   RETRO_PIXEL_FORMAT_0RGB1555 = 0, // 0RGB1555, native endian. 0 bit must be set to 0.
-   RETRO_PIXEL_FORMAT_XRGB8888      // XRGB8888, native endian. X bits are ignored.
+   // 0RGB1555, native endian. 0 bit must be set to 0.
+   // This pixel format is default for compatibility concerns only.
+   // If a 15/16-bit pixel format is desired, consider using RGB565.
+   RETRO_PIXEL_FORMAT_0RGB1555 = 0,
+
+   // XRGB8888, native endian. X bits are ignored.
+   RETRO_PIXEL_FORMAT_XRGB8888 = 1,
+
+   // RGB565, native endian. This pixel format is the recommended format to use if a 15/16-bit format is desired
+   // as it is the pixel format that is typically available on a wide range of low-power devices.
+   // It is also natively supported in APIs like OpenGL ES.
+   RETRO_PIXEL_FORMAT_RGB565   = 2
 };
 
 struct retro_message
@@ -369,8 +389,25 @@ struct retro_message
    unsigned    frames;     // Duration in frames of message.
 };
 
+// Describes how the libretro implementation maps a libretro input bind
+// to its internal input system through a human readable string.
+// This string can be used to better let a user configure input.
+struct retro_input_descriptor
+{
+   // Associates given parameters with a description.
+   unsigned port;
+   unsigned device;
+   unsigned index;
+   unsigned id;
+
+   const char *description; // Human readable description for parameters.
+                            // The pointer must remain valid until retro_unload_game() is called.
+};
+
 struct retro_system_info
 {
+   // All pointers are owned by libretro implementation, and pointers must remain valid until retro_deinit() is called.
+
    const char *library_name;      // Descriptive name of library. Should not contain any version numbers, etc.
    const char *library_version;   // Descriptive version of core.
 
@@ -383,8 +420,6 @@ struct retro_system_info
                                   // If false, ::data and ::size are guaranteed to be valid, but ::path might not be valid.
                                   // This is typically set to true for libretro implementations that must load from file.
                                   // Implementations should strive for setting this to false, as it allows the frontend to perform patching, etc.
-   bool        nonblock_state;    // If true, this indicates that the game's fps is above 60 and that vsync should
-                                  // be deactivated before startup
 
    bool        block_extract;     // If true, the frontend is not allowed to extract any archives before loading the real ROM.
                                   // Necessary for certain libretro implementations that load games from zipped archives.
@@ -441,6 +476,8 @@ typedef bool (*retro_environment_t)(unsigned cmd, void *data);
 // Render a frame. Pixel format is 15-bit 0RGB1555 native endian unless changed (see RETRO_ENVIRONMENT_SET_PIXEL_FORMAT).
 // Width and height specify dimensions of buffer.
 // Pitch specifices length in bytes between two lines in buffer.
+// For performance reasons, it is highly recommended to have a frame that is packed in memory, i.e. pitch == width * byte_per_pixel.
+// Certain graphic APIs, such as OpenGL ES, do not like textures that are not packed in memory.
 typedef void (*retro_video_refresh_t)(const void *data, unsigned width, unsigned height, size_t pitch);
 
 // Renders a single audio frame. Should only be used if implementation generates a single sample at a time.
@@ -480,6 +517,8 @@ void retro_get_system_info(struct retro_system_info *info);
 
 // Gets information about system audio/video timings and geometry.
 // Can be called only after retro_load_game() has successfully completed.
+// NOTE: The implementation of this function might not initialize every variable if needed.
+// E.g. geom.aspect_ratio might not be initialized if core doesn't desire a particular aspect ratio.
 void retro_get_system_av_info(struct retro_system_av_info *info);
 
 // Sets device to be used for player 'port'.
