@@ -2,11 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _MSC_VER
-#define TRUE 1
-#define FALSE 0
-#endif
-
 #include "libretro.h"
 
 #include "../src/system.h"
