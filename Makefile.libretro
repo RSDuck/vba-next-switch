@@ -29,31 +29,31 @@ else ifneq ($(findstring MINGW,$(shell uname -a)),)
 endif
 
 ifeq ($(platform), unix)
-   TARGET := libretro.so
+   TARGET := vba_next_libretro.so
    fpic := -fPIC
    SHARED := -shared -Wl,-version-script=$(LIBRETRO_DIR)/link.T -Wl,-no-undefined
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), osx)
-   TARGET := libretro.dylib
+   TARGET := vba_next_libretro.dylib
    fpic := -fPIC
    SHARED := -dynamiclib
    ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), ps3)
-   TARGET := libretro_ps3.a
+   TARGET := vba_next_libretro_ps3.a
    CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), sncps3)
-   TARGET := libretro_ps3.a
+   TARGET := vba_next_libretro_ps3.a
    CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), psp1)
-	TARGET := libretro_psp1.a
+	TARGET := vba_next_libretro_psp1.a
 	CC = psp-gcc$(EXE_EXT)
 	CXX = psp-g++$(EXE_EXT)
 	AR = psp-ar$(EXE_EXT)
@@ -62,35 +62,35 @@ else ifeq ($(platform), psp1)
 	CFLAGS += -G0
 	CXXFLAGS += -G0
 else ifeq ($(platform), psl1ght)
-   TARGET := libretro_psl1ght.a
+   TARGET := vba_next_libretro_psl1ght.a
    CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
    CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
    AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DUSE_CACHE_PREFETCH -DBRANCHLESS_GBA_GFX
 else ifeq ($(platform), xenon)
-   TARGET := libretro_xenon360.a
+   TARGET := vba_next_libretro_xenon360.a
    CC = xenon-gcc$(EXE_EXT)
    CXX = xenon-g++$(EXE_EXT)
    AR = xenon-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__LIBXENON__ -D__POWERPC__ -D__ppc__
 else ifeq ($(platform), ngc)
-   TARGET := libretro_ngc.a
+   TARGET := vba_next_libretro_ngc.a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -DHW_DOL -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else ifeq ($(platform), wii)
-   TARGET := libretro_wii.a
+   TARGET := vba_next_libretro_wii.a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES += -DGEKKO -DHW_RVL -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
 else
-   TARGET := retro.dll
+   TARGET := vba_next_retro.dll
    CC = gcc
    CXX = g++
    SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=$(LIBRETRO_DIR)/link.T
