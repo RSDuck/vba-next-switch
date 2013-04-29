@@ -40,6 +40,15 @@ else ifeq ($(platform), osx)
    fpic := -fPIC
    SHARED := -dynamiclib
    ENDIANNESS_DEFINES = -DLSB_FIRST
+else ifeq ($(platform), ios)
+   TARGET := $(TARGET_NAME)_libretro.dylib
+   fpic := -fPIC
+   SHARED := -dynamiclib
+
+   CC = clang -arch armv7 -isysroot $(IOSSDK)
+   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+   CFLAGS += -DIOS
+   ENDIANNESS_DEFINES = -DLSB_FIRST
 else ifeq ($(platform), qnx)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
