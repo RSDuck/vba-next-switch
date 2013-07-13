@@ -120,6 +120,7 @@ else ifneq (,$(findstring armv,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    SHARED := -shared -Wl,--no-undefined
    ENDIANNESS_DEFINES = -DLSB_FIRST
+   fpic := -fPIC
 ifneq (,$(findstring cortexa8,$(platform)))
    PLATFORM_DEFINES += -marm -mcpu=cortex-a8
 else ifneq (,$(findstring cortexa9,$(platform)))
