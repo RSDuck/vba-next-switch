@@ -20,6 +20,7 @@ static retro_environment_t environ_cb;
 
 extern uint64_t joy;
 static bool can_dupe;
+unsigned device_type = 0;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
 
@@ -121,6 +122,14 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
+
+   struct retro_variable variables[] = {
+      { "vbam-next-gamepad",
+         "Button layout; original|reversed" },
+      { NULL, NULL },
+   };
+
+   cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 }
 
 void retro_get_system_info(struct retro_system_info *info)
@@ -367,16 +376,49 @@ static const unsigned binds[] = {
 	RETRO_DEVICE_ID_JOYPAD_L
 };
 
+static const unsigned binds2[] = {
+	RETRO_DEVICE_ID_JOYPAD_B,
+	RETRO_DEVICE_ID_JOYPAD_A,
+	RETRO_DEVICE_ID_JOYPAD_SELECT,
+	RETRO_DEVICE_ID_JOYPAD_START,
+	RETRO_DEVICE_ID_JOYPAD_RIGHT,
+	RETRO_DEVICE_ID_JOYPAD_LEFT,
+	RETRO_DEVICE_ID_JOYPAD_UP,
+	RETRO_DEVICE_ID_JOYPAD_DOWN,
+	RETRO_DEVICE_ID_JOYPAD_R,
+	RETRO_DEVICE_ID_JOYPAD_L
+};
+
 static unsigned has_frame;
+
+static void update_variables(void)
+{
+   struct retro_variable var;
+   
+   var.key = "vbam-next-gamepad";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var))
+   {
+      if (strcmp(var.value, "original") == 0)
+         device_type = 0;
+      else if (strcmp(var.value, "reversed") == 0)
+         device_type = 1;
+   }
+}
 
 void retro_run(void)
 {
+   bool updated = false;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+      update_variables();
+
    poll_cb();
 
    u32 J = 0;
 
    for (unsigned i = 0; i < 10; i++)
-      J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, binds[i]) << i;
+      J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, device_type ? binds2[i] : binds[i]) << i;
 
    joy = J;
 
@@ -407,6 +449,8 @@ void retro_cheat_set(unsigned, bool, const char*)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
+   update_variables();
+
    bool ret = CPULoadRom(game->path);
 
    gba_init();
