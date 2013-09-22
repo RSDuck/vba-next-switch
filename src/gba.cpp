@@ -5998,159 +5998,145 @@ static int thumbExecute (void)
 static u32 map_widths[] = { 256, 512, 256, 512 };
 static u32 map_heights[] = { 256, 256, 512, 512 };
 
-static INLINE void gfxDrawTextScreen(bool process_layer0, bool process_layer1, bool process_layer2, bool process_layer3)
+static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
+				     u32 *line)
 {
-	bool	process_layers[4] = {process_layer0, process_layer1, process_layer2, process_layer3};
-	u16	control_layers[4] = {io_registers[REG_BG0CNT], io_registers[REG_BG1CNT], io_registers[REG_BG2CNT], io_registers[REG_BG3CNT]};
-	u16	hofs_layers[4]	  = {io_registers[REG_BG0HOFS], io_registers[REG_BG1HOFS], io_registers[REG_BG2HOFS], io_registers[REG_BG3HOFS]};
-	u16	vofs_layers[4]	  = {io_registers[REG_BG0VOFS], io_registers[REG_BG1VOFS], io_registers[REG_BG2VOFS], io_registers[REG_BG3VOFS]};
-	u32 *	line_layers[4]	  = {line[0], line[1], line[2], line[3]};
-	
-	for(int i = 0; i < 4; i++)
-	{
-		if(!process_layers[i])
-			continue;
+  u16 *palette = (u16 *)graphics.paletteRAM;
+  u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
+  u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) * 0x800];
+  u32 prio = ((control & 3)<<25) + 0x1000000;
+  int sizeX = 256;
+  int sizeY = 256;
+  switch((control >> 14) & 3) {
+  case 0:
+    break;
+  case 1:
+    sizeX = 512;
+    break;
+  case 2:
+    sizeY = 512;
+    break;
+  case 3:
+    sizeX = 512;
+    sizeY = 512;
+    break;
+  }
 
-		u16 control	= control_layers[i];
-		u16 hofs	= hofs_layers[i];
-		u16 vofs	= vofs_layers[i];
-		u32 * line	= line_layers[i];
+  int maskX = sizeX-1;
+  int maskY = sizeY-1;
 
-		u16 *palette = (u16 *)graphics.paletteRAM;
-		u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
-		u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) << 11];
-		u32 prio = ((control & 3)<<25) + 0x1000000;
-#ifdef BRANCHLESS_GBA_GFX
-		int tileXOdd = 0;
-#endif
+  bool mosaicOn = (control & 0x40) ? true : false;
 
-		u32 map_size = (control >> 14) & 3;
-		u32 sizeX = map_widths[map_size];
-		u32 sizeY = map_heights[map_size];
+  int xxx = hofs & maskX;
+  int yyy = (vofs + io_registers[REG_VCOUNT]) & maskY;
+  int mosaicX = (MOSAIC & 0x000F)+1;
+  int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
-		int maskX = sizeX-1;
-		int maskY = sizeY-1;
+  if(mosaicOn) {
+    if((io_registers[REG_VCOUNT] % mosaicY) != 0) {
+      mosaicY = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
+      yyy = (vofs + mosaicY) & maskY;
+    }
+  }
 
-		int xxx = hofs & maskX;
-		int yyy = (vofs + io_registers[REG_VCOUNT]) & maskY;
-		int mosaicX = (MOSAIC & 0x000F)+1;
-		int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
+  if(yyy > 255 && sizeY > 256) {
+    yyy &= 255;
+    screenBase += 0x400;
+    if(sizeX > 256)
+      screenBase += 0x400;
+  }
 
-		bool mosaicOn = (control & 0x40) ? true : false;
+  int yshift = ((yyy>>3)<<5);
+  if((control) & 0x80) {
+    u16 *screenSource = screenBase + 0x400 * (xxx>>8) + ((xxx & 255)>>3) + yshift;
+    for(int x = 0; x < 240; x++) {
+      u16 data = READ16LE(screenSource);
 
-		if(mosaicOn && ((io_registers[REG_VCOUNT] % mosaicY) != 0))
-		{
-			mosaicY = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
-			yyy = (vofs + mosaicY) & maskY;
-		}
+      int tile = data & 0x3FF;
+      int tileX = (xxx & 7);
+      int tileY = yyy & 7;
 
-		if(yyy > 255 && sizeY > 256)
-		{
-			yyy &= 255;
-			screenBase += 0x400;
-			if(sizeX > 256)
-				screenBase += 0x400;
-		}
+      if(tileX == 7)
+        screenSource++;
 
-		int yshift = ((yyy>>3)<<5);
-		u16 *screenSource = screenBase + ((xxx>>8) << 10) + ((xxx & 255)>>3) + yshift;
-		if((control) & 0x80)
-		{
-			for(u32 x = 0; x < 240u; x++)
-			{
-				u16 data = READ16LE(screenSource);
+      if(data & 0x0400)
+        tileX = 7 - tileX;
+      if(data & 0x0800)
+        tileY = 7 - tileY;
 
-				int tile = data & 0x3FF;
-				int tileX = (xxx & 7);
-				int tileY = yyy & 7;
+      u8 color = charBase[tile * 64 + tileY * 8 + tileX];
 
-				if(tileX == 7)
-					++screenSource;
+      line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
 
-				if(data & 0x0400)
-					tileX = 7 - tileX;
-				if(data & 0x0800)
-					tileY = 7 - tileY;
+      xxx++;
+      if(xxx == 256) {
+        if(sizeX > 256)
+          screenSource = screenBase + 0x400 + yshift;
+        else {
+          screenSource = screenBase + yshift;
+          xxx = 0;
+        }
+      } else if(xxx >= sizeX) {
+        xxx = 0;
+        screenSource = screenBase + yshift;
+      }
+    }
+  } else {
+    u16 *screenSource = screenBase + 0x400*(xxx>>8)+((xxx&255)>>3) +
+      yshift;
+    for(int x = 0; x < 240; x++) {
+      u16 data = READ16LE(screenSource);
 
-				u8 color = charBase[(tile<<6)  + (tileY<<3) + tileX];
+      int tile = data & 0x3FF;
+      int tileX = (xxx & 7);
+      int tileY = yyy & 7;
 
-				line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
+      if(tileX == 7)
+        screenSource++;
 
-				if(++xxx == 256)
-				{
-					screenSource = screenBase + yshift;
-					if(sizeX > 256)
-						screenSource += 0x400;
-					else
-						xxx = 0;
-				}
-				else if(xxx >= sizeX)
-				{
-					xxx = 0;
-					screenSource = screenBase + yshift;
-				}
-			}
-		}
-		else
-		{ 
-			for(u32 x = 0; x < 240u; ++x)
-			{
-				u16 data = READ16LE(screenSource);
+      if(data & 0x0400)
+        tileX = 7 - tileX;
+      if(data & 0x0800)
+        tileY = 7 - tileY;
 
-				int tile = data & 0x3FF;
-				int tileX = (xxx & 7);
-				int tileY = yyy & 7;
+      u8 color = charBase[(tile<<5) + (tileY<<2) + (tileX>>1)];
 
-				if(tileX == 7)
-					++screenSource;
+      if(tileX & 1) {
+        color = (color >> 4);
+      } else {
+        color &= 0x0F;
+      }
 
-				if(data & 0x0400)
-					tileX = 7 - tileX;
-				if(data & 0x0800)
-					tileY = 7 - tileY;
+      int pal = (data>>8) & 0xF0;
+      line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
 
-				u8 color = charBase[(tile<<5) + (tileY<<2) + (tileX>>1)];
-
-#ifdef BRANCHLESS_GBA_GFX
-				tileXOdd = (tileX & 1) - 1; 
-				color = isel(tileXOdd, color >> 4, color & 0x0F);
-#else
-				(tileX & 1) ? color >>= 4 : color &= 0x0F;
-#endif
-
-				int pal = (data>>8) & 0xF0;
-				line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
-
-				if(++xxx == 256)
-				{
-					screenSource = screenBase + yshift;
-					if(sizeX > 256)
-						screenSource += 0x400;
-					else
-						xxx = 0;
-				}
-				else if(xxx >= sizeX)
-				{
-					xxx = 0;
-					screenSource = screenBase + yshift;
-				}
-			}
-		}
-		if(mosaicOn && (mosaicX > 1))
-		{
-			int m = 1;
-			for(u32 i = 0; i < 239u; ++i)
-			{
-				line[i+1] = line[i];
-				++m;
-				if(m == mosaicX)
-				{
-					m = 1;
-					++i;
-				}
-			}
-		}
-	}
+      xxx++;
+      if(xxx == 256) {
+        if(sizeX > 256)
+          screenSource = screenBase + 0x400 + yshift;
+        else {
+          screenSource = screenBase + yshift;
+          xxx = 0;
+        }
+      } else if(xxx >= sizeX) {
+        xxx = 0;
+        screenSource = screenBase + yshift;
+      }
+    }
+  }
+  if(mosaicOn) {
+    if(mosaicX > 1) {
+      int m = 1;
+      for(int i = 0; i < 239; i++) {
+        line[i+1] = line[i];
+        m++;
+        if(m == mosaicX) {
+          m = 1;
+          i++;
+        }
+      }
+    }
+  }
 }
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
@@ -8168,15 +8154,22 @@ static void mode0RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
-	bool	process_layers[4];
 
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = graphics.layerEnable & 0x0400;
-	process_layers[3] = graphics.layerEnable & 0x0800;
+  if(graphics.layerEnable & 0x0100) {
+    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+  }
 
-	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
+  if(graphics.layerEnable & 0x0200) {
+    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+  }
+
+  if(graphics.layerEnable & 0x0400) {
+    gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+  }
+
+  if(graphics.layerEnable & 0x0800) {
+    gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+  }
 
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -8252,18 +8245,23 @@ static void mode0RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
-
-	bool	process_layers[4];
-
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = graphics.layerEnable & 0x0400;
-	process_layers[3] = graphics.layerEnable & 0x0800;
-
-	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
-
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
+
+   if(graphics.layerEnable & 0x0100) {
+      gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+   }
+
+   if(graphics.layerEnable & 0x0200) {
+      gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+   }
+
+   if(graphics.layerEnable & 0x0400) {
+      gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+   }
+
+   if(graphics.layerEnable & 0x0800) {
+      gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+   }
 
 	int effect = (BLDMOD >> 6) & 3;
 
@@ -8414,16 +8412,21 @@ static void mode0RenderLineAll (void)
 			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 
-	bool	process_layers[4];
+  if((graphics.layerEnable & 0x0100)) {
+    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+  }
 
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
-	process_layers[2] = graphics.layerEnable & 0x0400;
-	process_layers[3] = graphics.layerEnable & 0x0800;
+  if((graphics.layerEnable & 0x0200)) {
+    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+  }
 
-	if(process_layers[0] || process_layers[1] || process_layers[2] || process_layers[3])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], process_layers[2], process_layers[3]);
+  if((graphics.layerEnable & 0x0400)) {
+    gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+  }
 
+  if((graphics.layerEnable & 0x0800)) {
+    gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+  }
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -8576,13 +8579,13 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	bool	process_layers[2];
+  if(graphics.layerEnable & 0x0100) {
+    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+  }
 
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
-
-	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
+  if(graphics.layerEnable & 0x0200) {
+    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+  }
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8674,13 +8677,15 @@ static void mode1RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
-	bool	process_layers[2];
 
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
+  if(graphics.layerEnable & 0x0100) {
+    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+  }
 
-	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
+
+  if(graphics.layerEnable & 0x0200) {
+    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+  }
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
@@ -8859,13 +8864,14 @@ static void mode1RenderLineAll (void)
 			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
-	bool	process_layers[2];
 
-	process_layers[0] = graphics.layerEnable & 0x0100;
-	process_layers[1] = graphics.layerEnable & 0x0200;
+  if(graphics.layerEnable & 0x0100) {
+    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+  }
 
-	if(process_layers[0] || process_layers[1])
-		gfxDrawTextScreen(process_layers[0], process_layers[1], false, false);
+  if(graphics.layerEnable & 0x0200) {
+    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+  }
 
 	if(graphics.layerEnable & 0x0400) {
 		int changed = gfxBG2Changed;
