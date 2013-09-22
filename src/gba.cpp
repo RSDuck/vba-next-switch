@@ -6011,6 +6011,7 @@ union u8h
 
 union TileEntry
 {
+#ifdef LSB_FIRST
    struct
    {
       /* 0*/	unsigned tileNum:10;
@@ -6018,6 +6019,15 @@ union TileEntry
       /*13*/	unsigned vFlip:1;
       /*14*/	unsigned palette:4;
    };
+#else
+   struct
+   {
+      /*14*/	unsigned palette:4;
+      /*13*/	unsigned vFlip:1;
+      /*12*/	unsigned hFlip:1;
+      /* 0*/	unsigned tileNum:10;
+   };
+#endif
    u16 val;
 };
 
