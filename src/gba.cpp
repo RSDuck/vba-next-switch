@@ -6002,9 +6002,15 @@ static u32 map_heights[] = { 256, 256, 512, 512 };
 union u8h
 {
    struct
+#ifdef LSB_FIRST
    {
       /* 0*/	unsigned lo:4;
       /* 4*/	unsigned hi:4;
+#else
+   {
+      /* 4*/	unsigned hi:4;
+      /* 0*/	unsigned lo:4;
+#endif
    } __attribute__ ((packed));
    u8 val;
 };
