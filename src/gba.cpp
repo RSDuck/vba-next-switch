@@ -5999,6 +5999,25 @@ static u32 map_widths[] = { 256, 512, 256, 512 };
 static u32 map_heights[] = { 256, 256, 512, 512 };
 
 #ifdef TILED_RENDERING
+#ifdef _MSC_VER
+union u8h
+{
+   __pragma( pack(push, 1));
+   struct
+#ifdef LSB_FIRST
+   {
+      /* 0*/	unsigned lo:4;
+      /* 4*/	unsigned hi:4;
+#else
+   {
+      /* 4*/	unsigned hi:4;
+      /* 0*/	unsigned lo:4;
+#endif
+   }
+   __pragma(pack(pop));
+   u8 val;
+};
+#else
 union u8h
 {
    struct
@@ -6014,6 +6033,7 @@ union u8h
    } __attribute__ ((packed));
    u8 val;
 };
+#endif
 
 union TileEntry
 {
