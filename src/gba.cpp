@@ -524,7 +524,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 				value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
 			break;
 		case 13:
-         value =  eepromRead()
+         value =  eepromRead();
          break;
 		case 14:
          value = flashRead(address) * 0x0101;
