@@ -418,7 +418,21 @@ void retro_run(void)
    u32 J = 0;
 
    for (unsigned i = 0; i < 10; i++)
-      J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, device_type ? binds2[i] : binds[i]) << i;
+   {
+      unsigned button = device_type ? binds2[i] : binds[i];
+
+      if (button == RETRO_DEVICE_ID_JOYPAD_LEFT)
+      {
+         if (J & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT) == RETRO_DEVICE_ID_JOYPAD_RIGHT)
+            continue;
+      }
+      else if (button == RETRO_DEVICE_ID_JOYPAD_RIGHT)
+      {
+         if (J & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT) == RETRO_DEVICE_ID_JOYPAD_LEFT)
+            continue;
+      }
+      J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, button) << i;
+   }
 
    joy = J;
 
