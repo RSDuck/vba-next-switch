@@ -431,22 +431,18 @@ static INLINE u32 CPUReadMemory(u32 address)
 			value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
 			break;
 		case 0x0D:
-			if(cpuEEPROMEnabled)
-				return eepromRead();	// no need to swap this
-			goto unreadable;
+         value = eepromRead();
+         break;
 		case 14:
-			if(cpuFlashEnabled | cpuSramEnabled)
-				return flashRead(address);	// no need to swap this
+      case 15:
+				value = flashRead(address) * 0x01010101;
+            break;
 		default:
 unreadable:
-
 			if(armState)
-				value = CPUReadMemoryQuick(bus.reg[15].I);
+				value = CPUReadHalfWordQuick(bus.reg[15].I + (address & 2));
 			else
-			{
-				value = CPUReadHalfWordQuick(bus.reg[15].I) |
-					CPUReadHalfWordQuick(bus.reg[15].I) << 16;
-			}
+				value = CPUReadHalfWordQuick(bus.reg[15].I);
 	}
 
 	if(address & 3) {
@@ -528,12 +524,11 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 				value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
 			break;
 		case 13:
-			if(cpuEEPROMEnabled)
-				return  eepromRead();		// no need to swap this
-			goto unreadable;
+         value =  eepromRead()
+         break;
 		case 14:
-			if(cpuFlashEnabled | cpuSramEnabled)
-				return flashRead(address);	// no need to swap this
+         value = flashRead(address) * 0x0101;
+         break;
 		default:
 unreadable:
 			{
@@ -598,15 +593,13 @@ static INLINE u8 CPUReadByte(u32 address)
 		case 12:
 			return rom[address & 0x1FFFFFF];
 		case 13:
-			if(cpuEEPROMEnabled)
-				return eepromRead();
-			goto unreadable;
+         return eepromRead();
 		case 14:
-			if(cpuSramEnabled | cpuFlashEnabled)
-				return flashRead(address);
 #ifdef USE_MOTION_SENSOR
-			if(cpuEEPROMSensorEnabled) {
-				switch(address & 0x00008f00) {
+			if(cpuEEPROMSensorEnabled)
+         {
+				switch(address & 0x00008f00)
+            {
 					case 0x8200:
 						return systemGetSensorX() & 255;
 					case 0x8300:
@@ -618,6 +611,7 @@ static INLINE u8 CPUReadByte(u32 address)
 				}
 			}
 #endif
+         return flashRead(address);
 		default:
 unreadable:
 			if(armState)
