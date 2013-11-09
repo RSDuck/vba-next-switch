@@ -423,12 +423,12 @@ void retro_run(void)
 
       if (button == RETRO_DEVICE_ID_JOYPAD_LEFT)
       {
-         if (J & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT) == RETRO_DEVICE_ID_JOYPAD_RIGHT)
+         if ((J & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) == RETRO_DEVICE_ID_JOYPAD_RIGHT)
             continue;
       }
       else if (button == RETRO_DEVICE_ID_JOYPAD_RIGHT)
       {
-         if (J & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT) == RETRO_DEVICE_ID_JOYPAD_LEFT)
+         if ((J & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) == RETRO_DEVICE_ID_JOYPAD_LEFT)
             continue;
       }
       J |= input_cb(0, RETRO_DEVICE_JOYPAD, 0, button) << i;
