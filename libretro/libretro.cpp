@@ -356,7 +356,10 @@ static void gba_init(void)
    free(state_buf);
 }
 
-void retro_deinit(void) {}
+void retro_deinit(void)
+{
+	CPUCleanUp();
+}
 
 void retro_reset(void)
 {

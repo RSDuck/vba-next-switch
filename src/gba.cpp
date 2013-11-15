@@ -8251,7 +8251,7 @@ static bool CPUIsELF(const char *file)
 }
 #endif
 
-static void CPUCleanUp (void)
+void CPUCleanUp (void)
 {
 	if(rom != NULL) {
 		free(rom);
