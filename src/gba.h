@@ -111,6 +111,7 @@ extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32_t, uint16_t);
 extern void CPUInit(const char *,bool);
+extern void CPUCleanUp (void);
 extern void CPUReset (void);
 extern void CPULoop(void);
 extern void CPUCheckDMA(int,int);
