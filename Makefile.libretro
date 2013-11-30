@@ -52,9 +52,9 @@ else ifeq ($(platform), ios)
    fpic := -fPIC
    SHARED := -dynamiclib
 
-   CC = clang -arch armv7 -isysroot $(IOSSDK)
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
-   CFLAGS += -DIOS
+   CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
+   CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
+   CFLAGS += -DIOS -miphoneos-version-min=5.0
    ENDIANNESS_DEFINES = -DLSB_FIRST
 	TILED_RENDERING=1
 else ifeq ($(platform), qnx)
