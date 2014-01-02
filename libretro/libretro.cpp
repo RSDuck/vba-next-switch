@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "libretro.h"
@@ -528,8 +529,13 @@ void systemDrawScreen()
    has_frame = 1;
 }
 
-void systemMessage(const char* str, ...)
+void systemMessage(const char* fmt, ...)
 {
+   char buffer[256];
+   va_list ap;
+   va_start(ap, fmt);
+   vsprintf(buffer, fmt, ap);
    if (log_cb)
-      log_cb(RETRO_LOG_INFO, "%s", str);
+      log_cb(RETRO_LOG_INFO, "%s\n", buffer);
+   va_end(ap);
 }
