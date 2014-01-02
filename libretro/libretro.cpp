@@ -162,9 +162,10 @@ void retro_init(void)
    memset(libretro_save_buf, 0xff, sizeof(libretro_save_buf));
    adjust_save_ram();
    environ_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe);
-   environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log);
-   if (log.log)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
+   else
+      log_cb = NULL;
 
 #ifdef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format rgb565 = RETRO_PIXEL_FORMAT_RGB565;
