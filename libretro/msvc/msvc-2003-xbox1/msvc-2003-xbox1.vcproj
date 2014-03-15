@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.10"
-	Name="vbanext-msvc2003-xbox1"
+	Name="msvc-2003-xbox1"
 	ProjectGUID="{BDCB70E0-EEBB-404A-9874-9A2E22A4A2B3}"
 	Keyword="XboxProj">
 	<Platforms>
@@ -35,7 +35,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)/vba_next_libretro_xdk.lib"/>
+				OutputFile="$(OutDir)/msvc-2003-xbox1.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
@@ -70,7 +70,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)/vba_next_libretro_xdk.lib"/>
+				OutputFile="$(OutDir)/msvc-2003-xbox1.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
@@ -106,7 +106,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)/vba_next_libretro_xdk.lib"/>
+				OutputFile="$(OutDir)/msvc-2003-xbox1.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
@@ -147,7 +147,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)/vba_next_libretro_xdk.lib"/>
+				OutputFile="$(OutDir)/msvc-2003-xbox1.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
@@ -183,7 +183,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)/vba_next_libretro_xdk.lib"/>
+				OutputFile="$(OutDir)/msvc-2003-xbox1.lib"/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
