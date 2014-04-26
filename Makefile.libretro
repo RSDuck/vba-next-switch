@@ -56,8 +56,11 @@ ifeq ($(arch),ppc)
    ENDIANNESS_DEFINES = -DBLARGG_BIG_ENDIAN=1 -DWORDS_BIGENDIAN
    PLATFORM_DEFINES := -D__POWERPC__ -D__ppc__
 else
-   fpic += -mmacosx-version-min=10.6
    ENDIANNESS_DEFINES = -DLSB_FIRST
+endif
+OSXVER = `sw_vers -productVersion | cut -c 4`
+ifneq ($(OSXVER),9)
+   fpic += -mmacosx-version-min=10.5
 endif
    SHARED := -dynamiclib
 	TILED_RENDERING=1
@@ -66,9 +69,15 @@ else ifeq ($(platform), ios)
    fpic := -fPIC
    SHARED := -dynamiclib
 
-   CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
-   CFLAGS += -DIOS -miphoneos-version-min=5.0
+   CC = clang -arch armv7 -isysroot $(IOSSDK)
+   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+   CFLAGS += -DIOS
+OSXVER = `sw_vers -productVersion | cut -c 4`
+ifneq ($(OSXVER),9)
+   CC += -miphoneos-version-min=5.0
+   CXX += -miphoneos-version-min=5.0
+   CFLAGS += -miphoneos-version-min=5.0
+endif
    ENDIANNESS_DEFINES = -DLSB_FIRST
 	TILED_RENDERING=1
 else ifeq ($(platform), qnx)
