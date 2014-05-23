@@ -417,7 +417,7 @@ static void update_variables(void)
    var.key = "vbam-next-gamepad";
    var.value = NULL;
 
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var))
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "original") == 0)
          device_type = 0;
