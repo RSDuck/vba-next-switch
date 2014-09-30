@@ -163,6 +163,16 @@ static uint16_t io_registers[1024 * 16];
 #define R_DISPCNT_Window_1_Display   (graphics.layerEnable & (1 << 14))
 #define R_DISPCNT_OBJ_Window_Display (graphics.layerEnable & (1 << 15))
 
+#define R_WIN_Window0_X1 (io_registers[REG_WIN0H] >> 8)
+#define R_WIN_Window0_X2 (io_registers[REG_WIN0H] & 0xFF)
+#define R_WIN_Window0_Y1 (io_registers[REG_WIN0V] >> 8)
+#define R_WIN_Window0_Y2 (io_registers[REG_WIN0V] & 0xFF)
+
+#define R_WIN_Window1_X1 (io_registers[REG_WIN1H] >> 8)
+#define R_WIN_Window1_X2 (io_registers[REG_WIN1H] & 0xFF)
+#define R_WIN_Window1_Y1 (io_registers[REG_WIN1V] >> 8)
+#define R_WIN_Window1_Y2 (io_registers[REG_WIN1V] & 0xFF)
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -8064,8 +8074,8 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow0() \
 { \
-  int x00_window0 = io_registers[REG_WIN0H] >>8; \
-  int x01_window0 = io_registers[REG_WIN0H] & 255; \
+  int x00_window0 = R_WIN_Window0_X1; \
+  int x01_window0 = R_WIN_Window0_X2; \
   int x00_lte_x01 = x00_window0 <= x01_window0; \
   for(int i = 0; i < 240; i++) \
       gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
@@ -8073,8 +8083,8 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow1() \
 { \
-  int x00_window1 = io_registers[REG_WIN1H]>>8; \
-  int x01_window1 = io_registers[REG_WIN1H] & 255; \
+  int x00_window1 = R_WIN_Window1_X1; \
+  int x01_window1 = R_WIN_Window1_X2; \
   int x00_lte_x01 = x00_window1 <= x01_window1; \
   for(int i = 0; i < 240; i++) \
    gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
@@ -8692,8 +8702,8 @@ static void mode0RenderLineAll (void)
 	bool inWindow1 = false;
 
 	if(R_DISPCNT_Window_0_Display) {
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
@@ -8701,8 +8711,8 @@ static void mode0RenderLineAll (void)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 	if(R_DISPCNT_Window_1_Display) {
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
 			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
@@ -9132,8 +9142,8 @@ static void mode1RenderLineAll (void)
 
 	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9148,8 +9158,8 @@ static void mode1RenderLineAll (void)
 	}
 	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9544,8 +9554,8 @@ static void mode2RenderLineAll (void)
 
 	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9560,8 +9570,8 @@ static void mode2RenderLineAll (void)
 	}
 	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9866,8 +9876,8 @@ static void mode3RenderLineAll (void)
 
 	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -9883,8 +9893,8 @@ static void mode3RenderLineAll (void)
 
 	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10162,8 +10172,8 @@ static void mode4RenderLineAll (void)
 
 	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10179,8 +10189,8 @@ static void mode4RenderLineAll (void)
 
 	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10476,8 +10486,8 @@ static void mode5RenderLineAll (void)
 
 	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
@@ -10493,8 +10503,8 @@ static void mode5RenderLineAll (void)
 
 	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 #ifndef ORIGINAL_BRANCHES
 		uint32_t condition = v1 >= v0;
