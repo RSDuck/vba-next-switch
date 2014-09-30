@@ -146,6 +146,23 @@ typedef enum
 
 static uint16_t io_registers[1024 * 16];
 
+// Note: Some comments below are from the GBATEK document
+// (http://problemkaputt.de/gbatek.htm).
+
+// By default, BG0-3 and OBJ Display Flags (Bit 8-12) are used to
+// enable/disable BGs and OBJ. When enabling Window 0 and/or 1
+// (Bit 13-14), color special effects may be used, and BG0-3 and
+// OBJ are controlled by the window(s).
+
+#define R_DISPCNT_Screen_Display_BG0 (graphics.layerEnable & (1 <<  8))
+#define R_DISPCNT_Screen_Display_BG1 (graphics.layerEnable & (1 <<  9))
+#define R_DISPCNT_Screen_Display_BG2 (graphics.layerEnable & (1 << 10))
+#define R_DISPCNT_Screen_Display_BG3 (graphics.layerEnable & (1 << 11))
+#define R_DISPCNT_Screen_Display_OBJ (graphics.layerEnable & (1 << 12))
+#define R_DISPCNT_Window_0_Display   (graphics.layerEnable & (1 << 13))
+#define R_DISPCNT_Window_1_Display   (graphics.layerEnable & (1 << 14))
+#define R_DISPCNT_OBJ_Window_Display (graphics.layerEnable & (1 << 15))
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -6955,7 +6972,7 @@ static INLINE void gfxDrawSprites (void)
 		int sx = (a1 & 0x1FF);
 
 		// computes ticks used by OBJ-WIN if OBJWIN is enabled
-		if (((a0 & 0x0c00) == 0x0800) && (graphics.layerEnable & 0x8000))
+		if (((a0 & 0x0c00) == 0x0800) && (R_DISPCNT_OBJ_Window_Display))
 		{
 			if ((a0 & 0x0300) == 0x0300)
 			{
@@ -8436,19 +8453,19 @@ static void mode0RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
+  if(R_DISPCNT_Screen_Display_BG0) {
     gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
   }
 
-  if(graphics.layerEnable & 0x0200) {
+  if(R_DISPCNT_Screen_Display_BG1) {
     gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
   }
 
-  if(graphics.layerEnable & 0x0400) {
+  if(R_DISPCNT_Screen_Display_BG2) {
     gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
   }
 
-  if(graphics.layerEnable & 0x0800) {
+  if(R_DISPCNT_Screen_Display_BG3) {
     gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
   }
 
@@ -8528,19 +8545,19 @@ static void mode0RenderLineNoWindow (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-   if(graphics.layerEnable & 0x0100) {
+   if(R_DISPCNT_Screen_Display_BG0) {
       gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
    }
 
-   if(graphics.layerEnable & 0x0200) {
+   if(R_DISPCNT_Screen_Display_BG1) {
       gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
    }
 
-   if(graphics.layerEnable & 0x0400) {
+   if(R_DISPCNT_Screen_Display_BG2) {
       gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
    }
 
-   if(graphics.layerEnable & 0x0800) {
+   if(R_DISPCNT_Screen_Display_BG3) {
       gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
    }
 
@@ -8674,7 +8691,7 @@ static void mode0RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
+	if(R_DISPCNT_Window_0_Display) {
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
@@ -8683,7 +8700,7 @@ static void mode0RenderLineAll (void)
 		else
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
-	if(graphics.layerEnable & 0x4000) {
+	if(R_DISPCNT_Window_1_Display) {
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
@@ -8693,19 +8710,19 @@ static void mode0RenderLineAll (void)
 			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 	}
 
-  if((graphics.layerEnable & 0x0100)) {
+  if((R_DISPCNT_Screen_Display_BG0)) {
     gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
   }
 
-  if((graphics.layerEnable & 0x0200)) {
+  if((R_DISPCNT_Screen_Display_BG1)) {
     gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
   }
 
-  if((graphics.layerEnable & 0x0400)) {
+  if((R_DISPCNT_Screen_Display_BG2)) {
     gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
   }
 
-  if((graphics.layerEnable & 0x0800)) {
+  if((R_DISPCNT_Screen_Display_BG3)) {
     gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
   }
 
@@ -8860,15 +8877,15 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
+  if(R_DISPCNT_Screen_Display_BG0) {
     gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
   }
 
-  if(graphics.layerEnable & 0x0200) {
+  if(R_DISPCNT_Screen_Display_BG1) {
     gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
   }
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -8959,16 +8976,16 @@ static void mode1RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
+  if(R_DISPCNT_Screen_Display_BG0) {
     gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
   }
 
 
-  if(graphics.layerEnable & 0x0200) {
+  if(R_DISPCNT_Screen_Display_BG1) {
     gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
   }
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9113,7 +9130,7 @@ static void mode1RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
@@ -9129,7 +9146,7 @@ static void mode1RenderLineAll (void)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
@@ -9146,15 +9163,15 @@ static void mode1RenderLineAll (void)
 #endif
 	}
 
-  if(graphics.layerEnable & 0x0100) {
+  if(R_DISPCNT_Screen_Display_BG0) {
     gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
   }
 
-  if(graphics.layerEnable & 0x0200) {
+  if(R_DISPCNT_Screen_Display_BG1) {
     gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
   }
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9299,7 +9316,7 @@ static void mode2RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9311,7 +9328,7 @@ static void mode2RenderLine (void)
 				changed, line[2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9391,7 +9408,7 @@ static void mode2RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9403,7 +9420,7 @@ static void mode2RenderLineNoWindow (void)
 				changed, line[2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9525,7 +9542,7 @@ static void mode2RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
@@ -9541,7 +9558,7 @@ static void mode2RenderLineAll (void)
 			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
 #endif
 	}
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
@@ -9558,7 +9575,7 @@ static void mode2RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9570,7 +9587,7 @@ static void mode2RenderLineAll (void)
 				changed, line[2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
 		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
@@ -9699,7 +9716,7 @@ static void mode3RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -9754,7 +9771,7 @@ static void mode3RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -9847,7 +9864,7 @@ static void mode3RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
@@ -9864,7 +9881,7 @@ static void mode3RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
@@ -9881,7 +9898,7 @@ static void mode3RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -9992,7 +10009,7 @@ static void mode4RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
@@ -10049,7 +10066,7 @@ static void mode4RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
@@ -10143,7 +10160,7 @@ static void mode4RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
@@ -10160,7 +10177,7 @@ static void mode4RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
@@ -10177,7 +10194,7 @@ static void mode4RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
@@ -10291,7 +10308,7 @@ static void mode5RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -10348,7 +10365,7 @@ static void mode5RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
@@ -10440,7 +10457,7 @@ static void mode5RenderLineAll (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
@@ -10457,7 +10474,7 @@ static void mode5RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN0V] & 255;
@@ -10474,7 +10491,7 @@ static void mode5RenderLineAll (void)
 #endif
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
 		uint8_t v1 = io_registers[REG_WIN1V] & 255;
@@ -10583,9 +10600,9 @@ static bool render_line_all_enabled = false;
   render_line_all_enabled = false; \
   switch(io_registers[REG_DISPCNT] & 7) { \
   case 0: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode0RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode0RenderLineNoWindow; \
     else { \
       renderLine = mode0RenderLineAll; \
@@ -10593,9 +10610,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 1: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode1RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode1RenderLineNoWindow; \
     else { \
       renderLine = mode1RenderLineAll; \
@@ -10603,9 +10620,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 2: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode2RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode2RenderLineNoWindow; \
     else { \
       renderLine = mode2RenderLineAll; \
@@ -10613,9 +10630,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 3: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode3RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode3RenderLineNoWindow; \
     else { \
       renderLine = mode3RenderLineAll; \
@@ -10623,9 +10640,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 4: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode4RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode4RenderLineNoWindow; \
     else { \
       renderLine = mode4RenderLineAll; \
@@ -10633,9 +10650,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 5: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode5RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode5RenderLineNoWindow; \
     else { \
       renderLine = mode5RenderLineAll; \
@@ -11119,13 +11136,13 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				// we only care about changes in BG0-BG3
 				if(changeBG)
 				{
-					if(!(graphics.layerEnable & 0x0100))
+					if(!R_DISPCNT_Screen_Display_BG0)
 						memset(line[0], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0200))
+					if(!R_DISPCNT_Screen_Display_BG1)
 						memset(line[1], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0400))
+					if(!R_DISPCNT_Screen_Display_BG2)
 						memset(line[2], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0800))
+					if(!R_DISPCNT_Screen_Display_BG3)
 						memset(line[3], -1, 240 * sizeof(u32));
 				}
 				break;
@@ -12151,7 +12168,7 @@ updateLoop:
 				else
 				{
 					bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
-					bool draw_sprites = graphics.layerEnable & 0x1000;
+					bool draw_sprites = R_DISPCNT_Screen_Display_OBJ;
 					memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
 
 					if(draw_sprites)
