@@ -173,6 +173,17 @@ static uint16_t io_registers[1024 * 16];
 #define R_WIN_Window1_Y1 (io_registers[REG_WIN1V] >> 8)
 #define R_WIN_Window1_Y2 (io_registers[REG_WIN1V] & 0xFF)
 
+// These return a 6-bit mask which corresponds which layers are
+// visible in the corresponding window/region:
+// Bits 0-3 : Whether BG0-BG3 are visible
+// Bit   4  : Whether OBJ is visible
+// Bit   5  : Whether special effects are enabled
+
+#define R_WIN_Window0_Mask (io_registers[REG_WININ] & 0xFF)
+#define R_WIN_Window1_Mask (io_registers[REG_WININ] >> 8)
+#define R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
+#define R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -8738,9 +8749,9 @@ static void mode0RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -8748,7 +8759,7 @@ static void mode0RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9194,9 +9205,9 @@ static void mode1RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -9204,7 +9215,7 @@ static void mode1RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9611,9 +9622,9 @@ static void mode2RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -9621,7 +9632,7 @@ static void mode2RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -9919,9 +9930,9 @@ static void mode3RenderLineAll (void)
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	uint32_t background = (READ16LE(&palette[0]) | 0x30000000);
 
@@ -9931,7 +9942,7 @@ static void mode3RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -10218,9 +10229,9 @@ static void mode4RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -10228,7 +10239,7 @@ static void mode4RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000))
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
 		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
@@ -10518,9 +10529,9 @@ static void mode5RenderLineAll (void)
 #endif
 	}
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	uint32_t background;
 	background = (READ16LE(&palette[0]) | 0x30000000);
@@ -10531,7 +10542,7 @@ static void mode5RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+			mask = R_WIN_OBJ_Mask;
 		}
 
 		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
@@ -11111,7 +11122,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 {
 	switch(address)
 	{
-		case 0x00:
+		case 0x00: /* DISPCNT */
 			{
 				if((value & 7) > 5) // display modes above 0-5 are prohibited
 					io_registers[REG_DISPCNT] = (value & 7);
@@ -11157,7 +11168,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				}
 				break;
 			}
-		case 0x04:
+		case 0x04: /* DISPSTAT */
 			io_registers[REG_DISPSTAT] = (value & 0xFF38) | (io_registers[REG_DISPSTAT] & 7);
 			UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 			break;
