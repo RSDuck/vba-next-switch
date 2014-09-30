@@ -552,11 +552,12 @@ void systemDrawScreen()
 
 void systemMessage(const char* fmt, ...)
 {
+   if (!log_cb) return;
+
    char buffer[256];
    va_list ap;
    va_start(ap, fmt);
-   vsprintf(buffer, fmt, ap);
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "%s\n", buffer);
+   vsnprintf(buffer, sizeof(buffer), fmt, ap);
+   log_cb(RETRO_LOG_INFO, "%s\n", buffer);
    va_end(ap);
 }
