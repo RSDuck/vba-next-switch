@@ -189,6 +189,13 @@ static uint16_t io_registers[1024 * 16];
 
 #define R_VCOUNT (io_registers[REG_VCOUNT])
 
+// Two types of Special Effects are supported:
+// Alpha Blending (Semi-Transparency) allows to combine colors
+// of two selected surfaces. Brightness Increase/Decrease
+// adjust the brightness of the selected surface.
+
+#define R_BLDCNT_Color_Special_Effect ((BLDMOD >> 6) & 3)
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -199,7 +206,7 @@ static uint16_t BG3X_L   = 0x0000;
 static uint16_t BG3X_H   = 0x0000;
 static uint16_t BG3Y_L   = 0x0000;
 static uint16_t BG3Y_H   = 0x0000;
-static uint16_t BLDMOD   = 0x0000;
+static uint16_t BLDMOD   = 0x0000; // also BLDCNT
 static uint16_t COLEV    = 0x0000;
 static uint16_t COLY     = 0x0000;
 static uint16_t DM0SAD_L = 0x0000;
@@ -8446,7 +8453,7 @@ void doMirroring (bool b)
 }
 
 #define brightness_switch() \
-      switch((BLDMOD >> 6) & 3) \
+      switch(R_BLDCNT_Color_Special_Effect) \
       { \
          case 2: \
                color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]); \
@@ -8587,7 +8594,7 @@ static void mode0RenderLineNoWindow (void)
       gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
    }
 
-	int effect = (BLDMOD >> 6) & 3;
+	int effect = R_BLDCNT_Color_Special_Effect;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -8828,7 +8835,7 @@ static void mode0RenderLineAll (void)
 		else if((mask & 32) && (top & BLDMOD))
 		{
 			// special FX on in the window
-			switch((BLDMOD >> 6) & 3)
+			switch(R_BLDCNT_Color_Special_Effect)
 			{
 				case 0:
 					break;
@@ -9057,7 +9064,7 @@ static void mode1RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -9252,7 +9259,7 @@ static void mode1RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
 			// special FX on the window
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -9468,7 +9475,7 @@ static void mode2RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -9638,7 +9645,7 @@ static void mode2RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
 			// special FX on the window
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -9785,7 +9792,7 @@ static void mode3RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -9917,7 +9924,7 @@ static void mode3RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -10062,7 +10069,7 @@ static void mode4RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -10195,7 +10202,7 @@ static void mode4RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -10340,7 +10347,7 @@ static void mode5RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
@@ -10477,7 +10484,7 @@ static void mode5RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
+			switch(R_BLDCNT_Color_Special_Effect) {
 				case 0:
 					break;
 				case 1:
