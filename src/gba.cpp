@@ -6519,6 +6519,9 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
+template<typename T> static T max(T a, T b) { return a>b ? a : b; }
+template<typename T> static T min(T a, T b) { return a<b ? a : b; }
+
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
 {
@@ -6596,51 +6599,107 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	}
 
 	memset(line, -1, 240 * sizeof(u32));
-	if(control & 0x2000)
+	if(control & 0x2000) // Wraparound
 	{
-		for(u32 x = 0; x < 240u; ++x)
+		if(dx > 0 && dy == 0) // Common subcase: no rotation or flipping
 		{
-			int xxx = (realX >> 8) & maskX;
-			int yyy = (realY >> 8) & maskY;
+			unsigned yyy = (realY >> 8) & maskY;
+			unsigned yyyshift = (yyy>>3)<<yshift;
+			unsigned tileY = yyy & 7;
+			unsigned tileYshift = (tileY<<3);
 
-			int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
-
-			int tileX = (xxx & 7);
-			int tileY = yyy & 7;
-
-			u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
-
-			if(color)
-				line[x] = (READ16LE(&palette[color])|prio);
-
-			realX += dx;
-			realY += dy;
-		}
-	}
-	else
-	{
-		for(u32 x = 0; x < 240u; ++x)
-		{
-			unsigned xxx = (realX >> 8);
-			unsigned yyy = (realY >> 8);
-
-			if(xxx < sizeX && yyy < sizeY)
+			for(u32 x = 0; x < 240u; ++x)
 			{
-				int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
+				unsigned xxx = (realX >> 8) & maskX;
 
-				int tileX = (xxx & 7);
-				int tileY = yyy & 7;
+				unsigned tile = screenBase[(xxx>>3) | yyyshift];
 
-				u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
+				unsigned tileX = (xxx & 7);
+
+				u8 color = charBase[(tile<<6) | tileYshift | tileX];
 
 				if(color)
 					line[x] = (READ16LE(&palette[color])|prio);
-			}
 
-			realX += dx;
-			realY += dy;
+				realX += dx;
+			}
 		}
+		else
+			for(u32 x = 0; x < 240u; ++x)
+			{
+				unsigned xxx = (realX >> 8) & maskX;
+				unsigned yyy = (realY >> 8) & maskY;
+
+				unsigned tile = screenBase[(xxx>>3) | ((yyy>>3)<<yshift)];
+
+				unsigned tileX = (xxx & 7);
+				unsigned tileY = yyy & 7;
+
+				u8 color = charBase[(tile<<6) | (tileY<<3) | tileX];
+
+				if(color)
+					line[x] = (READ16LE(&palette[color])|prio);
+
+				realX += dx;
+				realY += dy;
+			}
 	}
+	else // Culling
+	{
+		if(dx > 0 && dy == 0) // Common subcase: no rotation or flipping
+		{
+			unsigned yyy = (realY >> 8);
+			if (yyy >= sizeY)
+				goto skipLine;
+			unsigned yyyshift = (yyy>>3)<<yshift;
+			unsigned tileY = yyy & 7;
+			unsigned tileYshift = (tileY<<3);
+
+			u32 x0 = max(  0, (int32_t)(             + (-realX + dx - 1)) / dx);
+			u32 x1 = min(240, (int32_t)((sizeX << 8) + (-realX + dx - 1)) / dx);
+
+			realX += dx * x0;
+
+			for(u32 x = x0; x < x1; ++x)
+			{
+				unsigned xxx = (realX >> 8);
+
+				unsigned tile = screenBase[(xxx>>3) | yyyshift];
+
+				unsigned tileX = (xxx & 7);
+
+				u8 color = charBase[(tile<<6) | tileYshift | tileX];
+
+				if(color)
+					line[x] = (READ16LE(&palette[color])|prio);
+
+				realX += dx;
+			}
+		}
+		else
+			for(u32 x = 0; x < 240u; ++x)
+			{
+				unsigned xxx = (realX >> 8);
+				unsigned yyy = (realY >> 8);
+
+				if(xxx < sizeX && yyy < sizeY)
+				{
+					unsigned tile = screenBase[(xxx>>3) | ((yyy>>3)<<yshift)];
+
+					unsigned tileX = (xxx & 7);
+					unsigned tileY = yyy & 7;
+
+					u8 color = charBase[(tile<<6) | (tileY<<3) | tileX];
+
+					if(color)
+						line[x] = (READ16LE(&palette[color])|prio);
+				}
+
+				realX += dx;
+				realY += dy;
+			}
+	}
+	skipLine:
 
 	if(control & 0x40)
 	{
