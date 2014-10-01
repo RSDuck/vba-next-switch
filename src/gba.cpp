@@ -214,11 +214,11 @@ static uint16_t io_registers[1024 * 16];
 // evaluating the parameters more than once.
 uint32_t FORCE_INLINE SELECT(bool condition, uint32_t ifTrue, uint32_t ifFalse)
 {
-	// Will be 0 if condition==false or 0xFFFFFFFF
-	// if condition==true.
-	int32_t testmask = ~(uint32_t)(condition) + 1;
+	// Will be 0 if condition==true or 0xFFFFFFFF
+	// if condition==false.
+	uint32_t testmask = (uint32_t)condition - 1;
 
-	return (ifTrue & testmask) | (ifFalse & ~testmask);
+	return (testmask & ifFalse) | (~testmask & ifTrue);
 }
 
 static u16 MOSAIC;
