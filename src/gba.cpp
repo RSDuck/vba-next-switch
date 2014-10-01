@@ -8677,7 +8677,7 @@ static void mode0RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -8711,7 +8711,7 @@ static void mode0RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -8719,11 +8719,11 @@ static void mode0RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -8877,7 +8877,7 @@ static void mode0RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		}
-		else if((mask & LayerMask_SFX) && (top & BLDMOD))
+		else if((mask & LayerMask_SFX) && (R_BLDCNT_IsTarget1(top)))
 		{
 			// special FX on in the window
 			switch(R_BLDCNT_Color_Special_Effect)
@@ -8917,7 +8917,7 @@ static void mode0RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -9113,7 +9113,7 @@ static void mode1RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9138,18 +9138,18 @@ static void mode1RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9307,7 +9307,7 @@ static void mode1RenderLineAll (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9332,18 +9332,18 @@ static void mode1RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9524,7 +9524,7 @@ static void mode2RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9544,18 +9544,18 @@ static void mode2RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9693,7 +9693,7 @@ static void mode2RenderLineAll (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9713,18 +9713,18 @@ static void mode2RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9841,7 +9841,7 @@ static void mode3RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9856,7 +9856,7 @@ static void mode3RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -9864,11 +9864,11 @@ static void mode3RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9972,7 +9972,7 @@ static void mode3RenderLineAll (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9987,18 +9987,18 @@ static void mode3RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10118,7 +10118,7 @@ static void mode4RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10133,18 +10133,18 @@ static void mode4RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10250,7 +10250,7 @@ static void mode4RenderLineAll (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10265,18 +10265,18 @@ static void mode4RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10396,7 +10396,7 @@ static void mode5RenderLineNoWindow (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10411,7 +10411,7 @@ static void mode5RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -10419,11 +10419,11 @@ static void mode5RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10532,7 +10532,7 @@ static void mode5RenderLineAll (void)
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(top & BLDMOD)
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10547,18 +10547,18 @@ static void mode5RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(BLDMOD & top)
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
