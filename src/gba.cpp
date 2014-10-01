@@ -200,6 +200,10 @@ static uint16_t io_registers[1024 * 16];
 #define SpecialEffect_Brightness_Increase (2)
 #define SpecialEffect_Brightness_Decrease (3)
 
+// Returns 0xFFFFFFFF if x is true (1) and 0 if x is false (0).
+// Do not use if x might have other values.
+#define MASK32(x) (~(int32_t)(x) + 1)
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -8777,8 +8781,8 @@ static void mode0RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
@@ -9213,8 +9217,8 @@ static void mode1RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
@@ -9612,8 +9616,8 @@ static void mode2RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
@@ -9904,8 +9908,8 @@ static void mode3RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
@@ -10182,8 +10186,8 @@ static void mode4RenderLineAll (void)
 		if(!(line[5][x] & 0x80000000))
 			mask = R_WIN_OBJ_Mask;
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
@@ -10468,8 +10472,8 @@ static void mode5RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
+		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
+		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
