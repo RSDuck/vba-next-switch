@@ -218,6 +218,19 @@ static uint16_t io_registers[1024 * 16];
 #define SpecialEffect_Brightness_Increase (2)
 #define SpecialEffect_Brightness_Decrease (3)
 
+// Special effect targets.
+#define R_BLDCNT_IsTarget1(target) ((target) & (BLDMOD     ))
+#define R_BLDCNT_IsTarget2(target) ((target) & (BLDMOD >> 8))
+
+// The first 5 entries coincide with LayerMask_*.
+#define SpecialEffectTarget_BG0  (1 << Layer_BG0)
+#define SpecialEffectTarget_BG1  (1 << Layer_BG1)
+#define SpecialEffectTarget_BG2  (1 << Layer_BG2)
+#define SpecialEffectTarget_BG3  (1 << Layer_BG3)
+#define SpecialEffectTarget_OBJ  (1 << Layer_OBJ) // Top-most OBJ
+#define SpecialEffectTarget_BD   (1 << 5        ) // Backdrop
+
+
 // Fast implementation of ternary operator.
 // Implemented as a function (as opposed to a macro) to avoid
 // evaluating the parameters more than once.
@@ -8498,13 +8511,13 @@ void doMirroring (bool b)
 	}
 
 #define alpha_blend_brightness_switch()                                                    \
-	if(top2 & (BLDMOD>>8))                                                                 \
+	if(R_BLDCNT_IsTarget2(top2))                                                           \
 		if(color < 0x80000000)                                                             \
 		{                                                                                  \
 			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
 		}                                                                                  \
 		else                                                                               \
-		if(BLDMOD & top)                                                                   \
+		if (R_BLDCNT_IsTarget1(top))                                                       \
 		{                                                                                  \
 			brightness_switch();                                                           \
 		}
@@ -8547,51 +8560,51 @@ static void mode0RenderLine (void)
 
 		if(line[Layer_BG0][x] < color) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG1][x];
-			top = 0x02;
+			top = SpecialEffectTarget_BG1;
 		}
 
 		if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG3][x];
-			top = 0x08;
+			top = SpecialEffectTarget_BG3;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = backdrop;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
 				if((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
 					back = line[Layer_BG0][x];
-					top2 = 0x01;
+					top2 = SpecialEffectTarget_BG0;
 				}
 
 				if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
 					back = line[Layer_BG1][x];
-					top2 = 0x02;
+					top2 = SpecialEffectTarget_BG1;
 				}
 
 				if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
 					back = line[Layer_BG3][x];
-					top2 = 0x08;
+					top2 = SpecialEffectTarget_BG3;
 				}
 
 				alpha_blend_brightness_switch();
@@ -8635,27 +8648,27 @@ static void mode0RenderLineNoWindow (void)
 
 		if(line[Layer_BG0][x] < color) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if(line[Layer_BG1][x] < (color & 0xFF000000)) {
 			color = line[Layer_BG1][x];
-			top = 0x02;
+			top = SpecialEffectTarget_BG1;
 		}
 
 		if(line[Layer_BG2][x] < (color & 0xFF000000)) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if(line[Layer_BG3][x] < (color & 0xFF000000)) {
 			color = line[Layer_BG3][x];
-			top = 0x08;
+			top = SpecialEffectTarget_BG3;
 		}
 
 		if(line[Layer_OBJ][x] < (color & 0xFF000000)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
@@ -8667,35 +8680,35 @@ static void mode0RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
-						if((line[Layer_BG0][x] < back) && (top != 0x01))
+						uint8_t top2 = SpecialEffectTarget_BD;
+						if((line[Layer_BG0][x] < back) && (top != SpecialEffectTarget_BG0))
 						{
 							back = line[Layer_BG0][x];
-							top2 = 0x01;
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((line[Layer_BG1][x] < (back & 0xFF000000)) && (top != 0x02))
+						if((line[Layer_BG1][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG1))
 						{
 							back = line[Layer_BG1][x];
-							top2 = 0x02;
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((line[Layer_BG2][x] < (back & 0xFF000000)) && (top != 0x04))
+						if((line[Layer_BG2][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG2))
 						{
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((line[Layer_BG3][x] < (back & 0xFF000000)) && (top != 0x08))
+						if((line[Layer_BG3][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG3))
 						{
 							back = line[Layer_BG3][x];
-							top2 = 0x08;
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((line[Layer_OBJ][x] < (back & 0xFF000000)) && (top != 0x10))
+						if((line[Layer_OBJ][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_OBJ))
 						{
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -8717,26 +8730,26 @@ static void mode0RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if(line[Layer_BG0][x] < back) {
 				back = line[Layer_BG0][x];
-				top2 = 0x01;
+				top2 = SpecialEffectTarget_BG0;
 			}
 
 			if(line[Layer_BG1][x] < (back & 0xFF000000)) {
 				back = line[Layer_BG1][x];
-				top2 = 0x02;
+				top2 = SpecialEffectTarget_BG1;
 			}
 
 			if(line[Layer_BG2][x] < (back & 0xFF000000)) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			if(line[Layer_BG3][x] < (back & 0xFF000000)) {
 				back = line[Layer_BG3][x];
-				top2 = 0x08;
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
@@ -8813,53 +8826,53 @@ static void mode0RenderLineAll (void)
 
 		if((mask & LayerMask_BG0) && (line[Layer_BG0][x] < color)) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[Layer_BG1][x];
-			top = 0x02;
+			top = SpecialEffectTarget_BG1;
 		}
 
 		if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[Layer_BG3][x];
-			top = 0x08;
+			top = SpecialEffectTarget_BG3;
 		}
 
 		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000)
 		{
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG0) && ((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[Layer_BG0][x];
-				top2 = 0x01;
+				top2 = SpecialEffectTarget_BG0;
 			}
 
 			if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[Layer_BG1][x];
-				top2 = 0x02;
+				top2 = SpecialEffectTarget_BG1;
 			}
 
 			if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[Layer_BG3][x];
-				top2 = 0x08;
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
@@ -8874,34 +8887,34 @@ static void mode0RenderLineAll (void)
 				case SpecialEffect_Alpha_Blending:
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
-						if(((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
+						uint8_t top2 = SpecialEffectTarget_BD;
+						if(((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG0)
 						{
 							back = line[Layer_BG0][x];
-							top2 = 0x01;
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if(((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
+						if(((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG1)
 						{
 							back = line[Layer_BG1][x];
-							top2 = 0x02;
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if(((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
+						if(((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG2)
 						{
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if(((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
+						if(((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG3)
 						{
 							back = line[Layer_BG3][x];
-							top2 = 0x08;
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if(((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
+						if(((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_OBJ) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -8979,24 +8992,24 @@ static void mode1RenderLine (void)
 
 		if(line[Layer_BG0][x] < backdrop) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
 				color = line[Layer_BG1][x];
-				top = 0x02;
+				top = SpecialEffectTarget_BG1;
 			}else if(r == li2){
 				color = line[Layer_BG2][x];
-				top = 0x04;
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li4){
 				color = line[Layer_OBJ][x];
-				top = 0x10;
+				top = SpecialEffectTarget_OBJ;
 				if((color & 0x00010000))
 				{
 					// semi-transparent OBJ
 					uint32_t back = backdrop;
-					uint8_t top2 = 0x20;
+					uint8_t top2 = SpecialEffectTarget_BD;
 
 					uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
 					uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
@@ -9010,13 +9023,13 @@ static void mode1RenderLine (void)
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li0){
 							back = line[Layer_BG0][x];
-							top2 = 0x01;
+							top2 = SpecialEffectTarget_BG0;
 						}else if(r == li1){
 							back = line[Layer_BG1][x];
-							top2 = 0x02;
+							top2 = SpecialEffectTarget_BG1;
 						}else if(r == li2){
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 					}
 
@@ -9078,19 +9091,19 @@ static void mode1RenderLineNoWindow (void)
 
 		if(line[Layer_BG0][x] < backdrop) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
 				color = line[Layer_BG1][x];
-				top = 0x02;
+				top = SpecialEffectTarget_BG1;
 			}else if(r == li2){
 				color = line[Layer_BG2][x];
-				top = 0x04;
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li4){
 				color = line[Layer_OBJ][x];
-				top = 0x10;
+				top = SpecialEffectTarget_OBJ;
 			}
 		}
 
@@ -9103,26 +9116,26 @@ static void mode1RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x01) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG0][x];
-							top2 = 0x01;
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((top != 0x02) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG1][x];
-							top2 = 0x02;
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -9143,7 +9156,7 @@ static void mode1RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
 			uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
@@ -9160,17 +9173,17 @@ static void mode1RenderLineNoWindow (void)
 				if(r == li0)
 				{
 					back = line[Layer_BG0][x];
-					top2 = 0x01;
+					top2 = SpecialEffectTarget_BG0;
 				}
 				else if(r == li1)
 				{
 					back = line[Layer_BG1][x];
-					top2 = 0x02;
+					top2 = SpecialEffectTarget_BG1;
 				}
 				else if(r == li2)
 				{
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}
 			}
 
@@ -9248,42 +9261,42 @@ static void mode1RenderLineAll (void)
 		// At the very least, move the inexpensive 'mask' operation up front
 		if((mask & LayerMask_BG0) && line[Layer_BG0][x] < backdrop) {
 			color = line[Layer_BG0][x];
-			top = 0x01;
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG1][x];
-			top = 0x02;
+			top = SpecialEffectTarget_BG1;
 		}
 
 		if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
 				back = line[Layer_BG0][x];
-				top2 = 0x01;
+				top2 = SpecialEffectTarget_BG0;
 			}
 
 			if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[Layer_BG1][x];
-				top2 = 0x02;
+				top2 = SpecialEffectTarget_BG1;
 			}
 
 			if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -9297,26 +9310,26 @@ static void mode1RenderLineAll (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & LayerMask_BG0) && (top != 0x01) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+						if((mask & LayerMask_BG0) && (top != SpecialEffectTarget_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
 							back = line[Layer_BG0][x];
-							top2 = 0x01;
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((mask & LayerMask_BG1) && (top != 0x02) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG1) && (top != SpecialEffectTarget_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG1][x];
-							top2 = 0x02;
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -9403,18 +9416,18 @@ static void mode2RenderLine (void)
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
 				color = line[Layer_BG2][x];
-				top = 0x04;
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li3){
 				color = line[Layer_BG3][x];
-				top = 0x08;
+				top = SpecialEffectTarget_BG3;
 			}else if(r == li4){
 				color = line[Layer_OBJ][x];
-				top = 0x10;
+				top = SpecialEffectTarget_OBJ;
 
 				if(color & 0x00010000) {
 					// semi-transparent OBJ
 					uint32_t back = backdrop;
-					uint8_t top2 = 0x20;
+					uint8_t top2 = SpecialEffectTarget_BD;
 
 					uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 					uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
@@ -9423,10 +9436,10 @@ static void mode2RenderLine (void)
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li2){
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}else if(r == li3){
 							back = line[Layer_BG3][x];
-							top2 = 0x08;
+							top2 = SpecialEffectTarget_BG3;
 						}
 					}
 
@@ -9495,13 +9508,13 @@ static void mode2RenderLineNoWindow (void)
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
 				color = line[Layer_BG2][x];
-				top = 0x04;
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li3){
 				color = line[Layer_BG3][x];
-				top = 0x08;
+				top = SpecialEffectTarget_BG3;
 			}else if(r == li4){
 				color = line[Layer_OBJ][x];
-				top = 0x10;
+				top = SpecialEffectTarget_OBJ;
 			}
 		}
 
@@ -9514,21 +9527,21 @@ static void mode2RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x08) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG3][x];
-							top2 = 0x08;
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -9549,7 +9562,7 @@ static void mode2RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 			uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
@@ -9558,10 +9571,10 @@ static void mode2RenderLineNoWindow (void)
 			if(r < (uint8_t)(back >> 24)) {
 				if(r == li2){
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}else if(r == li3){
 					back = line[Layer_BG3][x];
-					top2 = 0x08;
+					top2 = SpecialEffectTarget_BG3;
 				}
 			}
 
@@ -9644,32 +9657,32 @@ static void mode2RenderLineAll (void)
 
 		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < color) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_BG3][x];
-			top = 0x08;
+			top = SpecialEffectTarget_BG3;
 		}
 
 		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[Layer_BG3][x];
-				top2 = 0x08;
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
@@ -9683,21 +9696,21 @@ static void mode2RenderLineAll (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && line[Layer_BG2][x] < back) {
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < back) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & LayerMask_BG3) && (top != 0x08) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG3) && (top != SpecialEffectTarget_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_BG3][x];
-							top2 = 0x08;
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -9759,21 +9772,21 @@ static void mode3RenderLine (void)
 
 		if(line[Layer_BG2][x] < color) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = background;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
 				if(line[Layer_BG2][x] < background) {
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -9814,12 +9827,12 @@ static void mode3RenderLineNoWindow (void)
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
@@ -9831,16 +9844,16 @@ static void mode3RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if(top != 0x04 && (line[Layer_BG2][x] < background) ) {
+						if(top != SpecialEffectTarget_BG2 && (line[Layer_BG2][x] < background) ) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if(top != 0x10 && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24))) {
+						if(top != SpecialEffectTarget_OBJ && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24))) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -9862,11 +9875,11 @@ static void mode3RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if(line[Layer_BG2][x] < background) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -9934,22 +9947,22 @@ static void mode3RenderLineAll (void)
 
 		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -9962,16 +9975,16 @@ static void mode3RenderLineAll (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && line[Layer_BG2][x] < back) {
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < back) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -10034,21 +10047,21 @@ static void mode4RenderLine (void)
 
 		if(line[Layer_BG2][x] < backdrop) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = backdrop;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
 				if(line[Layer_BG2][x] < backdrop) {
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -10091,12 +10104,12 @@ static void mode4RenderLineNoWindow (void)
 
 		if(line[Layer_BG2][x] < backdrop) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
@@ -10108,16 +10121,16 @@ static void mode4RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && line[Layer_BG2][x] < backdrop) {
+						if((top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < backdrop) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -10138,11 +10151,11 @@ static void mode4RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if(line[Layer_BG2][x] < back) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10211,23 +10224,23 @@ static void mode4RenderLineAll (void)
 		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < backdrop))
 		{
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)))
 		{
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10240,16 +10253,16 @@ static void mode4RenderLineAll (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (line[Layer_BG2][x] < backdrop)) {
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (line[Layer_BG2][x] < backdrop)) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -10312,21 +10325,21 @@ static void mode5RenderLine (void)
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = background;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
 				if(line[Layer_BG2][x] < back) {
 					back = line[Layer_BG2][x];
-					top2 = 0x04;
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -10369,12 +10382,12 @@ static void mode5RenderLineNoWindow (void)
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
@@ -10386,16 +10399,16 @@ static void mode5RenderLineNoWindow (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && line[Layer_BG2][x] < background) {
+						if((top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < background) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
@@ -10417,11 +10430,11 @@ static void mode5RenderLineNoWindow (void)
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if(line[Layer_BG2][x] < back) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10494,22 +10507,22 @@ static void mode5RenderLineAll (void)
 
 		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < background)) {
 			color = line[Layer_BG2][x];
-			top = 0x04;
+			top = SpecialEffectTarget_BG2;
 		}
 
 		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
 			color = line[Layer_OBJ][x];
-			top = 0x10;
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
 			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
 				back = line[Layer_BG2][x];
-				top2 = 0x04;
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10522,16 +10535,16 @@ static void mode5RenderLineAll (void)
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (line[Layer_BG2][x] < background)) {
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (line[Layer_BG2][x] < background)) {
 							back = line[Layer_BG2][x];
-							top2 = 0x04;
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[Layer_OBJ][x];
-							top2 = 0x10;
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
 						if(top2 & (BLDMOD>>8) && color < 0x80000000)
