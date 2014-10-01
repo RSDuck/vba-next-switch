@@ -8556,7 +8556,7 @@ static void mode0RenderLine (void)
 	for(int x = 0; x < 240; x++)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG0][x] < color) {
 			color = line[Layer_BG0][x];
@@ -8644,7 +8644,7 @@ static void mode0RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG0][x] < color) {
 			color = line[Layer_BG0][x];
@@ -8814,7 +8814,7 @@ static void mode0RenderLineAll (void)
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
@@ -8978,7 +8978,7 @@ static void mode1RenderLine (void)
 
 	for(uint32_t x = 0; x < 240u; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
 		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
@@ -9077,7 +9077,7 @@ static void mode1RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
 		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
@@ -9248,7 +9248,7 @@ static void mode1RenderLineAll (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
@@ -9401,7 +9401,7 @@ static void mode2RenderLine (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
@@ -9493,7 +9493,7 @@ static void mode2RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
@@ -9645,7 +9645,7 @@ static void mode2RenderLineAll (void)
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
@@ -9768,7 +9768,7 @@ static void mode3RenderLine (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < color) {
 			color = line[Layer_BG2][x];
@@ -9823,7 +9823,7 @@ static void mode3RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
@@ -9935,7 +9935,7 @@ static void mode3RenderLineAll (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
@@ -10043,7 +10043,7 @@ static void mode4RenderLine (void)
 	for(int x = 0; x < 240; ++x)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < backdrop) {
 			color = line[Layer_BG2][x];
@@ -10100,7 +10100,7 @@ static void mode4RenderLineNoWindow (void)
 	for(int x = 0; x < 240; ++x)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < backdrop) {
 			color = line[Layer_BG2][x];
@@ -10212,7 +10212,7 @@ static void mode4RenderLineAll (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000))
@@ -10321,7 +10321,7 @@ static void mode5RenderLine (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
@@ -10378,7 +10378,7 @@ static void mode5RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
 		if(line[Layer_BG2][x] < background) {
 			color = line[Layer_BG2][x];
@@ -10495,7 +10495,7 @@ static void mode5RenderLineAll (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
 		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
