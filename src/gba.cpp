@@ -149,6 +149,8 @@ static uint16_t io_registers[1024 * 16];
 // Note: Some comments below are from the GBATEK document
 // (http://problemkaputt.de/gbatek.htm).
 
+#define R_DISPCNT_Video_Mode (io_registers[REG_DISPCNT] & 7)
+
 // By default, BG0-3 and OBJ Display Flags (Bit 8-12) are used to
 // enable/disable BGs and OBJ. When enabling Window 0 and/or 1
 // (Bit 13-14), color special effects may be used, and BG0-3 and
@@ -474,7 +476,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 		case 0x06:
 			/* VRAM */
 			address = (address & 0x1fffc);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -566,7 +568,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -644,7 +646,7 @@ static INLINE u8 CPUReadByte(u32 address)
 			return graphics.paletteRAM[address & 0x3ff];
 		case 6:
 			address = (address & 0x1ffff);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return 0;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -708,7 +710,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -753,7 +755,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -868,14 +870,14 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
 
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
-			if ((address) < objTilesAddress[((io_registers[REG_DISPCNT] & 7)+1)>>2])
+			if ((address) < objTilesAddress[(R_DISPCNT_Video_Mode+1)>>2])
 				*((u16 *)&vram[address]) = (b << 8) | b;
 			break;
 		case 7:
@@ -7105,7 +7107,7 @@ static INLINE void gfxDrawSprites (void)
 					u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					if(a0 & 0x2000)
@@ -7219,7 +7221,7 @@ static INLINE void gfxDrawSprites (void)
 						t = sizeY - t - 1;
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
@@ -7509,7 +7511,7 @@ static INLINE void gfxDrawOBJWin (void)
 						+ t * dmy;
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
@@ -7577,7 +7579,7 @@ static INLINE void gfxDrawOBJWin (void)
 					if(a1 & 0x2000)
 						t = sizeY - t - 1;
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 					if(a0 & 0x2000)
 					{
@@ -10555,7 +10557,7 @@ static bool render_line_all_enabled = false;
 
 #define CPUUpdateRender() \
   render_line_all_enabled = false; \
-  switch(io_registers[REG_DISPCNT] & 7) { \
+  switch(R_DISPCNT_Video_Mode) { \
   case 0: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode0RenderLine; \
