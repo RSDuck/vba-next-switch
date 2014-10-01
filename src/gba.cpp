@@ -184,6 +184,13 @@ static uint16_t io_registers[1024 * 16];
 #define R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
 #define R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
 
+#define LayerMask_BG0  (1 << 0)
+#define LayerMask_BG1  (1 << 1)
+#define LayerMask_BG2  (1 << 2)
+#define LayerMask_BG3  (1 << 3)
+#define LayerMask_OBJ  (1 << 4)
+#define LayerMask_SFX  (1 << 5)
+
 // Indicates the currently drawn scanline, values in range from
 // 160..227 indicate 'hidden' scanlines within VBlank area.
 
@@ -8786,27 +8793,27 @@ static void mode0RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 1) && (line[0][x] < color)) {
+		if((mask & LayerMask_BG0) && (line[0][x] < color)) {
 			color = line[0][x];
 			top = 0x01;
 		}
 
-		if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24))) {
+		if((mask & LayerMask_BG1) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[1][x];
 			top = 0x02;
 		}
 
-		if((mask & 4) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24))) {
+		if((mask & LayerMask_BG2) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 8) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24))) {
+		if((mask & LayerMask_BG3) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[3][x];
 			top = 0x08;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24))) {
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24))) {
 			color = line[4][x];
 			top = 0x10;
 		}
@@ -8817,29 +8824,29 @@ static void mode0RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 1) && ((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24))) {
+			if((mask & LayerMask_BG0) && ((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[0][x];
 				top2 = 0x01;
 			}
 
-			if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24))) {
+			if((mask & LayerMask_BG1) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[1][x];
 				top2 = 0x02;
 			}
 
-			if((mask & 4) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24))) {
+			if((mask & LayerMask_BG2) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
-			if((mask & 8) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24))) {
+			if((mask & LayerMask_BG3) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24))) {
 				back = line[3][x];
 				top2 = 0x08;
 			}
 
 			alpha_blend_brightness_switch();
 		}
-		else if((mask & 32) && (top & BLDMOD))
+		else if((mask & LayerMask_SFX) && (top & BLDMOD))
 		{
 			// special FX on in the window
 			switch(R_BLDCNT_Color_Special_Effect)
@@ -8850,31 +8857,31 @@ static void mode0RenderLineAll (void)
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
-						if(((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
+						if(((mask & LayerMask_BG0) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
 						{
 							back = line[0][x];
 							top2 = 0x01;
 						}
 
-						if(((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
+						if(((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
 						{
 							back = line[1][x];
 							top2 = 0x02;
 						}
 
-						if(((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
+						if(((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
 						{
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if(((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
+						if(((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
 						{
 							back = line[3][x];
 							top2 = 0x08;
 						}
 
-						if(((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
+						if(((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
@@ -9223,22 +9230,22 @@ static void mode1RenderLineAll (void)
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
-		if((mask & 1) && line[0][x] < backdrop) {
+		if((mask & LayerMask_BG0) && line[0][x] < backdrop) {
 			color = line[0][x];
 			top = 0x01;
 		}
 
-		if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
+		if((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[1][x];
 			top = 0x02;
 		}
 
-		if((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
+		if((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[4][x];
 			top = 0x10;
 		}
@@ -9248,23 +9255,23 @@ static void mode1RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+			if((mask & LayerMask_BG0) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
 				back = line[0][x];
 				top2 = 0x01;
 			}
 
-			if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
+			if((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[1][x];
 				top2 = 0x02;
 			}
 
-			if((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+			if((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
@@ -9276,22 +9283,22 @@ static void mode1RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & 1) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+						if((mask & LayerMask_BG0) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
 							back = line[0][x];
 							top2 = 0x01;
 						}
 
-						if((mask & 2) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG1) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[1][x];
 							top2 = 0x02;
 						}
 
-						if((mask & 4) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG2) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
@@ -9621,17 +9628,17 @@ static void mode2RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 4) && line[2][x] < color) {
+		if((mask & LayerMask_BG2) && line[2][x] < color) {
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
+		if((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[3][x];
 			top = 0x08;
 		}
 
-		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
 			color = line[4][x];
 			top = 0x10;
 		}
@@ -9641,18 +9648,18 @@ static void mode2RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 4) && line[2][x] < back) {
+			if((mask & LayerMask_BG2) && line[2][x] < back) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
-			if((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
+			if((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
 				back = line[3][x];
 				top2 = 0x08;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
@@ -9664,17 +9671,17 @@ static void mode2RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
+						if((mask & LayerMask_BG2) && (top != 0x04) && line[2][x] < back) {
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & 8) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_BG3) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[3][x];
 							top2 = 0x08;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
@@ -9913,12 +9920,12 @@ static void mode3RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 4) && line[2][x] < background) {
+		if((mask & LayerMask_BG2) && line[2][x] < background) {
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
 			color = line[4][x];
 			top = 0x10;
 		}
@@ -9928,13 +9935,13 @@ static void mode3RenderLineAll (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if((mask & 4) && line[2][x] < background) {
+			if((mask & LayerMask_BG2) && line[2][x] < background) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
@@ -9945,12 +9952,12 @@ static void mode3RenderLineAll (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
+						if((mask & LayerMask_BG2) && (top != 0x04) && line[2][x] < back) {
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
@@ -10191,13 +10198,13 @@ static void mode4RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 4) && (line[2][x] < backdrop))
+		if((mask & LayerMask_BG2) && (line[2][x] < backdrop))
 		{
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)))
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)))
 		{
 			color = line[4][x];
 			top = 0x10;
@@ -10208,13 +10215,13 @@ static void mode4RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & 4) && line[2][x] < back) {
+			if((mask & LayerMask_BG2) && line[2][x] < back) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
@@ -10225,12 +10232,12 @@ static void mode4RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & 4) && (top != 0x04) && (line[2][x] < backdrop)) {
+						if((mask & LayerMask_BG2) && (top != 0x04) && (line[2][x] < backdrop)) {
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
@@ -10477,12 +10484,12 @@ static void mode5RenderLineAll (void)
 		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
 		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
 
-		if((mask & 4) && (line[2][x] < background)) {
+		if((mask & LayerMask_BG2) && (line[2][x] < background)) {
 			color = line[2][x];
 			top = 0x04;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
 			color = line[4][x];
 			top = 0x10;
 		}
@@ -10492,13 +10499,13 @@ static void mode5RenderLineAll (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if((mask & 4) && line[2][x] < back) {
+			if((mask & LayerMask_BG2) && line[2][x] < back) {
 				back = line[2][x];
 				top2 = 0x04;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
@@ -10509,12 +10516,12 @@ static void mode5RenderLineAll (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if((mask & 4) && (top != 0x04) && (line[2][x] < background)) {
+						if((mask & LayerMask_BG2) && (top != 0x04) && (line[2][x] < background)) {
 							back = line[2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
 							back = line[4][x];
 							top2 = 0x10;
 						}
