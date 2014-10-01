@@ -186,11 +186,20 @@ static uint16_t io_registers[1024 * 16];
 #define R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
 #define R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
 
-#define LayerMask_BG0  (1 << 0)
-#define LayerMask_BG1  (1 << 1)
-#define LayerMask_BG2  (1 << 2)
-#define LayerMask_BG3  (1 << 3)
-#define LayerMask_OBJ  (1 << 4)
+// Indexes into the line array
+#define Layer_BG0 0
+#define Layer_BG1 1
+#define Layer_BG2 2
+#define Layer_BG3 3
+#define Layer_OBJ 4
+#define Layer_WIN_OBJ 5 // Used by VBA for OBJ opacity tests
+
+#define LayerMask_BG0  (1 << Layer_BG0)
+#define LayerMask_BG1  (1 << Layer_BG1)
+#define LayerMask_BG2  (1 << Layer_BG2)
+#define LayerMask_BG3  (1 << Layer_BG3)
+#define LayerMask_OBJ  (1 << Layer_OBJ)
+// Used in R_WIN_* to indicate whether color effects are enabled
 #define LayerMask_SFX  (1 << 5)
 
 // Indicates the currently drawn scanline, values in range from
@@ -6714,11 +6723,11 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 	unsigned xxx = (realX >> 8);
 	unsigned yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(xxx < sizeX && yyy < sizeY)
-			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[Layer_BG2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6733,7 +6742,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[2][i+1] = line[2][i];
+				line[Layer_BG2][i+1] = line[Layer_BG2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6819,12 +6828,12 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240; ++x)
 	{
 		u8 color = screenBase[yyy * 240 + xxx];
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
-			line[2][x] = (READ16LE(&palette[color])|prio);
+			line[Layer_BG2][x] = (READ16LE(&palette[color])|prio);
 		realX += dx;
 		realY += dy;
 
@@ -6840,7 +6849,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[2][i+1] = line[2][i];
+				line[Layer_BG2][i+1] = line[Layer_BG2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6926,11 +6935,11 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
-			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[Layer_BG2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6946,7 +6955,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 		int m = 1;
 		for(u32 i = 0; i < 239u; ++i)
 		{
-			line[2][i+1] = line[2][i];
+			line[Layer_BG2][i+1] = line[Layer_BG2][i];
 			if(++m == mosaicX)
 			{
 				m = 1;
@@ -7137,17 +7146,17 @@ static INLINE void gfxDrawSprites (void)
 								u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 								+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) + (xxx & 7))&0x7FFF)];
 
-								if ((color==0) && (((prio >> 25)&3) < ((line[4][sx]>>25)&3)))
+								if ((color==0) && (((prio >> 25)&3) < ((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 
 								if ((a0 & 0x1000) && ((m+1) == mosaicX))
@@ -7182,17 +7191,17 @@ static INLINE void gfxDrawSprites (void)
 									color &= 0x0F;
 
 								if ((color==0) && (((prio >> 25)&3) <
-											((line[4][sx]>>25)&3)))
+											((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[palette+color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette+color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 							}
 							if((a0 & 0x1000) && m)
@@ -7262,17 +7271,17 @@ static INLINE void gfxDrawSprites (void)
 							{
 								u8 color = vram[address];
 								if ((color==0) && (((prio >> 25)&3) <
-											((line[4][sx]>>25)&3)))
+											((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 
 								if ((a0 & 0x1000) && ((m+1) == mosaicX))
@@ -7333,17 +7342,17 @@ static INLINE void gfxDrawSprites (void)
 										color &= 0x0F;
 
 									if ((color==0) && (((prio >> 25)&3) <
-												((line[4][sx]>>25)&3)))
+												((line[Layer_OBJ][sx]>>25)&3)))
 									{
-										line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
-									else if((color) && (prio < (line[4][sx]&0xFF000000)))
+									else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 									{
-										line[4][sx] = READ16LE(&spritePalette[palette + color]) | prio;
+										line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette + color]) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
 								}
 
@@ -7379,17 +7388,17 @@ static INLINE void gfxDrawSprites (void)
 										color &= 0x0F;
 
 									if ((color==0) && (((prio >> 25)&3) <
-												((line[4][sx]>>25)&3)))
+												((line[Layer_OBJ][sx]>>25)&3)))
 									{
-										line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
-									else if((color) && (prio < (line[4][sx]&0xFF000000)))
+									else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 									{
-										line[4][sx] = READ16LE(&spritePalette[palette + color]) | prio;
+										line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette + color]) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 
 									}
 								}
@@ -7560,7 +7569,7 @@ static INLINE void gfxDrawOBJWin (void)
 							}
 
 							if(color)
-								line[5][sx] = 1;
+								line[Layer_WIN_OBJ][sx] = 1;
 						}
 						sx = (sx+1)&511;
 						realX += dx;
@@ -7615,7 +7624,7 @@ static INLINE void gfxDrawOBJWin (void)
 							{
 								u8 color = vram[address];
 								if(color)
-									line[5][sx] = 1;
+									line[Layer_WIN_OBJ][sx] = 1;
 							}
 
 							sx = (sx+1) & 511;
@@ -7670,7 +7679,7 @@ static INLINE void gfxDrawOBJWin (void)
 										color &= 0x0F;
 
 									if(color)
-										line[5][sx] = 1;
+										line[Layer_WIN_OBJ][sx] = 1;
 								}
 								sx = (sx+1) & 511;
 								xxx--;
@@ -7701,7 +7710,7 @@ static INLINE void gfxDrawOBJWin (void)
 										color &= 0x0F;
 
 									if(color)
-										line[5][sx] = 1;
+										line[Layer_WIN_OBJ][sx] = 1;
 								}
 								sx = (sx+1) & 511;
 								xxx++;
@@ -8452,10 +8461,10 @@ int CPULoadRom(const char * file)
 	flashInit();
 	eepromInit();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	return romSize;
 }
@@ -8513,19 +8522,19 @@ static void mode0RenderLine (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(R_DISPCNT_Screen_Display_BG0) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG1) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG3) {
-		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
 	}
 
 
@@ -8536,28 +8545,28 @@ static void mode0RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
+		if(line[Layer_BG0][x] < color) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
-		if((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
+		if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG1][x];
 			top = 0x02;
 		}
 
-		if((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[2][x];
+		if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[3][x];
+		if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG3][x];
 			top = 0x08;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 
 			if(color & 0x00010000) {
@@ -8565,23 +8574,23 @@ static void mode0RenderLine (void)
 				uint32_t back = backdrop;
 				uint8_t top2 = 0x20;
 
-				if((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[0][x];
+				if((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG0][x];
 					top2 = 0x01;
 				}
 
-				if((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[1][x];
+				if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG1][x];
 					top2 = 0x02;
 				}
 
-				if((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[2][x];
+				if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}
 
-				if((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[3][x];
+				if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG3][x];
 					top2 = 0x08;
 				}
 
@@ -8605,47 +8614,47 @@ static void mode0RenderLineNoWindow (void)
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	if(R_DISPCNT_Screen_Display_BG0) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG1) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG3) {
-		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
 	}
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
+		if(line[Layer_BG0][x] < color) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
-		if(line[1][x] < (color & 0xFF000000)) {
-			color = line[1][x];
+		if(line[Layer_BG1][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG1][x];
 			top = 0x02;
 		}
 
-		if(line[2][x] < (color & 0xFF000000)) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if(line[3][x] < (color & 0xFF000000)) {
-			color = line[3][x];
+		if(line[Layer_BG3][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG3][x];
 			top = 0x08;
 		}
 
-		if(line[4][x] < (color & 0xFF000000)) {
-			color = line[4][x];
+		if(line[Layer_OBJ][x] < (color & 0xFF000000)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -8659,33 +8668,33 @@ static void mode0RenderLineNoWindow (void)
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
-						if((line[0][x] < back) && (top != 0x01))
+						if((line[Layer_BG0][x] < back) && (top != 0x01))
 						{
-							back = line[0][x];
+							back = line[Layer_BG0][x];
 							top2 = 0x01;
 						}
 
-						if((line[1][x] < (back & 0xFF000000)) && (top != 0x02))
+						if((line[Layer_BG1][x] < (back & 0xFF000000)) && (top != 0x02))
 						{
-							back = line[1][x];
+							back = line[Layer_BG1][x];
 							top2 = 0x02;
 						}
 
-						if((line[2][x] < (back & 0xFF000000)) && (top != 0x04))
+						if((line[Layer_BG2][x] < (back & 0xFF000000)) && (top != 0x04))
 						{
-							back = line[2][x];
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((line[3][x] < (back & 0xFF000000)) && (top != 0x08))
+						if((line[Layer_BG3][x] < (back & 0xFF000000)) && (top != 0x08))
 						{
-							back = line[3][x];
+							back = line[Layer_BG3][x];
 							top2 = 0x08;
 						}
 
-						if((line[4][x] < (back & 0xFF000000)) && (top != 0x10))
+						if((line[Layer_OBJ][x] < (back & 0xFF000000)) && (top != 0x10))
 						{
-							back = line[4][x];
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -8710,23 +8719,23 @@ static void mode0RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if(line[0][x] < back) {
-				back = line[0][x];
+			if(line[Layer_BG0][x] < back) {
+				back = line[Layer_BG0][x];
 				top2 = 0x01;
 			}
 
-			if(line[1][x] < (back & 0xFF000000)) {
-				back = line[1][x];
+			if(line[Layer_BG1][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG1][x];
 				top2 = 0x02;
 			}
 
-			if(line[2][x] < (back & 0xFF000000)) {
-				back = line[2][x];
+			if(line[Layer_BG2][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
-			if(line[3][x] < (back & 0xFF000000)) {
-				back = line[3][x];
+			if(line[Layer_BG3][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG3][x];
 				top2 = 0x08;
 			}
 
@@ -8769,19 +8778,19 @@ static void mode0RenderLineAll (void)
 	}
 
 	if((R_DISPCNT_Screen_Display_BG0)) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if((R_DISPCNT_Screen_Display_BG1)) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if((R_DISPCNT_Screen_Display_BG2)) {
-		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
 	}
 
 	if((R_DISPCNT_Screen_Display_BG3)) {
-		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -8795,35 +8804,35 @@ static void mode0RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
 			mask = R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & LayerMask_BG0) && (line[0][x] < color)) {
-			color = line[0][x];
+		if((mask & LayerMask_BG0) && (line[Layer_BG0][x] < color)) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
-		if((mask & LayerMask_BG1) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[1][x];
+		if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG1][x];
 			top = 0x02;
 		}
 
-		if((mask & LayerMask_BG2) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[2][x];
+		if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_BG3) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[3][x];
+		if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG3][x];
 			top = 0x08;
 		}
 
-		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[4][x];
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -8833,23 +8842,23 @@ static void mode0RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG0) && ((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[0][x];
+			if((mask & LayerMask_BG0) && ((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG0][x];
 				top2 = 0x01;
 			}
 
-			if((mask & LayerMask_BG1) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[1][x];
+			if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG1][x];
 				top2 = 0x02;
 			}
 
-			if((mask & LayerMask_BG2) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
-			if((mask & LayerMask_BG3) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[3][x];
+			if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG3][x];
 				top2 = 0x08;
 			}
 
@@ -8866,32 +8875,32 @@ static void mode0RenderLineAll (void)
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
-						if(((mask & LayerMask_BG0) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
+						if(((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
 						{
-							back = line[0][x];
+							back = line[Layer_BG0][x];
 							top2 = 0x01;
 						}
 
-						if(((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
+						if(((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
 						{
-							back = line[1][x];
+							back = line[Layer_BG1][x];
 							top2 = 0x02;
 						}
 
-						if(((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
+						if(((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
 						{
-							back = line[2][x];
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if(((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
+						if(((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
 						{
-							back = line[3][x];
+							back = line[Layer_BG3][x];
 							top2 = 0x08;
 						}
 
-						if(((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
-							back = line[4][x];
+						if(((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -8934,11 +8943,11 @@ static void mode1RenderLine (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(R_DISPCNT_Screen_Display_BG0) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG1) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
@@ -8949,7 +8958,7 @@ static void mode1RenderLine (void)
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -8958,9 +8967,9 @@ static void mode1RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -8968,20 +8977,20 @@ static void mode1RenderLine (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
+		if(line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
+				color = line[Layer_BG1][x];
 				top = 0x02;
 			}else if(r == li2){
-				color = line[2][x];
+				color = line[Layer_BG2][x];
 				top = 0x04;
 			}else if(r == li4){
-				color = line[4][x];
+				color = line[Layer_OBJ][x];
 				top = 0x10;
 				if((color & 0x00010000))
 				{
@@ -8989,9 +8998,9 @@ static void mode1RenderLine (void)
 					uint32_t back = backdrop;
 					uint8_t top2 = 0x20;
 
-					uint8_t li0 = (uint8_t)(line[0][x]>>24);
-					uint8_t li1 = (uint8_t)(line[1][x]>>24);
-					uint8_t li2 = (uint8_t)(line[2][x]>>24);
+					uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
+					uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+					uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 					uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
 					if(li2 < r) {
@@ -9000,13 +9009,13 @@ static void mode1RenderLine (void)
 
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li0){
-							back = line[0][x];
+							back = line[Layer_BG0][x];
 							top2 = 0x01;
 						}else if(r == li1){
-							back = line[1][x];
+							back = line[Layer_BG1][x];
 							top2 = 0x02;
 						}else if(r == li2){
-							back = line[2][x];
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 					}
@@ -9033,11 +9042,11 @@ static void mode1RenderLineNoWindow (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
 	if(R_DISPCNT_Screen_Display_BG0) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG1) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
@@ -9048,7 +9057,7 @@ static void mode1RenderLineNoWindow (void)
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -9057,9 +9066,9 @@ static void mode1RenderLineNoWindow (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -9067,20 +9076,20 @@ static void mode1RenderLineNoWindow (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
+		if(line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
+				color = line[Layer_BG1][x];
 				top = 0x02;
 			}else if(r == li2){
-				color = line[2][x];
+				color = line[Layer_BG2][x];
 				top = 0x04;
 			}else if(r == li4){
-				color = line[4][x];
+				color = line[Layer_OBJ][x];
 				top = 0x10;
 			}
 		}
@@ -9096,23 +9105,23 @@ static void mode1RenderLineNoWindow (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[0][x];
+						if((top != 0x01) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG0][x];
 							top2 = 0x01;
 						}
 
-						if((top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[1][x];
+						if((top != 0x02) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG1][x];
 							top2 = 0x02;
 						}
 
-						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
+						if((top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -9136,9 +9145,9 @@ static void mode1RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			uint8_t li0 = (uint8_t)(line[0][x]>>24);
-			uint8_t li1 = (uint8_t)(line[1][x]>>24);
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);	
+			uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
+			uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+			uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);	
 
 			uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
@@ -9150,17 +9159,17 @@ static void mode1RenderLineNoWindow (void)
 			{
 				if(r == li0)
 				{
-					back = line[0][x];
+					back = line[Layer_BG0][x];
 					top2 = 0x01;
 				}
 				else if(r == li1)
 				{
-					back = line[1][x];
+					back = line[Layer_BG1][x];
 					top2 = 0x02;
 				}
 				else if(r == li2)
 				{
-					back = line[2][x];
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}
 			}
@@ -9200,11 +9209,11 @@ static void mode1RenderLineAll (void)
 	}
 
 	if(R_DISPCNT_Screen_Display_BG0) {
-		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG1) {
-		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
@@ -9215,7 +9224,7 @@ static void mode1RenderLineAll (void)
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -9229,7 +9238,7 @@ static void mode1RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
 			mask = R_WIN_OBJ_Mask;
 		}
 
@@ -9237,23 +9246,23 @@ static void mode1RenderLineAll (void)
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
-		if((mask & LayerMask_BG0) && line[0][x] < backdrop) {
-			color = line[0][x];
+		if((mask & LayerMask_BG0) && line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
 			top = 0x01;
 		}
 
-		if((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
+		if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG1][x];
 			top = 0x02;
 		}
 
-		if((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[2][x];
+		if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -9262,18 +9271,18 @@ static void mode1RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG0) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-				back = line[0][x];
+			if((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+				back = line[Layer_BG0][x];
 				top2 = 0x01;
 			}
 
-			if((mask & LayerMask_BG1) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[1][x];
+			if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG1][x];
 				top2 = 0x02;
 			}
 
-			if((mask & LayerMask_BG2) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -9290,23 +9299,23 @@ static void mode1RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & LayerMask_BG0) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-							back = line[0][x];
+						if((mask & LayerMask_BG0) && (top != 0x01) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+							back = line[Layer_BG0][x];
 							top2 = 0x01;
 						}
 
-						if((mask & LayerMask_BG1) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[1][x];
+						if((mask & LayerMask_BG1) && (top != 0x02) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG1][x];
 							top2 = 0x02;
 						}
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
+						if((mask & LayerMask_BG2) && (top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -9360,7 +9369,7 @@ static void mode2RenderLine (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG3) {
@@ -9372,7 +9381,7 @@ static void mode2RenderLine (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -9381,9 +9390,9 @@ static void mode2RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -9393,13 +9402,13 @@ static void mode2RenderLine (void)
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
-				color = line[2][x];
+				color = line[Layer_BG2][x];
 				top = 0x04;
 			}else if(r == li3){
-				color = line[3][x];
+				color = line[Layer_BG3][x];
 				top = 0x08;
 			}else if(r == li4){
-				color = line[4][x];
+				color = line[Layer_OBJ][x];
 				top = 0x10;
 
 				if(color & 0x00010000) {
@@ -9407,16 +9416,16 @@ static void mode2RenderLine (void)
 					uint32_t back = backdrop;
 					uint8_t top2 = 0x20;
 
-					uint8_t li2 = (uint8_t)(line[2][x]>>24);
-					uint8_t li3 = (uint8_t)(line[3][x]>>24);
+					uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+					uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
 					uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li2){
-							back = line[2][x];
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}else if(r == li3){
-							back = line[3][x];
+							back = line[Layer_BG3][x];
 							top2 = 0x08;
 						}
 					}
@@ -9452,7 +9461,7 @@ static void mode2RenderLineNoWindow (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG3) {
@@ -9464,7 +9473,7 @@ static void mode2RenderLineNoWindow (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -9473,9 +9482,9 @@ static void mode2RenderLineNoWindow (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -9485,13 +9494,13 @@ static void mode2RenderLineNoWindow (void)
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
-				color = line[2][x];
+				color = line[Layer_BG2][x];
 				top = 0x04;
 			}else if(r == li3){
-				color = line[3][x];
+				color = line[Layer_BG3][x];
 				top = 0x08;
 			}else if(r == li4){
-				color = line[4][x];
+				color = line[Layer_OBJ][x];
 				top = 0x10;
 			}
 		}
@@ -9507,18 +9516,18 @@ static void mode2RenderLineNoWindow (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
+						if((top != 0x04) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[3][x];
+						if((top != 0x08) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG3][x];
 							top2 = 0x08;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -9542,16 +9551,16 @@ static void mode2RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);
-			uint8_t li3 = (uint8_t)(line[3][x]>>24);
+			uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+			uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
 			uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
 			if(r < (uint8_t)(back >> 24)) {
 				if(r == li2){
-					back = line[2][x];
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}else if(r == li3){
-					back = line[3][x];
+					back = line[Layer_BG3][x];
 					top2 = 0x08;
 				}
 			}
@@ -9600,7 +9609,7 @@ static void mode2RenderLineAll (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
 	if(R_DISPCNT_Screen_Display_BG3) {
@@ -9612,7 +9621,7 @@ static void mode2RenderLineAll (void)
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -9626,25 +9635,25 @@ static void mode2RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
 			mask = R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & LayerMask_BG2) && line[2][x] < color) {
-			color = line[2][x];
+		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < color) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[3][x];
+		if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG3][x];
 			top = 0x08;
 		}
 
-		if((mask & LayerMask_OBJ) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -9653,13 +9662,13 @@ static void mode2RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG2) && line[2][x] < back) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
-			if((mask & LayerMask_BG3) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[3][x];
+			if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG3][x];
 				top2 = 0x08;
 			}
 
@@ -9676,18 +9685,18 @@ static void mode2RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && line[2][x] < back) {
-							back = line[2][x];
+						if((mask & LayerMask_BG2) && (top != 0x04) && line[Layer_BG2][x] < back) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & LayerMask_BG3) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[3][x];
+						if((mask & LayerMask_BG3) && (top != 0x08) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG3][x];
 							top2 = 0x08;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -9748,13 +9757,13 @@ static void mode3RenderLine (void)
 		uint32_t color = background;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < color) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < color) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 
 			if(color & 0x00010000) {
@@ -9762,8 +9771,8 @@ static void mode3RenderLine (void)
 				uint32_t back = background;
 				uint8_t top2 = 0x20;
 
-				if(line[2][x] < background) {
-					back = line[2][x];
+				if(line[Layer_BG2][x] < background) {
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}
 
@@ -9803,13 +9812,13 @@ static void mode3RenderLineNoWindow (void)
 		uint32_t color = background;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -9824,13 +9833,13 @@ static void mode3RenderLineNoWindow (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if(top != 0x04 && (line[2][x] < background) ) {
-							back = line[2][x];
+						if(top != 0x04 && (line[Layer_BG2][x] < background) ) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if(top != 0x10 && ((uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24))) {
-							back = line[4][x];
+						if(top != 0x10 && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24))) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -9855,8 +9864,8 @@ static void mode3RenderLineNoWindow (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if(line[2][x] < background) {
-				back = line[2][x];
+			if(line[Layer_BG2][x] < background) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -9916,20 +9925,20 @@ static void mode3RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
 			mask = R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & LayerMask_BG2) && line[2][x] < background) {
-			color = line[2][x];
+		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[4][x];
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -9938,8 +9947,8 @@ static void mode3RenderLineAll (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG2) && line[2][x] < background) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -9955,13 +9964,13 @@ static void mode3RenderLineAll (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && line[2][x] < back) {
-							back = line[2][x];
+						if((mask & LayerMask_BG2) && (top != 0x04) && line[Layer_BG2][x] < back) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -10023,13 +10032,13 @@ static void mode4RenderLine (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < backdrop) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < backdrop) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 
 			if(color & 0x00010000) {
@@ -10037,8 +10046,8 @@ static void mode4RenderLine (void)
 				uint32_t back = backdrop;
 				uint8_t top2 = 0x20;
 
-				if(line[2][x] < backdrop) {
-					back = line[2][x];
+				if(line[Layer_BG2][x] < backdrop) {
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}
 
@@ -10080,13 +10089,13 @@ static void mode4RenderLineNoWindow (void)
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < backdrop) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < backdrop) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -10101,13 +10110,13 @@ static void mode4RenderLineNoWindow (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((top != 0x04) && line[2][x] < backdrop) {
-							back = line[2][x];
+						if((top != 0x04) && line[Layer_BG2][x] < backdrop) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -10131,8 +10140,8 @@ static void mode4RenderLineNoWindow (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if(line[2][x] < back) {
-				back = line[2][x];
+			if(line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -10193,21 +10202,21 @@ static void mode4RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000))
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000))
 			mask = R_WIN_OBJ_Mask;
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & LayerMask_BG2) && (line[2][x] < backdrop))
+		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < backdrop))
 		{
-			color = line[2][x];
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)))
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)))
 		{
-			color = line[4][x];
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -10216,8 +10225,8 @@ static void mode4RenderLineAll (void)
 			uint32_t back = backdrop;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG2) && line[2][x] < back) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -10233,13 +10242,13 @@ static void mode4RenderLineAll (void)
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (line[2][x] < backdrop)) {
-							back = line[2][x];
+						if((mask & LayerMask_BG2) && (top != 0x04) && (line[Layer_BG2][x] < backdrop)) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -10301,13 +10310,13 @@ static void mode5RenderLine (void)
 		uint32_t color = background;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 
 			if(color & 0x00010000) {
@@ -10315,8 +10324,8 @@ static void mode5RenderLine (void)
 				uint32_t back = background;
 				uint8_t top2 = 0x20;
 
-				if(line[2][x] < back) {
-					back = line[2][x];
+				if(line[Layer_BG2][x] < back) {
+					back = line[Layer_BG2][x];
 					top2 = 0x04;
 				}
 
@@ -10358,13 +10367,13 @@ static void mode5RenderLineNoWindow (void)
 		uint32_t color = background;
 		uint8_t top = 0x20;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -10379,13 +10388,13 @@ static void mode5RenderLineNoWindow (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if((top != 0x04) && line[2][x] < background) {
-							back = line[2][x];
+						if((top != 0x04) && line[Layer_BG2][x] < background) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -10410,8 +10419,8 @@ static void mode5RenderLineNoWindow (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if(line[2][x] < back) {
-				back = line[2][x];
+			if(line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -10476,20 +10485,20 @@ static void mode5RenderLineAll (void)
 		uint8_t top = 0x20;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
 			mask = R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & LayerMask_BG2) && (line[2][x] < background)) {
-			color = line[2][x];
+		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < background)) {
+			color = line[Layer_BG2][x];
 			top = 0x04;
 		}
 
-		if((mask & LayerMask_OBJ) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[4][x];
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[Layer_OBJ][x];
 			top = 0x10;
 		}
 
@@ -10498,8 +10507,8 @@ static void mode5RenderLineAll (void)
 			uint32_t back = background;
 			uint8_t top2 = 0x20;
 
-			if((mask & LayerMask_BG2) && line[2][x] < back) {
-				back = line[2][x];
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
 				top2 = 0x04;
 			}
 
@@ -10515,13 +10524,13 @@ static void mode5RenderLineAll (void)
 						uint32_t back = background;
 						uint8_t top2 = 0x20;
 
-						if((mask & LayerMask_BG2) && (top != 0x04) && (line[2][x] < background)) {
-							back = line[2][x];
+						if((mask & LayerMask_BG2) && (top != 0x04) && (line[Layer_BG2][x] < background)) {
+							back = line[Layer_BG2][x];
 							top2 = 0x04;
 						}
 
-						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
+						if((mask & LayerMask_OBJ) && (top != 0x10) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
 							top2 = 0x10;
 						}
 
@@ -10664,10 +10673,10 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	CPUUpdateRender();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	CPUUpdateWindow0();
 	CPUUpdateWindow1();
@@ -11092,13 +11101,13 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				if(changeBG)
 				{
 					if(!R_DISPCNT_Screen_Display_BG0)
-						memset(line[0], -1, 240 * sizeof(u32));
+						memset(line[Layer_BG0], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG1)
-						memset(line[1], -1, 240 * sizeof(u32));
+						memset(line[Layer_BG1], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG2)
-						memset(line[2], -1, 240 * sizeof(u32));
+						memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG3)
-						memset(line[3], -1, 240 * sizeof(u32));
+						memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 				}
 				break;
 			}
@@ -11839,10 +11848,10 @@ void CPUReset (void)
 	saveType = 0;
 	graphics.layerEnable = io_registers[REG_DISPCNT];
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	for(int i = 0; i < 256; i++) {
 		map[i].address = 0;
@@ -12124,14 +12133,14 @@ updateLoop:
 				{
 					bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
 					bool draw_sprites = R_DISPCNT_Screen_Display_OBJ;
-					memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
+					memset(line[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 
 					if(draw_sprites)
 						gfxDrawSprites();
 
 					if(render_line_all_enabled)
 					{
-						memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+						memset(line[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 						if(draw_objwin)
 							gfxDrawOBJWin();
 					}
