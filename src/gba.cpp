@@ -209,9 +209,17 @@ static uint16_t io_registers[1024 * 16];
 #define SpecialEffect_Brightness_Increase (2)
 #define SpecialEffect_Brightness_Decrease (3)
 
-// Returns 0xFFFFFFFF if x is true (1) and 0 if x is false (0).
-// Do not use if x might have other values.
-#define MASK32(x) (~(int32_t)(x) + 1)
+// Fast implementation of ternary operator.
+// Implemented as a function (as opposed to a macro) to avoid
+// evaluating the parameters more than once.
+uint32_t FORCE_INLINE SELECT(bool condition, uint32_t ifTrue, uint32_t ifFalse)
+{
+	// Will be 0 if condition==false or 0xFFFFFFFF
+	// if condition==true.
+	int32_t testmask = ~(uint32_t)(condition) + 1;
+
+	return (ifTrue & testmask) | (ifFalse & ~testmask);
+}
 
 static u16 MOSAIC;
 
@@ -8791,10 +8799,8 @@ static void mode0RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG0) && (line[0][x] < color)) {
 			color = line[0][x];
@@ -9227,10 +9233,8 @@ static void mode1RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
 		if((mask & LayerMask_BG0) && line[0][x] < backdrop) {
@@ -9626,10 +9630,8 @@ static void mode2RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && line[2][x] < color) {
 			color = line[2][x];
@@ -9918,10 +9920,8 @@ static void mode3RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && line[2][x] < background) {
 			color = line[2][x];
@@ -10196,10 +10196,8 @@ static void mode4RenderLineAll (void)
 		if(!(line[5][x] & 0x80000000))
 			mask = R_WIN_OBJ_Mask;
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && (line[2][x] < backdrop))
 		{
@@ -10482,10 +10480,8 @@ static void mode5RenderLineAll (void)
 			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = MASK32(inWindow1 & gfxInWin[1][x]);
-		int32_t window0_mask = MASK32(inWindow0 & gfxInWin[0][x]);
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && (line[2][x] < background)) {
 			color = line[2][x];
