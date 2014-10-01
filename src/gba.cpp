@@ -8479,13 +8479,13 @@ static void mode0RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(R_DISPCNT_Screen_Display_BG0) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+	}
 
-  if(R_DISPCNT_Screen_Display_BG1) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+	}
 
   if(R_DISPCNT_Screen_Display_BG2) {
     gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
@@ -8903,13 +8903,13 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(R_DISPCNT_Screen_Display_BG0) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+	}
 
-  if(R_DISPCNT_Screen_Display_BG1) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
@@ -9169,13 +9169,13 @@ static void mode1RenderLineAll (void)
 		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-  if(R_DISPCNT_Screen_Display_BG0) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
+	}
 
-  if(R_DISPCNT_Screen_Display_BG1) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
+	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
