@@ -195,6 +195,10 @@ static uint16_t io_registers[1024 * 16];
 // adjust the brightness of the selected surface.
 
 #define R_BLDCNT_Color_Special_Effect ((BLDMOD >> 6) & 3)
+#define SpecialEffect_None                (0)
+#define SpecialEffect_Alpha_Blending      (1)
+#define SpecialEffect_Brightness_Increase (2)
+#define SpecialEffect_Brightness_Decrease (3)
 
 static u16 MOSAIC;
 
@@ -8455,10 +8459,10 @@ void doMirroring (bool b)
 #define brightness_switch() \
       switch(R_BLDCNT_Color_Special_Effect) \
       { \
-         case 2: \
+         case SpecialEffect_Brightness_Increase: \
                color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]); \
                break; \
-         case 3: \
+         case SpecialEffect_Brightness_Decrease: \
                color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]); \
                break; \
       }
@@ -8594,8 +8598,6 @@ static void mode0RenderLineNoWindow (void)
       gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
    }
 
-	int effect = R_BLDCNT_Color_Special_Effect;
-
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
 		uint8_t top = 0x20;
@@ -8626,10 +8628,11 @@ static void mode0RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -8671,11 +8674,11 @@ static void mode0RenderLineNoWindow (void)
 
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -8837,9 +8840,9 @@ static void mode0RenderLineAll (void)
 			// special FX on in the window
 			switch(R_BLDCNT_Color_Special_Effect)
 			{
-				case 0:
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = 0x20;
@@ -8878,10 +8881,10 @@ static void mode0RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9064,10 +9067,11 @@ static void mode1RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -9099,11 +9103,11 @@ static void mode1RenderLineNoWindow (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -9259,10 +9263,11 @@ static void mode1RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
 			// special FX on the window
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -9294,11 +9299,11 @@ static void mode1RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -9475,10 +9480,11 @@ static void mode2RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -9505,11 +9511,11 @@ static void mode2RenderLineNoWindow (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -9645,10 +9651,11 @@ static void mode2RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
 			// special FX on the window
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -9675,11 +9682,11 @@ static void mode2RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -9792,10 +9799,11 @@ static void mode3RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
@@ -9818,11 +9826,11 @@ static void mode3RenderLineNoWindow (void)
 
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -9924,10 +9932,11 @@ static void mode3RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
@@ -9949,11 +9958,11 @@ static void mode3RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -10069,10 +10078,11 @@ static void mode4RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -10094,11 +10104,11 @@ static void mode4RenderLineNoWindow (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -10202,10 +10212,11 @@ static void mode4RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = backdrop;
@@ -10227,11 +10238,11 @@ static void mode4RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -10347,10 +10358,11 @@ static void mode5RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
@@ -10373,11 +10385,11 @@ static void mode5RenderLineNoWindow (void)
 
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
@@ -10484,10 +10496,11 @@ static void mode5RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & 32) {
-			switch(R_BLDCNT_Color_Special_Effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					if(top & BLDMOD)
 					{
 						uint32_t back = background;
@@ -10509,11 +10522,11 @@ static void mode5RenderLineAll (void)
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					if(BLDMOD & top)
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					if(BLDMOD & top)
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
