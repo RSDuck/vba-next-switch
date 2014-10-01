@@ -7738,9 +7738,9 @@ static u32 AlphaClampLUT[64] =
  0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F
 };  
 
-#define GFX_ALPHA_BLEND(color, color2, ca, cb) \
-	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)]; \
-	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)]; \
+#define GFX_ALPHA_BLEND(color, color2, ca, cb)                                                           \
+	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)];                 \
+	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)];   \
 	int b = AlphaClampLUT[((((color >> 10) & 0x1F) * ca) >> 4) + ((((color2 >> 10) & 0x1F) * cb) >> 4)]; \
 	color = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
 
@@ -8467,27 +8467,28 @@ void doMirroring (bool b)
 	}
 }
 
-#define brightness_switch() \
-      switch(R_BLDCNT_Color_Special_Effect) \
-      { \
-         case SpecialEffect_Brightness_Increase: \
-               color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]); \
-               break; \
-         case SpecialEffect_Brightness_Decrease: \
-               color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]); \
-               break; \
-      }
+#define brightness_switch()                                                                \
+	switch(R_BLDCNT_Color_Special_Effect)                                                  \
+	{                                                                                      \
+		case SpecialEffect_Brightness_Increase:                                            \
+			color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);                      \
+			break;                                                                         \
+		case SpecialEffect_Brightness_Decrease:                                            \
+			color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);                      \
+			break;                                                                         \
+	}
 
-#define alpha_blend_brightness_switch() \
-      if(top2 & (BLDMOD>>8)) \
-	if(color < 0x80000000) \
-	{ \
-		GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
-	} \
-      else if(BLDMOD & top) \
-      { \
-         brightness_switch(); \
-      }
+#define alpha_blend_brightness_switch()                                                    \
+	if(top2 & (BLDMOD>>8))                                                                 \
+		if(color < 0x80000000)                                                             \
+		{                                                                                  \
+			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
+		}                                                                                  \
+		else                                                                               \
+		if(BLDMOD & top)                                                                   \
+		{                                                                                  \
+			brightness_switch();                                                           \
+		}
 
 /* we only use 16bit color depth */
 #define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
