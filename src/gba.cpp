@@ -9160,33 +9160,13 @@ static void mode1RenderLineAll (void)
 	{
 		uint8_t v0 = R_WIN_Window0_Y1;
 		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow0 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = R_WIN_Window1_Y1;
 		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow1 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
   if(R_DISPCNT_Screen_Display_BG0) {
@@ -9572,33 +9552,13 @@ static void mode2RenderLineAll (void)
 	{
 		uint8_t v0 = R_WIN_Window0_Y1;
 		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow0 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = R_WIN_Window1_Y1;
 		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow1 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
@@ -9894,34 +9854,14 @@ static void mode3RenderLineAll (void)
 	{
 		uint8_t v0 = R_WIN_Window0_Y1;
 		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow0 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = R_WIN_Window1_Y1;
 		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow1 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2) {
@@ -10190,34 +10130,14 @@ static void mode4RenderLineAll (void)
 	{
 		uint8_t v0 = R_WIN_Window0_Y1;
 		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow0 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = R_WIN_Window1_Y1;
 		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow1 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Screen_Display_BG2)
@@ -10504,34 +10424,14 @@ static void mode5RenderLineAll (void)
 	{
 		uint8_t v0 = R_WIN_Window0_Y1;
 		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow0 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	if(R_DISPCNT_Window_1_Display)
 	{
 		uint8_t v0 = R_WIN_Window1_Y1;
 		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (R_VCOUNT >= v0 && R_VCOUNT < v1)) & condition_mask) | (((inWindow1 | (R_VCOUNT >= v0 || R_VCOUNT < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
-		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
-#endif
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
 	uint8_t inWin0Mask = R_WIN_Window0_Mask;
