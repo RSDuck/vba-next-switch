@@ -88,4 +88,16 @@
 #define WRITE32LE(x,v) *((u32 *)x) = (v)
 #endif
 
+#ifdef INLINE
+ #if defined(_MSC_VER)
+  #define FORCE_INLINE __forceinline
+ #elif defined(__GNUC__)
+  #define FORCE_INLINE __attribute__((always_inline))
+ #else
+  #define FORCE_INLINE INLINE
+ #endif
+#else
+ #define FORCE_INLINE
 #endif
+
+#endif // PORT_H

@@ -163,6 +163,10 @@ static void check_system_specs(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL, &level);
 }
 
+#ifdef PROFILE_ANDROID
+#include <prof.h>
+#endif
+
 void retro_init(void)
 {
    struct retro_log_callback log;
@@ -181,6 +185,10 @@ void retro_init(void)
 #endif
 
    check_system_specs();
+
+#ifdef PROFILE_ANDROID
+   monstartup("vba_next_libretro_android.so");
+#endif
 }
 
 static unsigned serialize_size = 0;
@@ -384,6 +392,9 @@ static void gba_init(void)
 
 void retro_deinit(void)
 {
+#ifdef PROFILE_ANDROID
+	moncleanup();
+#endif
 	CPUCleanUp();
 }
 
@@ -541,11 +552,12 @@ void systemDrawScreen()
 
 void systemMessage(const char* fmt, ...)
 {
+   if (!log_cb) return;
+
    char buffer[256];
    va_list ap;
    va_start(ap, fmt);
-   vsprintf(buffer, fmt, ap);
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "%s\n", buffer);
+   vsnprintf(buffer, sizeof(buffer), fmt, ap);
+   log_cb(RETRO_LOG_INFO, "%s\n", buffer);
    va_end(ap);
 }

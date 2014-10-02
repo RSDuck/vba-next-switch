@@ -146,6 +146,103 @@ typedef enum
 
 static uint16_t io_registers[1024 * 16];
 
+// Note: Some comments below are from the GBATEK document
+// (http://problemkaputt.de/gbatek.htm).
+
+#define R_DISPCNT_Video_Mode (io_registers[REG_DISPCNT] & 7)
+
+// By default, BG0-3 and OBJ Display Flags (Bit 8-12) are used to
+// enable/disable BGs and OBJ. When enabling Window 0 and/or 1
+// (Bit 13-14), color special effects may be used, and BG0-3 and
+// OBJ are controlled by the window(s).
+
+#define R_DISPCNT_Screen_Display_BG0 (graphics.layerEnable & (1 <<  8))
+#define R_DISPCNT_Screen_Display_BG1 (graphics.layerEnable & (1 <<  9))
+#define R_DISPCNT_Screen_Display_BG2 (graphics.layerEnable & (1 << 10))
+#define R_DISPCNT_Screen_Display_BG3 (graphics.layerEnable & (1 << 11))
+#define R_DISPCNT_Screen_Display_OBJ (graphics.layerEnable & (1 << 12))
+#define R_DISPCNT_Window_0_Display   (graphics.layerEnable & (1 << 13))
+#define R_DISPCNT_Window_1_Display   (graphics.layerEnable & (1 << 14))
+#define R_DISPCNT_OBJ_Window_Display (graphics.layerEnable & (1 << 15))
+
+#define R_WIN_Window0_X1 (io_registers[REG_WIN0H] >> 8)
+#define R_WIN_Window0_X2 (io_registers[REG_WIN0H] & 0xFF)
+#define R_WIN_Window0_Y1 (io_registers[REG_WIN0V] >> 8)
+#define R_WIN_Window0_Y2 (io_registers[REG_WIN0V] & 0xFF)
+
+#define R_WIN_Window1_X1 (io_registers[REG_WIN1H] >> 8)
+#define R_WIN_Window1_X2 (io_registers[REG_WIN1H] & 0xFF)
+#define R_WIN_Window1_Y1 (io_registers[REG_WIN1V] >> 8)
+#define R_WIN_Window1_Y2 (io_registers[REG_WIN1V] & 0xFF)
+
+// These return a 6-bit mask which corresponds which layers are
+// visible in the corresponding window/region:
+// Bits 0-3 : Whether BG0-BG3 are visible
+// Bit   4  : Whether OBJ is visible
+// Bit   5  : Whether special effects are enabled
+
+#define R_WIN_Window0_Mask (io_registers[REG_WININ] & 0xFF)
+#define R_WIN_Window1_Mask (io_registers[REG_WININ] >> 8)
+#define R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
+#define R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
+
+// Indexes into the line array
+#define Layer_BG0 0
+#define Layer_BG1 1
+#define Layer_BG2 2
+#define Layer_BG3 3
+#define Layer_OBJ 4
+#define Layer_WIN_OBJ 5 // Used by VBA for OBJ opacity tests
+
+#define LayerMask_BG0  (1 << Layer_BG0)
+#define LayerMask_BG1  (1 << Layer_BG1)
+#define LayerMask_BG2  (1 << Layer_BG2)
+#define LayerMask_BG3  (1 << Layer_BG3)
+#define LayerMask_OBJ  (1 << Layer_OBJ)
+// Used in R_WIN_* to indicate whether color effects are enabled
+#define LayerMask_SFX  (1 << 5)
+
+// Indicates the currently drawn scanline, values in range from
+// 160..227 indicate 'hidden' scanlines within VBlank area.
+
+#define R_VCOUNT (io_registers[REG_VCOUNT])
+
+// Two types of Special Effects are supported:
+// Alpha Blending (Semi-Transparency) allows to combine colors
+// of two selected surfaces. Brightness Increase/Decrease
+// adjust the brightness of the selected surface.
+
+#define R_BLDCNT_Color_Special_Effect ((BLDMOD >> 6) & 3)
+#define SpecialEffect_None                (0)
+#define SpecialEffect_Alpha_Blending      (1)
+#define SpecialEffect_Brightness_Increase (2)
+#define SpecialEffect_Brightness_Decrease (3)
+
+// Special effect targets.
+#define R_BLDCNT_IsTarget1(target) ((target) & (BLDMOD     ))
+#define R_BLDCNT_IsTarget2(target) ((target) & (BLDMOD >> 8))
+
+// The first 5 entries coincide with LayerMask_*.
+#define SpecialEffectTarget_BG0  (1 << Layer_BG0)
+#define SpecialEffectTarget_BG1  (1 << Layer_BG1)
+#define SpecialEffectTarget_BG2  (1 << Layer_BG2)
+#define SpecialEffectTarget_BG3  (1 << Layer_BG3)
+#define SpecialEffectTarget_OBJ  (1 << Layer_OBJ) // Top-most OBJ
+#define SpecialEffectTarget_BD   (1 << 5        ) // Backdrop
+
+
+// Fast implementation of ternary operator.
+// Implemented as a function (as opposed to a macro) to avoid
+// evaluating the parameters more than once.
+uint32_t FORCE_INLINE SELECT(bool condition, uint32_t ifTrue, uint32_t ifFalse)
+{
+	// Will be 0 if condition==true or 0xFFFFFFFF
+	// if condition==false.
+	uint32_t testmask = (uint32_t)condition - 1;
+
+	return (testmask & ifFalse) | (~testmask & ifTrue);
+}
+
 static u16 MOSAIC;
 
 static uint16_t BG2X_L   = 0x0000;
@@ -156,9 +253,9 @@ static uint16_t BG3X_L   = 0x0000;
 static uint16_t BG3X_H   = 0x0000;
 static uint16_t BG3Y_L   = 0x0000;
 static uint16_t BG3Y_H   = 0x0000;
-static uint16_t BLDMOD   = 0x0000;
-static uint16_t COLEV    = 0x0000;
-static uint16_t COLY     = 0x0000;
+static uint16_t BLDMOD   = 0x0000; // aka BLDCNT
+static uint16_t COLEV    = 0x0000; // aka BLDALPHA
+static uint16_t COLY     = 0x0000; // aka BLDY
 static uint16_t DM0SAD_L = 0x0000;
 static uint16_t DM0SAD_H = 0x0000;
 static uint16_t DM0DAD_L = 0x0000;
@@ -409,7 +506,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 		case 0x06:
 			/* VRAM */
 			address = (address & 0x1fffc);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -501,7 +598,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 			{
 				value = 0;
 				break;
@@ -579,7 +676,7 @@ static INLINE u8 CPUReadByte(u32 address)
 			return graphics.paletteRAM[address & 0x3ff];
 		case 6:
 			address = (address & 0x1ffff);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return 0;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -643,7 +740,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -688,7 +785,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
@@ -803,14 +900,14 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 6:
 			address = (address & 0x1fffe);
-			if (((io_registers[REG_DISPCNT] & 7) >2) && ((address & 0x1C000) == 0x18000))
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
 
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
-			if ((address) < objTilesAddress[((io_registers[REG_DISPCNT] & 7)+1)>>2])
+			if ((address) < objTilesAddress[(R_DISPCNT_Video_Mode+1)>>2])
 				*((u16 *)&vram[address]) = (b << 8) | b;
 			break;
 		case 7:
@@ -6180,15 +6277,15 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
    bool mosaicOn = (control & 0x40) ? true : false;
 
    int xxx = hofs & maskX;
-   int yyy = (vofs + io_registers[REG_VCOUNT]) & maskY;
+   int yyy = (vofs + R_VCOUNT) & maskY;
    int mosaicX = (MOSAIC & 0x000F)+1;
    int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
    if (mosaicOn)
    {
-      if ((io_registers[REG_VCOUNT] % mosaicY) != 0)
+      if ((R_VCOUNT % mosaicY) != 0)
       {
-         mosaicY = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
+         mosaicY = R_VCOUNT - (R_VCOUNT % mosaicY);
          yyy = (vofs + mosaicY) & maskY;
       }
    }
@@ -6308,13 +6405,13 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
   bool mosaicOn = (control & 0x40) ? true : false;
 
   int xxx = hofs & maskX;
-  int yyy = (vofs + io_registers[REG_VCOUNT]) & maskY;
+  int yyy = (vofs + R_VCOUNT) & maskY;
   int mosaicX = (MOSAIC & 0x000F)+1;
   int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
 
   if(mosaicOn) {
-    if((io_registers[REG_VCOUNT] % mosaicY) != 0) {
-      mosaicY = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
+    if((R_VCOUNT % mosaicY) != 0) {
+      mosaicY = R_VCOUNT - (R_VCOUNT % mosaicY);
       yyy = (vofs + mosaicY) & maskY;
     }
   }
@@ -6422,6 +6519,9 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
+template<typename T> static T max(T a, T b) { return a>b ? a : b; }
+template<typename T> static T min(T a, T b) { return a<b ? a : b; }
+
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
 {
@@ -6467,7 +6567,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(io_registers[REG_VCOUNT] == 0)
+	if(R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6493,57 +6593,113 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	if(control & 0x40)
 	{
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = (io_registers[REG_VCOUNT] % mosaicY);
+		int y = (R_VCOUNT % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
 
 	memset(line, -1, 240 * sizeof(u32));
-	if(control & 0x2000)
+	if(control & 0x2000) // Wraparound
 	{
-		for(u32 x = 0; x < 240u; ++x)
+		if(dx > 0 && dy == 0) // Common subcase: no rotation or flipping
 		{
-			int xxx = (realX >> 8) & maskX;
-			int yyy = (realY >> 8) & maskY;
+			unsigned yyy = (realY >> 8) & maskY;
+			unsigned yyyshift = (yyy>>3)<<yshift;
+			unsigned tileY = yyy & 7;
+			unsigned tileYshift = (tileY<<3);
 
-			int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
-
-			int tileX = (xxx & 7);
-			int tileY = yyy & 7;
-
-			u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
-
-			if(color)
-				line[x] = (READ16LE(&palette[color])|prio);
-
-			realX += dx;
-			realY += dy;
-		}
-	}
-	else
-	{
-		for(u32 x = 0; x < 240u; ++x)
-		{
-			unsigned xxx = (realX >> 8);
-			unsigned yyy = (realY >> 8);
-
-			if(xxx < sizeX && yyy < sizeY)
+			for(u32 x = 0; x < 240u; ++x)
 			{
-				int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
+				unsigned xxx = (realX >> 8) & maskX;
 
-				int tileX = (xxx & 7);
-				int tileY = yyy & 7;
+				unsigned tile = screenBase[(xxx>>3) | yyyshift];
 
-				u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
+				unsigned tileX = (xxx & 7);
+
+				u8 color = charBase[(tile<<6) | tileYshift | tileX];
 
 				if(color)
 					line[x] = (READ16LE(&palette[color])|prio);
-			}
 
-			realX += dx;
-			realY += dy;
+				realX += dx;
+			}
 		}
+		else
+			for(u32 x = 0; x < 240u; ++x)
+			{
+				unsigned xxx = (realX >> 8) & maskX;
+				unsigned yyy = (realY >> 8) & maskY;
+
+				unsigned tile = screenBase[(xxx>>3) | ((yyy>>3)<<yshift)];
+
+				unsigned tileX = (xxx & 7);
+				unsigned tileY = yyy & 7;
+
+				u8 color = charBase[(tile<<6) | (tileY<<3) | tileX];
+
+				if(color)
+					line[x] = (READ16LE(&palette[color])|prio);
+
+				realX += dx;
+				realY += dy;
+			}
 	}
+	else // Culling
+	{
+		if(dx > 0 && dy == 0) // Common subcase: no rotation or flipping
+		{
+			unsigned yyy = (realY >> 8);
+			if (yyy >= sizeY)
+				goto skipLine;
+			unsigned yyyshift = (yyy>>3)<<yshift;
+			unsigned tileY = yyy & 7;
+			unsigned tileYshift = (tileY<<3);
+
+			u32 x0 = max(  0, (int32_t)(             + (-realX + dx - 1)) / dx);
+			u32 x1 = min(240, (int32_t)((sizeX << 8) + (-realX + dx - 1)) / dx);
+
+			realX += dx * x0;
+
+			for(u32 x = x0; x < x1; ++x)
+			{
+				unsigned xxx = (realX >> 8);
+
+				unsigned tile = screenBase[(xxx>>3) | yyyshift];
+
+				unsigned tileX = (xxx & 7);
+
+				u8 color = charBase[(tile<<6) | tileYshift | tileX];
+
+				if(color)
+					line[x] = (READ16LE(&palette[color])|prio);
+
+				realX += dx;
+			}
+		}
+		else
+			for(u32 x = 0; x < 240u; ++x)
+			{
+				unsigned xxx = (realX >> 8);
+				unsigned yyy = (realY >> 8);
+
+				if(xxx < sizeX && yyy < sizeY)
+				{
+					unsigned tile = screenBase[(xxx>>3) | ((yyy>>3)<<yshift)];
+
+					unsigned tileX = (xxx & 7);
+					unsigned tileY = yyy & 7;
+
+					u8 color = charBase[(tile<<6) | (tileY<<3) | tileX];
+
+					if(color)
+						line[x] = (READ16LE(&palette[color])|prio);
+				}
+
+				realX += dx;
+				realY += dy;
+			}
+	}
+	skipLine:
 
 	if(control & 0x40)
 	{
@@ -6606,7 +6762,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(io_registers[REG_VCOUNT] == 0)
+	if(R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6631,7 +6787,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 
 	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = (io_registers[REG_VCOUNT] % mosaicY);
+		int y = (R_VCOUNT % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
@@ -6639,11 +6795,11 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 	unsigned xxx = (realX >> 8);
 	unsigned yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(xxx < sizeX && yyy < sizeY)
-			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[Layer_BG2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6658,7 +6814,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[2][i+1] = line[2][i];
+				line[Layer_BG2][i+1] = line[Layer_BG2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6711,7 +6867,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(io_registers[REG_VCOUNT] == 0)
+	if(R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6736,7 +6892,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 
 	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
+		int y = R_VCOUNT - (R_VCOUNT % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
 	}
@@ -6744,12 +6900,12 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240; ++x)
 	{
 		u8 color = screenBase[yyy * 240 + xxx];
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY && color)
-			line[2][x] = (READ16LE(&palette[color])|prio);
+			line[Layer_BG2][x] = (READ16LE(&palette[color])|prio);
 		realX += dx;
 		realY += dy;
 
@@ -6765,7 +6921,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 			int m = 1;
 			for(u32 i = 0; i < 239u; ++i)
 			{
-				line[2][i+1] = line[2][i];
+				line[Layer_BG2][i+1] = line[Layer_BG2][i];
 				if(++m == mosaicX)
 				{
 					m = 1;
@@ -6818,7 +6974,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(io_registers[REG_VCOUNT] == 0)
+	if(R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6843,7 +6999,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 
 	if(io_registers[REG_BG2CNT] & 0x40) {
 		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = io_registers[REG_VCOUNT] - (io_registers[REG_VCOUNT] % mosaicY);
+		int y = R_VCOUNT - (R_VCOUNT % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
 	}
@@ -6851,11 +7007,11 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 	int xxx = (realX >> 8);
 	int yyy = (realY >> 8);
 
-	memset(line[2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	for(u32 x = 0; x < 240u; ++x)
 	{
 		if(unsigned(xxx) < sizeX && unsigned(yyy) < sizeY)
-			line[2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
+			line[Layer_BG2][x] = (READ16LE(&screenBase[yyy * sizeX + xxx]) | prio);
 
 		realX += dx;
 		realY += dy;
@@ -6871,7 +7027,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 		int m = 1;
 		for(u32 i = 0; i < 239u; ++i)
 		{
-			line[2][i+1] = line[2][i];
+			line[Layer_BG2][i+1] = line[Layer_BG2][i];
 			if(++m == mosaicX)
 			{
 				m = 1;
@@ -6955,7 +7111,7 @@ static INLINE void gfxDrawSprites (void)
 		int sx = (a1 & 0x1FF);
 
 		// computes ticks used by OBJ-WIN if OBJWIN is enabled
-		if (((a0 & 0x0c00) == 0x0800) && (graphics.layerEnable & 0x8000))
+		if (((a0 & 0x0c00) == 0x0800) && (R_DISPCNT_OBJ_Window_Display))
 		{
 			if ((a0 & 0x0300) == 0x0300)
 			{
@@ -6981,7 +7137,7 @@ static INLINE void gfxDrawSprites (void)
 			else if ((sx+sizeX)>240)
 				sizeX=240-sx;
 
-			if ((io_registers[REG_VCOUNT]>=sy) && (io_registers[REG_VCOUNT]<sy+sizeY) && (sx<240))
+			if ((R_VCOUNT>=sy) && (R_VCOUNT<sy+sizeY) && (sx<240))
 			{
 				lineOBJpix -= (sizeX-2);
 
@@ -7006,7 +7162,7 @@ static INLINE void gfxDrawSprites (void)
 			}
 			if((sy+fieldY) > 256)
 				sy -= 256;
-			int t = io_registers[REG_VCOUNT] - sy;
+			int t = R_VCOUNT - sy;
 			if(unsigned(t) < fieldY)
 			{
 				u32 startpix = 0;
@@ -7040,7 +7196,7 @@ static INLINE void gfxDrawSprites (void)
 					u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					if(a0 & 0x2000)
@@ -7062,17 +7218,17 @@ static INLINE void gfxDrawSprites (void)
 								u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
 								+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) + (xxx & 7))&0x7FFF)];
 
-								if ((color==0) && (((prio >> 25)&3) < ((line[4][sx]>>25)&3)))
+								if ((color==0) && (((prio >> 25)&3) < ((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 
 								if ((a0 & 0x1000) && ((m+1) == mosaicX))
@@ -7107,17 +7263,17 @@ static INLINE void gfxDrawSprites (void)
 									color &= 0x0F;
 
 								if ((color==0) && (((prio >> 25)&3) <
-											((line[4][sx]>>25)&3)))
+											((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[palette+color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette+color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 							}
 							if((a0 & 0x1000) && m)
@@ -7139,7 +7295,7 @@ static INLINE void gfxDrawSprites (void)
 		{
 			if(sy+sizeY > 256)
 				sy -= 256;
-			int t = io_registers[REG_VCOUNT] - sy;
+			int t = R_VCOUNT - sy;
 			if(unsigned(t) < sizeY)
 			{
 				u32 startpix = 0;
@@ -7154,7 +7310,7 @@ static INLINE void gfxDrawSprites (void)
 						t = sizeY - t - 1;
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
@@ -7187,17 +7343,17 @@ static INLINE void gfxDrawSprites (void)
 							{
 								u8 color = vram[address];
 								if ((color==0) && (((prio >> 25)&3) <
-											((line[4][sx]>>25)&3)))
+											((line[Layer_OBJ][sx]>>25)&3)))
 								{
-									line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+									line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
-								else if((color) && (prio < (line[4][sx]&0xFF000000)))
+								else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 								{
-									line[4][sx] = READ16LE(&spritePalette[color]) | prio;
+									line[Layer_OBJ][sx] = READ16LE(&spritePalette[color]) | prio;
 									if((a0 & 0x1000) && m)
-										line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 								}
 
 								if ((a0 & 0x1000) && ((m+1) == mosaicX))
@@ -7258,17 +7414,17 @@ static INLINE void gfxDrawSprites (void)
 										color &= 0x0F;
 
 									if ((color==0) && (((prio >> 25)&3) <
-												((line[4][sx]>>25)&3)))
+												((line[Layer_OBJ][sx]>>25)&3)))
 									{
-										line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
-									else if((color) && (prio < (line[4][sx]&0xFF000000)))
+									else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 									{
-										line[4][sx] = READ16LE(&spritePalette[palette + color]) | prio;
+										line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette + color]) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
 								}
 
@@ -7304,17 +7460,17 @@ static INLINE void gfxDrawSprites (void)
 										color &= 0x0F;
 
 									if ((color==0) && (((prio >> 25)&3) <
-												((line[4][sx]>>25)&3)))
+												((line[Layer_OBJ][sx]>>25)&3)))
 									{
-										line[4][sx] = (line[4][sx] & 0xF9FFFFFF) | prio;
+										line[Layer_OBJ][sx] = (line[Layer_OBJ][sx] & 0xF9FFFFFF) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 									}
-									else if((color) && (prio < (line[4][sx]&0xFF000000)))
+									else if((color) && (prio < (line[Layer_OBJ][sx]&0xFF000000)))
 									{
-										line[4][sx] = READ16LE(&spritePalette[palette + color]) | prio;
+										line[Layer_OBJ][sx] = READ16LE(&spritePalette[palette + color]) | prio;
 										if((a0 & 0x1000) && m)
-											line[4][sx]=(line[4][sx-1] & 0xF9FFFFFF) | prio;
+											line[Layer_OBJ][sx]=(line[Layer_OBJ][sx-1] & 0xF9FFFFFF) | prio;
 
 									}
 								}
@@ -7411,7 +7567,7 @@ static INLINE void gfxDrawOBJWin (void)
 			}
 			if((sy+fieldY) > 256)
 				sy -= 256;
-			int t = io_registers[REG_VCOUNT] - sy;
+			int t = R_VCOUNT - sy;
 			if((t >= 0) && (t < fieldY))
 			{
 				int sx = (a1 & 0x1FF);
@@ -7444,7 +7600,7 @@ static INLINE void gfxDrawOBJWin (void)
 						+ t * dmy;
 
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 
 					int inc = 32;
@@ -7485,7 +7641,7 @@ static INLINE void gfxDrawOBJWin (void)
 							}
 
 							if(color)
-								line[5][sx] = 1;
+								line[Layer_WIN_OBJ][sx] = 1;
 						}
 						sx = (sx+1)&511;
 						realX += dx;
@@ -7498,7 +7654,7 @@ static INLINE void gfxDrawOBJWin (void)
 		{
 			if((sy+sizeY) > 256)
 				sy -= 256;
-			int t = io_registers[REG_VCOUNT] - sy;
+			int t = R_VCOUNT - sy;
 			if((t >= 0) && (t < sizeY))
 			{
 				int sx = (a1 & 0x1FF);
@@ -7512,7 +7668,7 @@ static INLINE void gfxDrawOBJWin (void)
 					if(a1 & 0x2000)
 						t = sizeY - t - 1;
 					int c = (a2 & 0x3FF);
-					if((io_registers[REG_DISPCNT] & 7) > 2 && (c < 512))
+					if(R_DISPCNT_Video_Mode > 2 && (c < 512))
 						continue;
 					if(a0 & 0x2000)
 					{
@@ -7540,7 +7696,7 @@ static INLINE void gfxDrawOBJWin (void)
 							{
 								u8 color = vram[address];
 								if(color)
-									line[5][sx] = 1;
+									line[Layer_WIN_OBJ][sx] = 1;
 							}
 
 							sx = (sx+1) & 511;
@@ -7595,7 +7751,7 @@ static INLINE void gfxDrawOBJWin (void)
 										color &= 0x0F;
 
 									if(color)
-										line[5][sx] = 1;
+										line[Layer_WIN_OBJ][sx] = 1;
 								}
 								sx = (sx+1) & 511;
 								xxx--;
@@ -7626,7 +7782,7 @@ static INLINE void gfxDrawOBJWin (void)
 										color &= 0x0F;
 
 									if(color)
-										line[5][sx] = 1;
+										line[Layer_WIN_OBJ][sx] = 1;
 								}
 								sx = (sx+1) & 511;
 								xxx++;
@@ -7673,9 +7829,9 @@ static u32 AlphaClampLUT[64] =
  0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F
 };  
 
-#define GFX_ALPHA_BLEND(color, color2, ca, cb) \
-	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)]; \
-	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)]; \
+#define GFX_ALPHA_BLEND(color, color2, ca, cb)                                                           \
+	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)];                 \
+	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)];   \
 	int b = AlphaClampLUT[((((color >> 10) & 0x1F) * ca) >> 4) + ((((color2 >> 10) & 0x1F) * cb) >> 4)]; \
 	color = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
 
@@ -8047,8 +8203,8 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow0() \
 { \
-  int x00_window0 = io_registers[REG_WIN0H] >>8; \
-  int x01_window0 = io_registers[REG_WIN0H] & 255; \
+  int x00_window0 = R_WIN_Window0_X1; \
+  int x01_window0 = R_WIN_Window0_X2; \
   int x00_lte_x01 = x00_window0 <= x01_window0; \
   for(int i = 0; i < 240; i++) \
       gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
@@ -8056,15 +8212,15 @@ static INLINE int CPUUpdateTicks (void)
 
 #define CPUUpdateWindow1() \
 { \
-  int x00_window1 = io_registers[REG_WIN1H]>>8; \
-  int x01_window1 = io_registers[REG_WIN1H] & 255; \
+  int x00_window1 = R_WIN_Window1_X1; \
+  int x01_window1 = R_WIN_Window1_X2; \
   int x00_lte_x01 = x00_window1 <= x01_window1; \
   for(int i = 0; i < 240; i++) \
    gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
 }
 
 #define CPUCompareVCOUNT() \
-  if(io_registers[REG_VCOUNT] == (io_registers[REG_DISPSTAT] >> 8)) \
+  if(R_VCOUNT == (io_registers[REG_DISPSTAT] >> 8)) \
   { \
     io_registers[REG_DISPSTAT] |= 4; \
     UPDATE_REG(0x04, io_registers[REG_DISPSTAT]); \
@@ -8377,10 +8533,10 @@ int CPULoadRom(const char * file)
 	flashInit();
 	eepromInit();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	return romSize;
 }
@@ -8402,30 +8558,31 @@ void doMirroring (bool b)
 	}
 }
 
-#define brightness_switch() \
-      switch((BLDMOD >> 6) & 3) \
-      { \
-         case 2: \
-               color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]); \
-               break; \
-         case 3: \
-               color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]); \
-               break; \
-      }
+#define brightness_switch()                                                                \
+	switch(R_BLDCNT_Color_Special_Effect)                                                  \
+	{                                                                                      \
+		case SpecialEffect_Brightness_Increase:                                            \
+			color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);                      \
+			break;                                                                         \
+		case SpecialEffect_Brightness_Decrease:                                            \
+			color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);                      \
+			break;                                                                         \
+	}
 
-#define alpha_blend_brightness_switch() \
-      if(top2 & (BLDMOD>>8)) \
-	if(color < 0x80000000) \
-	{ \
-		GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
-	} \
-      else if(BLDMOD & top) \
-      { \
-         brightness_switch(); \
-      }
+#define alpha_blend_brightness_switch()                                                    \
+	if(R_BLDCNT_IsTarget2(top2))                                                           \
+		if(color < 0x80000000)                                                             \
+		{                                                                                  \
+			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
+		}                                                                                  \
+		else                                                                               \
+		if (R_BLDCNT_IsTarget1(top))                                                       \
+		{                                                                                  \
+			brightness_switch();                                                           \
+		}
 
 /* we only use 16bit color depth */
-#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * io_registers[REG_VCOUNT])
+#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
 
 static void mode0RenderLine (void)
 {
@@ -8436,21 +8593,21 @@ static void mode0RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
-  if(graphics.layerEnable & 0x0200) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-  if(graphics.layerEnable & 0x0400) {
-    gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
-  }
+	if(R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
+	}
 
-  if(graphics.layerEnable & 0x0800) {
-    gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
-  }
+	if(R_DISPCNT_Screen_Display_BG3) {
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
+	}
 
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
@@ -8458,55 +8615,55 @@ static void mode0RenderLine (void)
 	for(int x = 0; x < 240; x++)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
-			top = 0x01;
+		if(line[Layer_BG0][x] < color) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
-		if((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
-			top = 0x02;
+		if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG1][x];
+			top = SpecialEffectTarget_BG1;
 		}
 
-		if((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[2][x];
-			top = 0x04;
+		if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[3][x];
-			top = 0x08;
+		if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG3][x];
+			top = SpecialEffectTarget_BG3;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = backdrop;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
-				if((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[0][x];
-					top2 = 0x01;
+				if((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG0][x];
+					top2 = SpecialEffectTarget_BG0;
 				}
 
-				if((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[1][x];
-					top2 = 0x02;
+				if((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG1][x];
+					top2 = SpecialEffectTarget_BG1;
 				}
 
-				if((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[2][x];
-					top2 = 0x04;
+				if((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}
 
-				if((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-					back = line[3][x];
-					top2 = 0x08;
+				if((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+					back = line[Layer_BG3][x];
+					top2 = SpecialEffectTarget_BG3;
 				}
 
 				alpha_blend_brightness_switch();
@@ -8528,131 +8685,130 @@ static void mode0RenderLineNoWindow (void)
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-   if(graphics.layerEnable & 0x0100) {
-      gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-   }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
-   if(graphics.layerEnable & 0x0200) {
-      gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-   }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-   if(graphics.layerEnable & 0x0400) {
-      gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
-   }
+	if(R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
+	}
 
-   if(graphics.layerEnable & 0x0800) {
-      gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
-   }
-
-	int effect = (BLDMOD >> 6) & 3;
+	if(R_DISPCNT_Screen_Display_BG3) {
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
+	}
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[0][x] < color) {
-			color = line[0][x];
-			top = 0x01;
+		if(line[Layer_BG0][x] < color) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
-		if(line[1][x] < (color & 0xFF000000)) {
-			color = line[1][x];
-			top = 0x02;
+		if(line[Layer_BG1][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG1][x];
+			top = SpecialEffectTarget_BG1;
 		}
 
-		if(line[2][x] < (color & 0xFF000000)) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if(line[3][x] < (color & 0xFF000000)) {
-			color = line[3][x];
-			top = 0x08;
+		if(line[Layer_BG3][x] < (color & 0xFF000000)) {
+			color = line[Layer_BG3][x];
+			top = SpecialEffectTarget_BG3;
 		}
 
-		if(line[4][x] < (color & 0xFF000000)) {
-			color = line[4][x];
-			top = 0x10;
+		if(line[Layer_OBJ][x] < (color & 0xFF000000)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(effect) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
-						if((line[0][x] < back) && (top != 0x01))
+						uint8_t top2 = SpecialEffectTarget_BD;
+						if((line[Layer_BG0][x] < back) && (top != SpecialEffectTarget_BG0))
 						{
-							back = line[0][x];
-							top2 = 0x01;
+							back = line[Layer_BG0][x];
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((line[1][x] < (back & 0xFF000000)) && (top != 0x02))
+						if((line[Layer_BG1][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG1))
 						{
-							back = line[1][x];
-							top2 = 0x02;
+							back = line[Layer_BG1][x];
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((line[2][x] < (back & 0xFF000000)) && (top != 0x04))
+						if((line[Layer_BG2][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG2))
 						{
-							back = line[2][x];
-							top2 = 0x04;
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((line[3][x] < (back & 0xFF000000)) && (top != 0x08))
+						if((line[Layer_BG3][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_BG3))
 						{
-							back = line[3][x];
-							top2 = 0x08;
+							back = line[Layer_BG3][x];
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((line[4][x] < (back & 0xFF000000)) && (top != 0x10))
+						if((line[Layer_OBJ][x] < (back & 0xFF000000)) && (top != SpecialEffectTarget_OBJ))
 						{
-							back = line[4][x];
-							top2 = 0x10;
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if(line[0][x] < back) {
-				back = line[0][x];
-				top2 = 0x01;
+			if(line[Layer_BG0][x] < back) {
+				back = line[Layer_BG0][x];
+				top2 = SpecialEffectTarget_BG0;
 			}
 
-			if(line[1][x] < (back & 0xFF000000)) {
-				back = line[1][x];
-				top2 = 0x02;
+			if(line[Layer_BG1][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG1][x];
+				top2 = SpecialEffectTarget_BG1;
 			}
 
-			if(line[2][x] < (back & 0xFF000000)) {
-				back = line[2][x];
-				top2 = 0x04;
+			if(line[Layer_BG2][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
-			if(line[3][x] < (back & 0xFF000000)) {
-				back = line[3][x];
-				top2 = 0x08;
+			if(line[Layer_BG3][x] < (back & 0xFF000000)) {
+				back = line[Layer_BG3][x];
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
@@ -8674,164 +8830,162 @@ static void mode0RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000) {
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
+	if(R_DISPCNT_Window_0_Display) {
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
+			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
 		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
+			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
 	}
-	if(graphics.layerEnable & 0x4000) {
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
+	if(R_DISPCNT_Window_1_Display) {
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
+			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
 		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
+			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
 	}
 
-  if((graphics.layerEnable & 0x0100)) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if((R_DISPCNT_Screen_Display_BG0)) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
-  if((graphics.layerEnable & 0x0200)) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if((R_DISPCNT_Screen_Display_BG1)) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-  if((graphics.layerEnable & 0x0400)) {
-    gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[2]);
-  }
+	if((R_DISPCNT_Screen_Display_BG2)) {
+		gfxDrawTextScreen(io_registers[REG_BG2CNT], io_registers[REG_BG2HOFS], io_registers[REG_BG2VOFS], line[Layer_BG2]);
+	}
 
-  if((graphics.layerEnable & 0x0800)) {
-    gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[3]);
-  }
+	if((R_DISPCNT_Screen_Display_BG3)) {
+		gfxDrawTextScreen(io_registers[REG_BG3CNT], io_registers[REG_BG3HOFS], io_registers[REG_BG3VOFS], line[Layer_BG3]);
+	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
+			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & 1) && (line[0][x] < color)) {
-			color = line[0][x];
-			top = 0x01;
+		if((mask & LayerMask_BG0) && (line[Layer_BG0][x] < color)) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
-		if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[1][x];
-			top = 0x02;
+		if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG1][x];
+			top = SpecialEffectTarget_BG1;
 		}
 
-		if((mask & 4) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[2][x];
-			top = 0x04;
+		if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 8) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[3][x];
-			top = 0x08;
+		if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_BG3][x];
+			top = SpecialEffectTarget_BG3;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24))) {
-			color = line[4][x];
-			top = 0x10;
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24))) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000)
 		{
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 1) && ((uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[0][x];
-				top2 = 0x01;
+			if((mask & LayerMask_BG0) && ((uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG0][x];
+				top2 = SpecialEffectTarget_BG0;
 			}
 
-			if((mask & 2) && ((uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[1][x];
-				top2 = 0x02;
+			if((mask & LayerMask_BG1) && ((uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG1][x];
+				top2 = SpecialEffectTarget_BG1;
 			}
 
-			if((mask & 4) && ((uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && ((uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
-			if((mask & 8) && ((uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24))) {
-				back = line[3][x];
-				top2 = 0x08;
+			if((mask & LayerMask_BG3) && ((uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24))) {
+				back = line[Layer_BG3][x];
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
 		}
-		else if((mask & 32) && (top & BLDMOD))
+		else if((mask & LayerMask_SFX) && (R_BLDCNT_IsTarget1(top)))
 		{
 			// special FX on in the window
-			switch((BLDMOD >> 6) & 3)
+			switch(R_BLDCNT_Color_Special_Effect)
 			{
-				case 0:
+				case SpecialEffect_None:
 					break;
-				case 1:
+				case SpecialEffect_Alpha_Blending:
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
-						if(((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) && top != 0x01)
+						uint8_t top2 = SpecialEffectTarget_BD;
+						if(((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG0)
 						{
-							back = line[0][x];
-							top2 = 0x01;
+							back = line[Layer_BG0][x];
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if(((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) && top != 0x02)
+						if(((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG1)
 						{
-							back = line[1][x];
-							top2 = 0x02;
+							back = line[Layer_BG1][x];
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if(((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) && top != 0x04)
+						if(((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG2)
 						{
-							back = line[2][x];
-							top2 = 0x04;
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if(((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) && top != 0x08)
+						if(((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_BG3)
 						{
-							back = line[3][x];
-							top2 = 0x08;
+							back = line[Layer_BG3][x];
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if(((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) && top != 0x10) {
-							back = line[4][x];
-							top2 = 0x10;
+						if(((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) && top != SpecialEffectTarget_OBJ) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
+				case SpecialEffect_Brightness_Increase:
 					color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
+				case SpecialEffect_Brightness_Decrease:
 					color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -8860,34 +9014,34 @@ static void mode1RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
-  if(graphics.layerEnable & 0x0200) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(uint32_t x = 0; x < 240u; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -8895,30 +9049,30 @@ static void mode1RenderLine (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
-			top = 0x01;
+		if(line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
-				top = 0x02;
+				color = line[Layer_BG1][x];
+				top = SpecialEffectTarget_BG1;
 			}else if(r == li2){
-				color = line[2][x];
-				top = 0x04;
+				color = line[Layer_BG2][x];
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li4){
-				color = line[4][x];
-				top = 0x10;
+				color = line[Layer_OBJ][x];
+				top = SpecialEffectTarget_OBJ;
 				if((color & 0x00010000))
 				{
 					// semi-transparent OBJ
 					uint32_t back = backdrop;
-					uint8_t top2 = 0x20;
+					uint8_t top2 = SpecialEffectTarget_BD;
 
-					uint8_t li0 = (uint8_t)(line[0][x]>>24);
-					uint8_t li1 = (uint8_t)(line[1][x]>>24);
-					uint8_t li2 = (uint8_t)(line[2][x]>>24);
+					uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
+					uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+					uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
 					uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
 					if(li2 < r) {
@@ -8927,14 +9081,14 @@ static void mode1RenderLine (void)
 
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li0){
-							back = line[0][x];
-							top2 = 0x01;
+							back = line[Layer_BG0][x];
+							top2 = SpecialEffectTarget_BG0;
 						}else if(r == li1){
-							back = line[1][x];
-							top2 = 0x02;
+							back = line[Layer_BG1][x];
+							top2 = SpecialEffectTarget_BG1;
 						}else if(r == li2){
-							back = line[2][x];
-							top2 = 0x04;
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 					}
 
@@ -8947,7 +9101,7 @@ static void mode1RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode1RenderLineNoWindow (void)
@@ -8959,35 +9113,34 @@ static void mode1RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-  if(graphics.layerEnable & 0x0100) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-  if(graphics.layerEnable & 0x0200) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
-
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		uint8_t li1 = (uint8_t)(line[1][x]>>24);
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li2 < li1) ? (li2) : (li1);
 
@@ -8995,77 +9148,78 @@ static void mode1RenderLineNoWindow (void)
 			r = 	(li4);
 		}
 
-		if(line[0][x] < backdrop) {
-			color = line[0][x];
-			top = 0x01;
+		if(line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li1){
-				color = line[1][x];
-				top = 0x02;
+				color = line[Layer_BG1][x];
+				top = SpecialEffectTarget_BG1;
 			}else if(r == li2){
-				color = line[2][x];
-				top = 0x04;
+				color = line[Layer_BG2][x];
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li4){
-				color = line[4][x];
-				top = 0x10;
+				color = line[Layer_OBJ][x];
+				top = SpecialEffectTarget_OBJ;
 			}
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[0][x];
-							top2 = 0x01;
+						if((top != SpecialEffectTarget_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG0][x];
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[1][x];
-							top2 = 0x02;
+						if((top != SpecialEffectTarget_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG1][x];
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			uint8_t li0 = (uint8_t)(line[0][x]>>24);
-			uint8_t li1 = (uint8_t)(line[1][x]>>24);
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);	
+			uint8_t li0 = (uint8_t)(line[Layer_BG0][x]>>24);
+			uint8_t li1 = (uint8_t)(line[Layer_BG1][x]>>24);
+			uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);	
 
 			uint8_t r = 	(li1 < li0) ? (li1) : (li0);
 
@@ -9077,18 +9231,18 @@ static void mode1RenderLineNoWindow (void)
 			{
 				if(r == li0)
 				{
-					back = line[0][x];
-					top2 = 0x01;
+					back = line[Layer_BG0][x];
+					top2 = SpecialEffectTarget_BG0;
 				}
 				else if(r == li1)
 				{
-					back = line[1][x];
-					top2 = 0x02;
+					back = line[Layer_BG1][x];
+					top2 = SpecialEffectTarget_BG1;
 				}
 				else if(r == li2)
 				{
-					back = line[2][x];
-					top2 = 0x04;
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}
 			}
 
@@ -9098,7 +9252,7 @@ static void mode1RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode1RenderLineAll (void)
@@ -9113,163 +9267,142 @@ static void mode1RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-  if(graphics.layerEnable & 0x0100) {
-    gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[0]);
-  }
+	if(R_DISPCNT_Screen_Display_BG0) {
+		gfxDrawTextScreen(io_registers[REG_BG0CNT], io_registers[REG_BG0HOFS], io_registers[REG_BG0VOFS], line[Layer_BG0]);
+	}
 
-  if(graphics.layerEnable & 0x0200) {
-    gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[1]);
-  }
+	if(R_DISPCNT_Screen_Display_BG1) {
+		gfxDrawTextScreen(io_registers[REG_BG1CNT], io_registers[REG_BG1HOFS], io_registers[REG_BG1VOFS], line[Layer_BG1]);
+	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, line[2]);
+				gfxBG2X, gfxBG2Y, changed, line[Layer_BG2]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
+			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
-		if((mask & 1) && line[0][x] < backdrop) {
-			color = line[0][x];
-			top = 0x01;
+		if((mask & LayerMask_BG0) && line[Layer_BG0][x] < backdrop) {
+			color = line[Layer_BG0][x];
+			top = SpecialEffectTarget_BG0;
 		}
 
-		if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[1][x];
-			top = 0x02;
+		if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG1][x];
+			top = SpecialEffectTarget_BG1;
 		}
 
-		if((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[2][x];
-			top = 0x04;
+		if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 1) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-				back = line[0][x];
-				top2 = 0x01;
+			if((mask & LayerMask_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+				back = line[Layer_BG0][x];
+				top2 = SpecialEffectTarget_BG0;
 			}
 
-			if((mask & 2) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[1][x];
-				top2 = 0x02;
+			if((mask & LayerMask_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG1][x];
+				top2 = SpecialEffectTarget_BG1;
 			}
 
-			if((mask & 4) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & 1) && (top != 0x01) && (uint8_t)(line[0][x]>>24) < (uint8_t)(backdrop >> 24)) {
-							back = line[0][x];
-							top2 = 0x01;
+						if((mask & LayerMask_BG0) && (top != SpecialEffectTarget_BG0) && (uint8_t)(line[Layer_BG0][x]>>24) < (uint8_t)(backdrop >> 24)) {
+							back = line[Layer_BG0][x];
+							top2 = SpecialEffectTarget_BG0;
 						}
 
-						if((mask & 2) && (top != 0x02) && (uint8_t)(line[1][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[1][x];
-							top2 = 0x02;
+						if((mask & LayerMask_BG1) && (top != SpecialEffectTarget_BG1) && (uint8_t)(line[Layer_BG1][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG1][x];
+							top2 = SpecialEffectTarget_BG1;
 						}
 
-						if((mask & 4) && (top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9278,7 +9411,7 @@ static void mode1RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 /*
@@ -9299,39 +9432,39 @@ static void mode2RenderLine (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -9341,31 +9474,31 @@ static void mode2RenderLine (void)
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
-				color = line[2][x];
-				top = 0x04;
+				color = line[Layer_BG2][x];
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li3){
-				color = line[3][x];
-				top = 0x08;
+				color = line[Layer_BG3][x];
+				top = SpecialEffectTarget_BG3;
 			}else if(r == li4){
-				color = line[4][x];
-				top = 0x10;
+				color = line[Layer_OBJ][x];
+				top = SpecialEffectTarget_OBJ;
 
 				if(color & 0x00010000) {
 					// semi-transparent OBJ
 					uint32_t back = backdrop;
-					uint8_t top2 = 0x20;
+					uint8_t top2 = SpecialEffectTarget_BD;
 
-					uint8_t li2 = (uint8_t)(line[2][x]>>24);
-					uint8_t li3 = (uint8_t)(line[3][x]>>24);
+					uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+					uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
 					uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
 					if(r < (uint8_t)(back >> 24)) {
 						if(r == li2){
-							back = line[2][x];
-							top2 = 0x04;
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}else if(r == li3){
-							back = line[3][x];
-							top2 = 0x08;
+							back = line[Layer_BG3][x];
+							top2 = SpecialEffectTarget_BG3;
 						}
 					}
 
@@ -9379,7 +9512,7 @@ static void mode2RenderLine (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode2RenderLineNoWindow (void)
@@ -9391,39 +9524,39 @@ static void mode2RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		uint8_t li2 = (uint8_t)(line[2][x]>>24);
-		uint8_t li3 = (uint8_t)(line[3][x]>>24);
-		uint8_t li4 = (uint8_t)(line[4][x]>>24);	
+		uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+		uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
+		uint8_t li4 = (uint8_t)(line[Layer_OBJ][x]>>24);	
 
 		uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
@@ -9433,73 +9566,74 @@ static void mode2RenderLineNoWindow (void)
 
 		if(r < (uint8_t)(color >> 24)) {
 			if(r == li2){
-				color = line[2][x];
-				top = 0x04;
+				color = line[Layer_BG2][x];
+				top = SpecialEffectTarget_BG2;
 			}else if(r == li3){
-				color = line[3][x];
-				top = 0x08;
+				color = line[Layer_BG3][x];
+				top = SpecialEffectTarget_BG3;
 			}else if(r == li4){
-				color = line[4][x];
-				top = 0x10;
+				color = line[Layer_OBJ][x];
+				top = SpecialEffectTarget_OBJ;
 			}
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && (uint8_t)(line[2][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((top != SpecialEffectTarget_BG2) && (uint8_t)(line[Layer_BG2][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[3][x];
-							top2 = 0x08;
+						if((top != SpecialEffectTarget_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG3][x];
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			uint8_t li2 = (uint8_t)(line[2][x]>>24);
-			uint8_t li3 = (uint8_t)(line[3][x]>>24);
+			uint8_t li2 = (uint8_t)(line[Layer_BG2][x]>>24);
+			uint8_t li3 = (uint8_t)(line[Layer_BG3][x]>>24);
 			uint8_t r = 	(li3 < li2) ? (li3) : (li2);
 
 			if(r < (uint8_t)(back >> 24)) {
 				if(r == li2){
-					back = line[2][x];
-					top2 = 0x04;
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}else if(r == li3){
-					back = line[3][x];
-					top2 = 0x08;
+					back = line[Layer_BG3][x];
+					top2 = SpecialEffectTarget_BG3;
 				}
 			}
 
@@ -9510,7 +9644,7 @@ static void mode2RenderLineNoWindow (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode2RenderLineAll (void)
@@ -9525,152 +9659,131 @@ static void mode2RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD], gfxBG2X, gfxBG2Y,
-				changed, line[2]);
+				changed, line[Layer_BG2]);
 	}
 
-	if(graphics.layerEnable & 0x0800) {
+	if(R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD], gfxBG3X, gfxBG3Y,
-				changed, line[3]);
+				changed, line[Layer_BG3]);
 	}
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
+			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & 4) && line[2][x] < color) {
-			color = line[2][x];
-			top = 0x04;
+		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < color) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[3][x];
-			top = 0x08;
+		if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_BG3][x];
+			top = SpecialEffectTarget_BG3;
 		}
 
-		if((mask & 16) && (uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((mask & LayerMask_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 4) && line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
-			if((mask & 8) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-				back = line[3][x];
-				top2 = 0x08;
+			if((mask & LayerMask_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+				back = line[Layer_BG3][x];
+				top2 = SpecialEffectTarget_BG3;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
+		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < back) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & 8) && (top != 0x08) && (uint8_t)(line[3][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[3][x];
-							top2 = 0x08;
+						if((mask & LayerMask_BG3) && (top != SpecialEffectTarget_BG3) && (uint8_t)(line[Layer_BG3][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_BG3][x];
+							top2 = SpecialEffectTarget_BG3;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9680,7 +9793,7 @@ static void mode2RenderLineAll (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 /*
@@ -9699,11 +9812,11 @@ static void mode3RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9714,25 +9827,25 @@ static void mode3RenderLine (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < color) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < color) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = background;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
-				if(line[2][x] < background) {
-					back = line[2][x];
-					top2 = 0x04;
+				if(line[Layer_BG2][x] < background) {
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -9743,7 +9856,7 @@ static void mode3RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode3RenderLineNoWindow (void)
@@ -9754,11 +9867,11 @@ static void mode3RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9769,62 +9882,63 @@ static void mode3RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if(top != 0x04 && (line[2][x] < background) ) {
-							back = line[2][x];
-							top2 = 0x04;
+						if(top != SpecialEffectTarget_BG2 && (line[Layer_BG2][x] < background) ) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if(top != 0x10 && ((uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24))) {
-							back = line[4][x];
-							top2 = 0x10;
+						if(top != SpecialEffectTarget_OBJ && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24))) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if(line[2][x] < background) {
-				back = line[2][x];
-				top2 = 0x04;
+			if(line[Layer_BG2][x] < background) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -9833,7 +9947,7 @@ static void mode3RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode3RenderLineAll (void)
@@ -9847,124 +9961,103 @@ static void mode3RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	uint32_t background = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
+			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & 4) && line[2][x] < background) {
-			color = line[2][x];
-			top = 0x04;
+		if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[4][x];
-			top = 0x10;
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 4) && line[2][x] < background) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < background) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+		} else if(mask & LayerMask_SFX) {
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & 4) && (top != 0x04) && line[2][x] < back) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < back) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9973,7 +10066,7 @@ static void mode3RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 /*
@@ -9992,12 +10085,12 @@ static void mode4RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10009,25 +10102,25 @@ static void mode4RenderLine (void)
 	for(int x = 0; x < 240; ++x)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < backdrop) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < backdrop) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = backdrop;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
-				if(line[2][x] < backdrop) {
-					back = line[2][x];
-					top2 = 0x04;
+				if(line[Layer_BG2][x] < backdrop) {
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -10038,7 +10131,7 @@ static void mode4RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode4RenderLineNoWindow (void)
@@ -10049,12 +10142,12 @@ static void mode4RenderLineNoWindow (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10066,61 +10159,62 @@ static void mode4RenderLineNoWindow (void)
 	for(int x = 0; x < 240; ++x)
 	{
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < backdrop) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < backdrop) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >> 24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >> 24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && line[2][x] < backdrop) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < backdrop) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if(line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+			if(line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10129,7 +10223,7 @@ static void mode4RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode4RenderLineAll (void)
@@ -10143,46 +10237,26 @@ static void mode4RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10191,78 +10265,77 @@ static void mode4RenderLineAll (void)
 
 	uint32_t backdrop = (READ16LE(&palette[0]) | 0x30000000);
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000))
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000))
+			mask = R_WIN_OBJ_Mask;
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & 4) && (line[2][x] < backdrop))
+		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < backdrop))
 		{
-			color = line[2][x];
-			top = 0x04;
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)))
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)))
 		{
-			color = line[4][x];
-			top = 0x10;
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = backdrop;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 4) && line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+		} else if(mask & LayerMask_SFX) {
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & 4) && (top != 0x04) && (line[2][x] < backdrop)) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (line[Layer_BG2][x] < backdrop)) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10271,7 +10344,7 @@ static void mode4RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 /*
@@ -10291,11 +10364,11 @@ static void mode5RenderLine (void)
 	INIT_COLOR_DEPTH_LINE_MIX();
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10307,25 +10380,25 @@ static void mode5RenderLine (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 
 			if(color & 0x00010000) {
 				// semi-transparent OBJ
 				uint32_t back = background;
-				uint8_t top2 = 0x20;
+				uint8_t top2 = SpecialEffectTarget_BD;
 
-				if(line[2][x] < back) {
-					back = line[2][x];
-					top2 = 0x04;
+				if(line[Layer_BG2][x] < back) {
+					back = line[Layer_BG2][x];
+					top2 = SpecialEffectTarget_BG2;
 				}
 
 				alpha_blend_brightness_switch();
@@ -10336,7 +10409,7 @@ static void mode5RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode5RenderLineNoWindow (void)
@@ -10348,11 +10421,11 @@ static void mode5RenderLineNoWindow (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400) {
+	if(R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10364,62 +10437,63 @@ static void mode5RenderLineNoWindow (void)
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 
-		if(line[2][x] < background) {
-			color = line[2][x];
-			top = 0x04;
+		if(line[Layer_BG2][x] < background) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24)) {
-			color = line[4][x];
-			top = 0x10;
+		if((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24)) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(!(color & 0x00010000)) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((top != 0x04) && line[2][x] < background) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((top != SpecialEffectTarget_BG2) && line[Layer_BG2][x] < background) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
 		} else {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if(line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+			if(line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
@@ -10428,7 +10502,7 @@ static void mode5RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void mode5RenderLineAll (void)
@@ -10440,12 +10514,12 @@ static void mode5RenderLineAll (void)
 
 	uint16_t *palette = (uint16_t *)graphics.paletteRAM;
 
-	if(graphics.layerEnable & 0x0400)
+	if(R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > io_registers[REG_VCOUNT])
+		if(gfxLastVCOUNT > R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10457,114 +10531,93 @@ static void mode5RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(graphics.layerEnable & 0x2000)
+	if(R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN0V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN0V] & 255;
-		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow0 = (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow0 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow0 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window0_Y1;
+		uint8_t v1 = R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(graphics.layerEnable & 0x4000)
+	if(R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = io_registers[REG_WIN1V] >> 8;
-		uint8_t v1 = io_registers[REG_WIN1V] & 255;
-		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-#ifndef ORIGINAL_BRANCHES
-		uint32_t condition = v1 >= v0;
-		int32_t condition_mask = ((condition) | -(condition)) >> 31;
-		inWindow1 = (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1)) & condition_mask) | (((inWindow1 | (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1)) & ~(condition_mask))));
-#else
-		if(v1 >= v0)
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 && io_registers[REG_VCOUNT] < v1);
-		else
-			inWindow1 |= (io_registers[REG_VCOUNT] >= v0 || io_registers[REG_VCOUNT] < v1);
-#endif
+		uint8_t v0 = R_WIN_Window1_Y1;
+		uint8_t v1 = R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	uint8_t inWin0Mask = io_registers[REG_WININ] & 0xFF;
-	uint8_t inWin1Mask = io_registers[REG_WININ] >> 8;
-	uint8_t outMask = io_registers[REG_WINOUT] & 0xFF;
+	uint8_t inWin0Mask = R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = R_WIN_Window1_Mask;
+	uint8_t outMask = R_WIN_Outside_Mask;
 
 	uint32_t background;
 	background = (READ16LE(&palette[0]) | 0x30000000);
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
-		uint8_t top = 0x20;
+		uint8_t top = SpecialEffectTarget_BD;
 		uint8_t mask = outMask;
 
-		if(!(line[5][x] & 0x80000000)) {
-			mask = io_registers[REG_WINOUT] >> 8;
+		if(!(line[Layer_WIN_OBJ][x] & 0x80000000)) {
+			mask = R_WIN_OBJ_Mask;
 		}
 
-		int32_t window1_mask = ((inWindow1 & gfxInWin[1][x]) | -(inWindow1 & gfxInWin[1][x])) >> 31;
-		int32_t window0_mask = ((inWindow0 & gfxInWin[0][x]) | -(inWindow0 & gfxInWin[0][x])) >> 31;
-		mask = (inWin1Mask & window1_mask) | (mask & ~window1_mask);
-		mask = (inWin0Mask & window0_mask) | (mask & ~window0_mask);
+		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
 
-		if((mask & 4) && (line[2][x] < background)) {
-			color = line[2][x];
-			top = 0x04;
+		if((mask & LayerMask_BG2) && (line[Layer_BG2][x] < background)) {
+			color = line[Layer_BG2][x];
+			top = SpecialEffectTarget_BG2;
 		}
 
-		if((mask & 16) && ((uint8_t)(line[4][x]>>24) < (uint8_t)(color >>24))) {
-			color = line[4][x];
-			top = 0x10;
+		if((mask & LayerMask_OBJ) && ((uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(color >>24))) {
+			color = line[Layer_OBJ][x];
+			top = SpecialEffectTarget_OBJ;
 		}
 
 		if(color & 0x00010000) {
 			// semi-transparent OBJ
 			uint32_t back = background;
-			uint8_t top2 = 0x20;
+			uint8_t top2 = SpecialEffectTarget_BD;
 
-			if((mask & 4) && line[2][x] < back) {
-				back = line[2][x];
-				top2 = 0x04;
+			if((mask & LayerMask_BG2) && line[Layer_BG2][x] < back) {
+				back = line[Layer_BG2][x];
+				top2 = SpecialEffectTarget_BG2;
 			}
 
 			alpha_blend_brightness_switch();
-		} else if(mask & 32) {
-			switch((BLDMOD >> 6) & 3) {
-				case 0:
+		} else if(mask & LayerMask_SFX) {
+			switch(R_BLDCNT_Color_Special_Effect)
+			{
+				case SpecialEffect_None:
 					break;
-				case 1:
-					if(top & BLDMOD)
+				case SpecialEffect_Alpha_Blending:
+					if(R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
-						uint8_t top2 = 0x20;
+						uint8_t top2 = SpecialEffectTarget_BD;
 
-						if((mask & 4) && (top != 0x04) && (line[2][x] < background)) {
-							back = line[2][x];
-							top2 = 0x04;
+						if((mask & LayerMask_BG2) && (top != SpecialEffectTarget_BG2) && (line[Layer_BG2][x] < background)) {
+							back = line[Layer_BG2][x];
+							top2 = SpecialEffectTarget_BG2;
 						}
 
-						if((mask & 16) && (top != 0x10) && (uint8_t)(line[4][x]>>24) < (uint8_t)(back >> 24)) {
-							back = line[4][x];
-							top2 = 0x10;
+						if((mask & LayerMask_OBJ) && (top != SpecialEffectTarget_OBJ) && (uint8_t)(line[Layer_OBJ][x]>>24) < (uint8_t)(back >> 24)) {
+							back = line[Layer_OBJ][x];
+							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(top2 & (BLDMOD>>8) && color < 0x80000000)
+						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
-				case 2:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Increase:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
-				case 3:
-					if(BLDMOD & top)
+				case SpecialEffect_Brightness_Decrease:
+					if(R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10573,7 +10626,7 @@ static void mode5RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = io_registers[REG_VCOUNT];
+	//gfxLastVCOUNT = R_VCOUNT;
 }
 
 static void (*renderLine)(void) = mode0RenderLine;
@@ -10581,11 +10634,11 @@ static bool render_line_all_enabled = false;
 
 #define CPUUpdateRender() \
   render_line_all_enabled = false; \
-  switch(io_registers[REG_DISPCNT] & 7) { \
+  switch(R_DISPCNT_Video_Mode) { \
   case 0: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode0RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode0RenderLineNoWindow; \
     else { \
       renderLine = mode0RenderLineAll; \
@@ -10593,9 +10646,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 1: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode1RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode1RenderLineNoWindow; \
     else { \
       renderLine = mode1RenderLineAll; \
@@ -10603,9 +10656,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 2: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode2RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode2RenderLineNoWindow; \
     else { \
       renderLine = mode2RenderLineAll; \
@@ -10613,9 +10666,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 3: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode3RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode3RenderLineNoWindow; \
     else { \
       renderLine = mode3RenderLineAll; \
@@ -10623,9 +10676,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 4: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode4RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode4RenderLineNoWindow; \
     else { \
       renderLine = mode4RenderLineAll; \
@@ -10633,9 +10686,9 @@ static bool render_line_all_enabled = false;
     } \
     break; \
   case 5: \
-    if((!fxOn && !windowOn && !(graphics.layerEnable & 0x8000))) \
+    if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
       renderLine = mode5RenderLine; \
-    else if(fxOn && !windowOn && !(graphics.layerEnable & 0x8000)) \
+    else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
       renderLine = mode5RenderLineNoWindow; \
     else { \
       renderLine = mode5RenderLineAll; \
@@ -10692,10 +10745,10 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	CPUUpdateRender();
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	CPUUpdateWindow0();
 	CPUUpdateWindow1();
@@ -11084,7 +11137,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 {
 	switch(address)
 	{
-		case 0x00:
+		case 0x00: /* DISPCNT */
 			{
 				if((value & 7) > 5) // display modes above 0-5 are prohibited
 					io_registers[REG_DISPCNT] = (value & 7);
@@ -11119,18 +11172,18 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				// we only care about changes in BG0-BG3
 				if(changeBG)
 				{
-					if(!(graphics.layerEnable & 0x0100))
-						memset(line[0], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0200))
-						memset(line[1], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0400))
-						memset(line[2], -1, 240 * sizeof(u32));
-					if(!(graphics.layerEnable & 0x0800))
-						memset(line[3], -1, 240 * sizeof(u32));
+					if(!R_DISPCNT_Screen_Display_BG0)
+						memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+					if(!R_DISPCNT_Screen_Display_BG1)
+						memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+					if(!R_DISPCNT_Screen_Display_BG2)
+						memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+					if(!R_DISPCNT_Screen_Display_BG3)
+						memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 				}
 				break;
 			}
-		case 0x04:
+		case 0x04: /* DISPSTAT */
 			io_registers[REG_DISPSTAT] = (value & 0xFF38) | (io_registers[REG_DISPSTAT] & 7);
 			UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 			break;
@@ -11867,10 +11920,10 @@ void CPUReset (void)
 	saveType = 0;
 	graphics.layerEnable = io_registers[REG_DISPCNT];
 
-	memset(line[0], -1, 240 * sizeof(u32));
-	memset(line[1], -1, 240 * sizeof(u32));
-	memset(line[2], -1, 240 * sizeof(u32));
-	memset(line[3], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	for(int i = 0; i < 256; i++) {
 		map[i].address = 0;
@@ -12068,8 +12121,8 @@ updateLoop:
 					if(io_registers[REG_DISPSTAT] & 2)
 					{
 						graphics.lcdTicks += 1008;
-						io_registers[REG_VCOUNT] += 1;
-						UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
+						R_VCOUNT += 1;
+						UPDATE_REG(0x06, R_VCOUNT);
 						io_registers[REG_DISPSTAT] &= 0xFFFD;
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 						CPUCompareVCOUNT();
@@ -12086,25 +12139,25 @@ updateLoop:
 						}
 					}
 
-					if(io_registers[REG_VCOUNT] >= 228)
+					if(R_VCOUNT >= 228)
 					{
 						//Reaching last line
 						io_registers[REG_DISPSTAT] &= 0xFFFC;
 						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
-						io_registers[REG_VCOUNT] = 0;
-						UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
+						R_VCOUNT = 0;
+						UPDATE_REG(0x06, R_VCOUNT);
 						CPUCompareVCOUNT();
 					}
 				}
 				else if(io_registers[REG_DISPSTAT] & 2)
 				{
 					// if in H-Blank, leave it and move to drawing mode
-					io_registers[REG_VCOUNT] += 1;
-					UPDATE_REG(0x06, io_registers[REG_VCOUNT]);
+					R_VCOUNT += 1;
+					UPDATE_REG(0x06, R_VCOUNT);
 
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
-					if(io_registers[REG_VCOUNT] == 160)
+					if(R_VCOUNT == 160)
 					{
 						/* update joystick information */
 						io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
@@ -12151,15 +12204,15 @@ updateLoop:
 				else
 				{
 					bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
-					bool draw_sprites = graphics.layerEnable & 0x1000;
-					memset(line[4], -1, 240 * sizeof(u32));	// erase all sprites
+					bool draw_sprites = R_DISPCNT_Screen_Display_OBJ;
+					memset(line[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 
 					if(draw_sprites)
 						gfxDrawSprites();
 
 					if(render_line_all_enabled)
 					{
-						memset(line[5], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+						memset(line[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 						if(draw_objwin)
 							gfxDrawOBJWin();
 					}
