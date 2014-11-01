@@ -210,10 +210,9 @@ else
 	CXXFLAGS += -O3
 endif
 
+include Makefile.common
 
-VBA_CXXSRCS := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBRETRO_DIR)/libretro.cpp
-
-VBA_CXXOBJ := $(VBA_CXXSRCS:.cpp=.o)
+VBA_CXXOBJ := $(SOURCES_CXX:.cpp=.o)
 
 OBJS := $(VBA_CXXOBJ)
 

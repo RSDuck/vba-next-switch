@@ -15,8 +15,13 @@ ifeq ($(TARGET_ARCH),mips)
 LOCAL_CFLAGS += -DANDROID_MIPS
 endif
 
+VBA_DIR      := ../../src
+LIBRETRO_DIR := ../
+
+include ../../Makefile.common
+
 LOCAL_MODULE    := libretro
-LOCAL_SRC_FILES    = ../../src/gba.cpp ../../src/memory.cpp ../../src/sound.cpp ../../libretro/libretro.cpp
+LOCAL_SRC_FILES = $(SOURCES_CXX)
 LOCAL_CFLAGS = -DINLINE=inline -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DLSB_FIRST -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 -DTILED_RENDERING
 LOCAL_C_INCLUDES = ../src
 

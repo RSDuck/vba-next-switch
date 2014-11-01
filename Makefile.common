@@ -1,0 +1,1 @@
+SOURCES_CXX := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBRETRO_DIR)/libretro.cpp
