@@ -24,7 +24,7 @@ endif
 endif
 
 LIBRETRO_DIR := libretro
-VBA_DIR := src
+CORE_DIR := src
 
 # system platform
 system_platform = unix
@@ -196,7 +196,7 @@ else
 endif
 
 ifeq ($(TILED_RENDERING), 1)
-VBA_DEFINES += -DTILED_RENDERING
+DEFINES += -DTILED_RENDERING
 endif
 
 ifeq ($(DEBUG), 1)
@@ -212,11 +212,9 @@ endif
 
 include Makefile.common
 
-VBA_CXXOBJ := $(SOURCES_CXX:.cpp=.o)
+OBJECTS := $(SOURCES_CXX:.cpp=.o)
 
-OBJS := $(VBA_CXXOBJ)
-
-VBA_DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
+DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
 
 ifeq ($(platform), sncps3)
 CODE_DEFINES =
@@ -224,37 +222,36 @@ else
 CODE_DEFINES = -std=gnu99
 endif
 
-CFLAGS += $(CODE_DEFINES) $(fpic) $(VBA_DEFINES)
-CXXFLAGS += $(fpic) $(VBA_DEFINES)
+CFLAGS += $(CODE_DEFINES) $(fpic) $(DEFINES)
+CXXFLAGS += $(fpic) $(DEFINES)
 
 ifeq ($(FRONTEND_SUPPORTS_RGB565), 1)
 CFLAGS += -DFRONTEND_SUPPORTS_RGB565
 CXXFLAGS += -DFRONTEND_SUPPORTS_RGB565
 endif
 
-INCDIRS := -I$(VBA_DIR)
 LIBS :=
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
-	$(AR) rcs $@ $(OBJS)
+	$(AR) rcs $@ $(OBJECTS)
 else
-	$(CXX) -o $@ $(SHARED) $(OBJS) $(LDFLAGS) $(LIBS)
+	$(CXX) -o $@ $(SHARED) $(OBJECTS) $(LDFLAGS) $(LIBS)
 endif
 
 %.o: %.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCDIRS)
+	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCFLAGS)
 
 %.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS) $(INCDIRS)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INCFLAGS)
 
 clean-objs:
-	rm -f $(OBJS)
+	rm -f $(OBJECTS)
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJECTS)
 	rm -f $(TARGET)
 
 .PHONY: clean clean-objs

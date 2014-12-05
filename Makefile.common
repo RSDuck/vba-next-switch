@@ -1,1 +1,7 @@
-SOURCES_CXX := $(VBA_DIR)/sound.cpp $(VBA_DIR)/memory.cpp $(VBA_DIR)/gba.cpp $(LIBRETRO_DIR)/libretro.cpp
+INCFLAGS := -I$(CORE_DIR)
+
+SOURCES_CXX := \
+	$(CORE_DIR)/sound.cpp \
+	$(CORE_DIR)/memory.cpp \
+	$(CORE_DIR)/gba.cpp \
+	$(LIBRETRO_DIR)/libretro.cpp
