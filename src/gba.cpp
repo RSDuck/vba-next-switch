@@ -7873,7 +7873,7 @@ uint8_t *rom = 0;
 uint8_t *internalRAM = 0;
 uint8_t *workRAM = 0;
 uint8_t *vram = 0;
-u16 *pix = 0;
+uint16_t *pix = 0;
 uint8_t *oam = 0;
 uint8_t *ioMem = 0;
 
@@ -8558,6 +8558,91 @@ int CPULoadRom(const char * file)
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 
 	return romSize;
+}
+
+int CPULoadRomData(const char *data, int size)
+{
+	romSize = 0x2000000;
+	if(rom != NULL)
+		CPUCleanUp();
+
+	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+
+	rom = (uint8_t *)malloc(0x2000000);
+
+	if(rom == NULL)
+		return 0;
+
+	workRAM = (uint8_t *)calloc(1, 0x40000);
+
+	if(workRAM == NULL)
+		return 0;
+
+	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
+
+	romSize = size % 2 == 0 ? size : size + 1;
+	memcpy(whereToLoad, data, size);
+
+	uint16_t *temp = (u16 *)(rom+((romSize+1)&~1));
+	int i;
+
+	for(i = (romSize+1)&~1; i < 0x2000000; i+=2) {
+		WRITE16LE(temp, (i >> 1) & 0xFFFF);
+		temp++;
+	}
+
+	bios = (uint8_t *)calloc(1,0x4000);
+
+	if(bios == NULL)
+		goto cleanup_ret0;
+
+	internalRAM = (uint8_t *)calloc(1,0x8000);
+
+	if(internalRAM == NULL)
+		goto cleanup_ret0;
+
+	graphics.paletteRAM = (uint8_t *)calloc(1,0x400);
+
+	if(graphics.paletteRAM == NULL)
+		goto cleanup_ret0;
+
+	vram = (uint8_t *)calloc(1, 0x20000);
+
+	if(vram == NULL)
+		goto cleanup_ret0;
+
+	oam = (uint8_t *)calloc(1, 0x400);
+
+	if(oam == NULL)
+		goto cleanup_ret0;
+
+#ifdef __LIBRETRO__
+	pix = (uint16_t *)calloc(1, 4 * 240 * 160);
+#else
+	pix = (uint16_t *)calloc(1, 4 * 241 * 162);
+#endif
+
+	if(pix == NULL)
+		goto cleanup_ret0;
+
+	ioMem = (uint8_t *)calloc(1, 0x400);
+	if(ioMem == NULL)
+		goto cleanup_ret0;
+
+	flashInit();
+	eepromInit();
+
+	//CPUUpdateRenderBuffers(true);
+	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
+	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
+
+	return romSize;
+
+cleanup_ret0:
+	CPUCleanUp();
+	return 0;
 }
 
 void doMirroring (bool b)
