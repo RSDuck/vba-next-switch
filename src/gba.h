@@ -2,6 +2,7 @@
 #define GBA_H
 
 #include <stdint.h>
+#include "GBACheats.h"
 
 #define BITS_16 0
 #define BITS_32 1
