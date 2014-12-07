@@ -141,7 +141,7 @@ void retro_set_environment(retro_environment_t cb)
 
 void retro_get_system_info(struct retro_system_info *info)
 {
-   info->need_fullpath = true;
+   info->need_fullpath = false;
    info->valid_extensions = "gba";
    info->library_version = "v1.0.2";
    info->library_name = "VBA Next";
@@ -564,7 +564,7 @@ bool retro_load_game(const struct retro_game_info *game)
 
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
 
-   bool ret = CPULoadRom(game->path);
+   bool ret = CPULoadRomData((const char*)game->data, game->size);
 
    gba_init();
 
