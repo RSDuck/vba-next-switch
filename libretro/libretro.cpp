@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "libretro.h"
 
@@ -496,10 +497,51 @@ bool retro_unserialize(const void *data, size_t size)
 }
 
 void retro_cheat_reset(void)
-{}
+{
+   cheatsDeleteAll(false);
+}
 
-void retro_cheat_set(unsigned, bool, const char*)
-{}
+void retro_cheat_set(unsigned index, bool enabled, const char *code)
+{
+   const char *begin, *c;
+
+   begin = c = code;
+
+   if (!code)
+      return;
+
+   do {
+      if (*c != '+' && *c != '\0')
+         continue;
+
+      char buf[32] = {0};
+      int len = c - begin;
+      int i;
+
+      // make sure it's using uppercase letters
+      for (i = 0; i < len; i++)
+         buf[i] = toupper(begin[i]);
+      buf[i] = 0;
+
+      begin = ++c;
+
+      if (len == 16)
+         cheatsAddGSACode(buf, "", false);
+      else {
+         char *space = strrchr(buf, ' ');
+         if (space != NULL) {
+            if ((buf + len - space - 1) == 4)
+               cheatsAddCBACode(buf, "");
+            else {
+               memmove(space, space+1, strlen(space+1)+1);
+               cheatsAddGSACode(buf, "", true);
+            }
+         } else if (log_cb)
+            log_cb(RETRO_LOG_ERROR, "[VBA] Invalid cheat code '%s'\n", buf);
+      }
+
+   } while (*c++);
+}
 
 bool retro_load_game(const struct retro_game_info *game)
 {
