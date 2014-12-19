@@ -15,7 +15,7 @@ ifeq ($(TARGET_ARCH),mips)
 LOCAL_CFLAGS += -DANDROID_MIPS
 endif
 
-VBA_DIR      := ../../src
+CORE_DIR      := ../../src
 LIBRETRO_DIR := ../
 
 include ../../Makefile.common
