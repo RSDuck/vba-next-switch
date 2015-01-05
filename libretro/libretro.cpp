@@ -131,8 +131,6 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    struct retro_variable variables[] = {
-      { "vbam-next-gamepad",
-         "Button layout; original|reversed" },
       { NULL, NULL },
    };
 
@@ -434,18 +432,16 @@ static unsigned has_frame;
 
 static void update_variables(void)
 {
+#if 0
    struct retro_variable var;
    
-   var.key = "vbam-next-gamepad";
+   var.key = "vbam-next-undefined";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "original") == 0)
-         device_type = 0;
-      else if (strcmp(var.value, "reversed") == 0)
-         device_type = 1;
    }
+#endif
 }
 
 void retro_run(void)
