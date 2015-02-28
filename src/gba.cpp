@@ -8675,6 +8675,7 @@ void doMirroring (bool b)
 
 #define alpha_blend_brightness_switch()                                                    \
 	if(R_BLDCNT_IsTarget2(top2))                                                           \
+        { \
 		if(color < 0x80000000)                                                             \
 		{                                                                                  \
 			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
@@ -8683,7 +8684,8 @@ void doMirroring (bool b)
 		if (R_BLDCNT_IsTarget1(top))                                                       \
 		{                                                                                  \
 			brightness_switch();                                                           \
-		}
+		} \
+        }
 
 /* we only use 16bit color depth */
 #define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
