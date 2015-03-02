@@ -126,7 +126,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>_DEBUG;_XBOX;_LIB;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_XBOX;_LIB;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;MSB_FIRST;INLINE=_inline;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
       <CallAttributedProfiling>Callcap</CallAttributedProfiling>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -214,7 +214,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>NDEBUG;_XBOX;_LIB;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_XBOX;_LIB;__LIBRETRO__;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;MSB_FIRST;INLINE=_inline;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreschedulingOptimization>true</PreschedulingOptimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -238,7 +238,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PrecompiledHeaderOutputFile>$(OutDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>NDEBUG;_XBOX;LTCG;_LIB;__LIBRETRO__;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;INLINE=_inline;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_XBOX;LTCG;_LIB;__LIBRETRO__;USE_CACHE_PREFETCH;BRANCHLESS_GBA_GFX;SPEEDHAX;__POWERPC__;__ppc__;WORDS_BIGENDIAN;BLARGG_BIG_ENDIAN;MSB_FIRST;INLINE=_inline;%(PreprocessorDefinitions);_XBOX360;FRONTEND_SUPPORTS_RGB565;TILED_RENDERING</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\libretro;$(SolutionDir)\..\src;$(SolutionDir)\..\src\common;$(SolutionDir)\..\src\gb;$(SolutionDir)\..\src\gba;$(SolutionDir)\..\utils\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreschedulingOptimization>true</PreschedulingOptimization>
     </ClCompile>

@@ -6114,14 +6114,13 @@ union u8h
 {
    __pragma( pack(push, 1));
    struct
-#ifdef LSB_FIRST
    {
-      /* 0*/	unsigned char lo:4;
+#ifdef MSB_FIRST
       /* 4*/	unsigned char hi:4;
+      /* 0*/	unsigned char lo:4;
 #else
-   {
-      /* 4*/	unsigned char hi:4;
       /* 0*/	unsigned char lo:4;
+      /* 4*/	unsigned char hi:4;
 #endif
    }
    __pragma(pack(pop));
@@ -6131,14 +6130,13 @@ union u8h
 union u8h
 {
    struct
-#ifdef LSB_FIRST
    {
-      /* 0*/	unsigned char lo:4;
+#ifdef MSB_FIRST
       /* 4*/	unsigned char hi:4;
+      /* 0*/	unsigned char lo:4;
 #else
-   {
-      /* 4*/	unsigned char hi:4;
       /* 0*/	unsigned char lo:4;
+      /* 4*/	unsigned char hi:4;
 #endif
    } __attribute__ ((packed));
    u8 val;
@@ -6147,23 +6145,20 @@ union u8h
 
 union TileEntry
 {
-#ifdef LSB_FIRST
    struct
    {
-      /* 0*/	unsigned tileNum:10;
-      /*12*/	unsigned hFlip:1;
-      /*13*/	unsigned vFlip:1;
+#ifdef MSB_FIRST
       /*14*/	unsigned palette:4;
-   };
+      /*13*/	unsigned vFlip:1;
+      /*12*/	unsigned hFlip:1;
+      /* 0*/	unsigned tileNum:10;
 #else
-   struct
-   {
-      /*14*/	unsigned palette:4;
-      /*13*/	unsigned vFlip:1;
-      /*12*/	unsigned hFlip:1;
       /* 0*/	unsigned tileNum:10;
-   };
+      /*12*/	unsigned hFlip:1;
+      /*13*/	unsigned vFlip:1;
+      /*14*/	unsigned palette:4;
 #endif
+   };
    u16 val;
 };
 
@@ -7886,7 +7881,7 @@ bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
 bool cpuEEPROMSensorEnabled = false;
 
-#ifndef LSB_FIRST
+#ifdef MSB_FIRST
 bool cpuBiosSwapped = false;
 #endif
 
@@ -11708,9 +11703,11 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 
 void CPUInit(const char *biosFileName, bool useBiosFile)
 {
-#ifndef LSB_FIRST
-	if(!cpuBiosSwapped) {
-		for(unsigned int i = 0; i < sizeof(myROM)/4; i++) {
+#ifdef MSB_FIRST
+	if(!cpuBiosSwapped)
+   {
+		for(unsigned int i = 0; i < sizeof(myROM)/4; i++)
+      {
 			WRITE32LE(&myROM[i], myROM[i]);
 		}
 		cpuBiosSwapped = true;

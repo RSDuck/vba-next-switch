@@ -59,7 +59,7 @@
 #define CACHE_PREFETCH(prefetch)
 #endif
 
-#ifndef LSB_FIRST
+#ifdef MSB_FIRST
 #if defined(__SNC__)
 #define READ16LE( base )        (__builtin_lhbrx(base, 0))
 #define READ32LE( base )        (__builtin_lwbrx(base, 0))

@@ -55,31 +55,31 @@ typedef struct {
 
 typedef union {
 	struct {
-#ifdef LSB_FIRST
-		uint8_t B0;
-		uint8_t B1;
-		uint8_t B2;
+#ifdef MSB_FIRST
 		uint8_t B3;
+		uint8_t B2;
+		uint8_t B1;
+		uint8_t B0;
 #else
-		uint8_t B3;
-		uint8_t B2;
-		uint8_t B1;
 		uint8_t B0;
+		uint8_t B1;
+		uint8_t B2;
+		uint8_t B3;
 #endif
 	} B;
 	struct {
-#ifdef LSB_FIRST
-		uint16_t W0;
+#ifdef MSB_FIRST
 		uint16_t W1;
+		uint16_t W0;
 #else
-		uint16_t W1;
 		uint16_t W0;
+		uint16_t W1;
 #endif
 	} W;
-#ifdef LSB_FIRST
-	uint32_t I;
-#else
+#ifdef MSB_FIRST
 	volatile uint32_t I;
+#else
+	uint32_t I;
 #endif
 } reg_pair;
 
