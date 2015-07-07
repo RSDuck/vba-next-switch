@@ -8,3 +8,9 @@ EBOOT.BIN
 /libretro/msvc/msvc-2010/Release/
 *.suo
 *.sdf
+*.bc
+*.js
+*.dll
+*.dylib
+package.json
+.npmignore
