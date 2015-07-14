@@ -411,38 +411,39 @@ void eepromReadGameMem(const uint8_t *& data, int version)
 int eepromRead (void)
 {
 	switch(eepromMode)
-	{
-		case EEPROM_IDLE:
-		case EEPROM_READADDRESS:
-		case EEPROM_WRITEDATA:
-			return 1;
-		case EEPROM_READDATA:
-			{
-				eepromBits++;
-				if(eepromBits == 4) {
-					eepromMode = EEPROM_READDATA2;
-					eepromBits = 0;
-					eepromByte = 0;
-				}
-				return 0;
-			}
-		case EEPROM_READDATA2:
-			{
-				int data = 0;
-				int address = eepromAddress << 3;
-				int mask = 1 << (7 - (eepromBits & 7));
-				data = (eepromData[address+eepromByte] & mask) ? 1 : 0;
-				eepromBits++;
-				if((eepromBits & 7) == 0)
-					eepromByte++;
-				if(eepromBits == 0x40)
-					eepromMode = EEPROM_IDLE;
-				return data;
-			}
-		default:
-			return 0;
-	}
-	return 1;
+   {
+      case EEPROM_IDLE:
+      case EEPROM_READADDRESS:
+      case EEPROM_WRITEDATA:
+         return 1;
+      case EEPROM_READDATA:
+         {
+            eepromBits++;
+            if(eepromBits == 4) {
+               eepromMode = EEPROM_READDATA2;
+               eepromBits = 0;
+               eepromByte = 0;
+            }
+            return 0;
+         }
+      case EEPROM_READDATA2:
+         {
+            int data = 0;
+            int address = eepromAddress << 3;
+            int mask = 1 << (7 - (eepromBits & 7));
+            data = (eepromData[address+eepromByte] & mask) ? 1 : 0;
+            eepromBits++;
+            if((eepromBits & 7) == 0)
+               eepromByte++;
+            if(eepromBits == 0x40)
+               eepromMode = EEPROM_IDLE;
+            return data;
+         }
+      default:
+         break;
+   }
+
+   return 0;
 }
 
 void eepromWrite(u8 value)
