@@ -21,6 +21,7 @@
 #endif
 
 bool cheatsEnabled = true;
+bool lagged;
 
 /*============================================================
 	GBA INLINE
@@ -492,6 +493,8 @@ static INLINE u32 CPUReadMemory(u32 address)
 			break;
 		case 0x04:
 			/* I/O registers */
+         if (address == 0x4000130)
+				lagged = false;
 			if((address < 0x4000400) && ioReadable[address & 0x3fc])
 			{
 				if(ioReadable[(address & 0x3fc) + 2])
@@ -576,6 +579,8 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			value = READ16LE(((u16 *)&internalRAM[address & 0x7ffe]));
 			break;
 		case 4:
+         if (address == 0x4000130)
+				lagged = false;
 			if((address < 0x4000400) && ioReadable[address & 0x3fe])
 			{
 				value =  READ16LE(((u16 *)&ioMem[address & 0x3fe]));
@@ -672,6 +677,8 @@ static INLINE u8 CPUReadByte(u32 address)
 		case 3:
 			return internalRAM[address & 0x7fff];
 		case 4:
+         if (address == 0x4000130 || address == 0x4000131)
+				lagged = false;
 			if((address < 0x4000400) && ioReadable[address & 0x3ff])
 				return ioMem[address & 0x3ff];
 			else goto unreadable;
@@ -4423,11 +4430,7 @@ static int armExecute (void)
 
 		cpuTotalTicks += clockTicks;
 
-#ifdef USE_SWITICKS
-	} while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
-#else
 } while ((cpuTotalTicks < cpuNextEvent) & armState & ~holdState);
-#endif
 	return 1;
 }
 
@@ -6092,11 +6095,7 @@ static int thumbExecute (void)
 		cpuTotalTicks += clockTicks;
 
 
-#ifdef USE_SWITICKS
-	} while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
-#else
 } while ((cpuTotalTicks < cpuNextEvent) & ~armState & ~holdState);
-#endif
 	return 1;
 }
 
@@ -8183,9 +8182,6 @@ static INLINE int CPUUpdateTicks (void)
 {
 	int cpuLoopTicks = graphics.lcdTicks;
 
-	if(soundTicks < cpuLoopTicks)
-		cpuLoopTicks = soundTicks;
-
 	if(timer0On && (timer0Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer0Ticks;
 
@@ -8197,14 +8193,6 @@ static INLINE int CPUUpdateTicks (void)
 
 	if(timer3On && !(io_registers[REG_TM3CNT] & 4) && (timer3Ticks < cpuLoopTicks))
 		cpuLoopTicks = timer3Ticks;
-
-#ifdef USE_SWITICKS
-	if (SWITicks)
-	{
-		if (SWITicks < cpuLoopTicks)
-			cpuLoopTicks = SWITicks;
-	}
-#endif
 
 	if (IRQTicks)
 	{
@@ -12226,15 +12214,6 @@ void CPULoop (void)
 		if(cpuTotalTicks >= cpuNextEvent) {
 			int remainingTicks = cpuTotalTicks - cpuNextEvent;
 
-#ifdef USE_SWITICKS
-			if (SWITicks)
-			{
-				SWITicks-=clockTicks;
-				if (SWITicks<0)
-					SWITicks = 0;
-			}
-#endif
-
 			clockTicks = cpuNextEvent;
 			cpuTotalTicks = 0;
 
@@ -12248,6 +12227,8 @@ updateLoop:
 			}
 
 			graphics.lcdTicks -= clockTicks;
+
+         soundTicksUp += clockTicks;
 
 			if(graphics.lcdTicks <= 0)
 			{
@@ -12311,6 +12292,9 @@ updateLoop:
                   }
                   CPUCheckDMA(1, 0x0f);
                   systemDrawScreen();
+
+                  process_sound_tick_fn();
+
                   framedone = true;
                }
 
@@ -12351,12 +12335,9 @@ updateLoop:
 			// we shouldn't be doing sound in stop state, but we lose synchronization
 			// if sound is disabled, so in stop state, soundTick will just produce
 			// mute sound
-			soundTicks -= clockTicks;
-			if(!soundTicks)
-			{
-				process_sound_tick_fn();
-				soundTicks += SOUND_CLOCK_TICKS;
-			}
+
+         // moving this may have consequences; we'll see
+			//soundTicksUp += clockTicks;
 
 			if(!stopState) {
 				if(timer0On) {
@@ -12475,7 +12456,7 @@ updateLoop:
 				cpuDmaTicksToUpdate -= clockTicks;
 				if(cpuDmaTicksToUpdate < 0)
 					cpuDmaTicksToUpdate = 0;
-				goto updateLoop;
+				goto skipIRQ;
 			}
 
 			if(io_registers[REG_IF] && (io_registers[REG_IME] & 1) && armIrqEnable)
@@ -12512,14 +12493,10 @@ updateLoop:
 						}
 					}
 
-#ifdef USE_SWITICKS
-					// Stops the SWI Ticks emulation if an IRQ is executed
-					//(to avoid problems with nested IRQ/SWI)
-					if (SWITicks)
-						SWITicks = 0;
-#endif
 				}
 			}
+
+skipIRQ:
 
 			if(remainingTicks > 0) {
 				if(remainingTicks > cpuNextEvent)

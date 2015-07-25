@@ -444,6 +444,8 @@ static void update_variables(void)
 #endif
 }
 
+extern bool lagged;
+
 void retro_run(void)
 {
    bool updated = false;
@@ -475,6 +477,7 @@ void retro_run(void)
 
    has_frame = 0;
    UpdateJoypad();
+   lagged = false;
    do
    {
       CPULoop();

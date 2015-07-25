@@ -126,7 +126,6 @@ void process_sound_tick_fn (void);
 void soundSaveGameMem(uint8_t *& data);
 void soundReadGameMem(const uint8_t *& data, int version);
 
-extern int SOUND_CLOCK_TICKS;   // Number of 16.8 MHz clocks between calls to soundTick()
-extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() will be called
+extern int soundTicksUp;          // Number of 16.8 MHz clocks until soundTick() will be called
 
 #endif // SOUND_H

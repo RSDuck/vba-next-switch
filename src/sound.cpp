@@ -287,10 +287,9 @@ INLINE void Gb_Wave::write( unsigned addr, int data )
 		wave_bank[index] = data;;
 }
 
-static int16_t   soundFinalWave [1600];
+static int16_t   soundFinalWave [2048];
 long  soundSampleRate    = 22050;
-int   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
-int   soundTicks         = SOUND_CLOCK_TICKS_;
+int soundTicksUp; // counts up from 0 being the last time the blips were emptied
 
 static int soundEnableFlag   = 0x3ff; /* emulator channels enabled*/
 static float const apu_vols [4] = { -0.25f, -0.5f, -1.0f, -0.25f };
@@ -374,7 +373,7 @@ static void gba_pcm_apply_control( int pcm_idx, int idx )
 	if ( pcm[pcm_idx].pcm.output != out )
 	{
 		if ( pcm[pcm_idx].pcm.output )
-			pcm_synth.offset( SOUND_CLOCK_TICKS - soundTicks, -pcm[pcm_idx].pcm.last_amp, pcm[pcm_idx].pcm.output );
+			pcm_synth.offset( soundTicksUp, -pcm[pcm_idx].pcm.last_amp, pcm[pcm_idx].pcm.output );
 		pcm[pcm_idx].pcm.last_amp = 0;
 		pcm[pcm_idx].pcm.output = out;
 	}
@@ -1476,8 +1475,7 @@ Blip_Buffer::Blip_Buffer()
 
 Blip_Buffer::~Blip_Buffer()
 {
-   if (buffer_)
-      free(buffer_);
+   free(buffer_);
 }
 
 void Blip_Buffer::clear( void)
@@ -1722,7 +1720,7 @@ static void pcm_fifo_write_control( int data, int data2)
 
 	if(pcm[0].pcm.output)
 	{
-		int time = SOUND_CLOCK_TICKS -  soundTicks;
+		int time = soundTicksUp;
 
 		pcm[0].dac = (int8_t)pcm[0].dac >> pcm[0].pcm.shift;
 		int delta = pcm[0].dac - pcm[0].pcm.last_amp;
@@ -1751,7 +1749,7 @@ static void pcm_fifo_write_control( int data, int data2)
 
 	if(pcm[1].pcm.output)
 	{
-		int time = SOUND_CLOCK_TICKS -  soundTicks;
+		int time = soundTicksUp;
 
 		pcm[1].dac = (int8_t)pcm[1].dac >> pcm[1].pcm.shift;
 		int delta = pcm[1].dac - pcm[1].pcm.last_amp;
@@ -1838,7 +1836,7 @@ static void gba_pcm_fifo_timer_overflowed( unsigned pcm_idx )
 
 	if(pcm[pcm_idx].pcm.output)
 	{
-		int time = SOUND_CLOCK_TICKS -  soundTicks;
+		int time = soundTicksUp;
 
 		pcm[pcm_idx].dac = (int8_t)pcm[pcm_idx].dac >> pcm[pcm_idx].pcm.shift;
 		int delta = pcm[pcm_idx].dac - pcm[pcm_idx].pcm.last_amp;
@@ -1856,7 +1854,7 @@ void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 	for(uint32_t i = 0; i < 2; i++)
 	{
 		ioMem[address[i]] = data[i];
-		gb_apu_write_register( SOUND_CLOCK_TICKS -  soundTicks, gb_addr[i], data[i] );
+		gb_apu_write_register( soundTicksUp, gb_addr[i], data[i] );
 
 		if ( address[i] == NR52 )
 		{
@@ -1870,7 +1868,7 @@ void soundEvent_u8_parallel(int gb_addr[], uint32_t address[], uint8_t data[])
 void soundEvent_u8(int gb_addr, uint32_t address, uint8_t data)
 {
 	ioMem[address] = data;
-	gb_apu_write_register( SOUND_CLOCK_TICKS -  soundTicks, gb_addr, data );
+	gb_apu_write_register( soundTicksUp, gb_addr, data );
 
 	if ( address == NR52 )
 	{
@@ -1940,32 +1938,34 @@ void soundTimerOverflow(int timer)
 void process_sound_tick_fn (void)
 {
 	// Run sound hardware to present
-	pcm[0].pcm.last_time -= SOUND_CLOCK_TICKS;
+	pcm[0].pcm.last_time -= soundTicksUp;
 	if ( pcm[0].pcm.last_time < -2048 )
 		pcm[0].pcm.last_time = -2048;
 
-	pcm[1].pcm.last_time -= SOUND_CLOCK_TICKS;
+	pcm[1].pcm.last_time -= soundTicksUp;
 	if ( pcm[1].pcm.last_time < -2048 )
 		pcm[1].pcm.last_time = -2048;
 
 	/* Emulates sound hardware up to a specified time, ends current time
 	frame, then starts a new frame at time 0 */
 
-	if(SOUND_CLOCK_TICKS > gb_apu.last_time)
-		gb_apu_run_until_( SOUND_CLOCK_TICKS );
+	if(soundTicksUp > gb_apu.last_time)
+		gb_apu_run_until_( soundTicksUp );
 
-	gb_apu.frame_time -= SOUND_CLOCK_TICKS;
-	gb_apu.last_time -= SOUND_CLOCK_TICKS;
+	gb_apu.frame_time -= soundTicksUp;
+	gb_apu.last_time  -= soundTicksUp;
 
-	bufs_buffer[2].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[2].factor_;
-	bufs_buffer[1].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[1].factor_;
-	bufs_buffer[0].offset_ += SOUND_CLOCK_TICKS * bufs_buffer[0].factor_;
+	bufs_buffer[2].offset_ += soundTicksUp * bufs_buffer[2].factor_;
+	bufs_buffer[1].offset_ += soundTicksUp * bufs_buffer[1].factor_;
+	bufs_buffer[0].offset_ += soundTicksUp * bufs_buffer[0].factor_;
 
 
 	// dump all the samples available
 	// VBA will only ever store 1 frame worth of samples
 	int numSamples = stereo_buffer_read_samples( (int16_t*) soundFinalWave, stereo_buffer_samples_avail());
 	systemOnWriteDataToSoundBuffer(soundFinalWave, numSamples);
+
+   soundTicksUp = 0;
 }
 
 static void apply_muting (void)
@@ -2006,7 +2006,7 @@ static void remake_stereo_buffer (void)
 
 	stereo_buffer_clear();
 
-	soundTicks = SOUND_CLOCK_TICKS;
+	soundTicksUp = 0;
 
 	apply_muting();
 
@@ -2023,18 +2023,14 @@ void soundReset (void)
 
 	stereo_buffer_clear();
 
-	soundTicks = SOUND_CLOCK_TICKS;
-	//End of Reset APU
-
-	SOUND_CLOCK_TICKS = SOUND_CLOCK_TICKS_;
-	soundTicks        = SOUND_CLOCK_TICKS_;
+   soundTicksUp = 0;
 
 	// Sound Event (NR52)
 	int gb_addr = table[NR52 - 0x60];
 	if ( gb_addr )
 	{
 		ioMem[NR52] = 0x80;
-		gb_apu_write_register( SOUND_CLOCK_TICKS -  soundTicks, gb_addr, 0x80 );
+		gb_apu_write_register( soundTicksUp, gb_addr, 0x80 );
 
 		gba_pcm_apply_control(0, 0 );
 		gba_pcm_apply_control(1, 1 );
@@ -2134,7 +2130,7 @@ void soundReadGameMem(const uint8_t *& in_data, int)
 
 	stereo_buffer_clear();
 
-	soundTicks = SOUND_CLOCK_TICKS;
+	soundTicksUp = 0;
 	//End of Reset APU
 
 	gb_apu_save_state( &state.apu );
