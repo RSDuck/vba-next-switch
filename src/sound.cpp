@@ -1003,7 +1003,6 @@ void Gb_Sweep_Square::clock_sweep()
 
 int Gb_Wave::access( unsigned addr ) const
 {
-	addr = (phase & BANK_SIZE_MIN_ONE) >> 1;
 	return addr & 0x0F;
 }
 
