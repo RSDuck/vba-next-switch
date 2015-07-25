@@ -12187,9 +12187,11 @@ void UpdateJoypad(void)
 
 void CPULoop (void)
 {
-	bus.busPrefetchCount = 0;
-	int ticks = 250000;
+   bool framedone;
 	int timerOverflow = 0;
+   int ticks = 300000;
+
+	bus.busPrefetchCount = 0;
 	// variable used by the CPU core
 	cpuTotalTicks = 0;
 
@@ -12197,6 +12199,7 @@ void CPULoop (void)
 	if(cpuNextEvent > ticks)
 		cpuNextEvent = ticks;
 
+   framedone = false;
 
 	do
 	{
@@ -12308,6 +12311,7 @@ updateLoop:
                   }
                   CPUCheckDMA(1, 0x0f);
                   systemDrawScreen();
+                  framedone = true;
                }
 
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
@@ -12591,7 +12595,7 @@ updateLoop:
 			if(cpuNextEvent > ticks)
 				cpuNextEvent = ticks;
 
-			if(ticks <= 0)
+			if(ticks <= 0 || framedone)
 				break;
 
 		}
