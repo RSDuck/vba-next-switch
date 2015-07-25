@@ -474,7 +474,11 @@ void retro_run(void)
    joy = J;
 
    has_frame = 0;
-   do { CPULoop(); } while (!has_frame);
+   UpdateJoypad();
+   do
+   {
+      CPULoop();
+   }while (!has_frame);
 }
 
 size_t retro_serialize_size(void)

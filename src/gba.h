@@ -116,6 +116,7 @@ extern void CPUInit(const char *,bool);
 extern void CPUCleanUp (void);
 extern void CPUReset (void);
 extern void CPULoop(void);
+extern void UpdateJoypad(void);
 extern void CPUCheckDMA(int,int);
 
 #endif // GBA_H

@@ -12155,6 +12155,36 @@ static void CPUInterrupt(void)
 	biosProtected[3] = 0xe5;
 }
 
+void UpdateJoypad(void)
+{
+   /* update joystick information */
+   io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
+#if 0
+   if(cpuEEPROMSensorEnabled)
+      systemUpdateMotionSensor();
+#endif
+   UPDATE_REG(0x130, io_registers[REG_P1]);
+   io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));
+
+   // this seems wrong, but there are cases where the game
+   // can enter the stop state without requesting an IRQ from
+   // the joypad.
+   if((io_registers[REG_P1CNT] & 0x4000) || stopState) {
+      uint16_t p1 = (0x3FF ^ io_registers[REG_P1CNT]) & 0x3FF;
+      if(io_registers[REG_P1CNT] & 0x8000) {
+         if(p1 == (io_registers[REG_P1CNT] & 0x3FF)) {
+            io_registers[REG_IF] |= 0x1000;
+            UPDATE_REG(0x202, io_registers[REG_IF]);
+         }
+      } else {
+         if(p1 & io_registers[REG_P1CNT]) {
+            io_registers[REG_IF] |= 0x1000;
+            UPDATE_REG(0x202, io_registers[REG_IF]);
+         }
+      }
+   }
+}
+
 void CPULoop (void)
 {
 	bus.busPrefetchCount = 0;
@@ -12261,50 +12291,24 @@ updateLoop:
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
 					if(R_VCOUNT == 160)
-					{
-						/* update joystick information */
-						io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
-#if 0
-						if(cpuEEPROMSensorEnabled)
-							systemUpdateMotionSensor();
-#endif
-						UPDATE_REG(0x130, io_registers[REG_P1]);
-						io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));
-
-						// this seems wrong, but there are cases where the game
-						// can enter the stop state without requesting an IRQ from
-						// the joypad.
-						if((io_registers[REG_P1CNT] & 0x4000) || stopState) {
-							uint16_t p1 = (0x3FF ^ io_registers[REG_P1CNT]) & 0x3FF;
-							if(io_registers[REG_P1CNT] & 0x8000) {
-								if(p1 == (io_registers[REG_P1CNT] & 0x3FF)) {
-									io_registers[REG_IF] |= 0x1000;
-									UPDATE_REG(0x202, io_registers[REG_IF]);
-								}
-							} else {
-								if(p1 & io_registers[REG_P1CNT]) {
-									io_registers[REG_IF] |= 0x1000;
-									UPDATE_REG(0x202, io_registers[REG_IF]);
-								}
-							}
-						}
+               {
 
                   uint32_t ext = (joy >> 10);
                   // If no (m) code is enabled, apply the cheats at each LCDline
                   if((cheatsEnabled) && (mastercode==0))
                      remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
 
-						io_registers[REG_DISPSTAT] |= 1;
-						io_registers[REG_DISPSTAT] &= 0xFFFD;
-						UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
-						if(io_registers[REG_DISPSTAT] & 0x0008)
-						{
-							io_registers[REG_IF] |= 1;
-							UPDATE_REG(0x202, io_registers[REG_IF]);
-						}
-						CPUCheckDMA(1, 0x0f);
-						systemDrawScreen();
-					}
+                  io_registers[REG_DISPSTAT] |= 1;
+                  io_registers[REG_DISPSTAT] &= 0xFFFD;
+                  UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
+                  if(io_registers[REG_DISPSTAT] & 0x0008)
+                  {
+                     io_registers[REG_IF] |= 1;
+                     UPDATE_REG(0x202, io_registers[REG_IF]);
+                  }
+                  CPUCheckDMA(1, 0x0f);
+                  systemDrawScreen();
+               }
 
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 					CPUCompareVCOUNT();
