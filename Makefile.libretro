@@ -58,7 +58,7 @@ ifeq ($(arch),ppc)
 endif
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
-   fpic += -mmacosx-version-min=10.5
+   fpic += -mmacosx-version-min=10.2
    SHARED := -dynamiclib
 	TILED_RENDERING=1
 else ifeq ($(platform), ios)
