@@ -2,6 +2,43 @@ DEBUG = 0
 FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 
+CORE_DIR := src
+BUILD_DIR = build
+
+ifeq ($(platform),android-arm64_v8a)
+include $(BUILD_DIR)/Makefile.android-arm64_v8a
+else ifeq ($(platform),android-armeabi)
+include $(BUILD_DIR)/Makefile.android-armeabi
+else ifeq ($(platform),android-armeabi_v7a)
+include $(BUILD_DIR)/Makefile.android-armeabi_v7a
+else ifeq ($(platform),android-mips)
+include $(BUILD_DIR)/Makefile.android-mips
+else ifeq ($(platform),android-mips64)
+include $(BUILD_DIR)/Makefile.android-mips64
+else ifeq ($(platform),android-x86)
+include $(BUILD_DIR)/Makefile.android-x86
+else ifeq ($(platform),android-x86_64)
+include $(BUILD_DIR)/Makefile.android-x86_64
+else ifeq ($(platform),linux_portable-x86)
+include $(BUILD_DIR)/Makefile.linux_portable-x86
+else ifeq ($(platform),linux_portable-x86_64)
+include $(BUILD_DIR)/Makefile.linux_portable-x86_64
+else ifeq ($(platform),linux-x86)
+include $(BUILD_DIR)/Makefile.linux-x86
+else ifeq ($(platform),linux-x86_64)
+include $(BUILD_DIR)/Makefile.linux-x86_64
+else ifeq ($(platform),mingw32)
+include $(BUILD_DIR)/Makefile.mingw32
+else ifeq ($(platform),mingw64)
+include $(BUILD_DIR)/Makefile.mingw64
+else ifeq ($(platform),wii)
+include $(BUILD_DIR)/Makefile.wii
+else ifeq ($(platform),windows-x86)
+include $(BUILD_DIR)/Makefile.windows-x86
+else ifeq ($(platform),windows-x86_64)
+include $(BUILD_DIR)/Makefile.windows-x86_64
+else
+
 ifneq ($(EMSCRIPTEN),)
    platform = emscripten
 endif
@@ -24,7 +61,6 @@ endif
 endif
 
 LIBRETRO_DIR := libretro
-CORE_DIR := src
 
 # system platform
 system_platform = unix
@@ -211,7 +247,7 @@ else
 	CXXFLAGS += -O3
 endif
 
-include Makefile.common
+include build/Makefile.common
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o)
 
@@ -257,4 +293,6 @@ clean:
 	rm -f $(TARGET)
 
 .PHONY: clean clean-objs
+endif
+
 endif
