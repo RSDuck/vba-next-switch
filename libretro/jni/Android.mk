@@ -18,7 +18,7 @@ endif
 CORE_DIR      := ../../src
 LIBRETRO_DIR := ../
 
-include ../../Makefile.common
+include ../../build/Makefile.common
 
 LOCAL_MODULE    := libretro
 LOCAL_SRC_FILES = $(SOURCES_CXX)
