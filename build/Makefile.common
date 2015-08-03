@@ -1,4 +1,5 @@
 INCFLAGS := -I$(CORE_DIR)
+LIBRETRO_DIR ?= $(CORE_DIR)/../libretro
 
 SOURCES_CXX := \
 	$(CORE_DIR)/sound.cpp \
