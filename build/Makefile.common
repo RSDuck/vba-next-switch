@@ -1,8 +1,7 @@
 INCFLAGS := -I$(CORE_DIR)
-LIBRETRO_DIR ?= $(CORE_DIR)/../libretro
 
 SOURCES_CXX := \
-	$(CORE_DIR)/sound.cpp \
-	$(CORE_DIR)/memory.cpp \
-	$(CORE_DIR)/gba.cpp \
-	$(LIBRETRO_DIR)/libretro.cpp
+	$(CORE_DIR)/src/sound.cpp \
+	$(CORE_DIR)/src/memory.cpp \
+	$(CORE_DIR)/src/gba.cpp \
+	$(CORE_DIR)/libretro/libretro.cpp
