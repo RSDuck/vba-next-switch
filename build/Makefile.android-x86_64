@@ -43,8 +43,8 @@ AR  = $(NDK_ROOT_DIR)/toolchains/x86_64-4.9/prebuilt/$(HOST_PLATFORM)-x86_64/bin
 ############
 # Extensions
 
-OBJEXT = .android_x86_64.o
-SOEXT  = .android_x86_64.so
+OBJEXT = .android-x86_64.o
+SOEXT  = .android-x86_64.so
 
 ################
 # Platform setup
