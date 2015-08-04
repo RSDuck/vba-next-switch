@@ -4333,7 +4333,7 @@ static int armExecute (void)
 
 		bus.busPrefetch = false;
 		int32_t busprefetch_mask = ((bus.busPrefetchCount & 0xFFFFFE00) | -(bus.busPrefetchCount & 0xFFFFFE00)) >> 31;
-		bus.busPrefetchCount = (0x100 | (bus.busPrefetchCount & 0xFF) & busprefetch_mask) | (bus.busPrefetchCount & ~busprefetch_mask);
+		bus.busPrefetchCount = ((0x100 | (bus.busPrefetchCount & 0xFF)) & busprefetch_mask) | (bus.busPrefetchCount & ~busprefetch_mask);
 #if 0
 		if (bus.busPrefetchCount & 0xFFFFFE00)
 			bus.busPrefetchCount = 0x100 | (bus.busPrefetchCount & 0xFF);
@@ -5128,7 +5128,7 @@ static  void thumb44_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
+    clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1)
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -5142,7 +5142,7 @@ static  void thumb44_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
+    clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1)
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -5186,7 +5186,7 @@ static  void thumb46_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
+    clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1)
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -5200,7 +5200,7 @@ static  void thumb46_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    clockTicks = codeTicksAccessSeq16(bus.armNextPC)<<1
+    clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1)
         + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
   }
 }
@@ -11417,7 +11417,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 		case 0x80:
 		case 0x84:
 			{
-				int gb_addr[2] = {address & 0xFF, (address & 0xFF) + 1};
+				int32_t gb_addr[2] = {(int32_t)(address & 0xFF), (int32_t)((address & 0xFF) + 1)};
 				uint32_t address_array[2] = {address & 0xFF, (address&0xFF)+1};
 				uint8_t data_array[2] = {(uint8_t)(value & 0xFF), (uint8_t)(value>>8)};
 				gb_addr[0] = table[gb_addr[0] - 0x60];
@@ -13533,15 +13533,15 @@ int cheatsCheckKeys(u32 keys, u32 extended)
         break;
       case GSA_8_BIT_ADD :
         CPUWriteByte(cheatsList[i].address,
-                    (cheatsList[i].value & 0xFF) + CPUReadMemory(cheatsList[i].address) & 0xFF);
+                    (cheatsList[i].value & 0xFF) + (CPUReadMemory(cheatsList[i].address) & 0xFF));
         break;
       case GSA_16_BIT_ADD :
         CPUWriteHalfWord(cheatsList[i].address,
-                        (cheatsList[i].value & 0xFFFF) + CPUReadMemory(cheatsList[i].address) & 0xFFFF);
+                        (cheatsList[i].value & 0xFFFF) + (CPUReadMemory(cheatsList[i].address) & 0xFFFF));
         break;
       case GSA_32_BIT_ADD :
         CPUWriteMemory(cheatsList[i].address ,
-                       cheatsList[i].value + CPUReadMemory(cheatsList[i].address) & 0xFFFFFFFF);
+                       cheatsList[i].value + (CPUReadMemory(cheatsList[i].address) & 0xFFFFFFFF));
         break;
       case GSA_8_BIT_IF_LOWER_U:
         if (!(CPUReadByte(cheatsList[i].address) < (cheatsList[i].value & 0xFF))) {
@@ -15066,12 +15066,12 @@ void cheatsAddCBACode(const char *code, const char *desc)
   sscanf(buffer, "%x", &value);
 
   u8 array[8] = {
-    address & 255,
-    (address >> 8) & 255,
-    (address >> 16) & 255,
-    (address >> 24) & 255,
-    (value & 255),
-    (value >> 8) & 255,
+    (u8)(address & 255),
+    (u8)((address >> 8) & 255),
+    (u8)((address >> 16) & 255),
+    (u8)((address >> 24) & 255),
+    (u8)(value & 255),
+    (u8)((value >> 8) & 255),
     0,
     0
   };
