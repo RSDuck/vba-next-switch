@@ -31,18 +31,26 @@ static unsigned libretro_save_size = sizeof(libretro_save_buf);
 
 void *retro_get_memory_data(unsigned id)
 {
-   if (id != RETRO_MEMORY_SAVE_RAM)
-      return 0;
+   if (id == RETRO_MEMORY_SAVE_RAM)
+      return libretro_save_buf;
+   if (id == RETRO_MEMORY_SYSTEM_RAM)
+      return workRAM;
+   if (id == RETRO_MEMORY_VIDEO_RAM)
+      return vram;
 
-   return libretro_save_buf;
+   return NULL;
 }
 
 size_t retro_get_memory_size(unsigned id)
 {
-   if (id != RETRO_MEMORY_SAVE_RAM)
-      return 0;
+   if (id == RETRO_MEMORY_SAVE_RAM)
+      return libretro_save_size;
+   if (id == RETRO_MEMORY_SYSTEM_RAM)
+      return 0x40000;
+   if (id == RETRO_MEMORY_VIDEO_RAM)
+      return 0x20000;
 
-   return libretro_save_size;
+   return 0;
 }
 
 static bool scan_area(const uint8_t *data, unsigned size)
