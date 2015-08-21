@@ -8612,7 +8612,7 @@ int CPULoadRomData(const char *data, int size)
 		goto cleanup_ret0;
 
 #ifdef __LIBRETRO__
-	pix = (uint16_t *)calloc(1, 4 * 240 * 160);
+	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 #else
 	pix = (uint16_t *)calloc(1, 4 * 241 * 162);
 #endif
