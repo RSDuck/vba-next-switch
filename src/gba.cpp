@@ -8478,47 +8478,18 @@ bool CPUSetupBuffers()
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	rom = (uint8_t *)malloc(0x2000000);
-
-	if(rom == NULL)
-		return false;
-
 	workRAM = (uint8_t *)calloc(1, 0x40000);
-
-	if(workRAM == NULL)
-		return false;
-
 	bios = (uint8_t *)calloc(1,0x4000);
-	if(bios == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	internalRAM = (uint8_t *)calloc(1,0x8000);
-	if(internalRAM == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	graphics.paletteRAM = (uint8_t *)calloc(1,0x400);
-	if(graphics.paletteRAM == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	vram = (uint8_t *)calloc(1, 0x20000);
-	if(vram == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	oam = (uint8_t *)calloc(1, 0x400);
-	if(oam == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-	if(pix == NULL) {
-		CPUCleanUp();
-		return false;
-	}
 	ioMem = (uint8_t *)calloc(1, 0x400);
-	if(ioMem == NULL) {
+
+	if(rom == NULL || workRAM == NULL || bios == NULL ||
+	   internalRAM == NULL || graphics.paletteRAM == NULL ||
+	   vram == NULL || oam == NULL || pix == NULL || ioMem == NULL) {
 		CPUCleanUp();
 		return false;
 	}
