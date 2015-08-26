@@ -160,7 +160,7 @@ else ifeq ($(platform), psp1)
 	CC = psp-gcc$(EXE_EXT)
 	CXX = psp-g++$(EXE_EXT)
 	AR = psp-ar$(EXE_EXT)
-	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DPSP 
+	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DPSP
 	CFLAGS += -G0
 	CXXFLAGS += -G0
    STATIC_LINKING = 1
@@ -239,9 +239,6 @@ endif
 ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -g
 	CXXFLAGS += -O0 -g
-else ifeq ($(platform), emscripten)
-	CFLAGS += -O2
-	CXXFLAGS += -O2
 else
 	CFLAGS += -O3
 	CXXFLAGS += -O3
