@@ -160,6 +160,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_height = 160;
    info->geometry.max_width = 240;
    info->geometry.max_height = 160;
+   info->geometry.aspect_ratio = 3.0 / 2.0;
    info->timing.fps =  16777216.0 / 280896.0;
    info->timing.sample_rate = 32000.0;
 }
