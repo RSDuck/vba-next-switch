@@ -6533,8 +6533,19 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
+#if VITA
+inline static long max(int p, int q) { return p > q ? p : q; }
+inline static long max(long p, int q) { return p > q ? p : q; }
+inline static long max(int p, long q) { return p > q ? p : q; }
+inline static long max(long p, long q) { return p > q ? p : q; }
+inline static long min(int p, int q) { return p < q ? p : q; }
+inline static long min(long p, int q) { return p < q ? p : q; }
+inline static long min(int p, long q) { return p < q ? p : q; }
+inline static long min(long p, long q) { return p < q ? p : q; }
+#else
 template<typename T> static T max(T a, T b) { return a>b ? a : b; }
 template<typename T> static T min(T a, T b) { return a<b ? a : b; }
+#endif
 
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *line)
@@ -11339,7 +11350,11 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				uint8_t data_array[2] = {(uint8_t)(value & 0xFF), (uint8_t)(value>>8)};
 				gb_addr[0] = table[gb_addr[0] - 0x60];
 				gb_addr[1] = table[gb_addr[1] - 0x60];
+#if VITA
+				soundEvent_u8_parallel(reinterpret_cast<int*>(gb_addr), address_array, data_array);
+#else
 				soundEvent_u8_parallel(gb_addr, address_array, data_array);
+#endif
 				break;
 			}
 		case 0x82:
