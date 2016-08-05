@@ -213,8 +213,9 @@ else ifeq ($(platform), vita)
 	CXX = arm-vita-eabi-g++$(EXE_EXT)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
-	CFLAGS += -march=armv7-a -mfloat-abi-hard -mword-relocations -fomit-frame-pointer -ffast-math
-	CXXFLAGS += -march=armv7-a -mword-relocations -fomit-frame-pointer -ffast-math
+	CFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
+	CXXFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
+	CXXFLAGS += -fno-exceptions -fno-rtti
    STATIC_LINKING = 1
 	TILED_RENDERING=1
 
