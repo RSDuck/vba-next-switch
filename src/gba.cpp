@@ -20,8 +20,6 @@
 #include "elf.h"
 #endif
 
-bool cheatsEnabled = true;
-
 /*============================================================
 	GBA INLINE
 ============================================================ */
@@ -4322,8 +4320,9 @@ static int armExecute (void)
 
 		clockTicks = 0;
 
-      if(cheatsEnabled)
+#if USE_CHEATS
          cpuMasterCodeCheck();
+#endif
 
 		if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
 			bus.busPrefetchCount = 0x100;
@@ -5656,7 +5655,7 @@ static  void thumbD0(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-#if defined (SPEEDHAX)
+#if SPEEDHAX
 		clockTicks = 30;
 #else
 		clockTicks = ((codeTicksAccessSeq16(bus.armNextPC)) << 1) +
@@ -6055,8 +6054,9 @@ static int thumbExecute (void)
 
 		clockTicks = 0;
 
-      if (cheatsEnabled)
+#if USE_CHEATS
          cpuMasterCodeCheck();
+#endif
 
 #if 0
 		if ((bus.armNextPC & 0x0803FFFF) == 0x08020000)
@@ -12230,8 +12230,11 @@ updateLoop:
 
                   uint32_t ext = (joy >> 10);
                   // If no (m) code is enabled, apply the cheats at each LCDline
-                  if((cheatsEnabled) && (mastercode==0))
+
+#if USE_CHEATS
+                  if(mastercode == 0)
                      remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
+#endif
 
                   io_registers[REG_DISPSTAT] |= 1;
                   io_registers[REG_DISPSTAT] &= 0xFFFD;
