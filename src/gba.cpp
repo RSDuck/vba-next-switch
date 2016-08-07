@@ -21,11 +21,15 @@
 #endif
 
 #if SPEEDHAX
-  #define CLOCKTICKS_UPDATE_TYPE16 clockTicks = 18
-  #define CLOCKTICKS_UPDATE_TYPE32 clockTicks = 21
+  #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+  #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+  #define CLOCKTICKS_UPDATE_TYPE16P 16
+  #define CLOCKTICKS_UPDATE_TYPE32P 19
 #else
-  #define CLOCKTICKS_UPDATE_TYPE16 clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
-  #define CLOCKTICKS_UPDATE_TYPE32 clockTicks = (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
+  #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+  #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+  #define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
+  #define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
 #endif
 
 /*============================================================
@@ -2565,8 +2569,7 @@ static void armUnknownInsn(u32 opcode)
 #define ALU_INSN(ALU_INIT, GETVALUE, OP, MODECHANGE, ISREGSHIFT) \
 	ALU_INIT GETVALUE OP;                            \
 	if ((opcode & 0x0000F000) != 0x0000F000) {          \
-		clockTicks = 1 + ISREGSHIFT                             \
-					   + codeTicksAccessSeq32(bus.armNextPC);       \
+		clockTicks = CLOCKTICKS_UPDATE_TYPE32 + ISREGSHIFT;                             \
 	} else {                                                    \
 		MODECHANGE;                                             \
 		if (armState) {                                         \
@@ -2580,7 +2583,7 @@ static void armUnknownInsn(u32 opcode)
 			bus.reg[15].I += 2;                                     \
 			THUMB_PREFETCH;                                     \
 		}                                                       \
-		clockTicks = CLOCKTICKS_UPDATE_TYPE32 + ISREGSHIFT; \
+		clockTicks = CLOCKTICKS_UPDATE_TYPE32P + ISREGSHIFT; \
 	}
 
 #define MODECHANGE_NO  /*nothing*/
@@ -2928,13 +2931,13 @@ static  void arm121(u32 opcode)
 			bus.armNextPC = bus.reg[15].I;
 			bus.reg[15].I += 4;
 			ARM_PREFETCH;
-			CLOCKTICKS_UPDATE_TYPE32;
+			clockTicks = CLOCKTICKS_UPDATE_TYPE32P;
 		} else {
 			bus.reg[15].I = bus.reg[base].I & 0xFFFFFFFE;
 			bus.armNextPC = bus.reg[15].I;
 			bus.reg[15].I += 2;
 			THUMB_PREFETCH;
-			CLOCKTICKS_UPDATE_TYPE16;
+			clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
 		}
 	}
 	else
@@ -3549,7 +3552,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
         bus.armNextPC = bus.reg[15].I;                          \
         bus.reg[15].I += 4;                                 \
         ARM_PREFETCH;                                   \
-        clockTicks += 1 + codeTicksAccessSeq32(bus.armNextPC);\
+        clockTicks += CLOCKTICKS_UPDATE_TYPE32;\
     }
 #define STM_ALL_2 \
     STM_LOW(STM_REG);                                   \
@@ -3584,7 +3587,7 @@ static  void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB, 16); }
             bus.reg[15].I = bus.armNextPC + 2;                  \
             THUMB_PREFETCH;                             \
         }                                               \
-        clockTicks += 1 + codeTicksAccessSeq32(bus.armNextPC);\
+        clockTicks += CLOCKTICKS_UPDATE_TYPE32;\
     }
 
 
@@ -4049,8 +4052,6 @@ static  void arm9F0(u32 opcode)
 // B <offset>
 static  void armA00(u32 opcode)
 {
-	int codeTicksVal = 0;
-	int ct = 0;
 	int offset = opcode & 0x00FFFFFF;
 	if (offset & 0x00800000)
 		offset |= 0xFF000000;  // negative offset
@@ -4059,20 +4060,13 @@ static  void armA00(u32 opcode)
 	bus.reg[15].I += 4;
 	ARM_PREFETCH;
 
-	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
-	ct = codeTicksVal + 3;
-	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
-
+	clockTicks = CLOCKTICKS_UPDATE_TYPE32P + 2;
 	bus.busPrefetchCount = 0;
-	clockTicks = ct;
 }
 
 // BL <offset>
 static  void armB00(u32 opcode)
 {
-	int codeTicksVal = 0;
-	int ct = 0;
-
 	int offset = opcode & 0x00FFFFFF;
 	if (offset & 0x00800000)
 		offset |= 0xFF000000;  // negative offset
@@ -4082,12 +4076,8 @@ static  void armB00(u32 opcode)
 	bus.reg[15].I += 4;
 	ARM_PREFETCH;
 
-	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
-	ct = codeTicksVal + 3;
-	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
-
+	clockTicks = CLOCKTICKS_UPDATE_TYPE32P + 2;
 	bus.busPrefetchCount = 0;
-	clockTicks = ct;
 }
 
 #define armE01 armUnknownInsn
@@ -4095,16 +4085,8 @@ static  void armB00(u32 opcode)
 // SWI <comment>
 static  void armF00(u32 opcode)
 {
-	int codeTicksVal = 0;
-	int ct = 0;
-
-	codeTicksVal = codeTicksAccessSeq32(bus.armNextPC);
-	ct = codeTicksVal + 3;
-	ct += 2 + codeTicksAccess(bus.armNextPC, BITS_32) + codeTicksVal;
-
+	clockTicks = CLOCKTICKS_UPDATE_TYPE32P + 2;
 	bus.busPrefetchCount = 0;
-
-	clockTicks = ct;
 	CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
 
 }
@@ -5132,7 +5114,7 @@ static  void thumb44_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    CLOCKTICKS_UPDATE_TYPE16;
+    clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   }
 }
 
@@ -5145,7 +5127,7 @@ static  void thumb44_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    CLOCKTICKS_UPDATE_TYPE16;
+    clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   }
 }
 
@@ -5188,7 +5170,7 @@ static  void thumb46_2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-    CLOCKTICKS_UPDATE_TYPE16;
+    clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   }
 }
 
@@ -5201,7 +5183,7 @@ static  void thumb46_3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;    
-    CLOCKTICKS_UPDATE_TYPE16;
+    clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   }
 }
 
@@ -5218,7 +5200,7 @@ static  void thumb47(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-		CLOCKTICKS_UPDATE_TYPE16;
+		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
 		
 	} else {
 		armState = true;
@@ -5226,7 +5208,7 @@ static  void thumb47(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 4;
 		ARM_PREFETCH;		
-		CLOCKTICKS_UPDATE_TYPE32 ;
+		CLOCKTICKS_UPDATE_TYPE32P ;
 	}
 }
 
@@ -5655,7 +5637,11 @@ static  void thumbD0(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-		CLOCKTICKS_UPDATE_TYPE16;
+#if SPEEDHAX
+		clockTicks = 30;
+#else
+		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
+#endif
 		bus.busPrefetchCount=0;
 	}
 }
@@ -5668,7 +5654,7 @@ static  void thumbD1(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5681,7 +5667,7 @@ static  void thumbD2(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5694,7 +5680,7 @@ static  void thumbD3(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5707,7 +5693,7 @@ static  void thumbD4(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5720,7 +5706,7 @@ static  void thumbD5(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5733,7 +5719,7 @@ static  void thumbD6(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5746,7 +5732,7 @@ static  void thumbD7(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5759,7 +5745,7 @@ static  void thumbD8(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5772,7 +5758,7 @@ static  void thumbD9(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5785,7 +5771,7 @@ static  void thumbDA(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5798,7 +5784,7 @@ static  void thumbDB(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5811,7 +5797,7 @@ static  void thumbDC(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5824,7 +5810,7 @@ static  void thumbDD(u32 opcode)
     bus.armNextPC = bus.reg[15].I;
     bus.reg[15].I += 2;
     THUMB_PREFETCH;
-	CLOCKTICKS_UPDATE_TYPE16;
+	clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
     bus.busPrefetchCount=0;
   }
 }
@@ -5849,7 +5835,7 @@ static  void thumbE0(u32 opcode)
   bus.armNextPC = bus.reg[15].I;
   bus.reg[15].I += 2;
   THUMB_PREFETCH;
-  CLOCKTICKS_UPDATE_TYPE16;
+  clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   bus.busPrefetchCount=0;
 }
 
@@ -5858,7 +5844,7 @@ static  void thumbF0(u32 opcode)
 {
   int offset = (opcode & 0x7FF);
   bus.reg[14].I = bus.reg[15].I + (offset << 12);
-  clockTicks = codeTicksAccessSeq16(bus.armNextPC) + 1;
+  clockTicks = CLOCKTICKS_UPDATE_TYPE16;
 }
 
 // BLL #offset (backward)
@@ -5866,7 +5852,7 @@ static  void thumbF4(u32 opcode)
 {
   int offset = (opcode & 0x7FF);
   bus.reg[14].I = bus.reg[15].I + ((offset << 12) | 0xFF800000);
-  clockTicks = codeTicksAccessSeq16(bus.armNextPC) + 1;
+  clockTicks = CLOCKTICKS_UPDATE_TYPE16;
 }
 
 // BLH #offset
@@ -5879,7 +5865,7 @@ static  void thumbF8(u32 opcode)
   bus.reg[15].I += 2;
   bus.reg[14].I = temp|1;
   THUMB_PREFETCH;
-  CLOCKTICKS_UPDATE_TYPE16;
+  clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
   bus.busPrefetchCount = 0;
 }
 
