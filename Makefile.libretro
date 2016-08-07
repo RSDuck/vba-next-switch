@@ -3,7 +3,7 @@ FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 STATIC_LINKING=0
 USE_CHEATS=1
-USE_SPEEDHAX=1
+USE_SPEEDHAX=0
 
 CORE_DIR := .
 BUILD_DIR = build
@@ -221,7 +221,7 @@ else ifeq ($(platform), vita)
    STATIC_LINKING = 1
 	TILED_RENDERING=1
 	USE_CHEATS=0
-
+	USE_SPEEDHAX=1
 # Libxenon
 else ifeq ($(platform), xenon)
 	EXT=a
