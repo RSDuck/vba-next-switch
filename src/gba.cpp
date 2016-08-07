@@ -20,16 +20,17 @@
 #include "elf.h"
 #endif
 
-#if 0
-	#if SPEEDHAX
-	  #define SPEEDHAX_DECLARE 0
-	  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = 17
-	#else
-	  #define SPEEDHAX_DECLARE 0
-	  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
-	#endif
+#if SPEEDHAX
+  #define SPEEDHAX_SAMPLING_COUNT 100
+  #define SPEEDHAX_DECLARE 0
+  #define SPEEDHAX_EX 0
+  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = 17
+#else
+  #define SPEEDHAX_DECLARE 0
+  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
 #endif
 
+#if 0
 #if SPEEDHAX
   #define SPEEDHAX_SAMPLING_COUNT 100
   #define SPEEDHAX_DECLARE \
@@ -50,6 +51,7 @@
 #else
   #define SPEEDHAX_DECLARE 0
   #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
+#endif
 #endif
 
 /*============================================================
@@ -2586,7 +2588,7 @@ static void armUnknownInsn(u32 opcode)
 // ISREGSHIFT: 1 for insns of the form ...,Rn LSL/etc Rs; 0 otherwise
 // ALU_INIT, GETVALUE and OP are concatenated in order.
 
-#if SPEEDHAX
+#if SPEEDHAX_EX
 	#define ALU_INSN(ALU_INIT, GETVALUE, OP, MODECHANGE, ISREGSHIFT) \
 		static int speedhax_clocktick_count = 0; \
 		static int speedhax_clocktick_sum = 0; \
@@ -2978,7 +2980,7 @@ static  void arm360(u32 opcode)
 // BX Rm
 static  void arm121(u32 opcode)
 {
-#if SPEEDHAX
+#if SPEEDHAX_EX
 	static int speedhax_clocktick0_count = 0;
 	static int speedhax_clocktick1_count = 0;
 	static int speedhax_clocktick0_sum = 0;
@@ -2994,7 +2996,7 @@ static  void arm121(u32 opcode)
 			bus.armNextPC = bus.reg[15].I;
 			bus.reg[15].I += 4;
 			ARM_PREFETCH;
-#if SPEEDHAX	  
+#if SPEEDHAX_EX	  
 			if(speedhax_clocktick0_count < SPEEDHAX_SAMPLING_COUNT) {
 				clockTicks = 3 + (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32);
 				speedhax_clocktick0_sum += clockTicks; \
@@ -3013,7 +3015,7 @@ static  void arm121(u32 opcode)
 			bus.armNextPC = bus.reg[15].I;
 			bus.reg[15].I += 2;
 			THUMB_PREFETCH;
-#if SPEEDHAX			
+#if SPEEDHAX_EX			
 			if(speedhax_clocktick1_count < SPEEDHAX_SAMPLING_COUNT) {
 				clockTicks = 3 + (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16);
 				speedhax_clocktick1_sum += clockTicks; \
@@ -5305,7 +5307,7 @@ static  void thumb46_3(u32 opcode)
 // BX Rs
 static  void thumb47(u32 opcode)
 {
-#if SPEEDHAX
+#if SPEEDHAX_EX
 	static int speedhax_clocktick0_count = 0;
 	static int speedhax_clocktick1_count = 0;
 	static int speedhax_clocktick0_sum = 0;
@@ -5320,7 +5322,7 @@ static  void thumb47(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-#if SPEEDHAX	  
+#if SPEEDHAX_EX	  
 			if(speedhax_clocktick0_count < SPEEDHAX_SAMPLING_COUNT) {			
 				clockTicks = ((codeTicksAccessSeq16(bus.armNextPC)) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3;
 
@@ -5343,7 +5345,7 @@ static  void thumb47(u32 opcode)
 		bus.reg[15].I += 4;
 		ARM_PREFETCH;
 		
-#if SPEEDHAX			
+#if SPEEDHAX_EX			
 			if(speedhax_clocktick1_count < SPEEDHAX_SAMPLING_COUNT) {
 				clockTicks = ((codeTicksAccessSeq32(bus.armNextPC)) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3;
 				speedhax_clocktick1_sum += clockTicks; \
@@ -5992,9 +5994,10 @@ static  void thumbDD(u32 opcode)
 // SWI #comment
 static  void thumbDF(u32 opcode)
 {
-  SPEEDHAX_DECLARE;
+#if SPEEDHAX_EX
+  static int speedhax_clocktick_count = 0;
+  static int speedhax_clocktick_sum = 0;
 
-#if SPEEDHAX	  
 	if(speedhax_clocktick_count < SPEEDHAX_SAMPLING_COUNT) {
 		clockTicks = (codeTicksAccessSeq16(0) << 1) + codeTicksAccess(0, BITS_16) + 3;
 		speedhax_clocktick_sum += clockTicks;
