@@ -23,8 +23,8 @@
 #if SPEEDHAX
   #define SPEEDHAX_SAMPLING_COUNT 100
   #define SPEEDHAX_DECLARE 0
-  #define SPEEDHAX_EX 0
-  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = 17
+  #define SPEEDHAX_EX 1
+  #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = 18
 #else
   #define SPEEDHAX_DECLARE 0
   #define CLOCKTICKS_UPDATE_TYPE0 clockTicks = (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
@@ -2609,15 +2609,7 @@ static void armUnknownInsn(u32 opcode)
 				bus.reg[15].I += 2;                                     \
 				THUMB_PREFETCH;                                     \
 			}                                                       \
-			if(speedhax_clocktick_count < SPEEDHAX_SAMPLING_COUNT) { \
-				clockTicks = 3 + ISREGSHIFT + codeTicksAccess(bus.armNextPC, BITS_32) + ((codeTicksAccessSeq32(bus.armNextPC)) << 1); \
-				speedhax_clocktick_sum += clockTicks; \
-				++speedhax_clocktick_count; \
-				if(speedhax_clocktick_count == SPEEDHAX_SAMPLING_COUNT) \
-					speedhax_clocktick_sum /= speedhax_clocktick_count; \
-			} else { \
-				clockTicks = speedhax_clocktick_sum; \
-			} \
+			clockTicks = 21;	\
 		}
 #else
 	#define ALU_INSN(ALU_INIT, GETVALUE, OP, MODECHANGE, ISREGSHIFT) \
