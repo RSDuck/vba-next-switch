@@ -4,6 +4,7 @@ TILED_RENDERING=0
 STATIC_LINKING=0
 USE_CHEATS=1
 USE_SPEEDHAX=0
+USE_THREADED_RENDERER=0
 
 CORE_DIR := .
 BUILD_DIR = build
@@ -217,11 +218,12 @@ else ifeq ($(platform), vita)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
 	CFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
 	CXXFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
-	CXXFLAGS += -fno-exceptions -fno-rtti
+	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
 	USE_CHEATS=0
-	USE_SPEEDHAX=1
+	#USE_SPEEDHAX=1
+	USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)
 	EXT=a
@@ -335,6 +337,13 @@ ifeq ($(USE_SPEEDHAX), 1)
 CFLAGS += -DSPEEDHAX
 CXXFLAGS += -DSPEEDHAX
 endif
+
+ifeq ($(USE_THREADED_RENDERER), 1)
+CFLAGS += -DTHREADED_RENDERER
+CXXFLAGS += -DTHREADED_RENDERER
+endif
+
+CXXFLAGS += -std=c++11
 
 LIBS :=
 
