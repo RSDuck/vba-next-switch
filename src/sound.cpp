@@ -1803,7 +1803,7 @@ static void soundEvent_u16_parallel(uint32_t address[])
 
 			default:
 				{
-					int gb_addr[2]	= {address[i] & ~1, address[i] | 1};
+					int gb_addr[2]	= {static_cast<int>(address[i] & ~1), static_cast<int>(address[i] | 1)};
 					uint32_t address_array[2] = {address[i] & ~ 1, address[i] | 1};
 					uint8_t data_array[2] = {0};
 					gba_to_gb_sound_parallel(&gb_addr[0], &gb_addr[1]);
@@ -1826,7 +1826,7 @@ static void gba_pcm_fifo_timer_overflowed( unsigned pcm_idx )
 			// Not filled by DMA, so fill with 16 bytes of silence
 			int reg = pcm[pcm_idx].which ? FIFOB_L : FIFOA_L;
 
-			uint32_t address_array[8] = {reg, reg+2, reg, reg+2, reg, reg+2, reg, reg+2};
+			uint32_t address_array[8] = {static_cast<uint32_t>(reg), static_cast<uint32_t>(reg+2), static_cast<uint32_t>(reg), static_cast<uint32_t>(reg+2), static_cast<uint32_t>(reg), static_cast<uint32_t>(reg+2), static_cast<uint32_t>(reg), static_cast<uint32_t>(reg+2)};
 			soundEvent_u16_parallel(address_array);
 		}
 	}
@@ -1919,8 +1919,8 @@ void soundEvent_u16(uint32_t address, uint16_t data)
 
 		default:
 			{
-				int gb_addr[2]	= {address & ~1, address | 1};
-				uint32_t address_array[2] = {address & ~ 1, address | 1};
+				int gb_addr[2]	= {static_cast<int>(address & ~1), (int)(address | 1)};
+				uint32_t address_array[2] = {address & ~ 1, static_cast<uint32_t>(address | 1)};
 				uint8_t data_array[2] = {(uint8_t)data, (uint8_t)(data >> 8)};
 				gba_to_gb_sound_parallel(&gb_addr[0], &gb_addr[1]);
 				soundEvent_u8_parallel(gb_addr, address_array, data_array);
