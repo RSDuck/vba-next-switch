@@ -5,13 +5,13 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/sound.cpp \
 	$(CORE_DIR)/src/memory.cpp \
 	$(CORE_DIR)/src/gba.cpp \
-	$(CORE_DIR)/src/thread.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp
 
 SOURCES_C :=
 
-ifneq ($(platform), vita)
 ifeq ($(USE_THREADED_RENDERER), 1)
+ifneq ($(platform), vita)
 SOURCES_C +=  $(LIBRETRO_COMMON_DIR)/rthreads/rthreads.c
 endif
+SOURCES_CXX += $(CORE_DIR)/src/thread.cpp
 endif
