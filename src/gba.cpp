@@ -33,6 +33,9 @@
 #endif
 
 //static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
+
+typedef void (*renderfunc_t)(void);
+
 #if THREADED_RENDERER
 
 #include "thread.h"
@@ -51,12 +54,14 @@ static uint16_t threaded_graphics_layer_enable = 0;
 static bool threaded_palette_dirty = true;
 static bool threaded_background2_dirty = true;
 static bool threaded_background3_dirty = true;
+static renderfunc_t threaded_renderfunc = NULL;
 
 #define RENDERER_PALETTE threaded_palette
 #define RENDERER_IO_REGISTERS threaded_renderer_io_registers
 #define RENDERER_LINE threaded_renderer_line
 #define RENDERER_OAM threaded_oam
 #define RENDERER_MOSAIC threaded_mosaic
+#define RENDERER_RENDERFUNC threaded_renderfunc
 
 #define RENDERER_R_VCOUNT RENDERER_IO_REGISTERS[REG_VCOUNT]
 #define RENDERER_R_DISPCNT_Video_Mode RENDERER_IO_REGISTERS[REG_VCOUNT]
@@ -69,6 +74,7 @@ static bool threaded_background3_dirty = true;
 #define RENDERER_LINE line
 #define RENDERER_OAM oam
 #define RENDERER_MOSAIC MOSAIC
+#define RENDERER_RENDERFUNC renderfunc
 
 #define RENDERER_R_VCOUNT R_VCOUNT
 #define RENDERER_R_DISPCNT_Video_Mode R_DISPCNT_Video_Mode
@@ -6613,7 +6619,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(R_VCOUNT == 0)
+	if(RENDERER_R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6808,7 +6814,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(R_VCOUNT == 0)
+	if(RENDERER_R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -6913,7 +6919,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		dmy |= 0xFFFF8000;
 #endif
 
-	if(R_VCOUNT == 0)
+	if(RENDERER_R_VCOUNT == 0)
 		changed = 3;
 
 	currentX += dmx;
@@ -8639,7 +8645,11 @@ void doMirroring (bool b)
         }
 
 /* we only use 16bit color depth */
-#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
+#if THREADED_RENDERER
+	#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
+#else
+	#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
+#endif
 
 static void mode0RenderLine (void)
 {
@@ -10641,14 +10651,15 @@ static void mode5RenderLineAll (void)
 	//gfxLastVCOUNT = R_VCOUNT;
 }
 
-static void (*renderLine)(void) = mode0RenderLine;
+static renderfunc_t renderfunc = mode0RenderLine;
 static bool render_line_all_enabled = false;
 
 #if THREADED_RENDERER
 
 static void __threaded_renderer_loop(void* p) {
 	while(threaded_renderer_running) {
-		if(threaded_renderer_state != 1) continue;
+		//buffer is not ready.
+		if(threaded_renderer_state == 0) continue;
 	
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(threaded_draw_sprites) gfxDrawSprites();
@@ -10659,10 +10670,10 @@ static void __threaded_renderer_loop(void* p) {
 			if(threaded_draw_objwin) gfxDrawOBJWin();
 		}
 		
-		(*renderLine)();
+		(*RENDERER_RENDERFUNC)();
 
 		//rendering is done.
-		threaded_renderer_state = 2;
+		threaded_renderer_state = 0;
 	}
 }
 
@@ -10716,6 +10727,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 		return;
 	}
 
+	threaded_renderfunc = renderfunc;
 	threaded_draw_objwin = draw_objwin;
 	threaded_draw_sprites = draw_sprites;
 	threaded_render_line_all_enabled = render_line_all_enabled;
@@ -10757,61 +10769,61 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
   switch(R_DISPCNT_Video_Mode) { \
   case 0: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode0RenderLine; \
+      renderfunc = mode0RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode0RenderLineNoWindow; \
+      renderfunc = mode0RenderLineNoWindow; \
     else { \
-      renderLine = mode0RenderLineAll; \
+      renderfunc = mode0RenderLineAll; \
       render_line_all_enabled = true; \
     } \
     break; \
   case 1: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode1RenderLine; \
+      renderfunc = mode1RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode1RenderLineNoWindow; \
+      renderfunc = mode1RenderLineNoWindow; \
     else { \
-      renderLine = mode1RenderLineAll; \
+      renderfunc = mode1RenderLineAll; \
       render_line_all_enabled = true; \
     } \
     break; \
   case 2: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode2RenderLine; \
+      renderfunc = mode2RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode2RenderLineNoWindow; \
+      renderfunc = mode2RenderLineNoWindow; \
     else { \
-      renderLine = mode2RenderLineAll; \
+      renderfunc = mode2RenderLineAll; \
       render_line_all_enabled = true; \
     } \
     break; \
   case 3: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode3RenderLine; \
+      renderfunc = mode3RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode3RenderLineNoWindow; \
+      renderfunc = mode3RenderLineNoWindow; \
     else { \
-      renderLine = mode3RenderLineAll; \
+      renderfunc = mode3RenderLineAll; \
       render_line_all_enabled = true; \
     } \
     break; \
   case 4: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode4RenderLine; \
+      renderfunc = mode4RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode4RenderLineNoWindow; \
+      renderfunc = mode4RenderLineNoWindow; \
     else { \
-      renderLine = mode4RenderLineAll; \
+      renderfunc = mode4RenderLineAll; \
       render_line_all_enabled = true; \
     } \
     break; \
   case 5: \
     if((!fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display)) \
-      renderLine = mode5RenderLine; \
+      renderfunc = mode5RenderLine; \
     else if(fxOn && !windowOn && !R_DISPCNT_OBJ_Window_Display) \
-      renderLine = mode5RenderLineNoWindow; \
+      renderfunc = mode5RenderLineNoWindow; \
     else { \
-      renderLine = mode5RenderLineAll; \
+      renderfunc = mode5RenderLineAll; \
       render_line_all_enabled = true; \
     } \
   }
@@ -12064,7 +12076,7 @@ void CPUReset (void)
 	dma3Source = 0;
 	dma3Dest = 0;
 	cpuSaveGameFunc = flashSaveDecide;
-	renderLine = mode0RenderLine;
+	renderfunc = mode0RenderLine;
 	fxOn = false;
 	windowOn = false;
 	saveType = 0;
@@ -12338,34 +12350,26 @@ updateLoop:
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
 					if(R_VCOUNT == 160)
-		           {
-		              uint32_t ext = (joy >> 10);
-		              // If no (m) code is enabled, apply the cheats at each LCDline
-
+		        	{
+		            	uint32_t ext = (joy >> 10);
+		            	// If no (m) code is enabled, apply the cheats at each LCDline
 #if USE_CHEATS
-		              if(mastercode == 0)
-		                 remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
+		            	if(mastercode == 0)
+		                	remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
 #endif
-		              io_registers[REG_DISPSTAT] |= 1;
-		              io_registers[REG_DISPSTAT] &= 0xFFFD;
-		              UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
-		              if(io_registers[REG_DISPSTAT] & 0x0008)
-		              {
-		                 io_registers[REG_IF] |= 1;
-		                 UPDATE_REG(0x202, io_registers[REG_IF]);
-		              }
-		              CPUCheckDMA(1, 0x0f);
+		            	io_registers[REG_DISPSTAT] |= 1;
+		            	io_registers[REG_DISPSTAT] &= 0xFFFD;
+		            	UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
+		            	if(io_registers[REG_DISPSTAT] & 0x0008)
+		            	{
+		                	io_registers[REG_IF] |= 1;
+		                	UPDATE_REG(0x202, io_registers[REG_IF]);
+		            	}
+		            	CPUCheckDMA(1, 0x0f);
 
-#if THREADED_RENDERER
-					  if(threaded_renderer_state == 2) {
-						  threaded_renderer_state = 0;
-		                  systemDrawScreen();
-					  }
-#else
-		              systemDrawScreen();
-#endif
-		              framedone = true;
-		           }
+		            	systemDrawScreen();
+		            	framedone = true;
+		        	}
 
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 					CPUCompareVCOUNT();
@@ -12387,7 +12391,7 @@ updateLoop:
 						if(draw_objwin) gfxDrawOBJWin();
 					}
 					
-					(*renderLine)();
+					(*RENDERER_RENDERFUNC)();
 #endif
 					// entering H-Blank
 					io_registers[REG_DISPSTAT] |= 2;
