@@ -5775,7 +5775,7 @@ static  void thumbD0(u32 opcode)
 		THUMB_PREFETCH;
 
 #if SPEEDHAX_SAFE && SPEEDHAX
-		clockTicks = 30
+		clockTicks = 30;
 #else
 		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
 #endif
