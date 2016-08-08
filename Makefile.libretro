@@ -88,6 +88,15 @@ PLAT=_unix
 endif
 endif
 
+PTHREAD_FLAGS=
+ifneq ($(platform), osx)
+ifeq ($(USE_THREADED_RENDERER), 1)
+   ifeq ($(findstring Haiku,$(shell uname -a)),)
+      PTHREAD_FLAGS = -lpthread
+   endif
+endif
+endif
+
 # UNIX
 ifeq ($(platform), unix)
 	EXT    ?= so
@@ -95,6 +104,7 @@ ifeq ($(platform), unix)
    fpic := -fPIC
    SHARED := -shared -Wl,-version-script=$(LIBRETRO_DIR)/link.T -Wl,-no-undefined
 	TILED_RENDERING=1
+   LDFLAGS += $(PTHREAD_FLAGS)
 
 # OS X
 else ifeq ($(platform), osx)
@@ -316,7 +326,7 @@ endif
 
 include build/Makefile.common
 
-OBJECTS := $(SOURCES_CXX:.cpp=.o)
+OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 
 DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DINLINE=inline
 
