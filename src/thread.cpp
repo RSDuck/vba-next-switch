@@ -35,8 +35,6 @@ static void _thread_func(void* p)
 	void** argp = static_cast<void**>(p);
 	auto func = reinterpret_cast<threadfunc_t>(argp[0]);
 	(*func)(argp[1]);
-
-   sthread_detach(thid);
 }
 
 void thread_run(threadfunc_t func, void* p)
@@ -46,6 +44,7 @@ void thread_run(threadfunc_t func, void* p)
 	argp[1] = p;
 
    thid = sthread_create(_thread_func, &argp);
+   sthread_detach(thid);
 }
 #endif
 
