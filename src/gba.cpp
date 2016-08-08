@@ -8536,13 +8536,10 @@ bool CPUSetupBuffers()
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 	
 #if THREADED_RENDERER
-	/* 
-	//this will cause crash
 	if(!threaded_renderer_running) {
 		threaded_renderer_running = 1;		
 		thread_run(__threaded_renderer_loop, NULL);
 	}
-	*/
 #endif
 
 	return true;
@@ -10750,8 +10747,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 
 	if(draw_sprites || draw_objwin)	memcpy(threaded_oam, oam, 0x400);
 	
-	//because of thread is not turned on, just keep copying buffer to performance test.
-	//threaded_renderer_ready = 1;
+	threaded_renderer_ready = 1;
 }
 
 #endif
