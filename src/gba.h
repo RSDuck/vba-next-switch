@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "GBACheats.h"
+#include "thread.h"
 
 #define BITS_16 0
 #define BITS_32 1

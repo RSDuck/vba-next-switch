@@ -2,6 +2,9 @@ DEBUG = 0
 FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 STATIC_LINKING=0
+USE_CHEATS=1
+USE_SPEEDHAX=0
+USE_THREADED_RENDERER=0
 
 CORE_DIR := .
 BUILD_DIR = build
@@ -215,10 +218,12 @@ else ifeq ($(platform), vita)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
 	CFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
 	CXXFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
-	CXXFLAGS += -fno-exceptions -fno-rtti
+	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
-
+	USE_CHEATS=0
+	#USE_SPEEDHAX=1
+	USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)
 	EXT=a
@@ -313,7 +318,7 @@ include build/Makefile.common
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o)
 
-DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DSPEEDHAX -DINLINE=inline
+DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DINLINE=inline
 
 CFLAGS += $(CODE_DEFINES) $(fpic) $(DEFINES)
 CXXFLAGS += $(fpic) $(DEFINES)
@@ -322,6 +327,23 @@ ifeq ($(FRONTEND_SUPPORTS_RGB565), 1)
 CFLAGS += -DFRONTEND_SUPPORTS_RGB565
 CXXFLAGS += -DFRONTEND_SUPPORTS_RGB565
 endif
+
+ifeq ($(USE_CHEATS), 1)
+CFLAGS += -DUSE_CHEATS
+CXXFLAGS += -DUSE_CHEATS
+endif
+
+ifeq ($(USE_SPEEDHAX), 1)
+CFLAGS += -DSPEEDHAX
+CXXFLAGS += -DSPEEDHAX
+endif
+
+ifeq ($(USE_THREADED_RENDERER), 1)
+CFLAGS += -DTHREADED_RENDERER
+CXXFLAGS += -DTHREADED_RENDERER
+endif
+
+CXXFLAGS += -std=c++11
 
 LIBS :=
 
