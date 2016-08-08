@@ -20,6 +20,13 @@
 #include "elf.h"
 #endif
 
+#define DEBUG_RENDERER_MODE0 1
+#define DEBUG_RENDERER_MODE1 1
+#define DEBUG_RENDERER_MODE2 1
+#define DEBUG_RENDERER_MODE3 1
+#define DEBUG_RENDERER_MODE4 1
+#define DEBUG_RENDERER_MODE5 1
+
 //use original vba-next speedhax.
 #define SPEEDHAX_SAFE 1
 
@@ -61,6 +68,7 @@ typedef void (*renderfunc_t)(void);
 	static bool threaded_render_line_all_enabled = false;
 	static uint16_t threaded_mosaic = 0;
 	static uint16_t threaded_graphics_layer_enable = 0;
+	static uint16_t threaded_bldmod = 0;
 	static bool threaded_palette_dirty = true;
 	static bool threaded_background2_dirty = true;
 	static bool threaded_background3_dirty = true;
@@ -72,6 +80,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_OAM threaded_oam
 	#define RENDERER_MOSAIC threaded_mosaic
 	#define RENDERER_RENDERFUNC (*threaded_renderfunc)
+	#define RENDERER_BLDMOD threaded_bldmod
 
 	#define RENDERER_R_VCOUNT RENDERER_IO_REGISTERS[REG_VCOUNT]
 
@@ -109,6 +118,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_OAM oam
 	#define RENDERER_MOSAIC MOSAIC
 	#define RENDERER_RENDERFUNC (*renderfunc)
+	#define RENDERER_BLDMOD BLDMOD
 
 	#define RENDERER_R_VCOUNT (io_registers[REG_VCOUNT])
 
@@ -141,6 +151,9 @@ typedef void (*renderfunc_t)(void);
 #endif
 
 #define RENDERER_BACKDROP (READ16LE(&reinterpret_cast<uint16_t*>(RENDERER_PALETTE)[0]) | 0x30000000)
+#define RENDERER_R_BLDCNT_Color_Special_Effect ((RENDERER_BLDMOD >> 6) & 3)
+#define RENDERER_R_BLDCNT_IsTarget1(target) ((target) & (RENDERER_BLDMOD     ))
+#define RENDERER_R_BLDCNT_IsTarget2(target) ((target) & (RENDERER_BLDMOD >> 8))
 
 #if THREADED_RENDERER
 static void __threaded_renderer_loop(void* p);
@@ -8679,7 +8692,7 @@ void doMirroring (bool b)
 }
 
 #define brightness_switch()                                                                \
-	switch(R_BLDCNT_Color_Special_Effect)                                                  \
+	switch(RENDERER_R_BLDCNT_Color_Special_Effect)                                                  \
 	{                                                                                      \
 		case SpecialEffect_Brightness_Increase:                                            \
 			color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);                      \
@@ -8690,14 +8703,14 @@ void doMirroring (bool b)
 	}
 
 #define alpha_blend_brightness_switch()                                                    \
-	if(R_BLDCNT_IsTarget2(top2))                                                           \
+	if(RENDERER_R_BLDCNT_IsTarget2(top2))                                                           \
         { \
 		if(color < 0x80000000)                                                             \
 		{                                                                                  \
 			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
 		}                                                                                  \
 		else                                                                               \
-		if (R_BLDCNT_IsTarget1(top))                                                       \
+		if (RENDERER_R_BLDCNT_IsTarget1(top))                                                       \
 		{                                                                                  \
 			brightness_switch();                                                           \
 		} \
@@ -8712,6 +8725,9 @@ void doMirroring (bool b)
 
 static void mode0RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE0
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line\n");
 #endif
@@ -8800,6 +8816,9 @@ static void mode0RenderLine (void)
 
 static void mode0RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE0
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line No Window\n");
 #endif
@@ -8807,7 +8826,7 @@ static void mode0RenderLineNoWindow (void)
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) { //mario kart intro issue
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
@@ -8853,12 +8872,12 @@ static void mode0RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -8892,7 +8911,7 @@ static void mode0RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -8900,11 +8919,11 @@ static void mode0RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -8942,6 +8961,9 @@ static void mode0RenderLineNoWindow (void)
 
 static void mode0RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE0
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line All\n");
 #endif
@@ -9056,10 +9078,10 @@ static void mode0RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		}
-		else if((mask & LayerMask_SFX) && (R_BLDCNT_IsTarget1(top)))
+		else if((mask & LayerMask_SFX) && (RENDERER_R_BLDCNT_IsTarget1(top)))
 		{
 			// special FX on in the window
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
@@ -9096,7 +9118,7 @@ static void mode0RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -9127,6 +9149,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode1RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE1
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line\n");
 #endif
@@ -9224,6 +9249,9 @@ static void mode1RenderLine (void)
 
 static void mode1RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE1
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line No Window\n");
 #endif
@@ -9283,12 +9311,12 @@ static void mode1RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9313,18 +9341,18 @@ static void mode1RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9373,6 +9401,9 @@ static void mode1RenderLineNoWindow (void)
 
 static void mode1RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE1
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line All\n");
 #endif
@@ -9475,12 +9506,12 @@ static void mode1RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9505,18 +9536,18 @@ static void mode1RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9539,6 +9570,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode2RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE2
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line\n");
 #endif
@@ -9629,6 +9663,9 @@ static void mode2RenderLine (void)
 
 static void mode2RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE2
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line No Window\n");
 #endif
@@ -9688,12 +9725,12 @@ static void mode2RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9713,18 +9750,18 @@ static void mode2RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9759,6 +9796,9 @@ static void mode2RenderLineNoWindow (void)
 
 static void mode2RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE2
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line All\n");
 #endif
@@ -9855,12 +9895,12 @@ static void mode2RenderLineAll (void)
 			alpha_blend_brightness_switch();
 		} else if(mask & LayerMask_SFX) {
 			// special FX on the window
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -9880,18 +9920,18 @@ static void mode2RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -9914,6 +9954,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode3RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE3
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line\n");
 #endif
@@ -9967,6 +10010,9 @@ static void mode3RenderLine (void)
 
 static void mode3RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE3
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line No Window\n");
 #endif
@@ -9999,12 +10045,12 @@ static void mode3RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10019,7 +10065,7 @@ static void mode3RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -10027,11 +10073,11 @@ static void mode3RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10056,6 +10102,9 @@ static void mode3RenderLineNoWindow (void)
 
 static void mode3RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE3
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line All\n");
 #endif
@@ -10128,12 +10177,12 @@ static void mode3RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & LayerMask_SFX) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10148,18 +10197,18 @@ static void mode3RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10181,6 +10230,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode4RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE4
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line\n");
 #endif
@@ -10235,6 +10287,9 @@ static void mode4RenderLine (void)
 
 static void mode4RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE4
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line No Window\n");
 #endif
@@ -10269,12 +10324,12 @@ static void mode4RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10289,18 +10344,18 @@ static void mode4RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10325,6 +10380,9 @@ static void mode4RenderLineNoWindow (void)
 
 static void mode4RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE4
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line All\n");
 #endif
@@ -10399,12 +10457,12 @@ static void mode4RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & LayerMask_SFX) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = backdrop;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10419,18 +10477,18 @@ static void mode4RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10453,6 +10511,9 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode5RenderLine (void)
 {
+#if !DEBUG_RENDERER_MODE5
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line\n");
 #endif
@@ -10505,6 +10566,9 @@ static void mode5RenderLine (void)
 
 static void mode5RenderLineNoWindow (void)
 {
+#if !DEBUG_RENDERER_MODE5
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line No Window\n");
 #endif
@@ -10537,12 +10601,12 @@ static void mode5RenderLineNoWindow (void)
 		}
 
 		if(!(color & 0x00010000)) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10557,7 +10621,7 @@ static void mode5RenderLineNoWindow (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
@@ -10565,11 +10629,11 @@ static void mode5RenderLineNoWindow (void)
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10594,6 +10658,9 @@ static void mode5RenderLineNoWindow (void)
 
 static void mode5RenderLineAll (void)
 {
+#if !DEBUG_RENDERER_MODE5
+	return;
+#endif
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line All\n");
 #endif
@@ -10667,12 +10734,12 @@ static void mode5RenderLineAll (void)
 
 			alpha_blend_brightness_switch();
 		} else if(mask & LayerMask_SFX) {
-			switch(R_BLDCNT_Color_Special_Effect)
+			switch(RENDERER_R_BLDCNT_Color_Special_Effect)
 			{
 				case SpecialEffect_None:
 					break;
 				case SpecialEffect_Alpha_Blending:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 					{
 						uint32_t back = background;
 						uint8_t top2 = SpecialEffectTarget_BD;
@@ -10687,18 +10754,18 @@ static void mode5RenderLineAll (void)
 							top2 = SpecialEffectTarget_OBJ;
 						}
 
-						if(R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
+						if(RENDERER_R_BLDCNT_IsTarget2(top2) && color < 0x80000000)
 						{
 							GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
 						}
 					}
 					break;
 				case SpecialEffect_Brightness_Increase:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 				case SpecialEffect_Brightness_Decrease:
-					if(R_BLDCNT_IsTarget1(top))
+					if(RENDERER_R_BLDCNT_IsTarget1(top))
 						color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
 					break;
 			}
@@ -10736,55 +10803,17 @@ static void __threaded_renderer_loop(void* p) {
 	}
 }
 
+#if 0
 static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
-	//rendereing is not finished.
-	if(threaded_renderer_state > 0) return;
-
-	bool copy_bg3 = false;
+	while(threaded_renderer_state > 0); //busy wait
 	
-	switch(R_DISPCNT_Video_Mode) {
-	case 0:	
-		threaded_renderer_io_registers[REG_BG0CNT] = io_registers[REG_BG0CNT];
-		threaded_renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
-		threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
-		threaded_renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
-		threaded_renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
-		threaded_renderer_io_registers[REG_BG2HOFS] = io_registers[REG_BG2HOFS];
-		threaded_renderer_io_registers[REG_BG3HOFS] = io_registers[REG_BG3HOFS];
-		threaded_renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
-		threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
-		threaded_renderer_io_registers[REG_BG2VOFS] = io_registers[REG_BG2VOFS];
-		threaded_renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];	
-		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], sizeof(240 * 4));
-		if(threaded_background3_dirty) copy_bg3 = true;		
-		break;
-	case 1:
-		threaded_renderer_io_registers[REG_BG0CNT] = io_registers[REG_BG0CNT];
-		threaded_renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
-		threaded_renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
-		threaded_renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
-		threaded_renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
-		threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
-		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], sizeof(240 * 4));
-		break;
-	case 2:
-		threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
-		threaded_renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
-		threaded_renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
-		threaded_renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
-		threaded_renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];	
-		if(threaded_background3_dirty) copy_bg3 = true;
-		break;	
-	case 3:
-	case 4:
-	case 5:
-		break;
-	default: 
-		return;
-	}
+	memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], sizeof(240 * 4));
+	memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], sizeof(240 * 4));
+	memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
+	memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], sizeof(240 * 4));
+	memcpy(threaded_oam, oam, 0x400);
+	memcpy(threaded_palette, graphics.paletteRAM, 0x400);
 
 	threaded_renderfunc = renderfunc;
 	threaded_draw_objwin = draw_objwin;
@@ -10792,21 +10821,98 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_render_line_all_enabled = render_line_all_enabled;
 	threaded_graphics_layer_enable = graphics.layerEnable;
 	threaded_mosaic = MOSAIC;
-	
+	threaded_bldmod = BLDMOD;
+
 	threaded_renderer_io_registers[REG_DISPCNT] = io_registers[REG_DISPCNT];
-	threaded_renderer_io_registers[REG_VCOUNT] = io_registers[REG_VCOUNT];	
-	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];	
+	threaded_renderer_io_registers[REG_DISPSTAT] = io_registers[REG_DISPSTAT];
+	threaded_renderer_io_registers[REG_VCOUNT] = io_registers[REG_VCOUNT];
+
+	threaded_renderer_io_registers[REG_BG0CNT] = io_registers[REG_BG0CNT];
+	threaded_renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
+	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];
+	threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
+	threaded_renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
+	threaded_renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
+	threaded_renderer_io_registers[REG_BG2HOFS] = io_registers[REG_BG2HOFS];
+	threaded_renderer_io_registers[REG_BG3HOFS] = io_registers[REG_BG3HOFS];
+	threaded_renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
+	threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
+	threaded_renderer_io_registers[REG_BG2VOFS] = io_registers[REG_BG2VOFS];
+	threaded_renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];
 	threaded_renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
 	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
 	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
-	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];
+	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];	
+	threaded_renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
+	threaded_renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
+	threaded_renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
+	threaded_renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];	
+
+	threaded_renderer_io_registers[REG_BG2X_L] = io_registers[REG_BG2X_L];
+	threaded_renderer_io_registers[REG_BG2X_H] = io_registers[REG_BG2X_H];
+	threaded_renderer_io_registers[REG_BG2Y_L] = io_registers[REG_BG2Y_L];
+	threaded_renderer_io_registers[REG_BG2Y_H] = io_registers[REG_BG2Y_H];
+	threaded_renderer_io_registers[REG_BG3X_L] = io_registers[REG_BG3X_L];
+	threaded_renderer_io_registers[REG_BG3X_H] = io_registers[REG_BG3X_H];
+	threaded_renderer_io_registers[REG_BG3Y_L] = io_registers[REG_BG3Y_L];
+	threaded_renderer_io_registers[REG_BG3Y_H] = io_registers[REG_BG3Y_H];
 
 	threaded_renderer_io_registers[REG_WIN0H] = io_registers[REG_WIN0H];
+	threaded_renderer_io_registers[REG_WIN1H] = io_registers[REG_WIN1H];	
 	threaded_renderer_io_registers[REG_WIN0V] = io_registers[REG_WIN0V];
-	threaded_renderer_io_registers[REG_WIN1H] = io_registers[REG_WIN1H];
 	threaded_renderer_io_registers[REG_WIN1V] = io_registers[REG_WIN1V];
 	threaded_renderer_io_registers[REG_WININ] = io_registers[REG_WININ];
 	threaded_renderer_io_registers[REG_WINOUT] = io_registers[REG_WINOUT];
+
+	threaded_renderer_io_registers[REG_BLDCNT] = io_registers[REG_BLDCNT];
+	threaded_renderer_io_registers[REG_BLDALPHA] = io_registers[REG_BLDALPHA];
+	threaded_renderer_io_registers[REG_BLDY] = io_registers[REG_BLDY];
+
+	threaded_renderer_io_registers[REG_TM0D] = io_registers[REG_TM0D];
+	threaded_renderer_io_registers[REG_TM1D] = io_registers[REG_TM1D];
+	threaded_renderer_io_registers[REG_TM2D] = io_registers[REG_TM2D];
+	threaded_renderer_io_registers[REG_TM3D] = io_registers[REG_TM3D];
+	threaded_renderer_io_registers[REG_TM0CNT] = io_registers[REG_TM0CNT];
+	threaded_renderer_io_registers[REG_TM1CNT] = io_registers[REG_TM1CNT];
+	threaded_renderer_io_registers[REG_TM2CNT] = io_registers[REG_TM2CNT];
+	threaded_renderer_io_registers[REG_TM3CNT] = io_registers[REG_TM3CNT];
+
+	threaded_renderer_io_registers[REG_P1] = io_registers[REG_P1];
+	threaded_renderer_io_registers[REG_P1CNT] = io_registers[REG_P1CNT];
+	threaded_renderer_io_registers[REG_RCNT] = io_registers[REG_RCNT];
+	threaded_renderer_io_registers[REG_IE] = io_registers[REG_IE];
+	threaded_renderer_io_registers[REG_IF] = io_registers[REG_IF];
+	threaded_renderer_io_registers[REG_IME] = io_registers[REG_IME];
+	threaded_renderer_io_registers[REG_HALTCNT] = io_registers[REG_HALTCNT];
+	
+	threaded_renderer_state = 1;
+}
+#endif
+
+static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
+	
+	while(threaded_renderer_state > 0); //busy wait
+
+	switch(R_DISPCNT_Video_Mode) {
+	case 0:	
+		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], 240 * 4);
+		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], 240 * 4);	
+		break;
+	case 1:
+		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], 240 * 4);
+		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], 240 * 4);
+		threaded_background3_dirty = false;
+		break;
+	case 2:
+		break;	
+	case 3:
+	case 4:
+	case 5:
+		threaded_background3_dirty = false;
+		break;
+	default: 
+		return;
+	}
 	
 	if(threaded_palette_dirty) {
 		memcpy(threaded_palette, graphics.paletteRAM, 0x400);
@@ -10814,16 +10920,91 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	}
 
 	if(threaded_background2_dirty) {
-		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
+		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], 240 * 4);
 		threaded_background2_dirty = false;
 	}
 
-	if(copy_bg3) {
-		memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], sizeof(240 * 4));
+	if(threaded_background3_dirty) {
+		memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], 240 * 4);
 		threaded_background3_dirty = false;
 	}
 
 	if(draw_sprites || draw_objwin)	memcpy(threaded_oam, oam, 0x400);
+
+	threaded_renderfunc = renderfunc;
+	threaded_draw_objwin = draw_objwin;
+	threaded_draw_sprites = draw_sprites;
+	threaded_render_line_all_enabled = render_line_all_enabled;
+	threaded_graphics_layer_enable = graphics.layerEnable;
+	threaded_mosaic = MOSAIC;
+	threaded_bldmod = BLDMOD;
+
+	threaded_renderer_io_registers[REG_DISPCNT] = io_registers[REG_DISPCNT];
+	threaded_renderer_io_registers[REG_DISPSTAT] = io_registers[REG_DISPSTAT];
+	threaded_renderer_io_registers[REG_VCOUNT] = io_registers[REG_VCOUNT];
+
+	threaded_renderer_io_registers[REG_BG0CNT] = io_registers[REG_BG0CNT];
+	threaded_renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
+	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];
+	threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
+	threaded_renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
+	threaded_renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
+
+	threaded_renderer_io_registers[REG_BG2HOFS] = io_registers[REG_BG2HOFS];
+	threaded_renderer_io_registers[REG_BG3HOFS] = io_registers[REG_BG3HOFS];
+	threaded_renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
+	threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
+	threaded_renderer_io_registers[REG_BG2VOFS] = io_registers[REG_BG2VOFS];
+
+	threaded_renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];
+	threaded_renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
+	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
+	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
+	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];	
+
+	threaded_renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
+	threaded_renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
+	threaded_renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
+	threaded_renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];
+
+	threaded_renderer_io_registers[REG_BG2X_L] = io_registers[REG_BG2X_L];
+	threaded_renderer_io_registers[REG_BG2X_H] = io_registers[REG_BG2X_H];
+	threaded_renderer_io_registers[REG_BG2Y_L] = io_registers[REG_BG2Y_L];
+	threaded_renderer_io_registers[REG_BG2Y_H] = io_registers[REG_BG2Y_H];
+	threaded_renderer_io_registers[REG_BG3X_L] = io_registers[REG_BG3X_L];
+
+	threaded_renderer_io_registers[REG_BG3X_H] = io_registers[REG_BG3X_H];
+	threaded_renderer_io_registers[REG_BG3Y_L] = io_registers[REG_BG3Y_L];
+	threaded_renderer_io_registers[REG_BG3Y_H] = io_registers[REG_BG3Y_H];
+
+	threaded_renderer_io_registers[REG_WIN0H] = io_registers[REG_WIN0H];
+	threaded_renderer_io_registers[REG_WIN1H] = io_registers[REG_WIN1H];	
+	threaded_renderer_io_registers[REG_WIN0V] = io_registers[REG_WIN0V];
+	threaded_renderer_io_registers[REG_WIN1V] = io_registers[REG_WIN1V];
+	threaded_renderer_io_registers[REG_WININ] = io_registers[REG_WININ];
+	threaded_renderer_io_registers[REG_WINOUT] = io_registers[REG_WINOUT];
+
+	threaded_renderer_io_registers[REG_BLDCNT] = io_registers[REG_BLDCNT];
+	threaded_renderer_io_registers[REG_BLDALPHA] = io_registers[REG_BLDALPHA];
+	threaded_renderer_io_registers[REG_BLDY] = io_registers[REG_BLDY];
+
+	threaded_renderer_io_registers[REG_TM0D] = io_registers[REG_TM0D];
+	threaded_renderer_io_registers[REG_TM1D] = io_registers[REG_TM1D];
+	threaded_renderer_io_registers[REG_TM2D] = io_registers[REG_TM2D];
+	threaded_renderer_io_registers[REG_TM3D] = io_registers[REG_TM3D];
+	threaded_renderer_io_registers[REG_TM0CNT] = io_registers[REG_TM0CNT];
+
+	threaded_renderer_io_registers[REG_TM1CNT] = io_registers[REG_TM1CNT];
+	threaded_renderer_io_registers[REG_TM2CNT] = io_registers[REG_TM2CNT];
+	threaded_renderer_io_registers[REG_TM3CNT] = io_registers[REG_TM3CNT];
+
+	threaded_renderer_io_registers[REG_P1] = io_registers[REG_P1];
+	threaded_renderer_io_registers[REG_P1CNT] = io_registers[REG_P1CNT];
+	threaded_renderer_io_registers[REG_RCNT] = io_registers[REG_RCNT];
+	threaded_renderer_io_registers[REG_IE] = io_registers[REG_IE];
+	threaded_renderer_io_registers[REG_IF] = io_registers[REG_IF];
+	threaded_renderer_io_registers[REG_IME] = io_registers[REG_IME];
+	threaded_renderer_io_registers[REG_HALTCNT] = io_registers[REG_HALTCNT];
 	
 	threaded_renderer_state = 1;
 }
@@ -12415,6 +12596,7 @@ updateLoop:
 
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
+
 					if(R_VCOUNT == 160)
 		        	{
 		            	uint32_t ext = (joy >> 10);
