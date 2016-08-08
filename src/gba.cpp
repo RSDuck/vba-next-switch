@@ -6466,7 +6466,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line
 
       u8 color = charBase[tile * 64 + tileY * 8 + tileX];
 
-      RENDERER_LINE[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
+      _line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
 
       xxx++;
       if(xxx == 256) {
@@ -6508,7 +6508,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line
       }
 
       int pal = (data>>8) & 0xF0;
-      RENDERER_LINE[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
+      _line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
 
       xxx++;
       if(xxx == 256) {
@@ -6528,7 +6528,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line
     if(mosaicX > 1) {
       int m = 1;
       for(int i = 0; i < 239; i++) {
-        RENDERER_LINE[i+1] = RENDERER_LINE[i];
+        _line[i+1] = _line[i];
         m++;
         if(m == mosaicX) {
           m = 1;
@@ -10662,7 +10662,6 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	//screen is being rendered.
 	if(threaded_renderer_ready) return;
 	
-#if 0
 	threaded_draw_objwin = draw_objwin;
 	threaded_draw_sprites = draw_sprites;
 	threaded_render_line_all_enabled = render_line_all_enabled;
@@ -10725,11 +10724,11 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	}
 	
 	memcpy(threaded_palette, graphics.paletteRAM, 0x400);
-	if(draw_sprites || (draw_objwin))	
+	if(draw_sprites || draw_objwin)	
 		memcpy(threaded_oam, oam, 0x400);
-#endif
 	
-	threaded_renderer_ready = 1;
+	//because of thread is not turned on, just keep copying buffer to performance test.
+	//threaded_renderer_ready = 1;
 }
 
 #endif
