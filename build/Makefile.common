@@ -11,5 +11,7 @@ SOURCES_CXX := \
 SOURCES_C :=
 
 ifneq ($(platform), vita)
+ifeq ($(USE_THREADED_RENDERER), 1)
 SOURCES_C +=  $(LIBRETRO_COMMON_DIR)/rthreads/rthreads.c
+endif
 endif
