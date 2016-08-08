@@ -20,16 +20,26 @@
 #include "elf.h"
 #endif
 
-#if SPEEDHAX
-  #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
-  #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
-  #define CLOCKTICKS_UPDATE_TYPE16P 16
-  #define CLOCKTICKS_UPDATE_TYPE32P 19
-#else
-  #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
-  #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
-  #define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
-  #define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
+//use original vba-next speedhax.
+#define SPEEDHAX_SAFE 1
+
+#if SPEEDHAX_SAFE
+	#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+	#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+	#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
+	#define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3	
+#else	
+	#if SPEEDHAX
+		#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+		#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+		#define CLOCKTICKS_UPDATE_TYPE16P 30
+		#define CLOCKTICKS_UPDATE_TYPE32P 35
+	#else
+		#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+		#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+		#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
+		#define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
+	#endif
 #endif
 
 //static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
@@ -38,47 +48,95 @@ typedef void (*renderfunc_t)(void);
 
 #if THREADED_RENDERER
 
-#include "thread.h"
+	#include "thread.h"
 
-static volatile int threaded_renderer_running = 0;
-static volatile int threaded_renderer_state = 0;
-static uint16_t threaded_renderer_io_registers[1024 * 16];
-static uint32_t threaded_renderer_line[6][240];
-static uint8_t threaded_palette[0x400];
-static uint8_t threaded_oam[0x400];
-static bool threaded_draw_objwin = false;
-static bool threaded_draw_sprites = false;
-static bool threaded_render_line_all_enabled = false;
-static uint16_t threaded_mosaic = 0;
-static uint16_t threaded_graphics_layer_enable = 0;
-static bool threaded_palette_dirty = true;
-static bool threaded_background2_dirty = true;
-static bool threaded_background3_dirty = true;
-static renderfunc_t threaded_renderfunc = NULL;
+	static volatile int threaded_renderer_running = 0;
+	static volatile int threaded_renderer_state = 0;
+	static uint16_t threaded_renderer_io_registers[1024 * 16];
+	static uint32_t threaded_renderer_line[6][240];
+	static uint8_t threaded_palette[0x400];
+	static uint8_t threaded_oam[0x400];
+	static bool threaded_draw_objwin = false;
+	static bool threaded_draw_sprites = false;
+	static bool threaded_render_line_all_enabled = false;
+	static uint16_t threaded_mosaic = 0;
+	static uint16_t threaded_graphics_layer_enable = 0;
+	static bool threaded_palette_dirty = true;
+	static bool threaded_background2_dirty = true;
+	static bool threaded_background3_dirty = true;
+	static renderfunc_t threaded_renderfunc = NULL;
 
-#define RENDERER_PALETTE threaded_palette
-#define RENDERER_IO_REGISTERS threaded_renderer_io_registers
-#define RENDERER_LINE threaded_renderer_line
-#define RENDERER_OAM threaded_oam
-#define RENDERER_MOSAIC threaded_mosaic
-#define RENDERER_RENDERFUNC threaded_renderfunc
+	#define RENDERER_PALETTE threaded_palette
+	#define RENDERER_IO_REGISTERS threaded_renderer_io_registers
+	#define RENDERER_LINE threaded_renderer_line
+	#define RENDERER_OAM threaded_oam
+	#define RENDERER_MOSAIC threaded_mosaic
+	#define RENDERER_RENDERFUNC (*threaded_renderfunc)
 
-#define RENDERER_R_VCOUNT RENDERER_IO_REGISTERS[REG_VCOUNT]
-#define RENDERER_R_DISPCNT_Video_Mode RENDERER_IO_REGISTERS[REG_VCOUNT]
-#define RENDERER_R_DISPCNT_OBJ_Window_Display (threaded_graphics_layer_enable & (1 << 15))
+	#define RENDERER_R_VCOUNT RENDERER_IO_REGISTERS[REG_VCOUNT]
+
+	#define RENDERER_R_DISPCNT_Video_Mode (RENDERER_IO_REGISTERS[REG_DISPCNT] & 7)
+
+	#define RENDERER_R_DISPCNT_Screen_Display_BG0 (threaded_graphics_layer_enable & (1 <<  8))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG1 (threaded_graphics_layer_enable & (1 <<  9))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG2 (threaded_graphics_layer_enable & (1 << 10))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG3 (threaded_graphics_layer_enable & (1 << 11))
+	#define RENDERER_R_DISPCNT_Screen_Display_OBJ (threaded_graphics_layer_enable & (1 << 12))
+	#define RENDERER_R_DISPCNT_Window_0_Display   (threaded_graphics_layer_enable & (1 << 13))
+	#define RENDERER_R_DISPCNT_Window_1_Display   (threaded_graphics_layer_enable & (1 << 14))
+	#define RENDERER_R_DISPCNT_OBJ_Window_Display (threaded_graphics_layer_enable & (1 << 15))
+
+	#define RENDERER_R_WIN_Window0_X1 (RENDERER_IO_REGISTERS[REG_WIN0H] >> 8)
+	#define RENDERER_R_WIN_Window0_X2 (RENDERER_IO_REGISTERS[REG_WIN0H] & 0xFF)
+	#define RENDERER_R_WIN_Window0_Y1 (RENDERER_IO_REGISTERS[REG_WIN0V] >> 8)
+	#define RENDERER_R_WIN_Window0_Y2 (RENDERER_IO_REGISTERS[REG_WIN0V] & 0xFF)
+
+	#define RENDERER_R_WIN_Window1_X1 (RENDERER_IO_REGISTERS[REG_WIN1H] >> 8)
+	#define RENDERER_R_WIN_Window1_X2 (RENDERER_IO_REGISTERS[REG_WIN1H] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Y1 (RENDERER_IO_REGISTERS[REG_WIN1V] >> 8)
+	#define RENDERER_R_WIN_Window1_Y2 (RENDERER_IO_REGISTERS[REG_WIN1V] & 0xFF)
+
+	#define RENDERER_R_WIN_Window0_Mask (RENDERER_IO_REGISTERS[REG_WININ] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Mask (RENDERER_IO_REGISTERS[REG_WININ] >> 8)
+	#define RENDERER_R_WIN_Outside_Mask (RENDERER_IO_REGISTERS[REG_WINOUT] & 0xFF)
+	#define RENDERER_R_WIN_OBJ_Mask     (RENDERER_IO_REGISTERS[REG_WINOUT] >> 8)
 
 #else
 
-#define RENDERER_PALETTE graphics.paletteRAM
-#define RENDERER_IO_REGISTERS io_registers
-#define RENDERER_LINE line
-#define RENDERER_OAM oam
-#define RENDERER_MOSAIC MOSAIC
-#define RENDERER_RENDERFUNC renderfunc
+	#define RENDERER_PALETTE graphics.paletteRAM
+	#define RENDERER_IO_REGISTERS io_registers
+	#define RENDERER_LINE line
+	#define RENDERER_OAM oam
+	#define RENDERER_MOSAIC MOSAIC
+	#define RENDERER_RENDERFUNC (*renderfunc)
 
-#define RENDERER_R_VCOUNT R_VCOUNT
-#define RENDERER_R_DISPCNT_Video_Mode R_DISPCNT_Video_Mode
-#define RENDERER_R_DISPCNT_OBJ_Window_Display R_DISPCNT_OBJ_Window_Display
+	#define RENDERER_R_VCOUNT (io_registers[REG_VCOUNT])
+
+	#define RENDERER_R_DISPCNT_Video_Mode (io_registers[REG_DISPCNT] & 7)
+
+	#define RENDERER_R_DISPCNT_Screen_Display_BG0 (graphics.layerEnable & (1 <<  8))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG1 (graphics.layerEnable & (1 <<  9))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG2 (graphics.layerEnable & (1 << 10))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG3 (graphics.layerEnable & (1 << 11))
+	#define RENDERER_R_DISPCNT_Screen_Display_OBJ (graphics.layerEnable & (1 << 12))
+	#define RENDERER_R_DISPCNT_Window_0_Display   (graphics.layerEnable & (1 << 13))
+	#define RENDERER_R_DISPCNT_Window_1_Display   (graphics.layerEnable & (1 << 14))
+	#define RENDERER_R_DISPCNT_OBJ_Window_Display (graphics.layerEnable & (1 << 15))
+
+	#define RENDERER_R_WIN_Window0_X1 (io_registers[REG_WIN0H] >> 8)
+	#define RENDERER_R_WIN_Window0_X2 (io_registers[REG_WIN0H] & 0xFF)
+	#define RENDERER_R_WIN_Window0_Y1 (io_registers[REG_WIN0V] >> 8)
+	#define RENDERER_R_WIN_Window0_Y2 (io_registers[REG_WIN0V] & 0xFF)
+
+	#define RENDERER_R_WIN_Window1_X1 (io_registers[REG_WIN1H] >> 8)
+	#define RENDERER_R_WIN_Window1_X2 (io_registers[REG_WIN1H] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Y1 (io_registers[REG_WIN1V] >> 8)
+	#define RENDERER_R_WIN_Window1_Y2 (io_registers[REG_WIN1V] & 0xFF)
+
+	#define RENDERER_R_WIN_Window0_Mask (io_registers[REG_WININ] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Mask (io_registers[REG_WININ] >> 8)
+	#define RENDERER_R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
+	#define RENDERER_R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
 
 #endif
 
@@ -5702,8 +5760,9 @@ static  void thumbD0(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-#if SPEEDHAX
-		clockTicks = 30;
+
+#if SPEEDHAX_SAFE && SPEEDHAX
+		clockTicks = 30
 #else
 		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
 #endif
@@ -8646,9 +8705,9 @@ void doMirroring (bool b)
 
 /* we only use 16bit color depth */
 #if THREADED_RENDERER
-	#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
+	#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
 #else
-	#define INIT_COLOR_DEPTH_LINE_MIX() uint16_t * lineMix = (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
+	#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
 #endif
 
 static void mode0RenderLine (void)
@@ -8656,23 +8715,23 @@ static void mode0RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG1) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG1) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_IO_REGISTERS[REG_BG2HOFS], RENDERER_IO_REGISTERS[REG_BG2VOFS], RENDERER_LINE[Layer_BG2]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG3) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_IO_REGISTERS[REG_BG3HOFS], RENDERER_IO_REGISTERS[REG_BG3VOFS], RENDERER_LINE[Layer_BG3]);
 	}
 
@@ -8744,23 +8803,23 @@ static void mode0RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG1) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG1) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_IO_REGISTERS[REG_BG2HOFS], RENDERER_IO_REGISTERS[REG_BG2VOFS], RENDERER_LINE[Layer_BG2]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG3) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_IO_REGISTERS[REG_BG3HOFS], RENDERER_IO_REGISTERS[REG_BG3VOFS], RENDERER_LINE[Layer_BG3]);
 	}
 
@@ -8886,51 +8945,51 @@ static void mode0RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 0: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display) {
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
+	if(RENDERER_R_DISPCNT_Window_0_Display) {
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
 		inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow0 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
+			inWindow0 |= (RENDERER_R_VCOUNT >= v0 && RENDERER_R_VCOUNT < v1);
 		else
-			inWindow0 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
+			inWindow0 |= (RENDERER_R_VCOUNT >= v0 || RENDERER_R_VCOUNT < v1);
 	}
-	if(R_DISPCNT_Window_1_Display) {
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
+	if(RENDERER_R_DISPCNT_Window_1_Display) {
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
 		inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
 		if(v1 >= v0)
-			inWindow1 |= (R_VCOUNT >= v0 && R_VCOUNT < v1);
+			inWindow1 |= (RENDERER_R_VCOUNT >= v0 && RENDERER_R_VCOUNT < v1);
 		else
-			inWindow1 |= (R_VCOUNT >= v0 || R_VCOUNT < v1);
+			inWindow1 |= (RENDERER_R_VCOUNT >= v0 || RENDERER_R_VCOUNT < v1);
 	}
 
-	if((R_DISPCNT_Screen_Display_BG0)) {
+	if((RENDERER_R_DISPCNT_Screen_Display_BG0)) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if((R_DISPCNT_Screen_Display_BG1)) {
+	if((RENDERER_R_DISPCNT_Screen_Display_BG1)) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if((R_DISPCNT_Screen_Display_BG2)) {
+	if((RENDERER_R_DISPCNT_Screen_Display_BG2)) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_IO_REGISTERS[REG_BG2HOFS], RENDERER_IO_REGISTERS[REG_BG2VOFS], RENDERER_LINE[Layer_BG2]);
 	}
 
-	if((R_DISPCNT_Screen_Display_BG3)) {
+	if((RENDERER_R_DISPCNT_Screen_Display_BG3)) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_IO_REGISTERS[REG_BG3HOFS], RENDERER_IO_REGISTERS[REG_BG3VOFS], RENDERER_LINE[Layer_BG3]);
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -8938,7 +8997,7 @@ static void mode0RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000)) {
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
@@ -9071,22 +9130,22 @@ static void mode1RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG1) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG1) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -9160,7 +9219,7 @@ static void mode1RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode1RenderLineNoWindow (void)
@@ -9168,22 +9227,22 @@ static void mode1RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG1) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG1) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -9309,7 +9368,7 @@ static void mode1RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode1RenderLineAll (void)
@@ -9317,38 +9376,38 @@ static void mode1RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 1: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 	
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display)
+	if(RENDERER_R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
-	if(R_DISPCNT_Window_1_Display)
+	if(RENDERER_R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Screen_Display_BG0) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG0) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG0CNT], RENDERER_IO_REGISTERS[REG_BG0HOFS], RENDERER_IO_REGISTERS[REG_BG0VOFS], RENDERER_LINE[Layer_BG0]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG1) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG1) {
 		gfxDrawTextScreen(RENDERER_IO_REGISTERS[REG_BG1CNT], RENDERER_IO_REGISTERS[REG_BG1HOFS], RENDERER_IO_REGISTERS[REG_BG1VOFS], RENDERER_LINE[Layer_BG1]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
@@ -9356,9 +9415,9 @@ static void mode1RenderLineAll (void)
 				gfxBG2X, gfxBG2Y, changed, RENDERER_LINE[Layer_BG2]);
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -9366,7 +9425,7 @@ static void mode1RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000)) {
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
@@ -9466,7 +9525,7 @@ static void mode1RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 /*
@@ -9483,14 +9542,14 @@ static void mode2RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9499,10 +9558,10 @@ static void mode2RenderLine (void)
 				changed, RENDERER_LINE[Layer_BG2]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG3) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9565,7 +9624,7 @@ static void mode2RenderLine (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode2RenderLineNoWindow (void)
@@ -9573,14 +9632,14 @@ static void mode2RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9589,10 +9648,10 @@ static void mode2RenderLineNoWindow (void)
 				changed, RENDERER_LINE[Layer_BG2]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG3) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9695,7 +9754,7 @@ static void mode2RenderLineNoWindow (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode2RenderLineAll (void)
@@ -9703,30 +9762,30 @@ static void mode2RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 2: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display)
+	if(RENDERER_R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
-	if(R_DISPCNT_Window_1_Display)
+	if(RENDERER_R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9735,10 +9794,10 @@ static void mode2RenderLineAll (void)
 				changed, RENDERER_LINE[Layer_BG2]);
 	}
 
-	if(R_DISPCNT_Screen_Display_BG3) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		int changed = gfxBG3Changed;
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9747,9 +9806,9 @@ static void mode2RenderLineAll (void)
 				changed, RENDERER_LINE[Layer_BG3]);
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; x++) {
 		uint32_t color = backdrop;
@@ -9757,7 +9816,7 @@ static void mode2RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000)) {
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
@@ -9842,7 +9901,7 @@ static void mode2RenderLineAll (void)
 	}
 	gfxBG2Changed = 0;
 	gfxBG3Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 /*
@@ -9858,14 +9917,14 @@ static void mode3RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9903,7 +9962,7 @@ static void mode3RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode3RenderLineNoWindow (void)
@@ -9911,14 +9970,14 @@ static void mode3RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -9992,7 +10051,7 @@ static void mode3RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode3RenderLineAll (void)
@@ -10000,40 +10059,40 @@ static void mode3RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 3: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display)
+	if(RENDERER_R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Window_1_Display)
+	if(RENDERER_R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
@@ -10041,7 +10100,7 @@ static void mode3RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000)) {
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
@@ -10109,7 +10168,7 @@ static void mode3RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 /*
@@ -10125,15 +10184,15 @@ static void mode4RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2)
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10171,7 +10230,7 @@ static void mode4RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode4RenderLineNoWindow (void)
@@ -10179,15 +10238,15 @@ static void mode4RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2)
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10261,7 +10320,7 @@ static void mode4RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode4RenderLineAll (void)
@@ -10269,41 +10328,41 @@ static void mode4RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 4: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t backdrop = RENDERER_BACKDROP;
 	
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display)
+	if(RENDERER_R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Window_1_Display)
+	if(RENDERER_R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Screen_Display_BG2)
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
 		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, changed);
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = backdrop;
@@ -10311,7 +10370,7 @@ static void mode4RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000))
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
 		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
@@ -10380,7 +10439,7 @@ static void mode4RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 /*
@@ -10397,14 +10456,14 @@ static void mode5RenderLine (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10441,7 +10500,7 @@ static void mode5RenderLine (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode5RenderLineNoWindow (void)
@@ -10449,14 +10508,14 @@ static void mode5RenderLineNoWindow (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line No Window\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2) {
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10530,7 +10589,7 @@ static void mode5RenderLineNoWindow (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static void mode5RenderLineAll (void)
@@ -10538,15 +10597,15 @@ static void mode5RenderLineAll (void)
 #ifdef REPORT_VIDEO_MODES
 	fprintf(stderr, "MODE 5: Render Line All\n");
 #endif
-	INIT_COLOR_DEPTH_LINE_MIX();
+	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(R_DISPCNT_Screen_Display_BG2)
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
 	{
 		int changed = gfxBG2Changed;
 
 #if 0
-		if(gfxLastVCOUNT > R_VCOUNT)
+		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
 			changed = 3;
 #endif
 
@@ -10556,23 +10615,23 @@ static void mode5RenderLineAll (void)
 	bool inWindow0 = false;
 	bool inWindow1 = false;
 
-	if(R_DISPCNT_Window_0_Display)
+	if(RENDERER_R_DISPCNT_Window_0_Display)
 	{
-		uint8_t v0 = R_WIN_Window0_Y1;
-		uint8_t v1 = R_WIN_Window0_Y2;
-		inWindow0 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window0_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window0_Y2;
+		inWindow0 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(R_DISPCNT_Window_1_Display)
+	if(RENDERER_R_DISPCNT_Window_1_Display)
 	{
-		uint8_t v0 = R_WIN_Window1_Y1;
-		uint8_t v1 = R_WIN_Window1_Y2;
-		inWindow1 = (uint8_t)(R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
+		uint8_t v0 = RENDERER_R_WIN_Window1_Y1;
+		uint8_t v1 = RENDERER_R_WIN_Window1_Y2;
+		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	uint8_t inWin0Mask = R_WIN_Window0_Mask;
-	uint8_t inWin1Mask = R_WIN_Window1_Mask;
-	uint8_t outMask = R_WIN_Outside_Mask;
+	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
+	uint8_t inWin1Mask = RENDERER_R_WIN_Window1_Mask;
+	uint8_t outMask = RENDERER_R_WIN_Outside_Mask;
 
 	for(int x = 0; x < 240; ++x) {
 		uint32_t color = background;
@@ -10580,7 +10639,7 @@ static void mode5RenderLineAll (void)
 		uint8_t mask = outMask;
 
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000)) {
-			mask = R_WIN_OBJ_Mask;
+			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
 		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
@@ -10648,7 +10707,7 @@ static void mode5RenderLineAll (void)
 		lineMix[x] = CONVERT_COLOR(color);
 	}
 	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = R_VCOUNT;
+	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
 }
 
 static renderfunc_t renderfunc = mode0RenderLine;
@@ -10670,7 +10729,7 @@ static void __threaded_renderer_loop(void* p) {
 			if(threaded_draw_objwin) gfxDrawOBJWin();
 		}
 		
-		(*RENDERER_RENDERFUNC)();
+		RENDERER_RENDERFUNC();
 
 		//rendering is done.
 		threaded_renderer_state = 0;
@@ -10741,6 +10800,13 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
 	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
 	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];
+
+	threaded_renderer_io_registers[REG_WIN0H] = io_registers[REG_WIN0H];
+	threaded_renderer_io_registers[REG_WIN0V] = io_registers[REG_WIN0V];
+	threaded_renderer_io_registers[REG_WIN1H] = io_registers[REG_WIN1H];
+	threaded_renderer_io_registers[REG_WIN1V] = io_registers[REG_WIN1V];
+	threaded_renderer_io_registers[REG_WININ] = io_registers[REG_WININ];
+	threaded_renderer_io_registers[REG_WINOUT] = io_registers[REG_WINOUT];
 	
 	if(threaded_palette_dirty) {
 		memcpy(threaded_palette, graphics.paletteRAM, 0x400);
@@ -12391,7 +12457,7 @@ updateLoop:
 						if(draw_objwin) gfxDrawOBJWin();
 					}
 					
-					(*RENDERER_RENDERFUNC)();
+					RENDERER_RENDERFUNC();
 #endif
 					// entering H-Blank
 					io_registers[REG_DISPSTAT] |= 2;
