@@ -28,8 +28,6 @@ void thread_run(threadfunc_t func, void* p)
 #else
 #include <rthreads/rthreads.h>
 
-static sthread_t *thid = NULL;
-
 static void _thread_func(void* p)
 {
 	void** argp = static_cast<void**>(p);
@@ -40,6 +38,7 @@ static void _thread_func(void* p)
 void thread_run(threadfunc_t func, void* p)
 {
 	void* argp[2];
+   sthread_t *thid = NULL;
 	argp[0] = reinterpret_cast<void*>(func);
 	argp[1] = p;
 
