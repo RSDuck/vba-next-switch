@@ -223,7 +223,7 @@ else ifeq ($(platform), vita)
 	TILED_RENDERING=1
 	USE_CHEATS=0
 	#USE_SPEEDHAX=1
-	USE_THREADED_RENDERER=1
+	#USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)
 	EXT=a

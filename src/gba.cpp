@@ -6260,12 +6260,12 @@ inline const TileLine gfxReadTilePal(const u16 *screenSource, const int yyy, con
    return tileLine;
 }
 
-static inline void gfxDrawTile(const TileLine &tileLine, u32 *_line)
+static inline void gfxDrawTile(const TileLine &tileLine, u32* _line)
 {
    memcpy(_line, tileLine.pixels, sizeof(tileLine.pixels));
 }
 
-static inline void gfxDrawTileClipped(const TileLine &tileLine, u32 *_line, const int start, int w)
+static inline void gfxDrawTileClipped(const TileLine &tileLine, u32* _line, const int start, int w)
 {
    memcpy(_line, tileLine.pixels + start, w * sizeof(u32));
 }
@@ -6391,7 +6391,7 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
    }
 }
 
-void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line)
+void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
 {
    if (control & 0x80) // 1 pal / 256 col
       gfxDrawTextScreen<gfxReadTile>(control, hofs, vofs, _line);
@@ -6399,7 +6399,7 @@ void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line)
       gfxDrawTextScreen<gfxReadTilePal>(control, hofs, vofs, _line);
 }
 #else
-static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line)
+static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
 {
   u16 *palette = (u16 *)RENDERER_PALETTE;
   u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
@@ -6429,8 +6429,8 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *_line
 
   int xxx = hofs & maskX;
   int yyy = (vofs + RENDERER_R_VCOUNT) & maskY;
-  int mosaicX = (MOSAIC & 0x000F)+1;
-  int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
+  int mosaicX = (RENDERER_MOSAIC & 0x000F)+1;
+  int mosaicY = ((RENDERER_MOSAIC & 0x00F0)>>4)+1;
 
   if(mosaicOn) {
     if((RENDERER_R_VCOUNT % mosaicY) != 0) {
@@ -6557,7 +6557,7 @@ template<typename T> static T min(T a, T b) { return a<b ? a : b; }
 #endif
 
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
-u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32 *_line)
+u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32* _line)
 {
 	u16 *palette = (u16 *)RENDERER_PALETTE;
 	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
@@ -6632,7 +6632,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 		realY -= y*dmy;
 	}
 
-	memset(line, -1, 240 * sizeof(u32));
+	memset(_line, -1, 240 * sizeof(u32));
 	if(control & 0x2000) // Wraparound
 	{
 		if(dx > 0 && dy == 0) // Common subcase: no rotation or flipping
@@ -6820,8 +6820,8 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 	int realY = currentY;
 
 	if(RENDERER_IO_REGISTERS[REG_BG2CNT] & 0x40) {
-		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = (R_VCOUNT % mosaicY);
+		int mosaicY = ((RENDERER_MOSAIC & 0xF0)>>4) + 1;
+		int y = (RENDERER_R_VCOUNT % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
@@ -6925,8 +6925,8 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 	int realY = currentY;
 
 	if(RENDERER_IO_REGISTERS[REG_BG2CNT] & 0x40) {
-		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-		int y = R_VCOUNT - (R_VCOUNT % mosaicY);
+		int mosaicY = ((RENDERER_MOSAIC & 0xF0)>>4) + 1;
+		int y = RENDERER_R_VCOUNT - (RENDERER_R_VCOUNT % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
 	}
@@ -7032,7 +7032,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 	int realY = currentY;
 
 	if(RENDERER_IO_REGISTERS[REG_BG2CNT] & 0x40) {
-		int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+		int mosaicY = ((RENDERER_MOSAIC & 0xF0)>>4) + 1;
 		int y = RENDERER_R_VCOUNT - (RENDERER_R_VCOUNT % mosaicY);
 		realX = startX + y*dmx;
 		realY = startY + y*dmy;
