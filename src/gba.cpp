@@ -6632,7 +6632,6 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
-#if VITA
 inline static long max(int p, int q) { return p > q ? p : q; }
 inline static long max(long p, int q) { return p > q ? p : q; }
 inline static long max(int p, long q) { return p > q ? p : q; }
@@ -6641,10 +6640,6 @@ inline static long min(int p, int q) { return p < q ? p : q; }
 inline static long min(long p, int q) { return p < q ? p : q; }
 inline static long min(int p, long q) { return p < q ? p : q; }
 inline static long min(long p, long q) { return p < q ? p : q; }
-#else
-template<typename T> static T max(T a, T b) { return a>b ? a : b; }
-template<typename T> static T min(T a, T b) { return a<b ? a : b; }
-#endif
 
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32* _line)
