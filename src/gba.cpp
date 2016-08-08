@@ -38,7 +38,7 @@
 #include "thread.h"
 
 static volatile int threaded_renderer_running = 0;
-static volatile int threaded_renderer_ready = 0;
+static volatile int threaded_renderer_state = 0;
 static uint16_t threaded_renderer_io_registers[1024 * 16];
 static uint32_t threaded_renderer_line[6][240];
 static uint8_t threaded_palette[0x400];
@@ -10648,9 +10648,8 @@ static bool render_line_all_enabled = false;
 
 static void __threaded_renderer_loop(void* p) {
 	while(threaded_renderer_running) {
-		if(!threaded_renderer_ready) continue;
-		
-#if 0
+		if(threaded_renderer_state != 1) continue;
+	
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(threaded_draw_sprites) gfxDrawSprites();
 
@@ -10661,15 +10660,16 @@ static void __threaded_renderer_loop(void* p) {
 		}
 		
 		(*renderLine)();
-#endif
-		threaded_renderer_ready = 0;
+
+		//rendering is done.
+		threaded_renderer_state = 2;
 	}
 }
 
 static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
-	//screen is being rendered.
-	if(threaded_renderer_ready) return;
+	//rendereing is not finished.
+	if(threaded_renderer_state > 0) return;
 
 	bool copy_bg3 = false;
 	
@@ -10747,7 +10747,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 
 	if(draw_sprites || draw_objwin)	memcpy(threaded_oam, oam, 0x400);
 	
-	threaded_renderer_ready = 1;
+	threaded_renderer_state = 1;
 }
 
 #endif
@@ -12234,9 +12234,9 @@ void UpdateJoypad(void)
 
 void CPULoop (void)
 {
-   bool framedone;
+	bool framedone;
 	int timerOverflow = 0;
-   int ticks = 300000;
+	int ticks = 300000;
 
 	bus.busPrefetchCount = 0;
 	// variable used by the CPU core
@@ -12244,9 +12244,9 @@ void CPULoop (void)
 
 	cpuNextEvent = CPUUpdateTicks();
 	if(cpuNextEvent > ticks)
-		cpuNextEvent = ticks;
+	cpuNextEvent = ticks;
 
-   framedone = false;
+	framedone = false;
 
 	do
 	{
@@ -12269,13 +12269,11 @@ void CPULoop (void)
 
 		cpuTotalTicks += clockTicks;
 
-
 		if(cpuTotalTicks >= cpuNextEvent) {
 			int remainingTicks = cpuTotalTicks - cpuNextEvent;
 
 #ifdef USE_SWITICKS
-			if (SWITicks)
-			{
+			if (SWITicks) {
 				SWITicks-=clockTicks;
 				if (SWITicks<0)
 					SWITicks = 0;
@@ -12287,8 +12285,7 @@ void CPULoop (void)
 
 updateLoop:
 
-			if (IRQTicks)
-			{
+			if (IRQTicks) {
 				IRQTicks -= clockTicks;
 				if (IRQTicks<0)
 					IRQTicks = 0;
@@ -12341,28 +12338,34 @@ updateLoop:
 					graphics.lcdTicks += 1008;
 					io_registers[REG_DISPSTAT] &= 0xFFFD;
 					if(R_VCOUNT == 160)
-               {
-
-                  uint32_t ext = (joy >> 10);
-                  // If no (m) code is enabled, apply the cheats at each LCDline
+		           {
+		              uint32_t ext = (joy >> 10);
+		              // If no (m) code is enabled, apply the cheats at each LCDline
 
 #if USE_CHEATS
-                  if(mastercode == 0)
-                     remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
+		              if(mastercode == 0)
+		                 remainingTicks += cheatsCheckKeys(io_registers[REG_P1] ^ 0x3FF, ext);
 #endif
+		              io_registers[REG_DISPSTAT] |= 1;
+		              io_registers[REG_DISPSTAT] &= 0xFFFD;
+		              UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
+		              if(io_registers[REG_DISPSTAT] & 0x0008)
+		              {
+		                 io_registers[REG_IF] |= 1;
+		                 UPDATE_REG(0x202, io_registers[REG_IF]);
+		              }
+		              CPUCheckDMA(1, 0x0f);
 
-                  io_registers[REG_DISPSTAT] |= 1;
-                  io_registers[REG_DISPSTAT] &= 0xFFFD;
-                  UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
-                  if(io_registers[REG_DISPSTAT] & 0x0008)
-                  {
-                     io_registers[REG_IF] |= 1;
-                     UPDATE_REG(0x202, io_registers[REG_IF]);
-                  }
-                  CPUCheckDMA(1, 0x0f);
-                  systemDrawScreen(); //render retroarch ui.
-                  framedone = true;
-               }
+#if THREADED_RENDERER
+					  if(threaded_renderer_state == 2) {
+						  threaded_renderer_state = 0;
+		                  systemDrawScreen();
+					  }
+#else
+		              systemDrawScreen();
+#endif
+		              framedone = true;
+		           }
 
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
 					CPUCompareVCOUNT();
@@ -12386,7 +12389,6 @@ updateLoop:
 					
 					(*renderLine)();
 #endif
-
 					// entering H-Blank
 					io_registers[REG_DISPSTAT] |= 2;
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
@@ -12649,9 +12651,8 @@ updateLoop:
 
 			if(ticks <= 0 || framedone)
 				break;
-
 		}
-	}while(1);
+	} while(1);
 }
 
 /* GBA CHEATS */
