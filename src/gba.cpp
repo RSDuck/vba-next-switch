@@ -8524,10 +8524,13 @@ bool CPUSetupBuffers()
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 	
 #if THREADED_RENDERER
+	/* 
+	//this will cause crash
 	if(!threaded_renderer_running) {
 		threaded_renderer_running = 1;		
 		thread_run(__threaded_renderer_loop, NULL);
 	}
+	*/
 #endif
 
 	return true;
@@ -10638,6 +10641,7 @@ static void __threaded_renderer_loop(void* p) {
 	while(threaded_renderer_running) {
 		if(!threaded_renderer_ready) continue;
 		
+#if 0
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(threaded_draw_sprites) gfxDrawSprites();
 
@@ -10648,6 +10652,7 @@ static void __threaded_renderer_loop(void* p) {
 		}
 		
 		(*renderLine)();
+#endif
 		threaded_renderer_ready = 0;
 	}
 }
@@ -10657,6 +10662,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	//screen is being rendered.
 	if(threaded_renderer_ready) return;
 	
+#if 0
 	threaded_draw_objwin = draw_objwin;
 	threaded_draw_sprites = draw_sprites;
 	threaded_render_line_all_enabled = render_line_all_enabled;
@@ -10721,6 +10727,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	memcpy(threaded_palette, graphics.paletteRAM, 0x400);
 	if(draw_sprites || (draw_objwin))	
 		memcpy(threaded_oam, oam, 0x400);
+#endif
 	
 	threaded_renderer_ready = 1;
 }
