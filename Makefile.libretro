@@ -353,8 +353,6 @@ CFLAGS += -DTHREADED_RENDERER
 CXXFLAGS += -DTHREADED_RENDERER
 endif
 
-CXXFLAGS += -std=c++11
-
 LIBS :=
 
 %.o: %.cpp
