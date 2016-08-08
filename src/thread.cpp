@@ -11,7 +11,7 @@
 static int _thread_func(SceSize args, void* p)
 {
 	void** argp = static_cast<void**>(p);
-	auto func = reinterpret_cast<threadfunc_t>(argp[0]);
+	threadfunc_t func = reinterpret_cast<threadfunc_t>(argp[0]);
 	(*func)(argp[1]);
 	return sceKernelExitDeleteThread(0);
 }
@@ -31,7 +31,7 @@ void thread_run(threadfunc_t func, void* p)
 static void _thread_func(void* p)
 {
 	void** argp = static_cast<void**>(p);
-	auto func = reinterpret_cast<threadfunc_t>(argp[0]);
+	threadfunc_t func = reinterpret_cast<threadfunc_t>(argp[0]);
 	(*func)(argp[1]);
 }
 
