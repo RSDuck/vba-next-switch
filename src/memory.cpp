@@ -23,18 +23,21 @@ bool utilIsGBAImage(const char * file)
 		const char * p = strrchr(file,'.');
 
 		if(p != NULL)
-		{
-			if((strcasecmp(p, ".agb") == 0) ||
-					(strcasecmp(p, ".gba") == 0) ||
-					(strcasecmp(p, ".bin") == 0) ||
-					(strcasecmp(p, ".elf") == 0))
-				return true;
-			if(strcasecmp(p, ".mb") == 0)
-			{
-				cpuIsMultiBoot = true;
-				return true;
-			}
-		}
+      {
+         if(
+               !strcasecmp(p, ".agb") ||
+               !strcasecmp(p, ".gba") ||
+               !strcasecmp(p, ".bin") ||
+               !strcasecmp(p, ".elf")
+           )
+            return true;
+
+         if(!strcasecmp(p, ".mb"))
+         {
+            cpuIsMultiBoot = true;
+            return true;
+         }
+      }
 	}
 
 	return false;
@@ -52,14 +55,15 @@ static int utilGetSize(int size)
 
 uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data, int &size)
 {
-	FILE *fp = NULL;
+   uint8_t *image = NULL;
+	FILE *fp       = fopen(file,"rb");
 
-	fp = fopen(file,"rb");
 	fseek(fp, 0, SEEK_END); /*go to end*/
 	size = ftell(fp); /* get position at end (length)*/
 	rewind(fp);
 
-	uint8_t *image = data;
+	image = data;
+
 	if(image == NULL)
 	{
 		/*allocate buffer memory if none was passed to the function*/
@@ -138,12 +142,8 @@ void utilReadDataMem(const uint8_t *& data, variable_desc *desc)
 #define FLASH_PROGRAM            8
 #define FLASH_SETBANK            9
 
-#ifdef __LIBRETRO__
 extern uint8_t libretro_save_buf[0x20000 + 0x2000];
 uint8_t *flashSaveMemory = libretro_save_buf;
-#else
-uint8_t flashSaveMemory[FLASH_128K_SZ];
-#endif
 
 int flashState = FLASH_READ_ARRAY;
 int flashReadState = FLASH_READ_ARRAY;
@@ -163,11 +163,7 @@ static variable_desc flashSaveData3[] = {
 
 void flashInit (void)
 {
-#ifdef __LIBRETRO__
 	memset(flashSaveMemory, 0xff, 0x20000);
-#else
-	memset(flashSaveMemory, 0xff, sizeof(flashSaveMemory));
-#endif
 }
 
 void flashReset()
@@ -352,13 +348,9 @@ int eepromByte = 0;
 int eepromBits = 0;
 int eepromAddress = 0;
 
-#ifdef __LIBRETRO__
 // Workaround for broken-by-design GBA save semantics.
 extern u8 libretro_save_buf[0x20000 + 0x2000];
 u8 *eepromData = libretro_save_buf + 0x20000;
-#else
-u8 eepromData[0x2000];
-#endif
 
 u8 eepromBuffer[16];
 bool eepromInUse = false;
@@ -377,11 +369,7 @@ variable_desc eepromSaveData[] = {
 
 void eepromInit (void)
 {
-#ifdef __LIBRETRO__
 	memset(eepromData, 255, 0x2000);
-#else
-	memset(eepromData, 255, sizeof(eepromData));
-#endif
 }
 
 void eepromReset (void)

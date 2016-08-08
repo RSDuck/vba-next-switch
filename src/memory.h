@@ -25,13 +25,8 @@ extern int flashSize;
 extern bool eepromInUse;
 extern int eepromSize;
 
-#ifdef __LIBRETRO__
 extern uint8_t *flashSaveMemory;
 extern u8 *eepromData;
-#else
-extern uint8_t flashSaveMemory[FLASH_128K_SZ];
-extern u8 eepromData[0x2000];
-#endif
 
 extern void eepromReadGameMem(const uint8_t *&data, int version);
 extern void eepromSaveGameMem(uint8_t *&data);
