@@ -48,6 +48,9 @@ static bool threaded_draw_sprites = false;
 static bool threaded_render_line_all_enabled = false;
 static uint16_t threaded_mosaic = 0;
 static uint16_t threaded_graphics_layer_enable = 0;
+static bool threaded_palette_dirty = true;
+static bool threaded_background2_dirty = true;
+static bool threaded_background3_dirty = true;
 
 #define RENDERER_PALETTE threaded_palette
 #define RENDERER_IO_REGISTERS threaded_renderer_io_registers
@@ -797,6 +800,9 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x05:
 			WRITE32LE(((u32 *)&graphics.paletteRAM[address & 0x3FC]), value);
+#if THREADED_RENDERER
+			threaded_palette_dirty = true;
+#endif
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
@@ -842,6 +848,9 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 5:
 			WRITE16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]), value);
+#if THREADED_RENDERER
+			threaded_palette_dirty = true;
+#endif
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -957,6 +966,9 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 		case 5:
 			// no need to switch
 			*((u16 *)&graphics.paletteRAM[address & 0x3FE]) = (b << 8) | b;
+#if THREADED_RENDERER
+			threaded_palette_dirty = true;
+#endif
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -10661,20 +10673,8 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	
 	//screen is being rendered.
 	if(threaded_renderer_ready) return;
-	
-	threaded_draw_objwin = draw_objwin;
-	threaded_draw_sprites = draw_sprites;
-	threaded_render_line_all_enabled = render_line_all_enabled;
-	threaded_graphics_layer_enable = graphics.layerEnable;
-	threaded_mosaic = MOSAIC;
-	
-	threaded_renderer_io_registers[REG_DISPCNT] = io_registers[REG_DISPCNT];
-	threaded_renderer_io_registers[REG_VCOUNT] = io_registers[REG_VCOUNT];	
-	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];	
-	threaded_renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
-	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
-	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
-	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];
+
+	bool copy_bg3 = false;
 	
 	switch(R_DISPCNT_Video_Mode) {
 	case 0:	
@@ -10691,8 +10691,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 		threaded_renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];	
 		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], sizeof(240 * 4));
 		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], sizeof(240 * 4));
+		if(threaded_background3_dirty) copy_bg3 = true;		
 		break;
 	case 1:
 		threaded_renderer_io_registers[REG_BG0CNT] = io_registers[REG_BG0CNT];
@@ -10703,29 +10702,53 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 		threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
 		memcpy(threaded_renderer_line[Layer_BG0], line[Layer_BG0], sizeof(240 * 4));
 		memcpy(threaded_renderer_line[Layer_BG1], line[Layer_BG1], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
 		break;
 	case 2:
 		threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
 		threaded_renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
 		threaded_renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
 		threaded_renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
-		threaded_renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];
-		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
-		memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], sizeof(240 * 4));
+		threaded_renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];	
+		if(threaded_background3_dirty) copy_bg3 = true;
 		break;	
 	case 3:
 	case 4:
 	case 5:
-		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
 		break;
 	default: 
 		return;
 	}
+
+	threaded_draw_objwin = draw_objwin;
+	threaded_draw_sprites = draw_sprites;
+	threaded_render_line_all_enabled = render_line_all_enabled;
+	threaded_graphics_layer_enable = graphics.layerEnable;
+	threaded_mosaic = MOSAIC;
 	
-	memcpy(threaded_palette, graphics.paletteRAM, 0x400);
-	if(draw_sprites || draw_objwin)	
-		memcpy(threaded_oam, oam, 0x400);
+	threaded_renderer_io_registers[REG_DISPCNT] = io_registers[REG_DISPCNT];
+	threaded_renderer_io_registers[REG_VCOUNT] = io_registers[REG_VCOUNT];	
+	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];	
+	threaded_renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
+	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
+	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
+	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];
+	
+	if(threaded_palette_dirty) {
+		memcpy(threaded_palette, graphics.paletteRAM, 0x400);
+		threaded_palette_dirty = false;
+	}
+
+	if(threaded_background2_dirty) {
+		memcpy(threaded_renderer_line[Layer_BG2], line[Layer_BG2], sizeof(240 * 4));
+		threaded_background2_dirty = false;
+	}
+
+	if(copy_bg3) {
+		memcpy(threaded_renderer_line[Layer_BG3], line[Layer_BG3], sizeof(240 * 4));
+		threaded_background3_dirty = false;
+	}
+
+	if(draw_sprites || draw_objwin)	memcpy(threaded_oam, oam, 0x400);
 	
 	//because of thread is not turned on, just keep copying buffer to performance test.
 	//threaded_renderer_ready = 1;
@@ -11323,21 +11346,33 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			BG2X_L = value;
 			UPDATE_REG(0x28, BG2X_L);
 			gfxBG2Changed |= 1;
+#if THREADED_RENDERER
+			threaded_background2_dirty = true;
+#endif
 			break;
 		case 0x2A:
 			BG2X_H = (value & 0xFFF);
 			UPDATE_REG(0x2A, BG2X_H);
 			gfxBG2Changed |= 1;
+#if THREADED_RENDERER
+			threaded_background2_dirty = true;
+#endif
 			break;
 		case 0x2C:
 			BG2Y_L = value;
 			UPDATE_REG(0x2C, BG2Y_L);
 			gfxBG2Changed |= 2;
+#if THREADED_RENDERER
+			threaded_background2_dirty = true;
+#endif
 			break;
 		case 0x2E:
 			BG2Y_H = value & 0xFFF;
 			UPDATE_REG(0x2E, BG2Y_H);
 			gfxBG2Changed |= 2;
+#if THREADED_RENDERER
+			threaded_background2_dirty = true;
+#endif
 			break;
 		case 0x30: /* BG3PA */
 		case 0x32: /* BG3PB */
@@ -11350,21 +11385,33 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			BG3X_L = value;
 			UPDATE_REG(0x38, BG3X_L);
 			gfxBG3Changed |= 1;
+#if THREADED_RENDERER
+			threaded_background3_dirty = true;
+#endif
 			break;
 		case 0x3A:
 			BG3X_H = value & 0xFFF;
 			UPDATE_REG(0x3A, BG3X_H);
 			gfxBG3Changed |= 1;
+#if THREADED_RENDERER
+			threaded_background3_dirty = true;
+#endif
 			break;
 		case 0x3C:
 			BG3Y_L = value;
 			UPDATE_REG(0x3C, BG3Y_L);
 			gfxBG3Changed |= 2;
+#if THREADED_RENDERER
+			threaded_background3_dirty = true;
+#endif
 			break;
 		case 0x3E:
 			BG3Y_H = value & 0xFFF;
 			UPDATE_REG(0x3E, BG3Y_H);
 			gfxBG3Changed |= 2;
+#if THREADED_RENDERER
+			threaded_background3_dirty = true;
+#endif
 			break;
 		case 0x40:
 			io_registers[REG_WIN0H] = value;
@@ -12317,7 +12364,7 @@ updateLoop:
                      UPDATE_REG(0x202, io_registers[REG_IF]);
                   }
                   CPUCheckDMA(1, 0x0f);
-                  systemDrawScreen();
+                  systemDrawScreen(); //render retroarch ui.
                   framedone = true;
                }
 
