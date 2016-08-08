@@ -11719,11 +11719,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				uint8_t data_array[2] = {(uint8_t)(value & 0xFF), (uint8_t)(value>>8)};
 				gb_addr[0] = table[gb_addr[0] - 0x60];
 				gb_addr[1] = table[gb_addr[1] - 0x60];
-#if VITA
 				soundEvent_u8_parallel(reinterpret_cast<int*>(gb_addr), address_array, data_array);
-#else
-				soundEvent_u8_parallel(gb_addr, address_array, data_array);
-#endif
 				break;
 			}
 		case 0x82:
