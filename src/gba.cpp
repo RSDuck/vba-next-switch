@@ -88,9 +88,10 @@ typedef void (*renderfunc_t)(void);
 		bool draw_objwin;
 		bool draw_sprites;
 		bool render_line_all_enabled;
-		bool palette_dirty;
-		bool background2_dirty;
-		bool background3_dirty;
+		
+		uint32_t palette_ver;
+		uint32_t background2_ver;
+		uint32_t background3_ver;
 		
 	} renderer_context;
 
@@ -102,9 +103,10 @@ typedef void (*renderfunc_t)(void);
 	static bool threaded_draw_objwin = false;
 	static bool threaded_draw_sprites = false;
 	static bool threaded_render_line_all_enabled = false;
-	static bool threaded_palette_dirty = true;
-	static bool threaded_background2_dirty = true;
-	static bool threaded_background3_dirty = true;
+
+	static uint32_t threaded_palette_ver = 0;
+	static uint32_t threaded_background2_ver = 0;
+	static uint32_t threaded_background3_ver = 0;
 
 	#define RENDERER_BG2C threaded_context->bg2c
 	#define RENDERER_BG2X threaded_context->bg2x
@@ -127,7 +129,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_LINE threaded_context->renderer_line
 	#define RENDERER_OAM threaded_context->oam
 	#define RENDERER_MOSAIC threaded_context->mosaic
-	#define RENDERER_RENDERFUNC (*threaded_context->renderfunc)
+	#define RENDERER_RENDERFUNC (*(threaded_context->renderfunc))
 	#define RENDERER_BLDMOD threaded_context->bldmod
 	#define RENDERER_GRAPHICS_LAYER_ENABLE threaded_context->graphics_layer_enable
 
@@ -942,7 +944,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 		case 0x05:
 			WRITE32LE(((u32 *)&graphics.paletteRAM[address & 0x3FC]), value);
 #if THREADED_RENDERER
-			threaded_palette_dirty = true;
+			++threaded_palette_ver;
 #endif
 			break;
 		case 0x06:
@@ -990,7 +992,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 		case 5:
 			WRITE16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]), value);
 #if THREADED_RENDERER
-			threaded_palette_dirty = true;
+			++threaded_palette_ver;
 #endif
 			break;
 		case 6:
@@ -1108,7 +1110,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			// no need to switch
 			*((u16 *)&graphics.paletteRAM[address & 0x3FE]) = (b << 8) | b;
 #if THREADED_RENDERER
-			threaded_palette_dirty = true;
+			++threaded_palette_ver;
 #endif
 			break;
 		case 6:
@@ -6705,7 +6707,7 @@ inline static long min(long p, int q) { return p < q ? p : q; }
 inline static long min(int p, long q) { return p < q ? p : q; }
 inline static long min(long p, long q) { return p < q ? p : q; }
 
-static void fetchDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h, u16 pa, u16 pb, u16 pc, u16 pd, int& currentX, int& currentY, int changed)
+static INLINE void fetchDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h, u16 pa, u16 pb, u16 pc, u16 pd, int& currentX, int& currentY, int changed)
 {
 #ifdef BRANCHLESS_GBA_GFX
 	int dx = pa & 0x7FFF;
@@ -8878,9 +8880,9 @@ bool CPUSetupBuffers()
 		threaded_renderer_running = 1;
 		for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 			threaded_context_array[u].renderer_state = 0;
-			threaded_context_array[u].palette_dirty = true;
-			threaded_context_array[u].background2_dirty = true;
-			threaded_context_array[u].background3_dirty = true;
+			threaded_context_array[u].palette_ver = 0;
+			threaded_context_array[u].background2_ver = 0;
+			threaded_context_array[u].background3_ver = 0;
 			thread_run(__threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)));
 		}
 	}
@@ -10971,12 +10973,11 @@ static void __threaded_renderer_loop(void* p) {
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(threaded_context->draw_sprites) gfxDrawSprites();
 
-		if(threaded_context->render_line_all_enabled)
-		{
+		if(threaded_context->render_line_all_enabled) {
 			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 			if(threaded_context->draw_objwin) gfxDrawOBJWin();
 		}
-		
+
 		RENDERER_RENDERFUNC();
 
 		//rendering is done.
@@ -11010,37 +11011,29 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	case 1:
 		memcpy(ctx->renderer_line[Layer_BG0], line[Layer_BG0], 240 * 4);
 		memcpy(ctx->renderer_line[Layer_BG1], line[Layer_BG1], 240 * 4);
-		ctx->background3_dirty = threaded_background3_dirty;
-		threaded_background3_dirty = false;
 		break;
 	case 2:
-		break;	
 	case 3:
 	case 4:
 	case 5:
-		ctx->background3_dirty = threaded_background3_dirty;
-		threaded_background3_dirty = false;
 		break;
 	default: 
 		return;
 	}
 	
-	if(threaded_palette_dirty) {
+	if(ctx->palette_ver < threaded_palette_ver) {
 		memcpy(ctx->palette, graphics.paletteRAM, 0x400);
-		ctx->palette_dirty = threaded_palette_dirty;
-		threaded_palette_dirty = false;
+		ctx->palette_ver = threaded_palette_ver;
 	}
 
-	if(threaded_background2_dirty) {
+	if(ctx->background2_ver < threaded_background2_ver) {
 		memcpy(ctx->renderer_line[Layer_BG2], line[Layer_BG2], 240 * 4);
-		ctx->background2_dirty = threaded_background2_dirty;
-		threaded_background2_dirty = false;
+		ctx->background2_ver = threaded_background2_ver;
 	}
 
-	if(threaded_background3_dirty) {
+	if(video_mode == 1 && ctx->background3_ver < threaded_background3_ver) {
 		memcpy(ctx->renderer_line[Layer_BG3], line[Layer_BG3], 240 * 4);
-		ctx->background3_dirty = threaded_background3_dirty;
-		threaded_background3_dirty = false;
+		ctx->background3_ver = threaded_background3_ver;
 	}
 
 	if(draw_sprites || draw_objwin)	memcpy(ctx->oam, oam, 0x400);
@@ -11156,6 +11149,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	}
 	gfxBG2Changed = 0;
 	
+	//now buffer is ready.
 	ctx->renderer_state = 1;
 }
 
@@ -11752,7 +11746,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x28, BG2X_L);
 			gfxBG2Changed |= 1;
 #if THREADED_RENDERER
-			threaded_background2_dirty = true;
+			++threaded_background2_ver;
 #endif
 			break;
 		case 0x2A:
@@ -11760,7 +11754,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x2A, BG2X_H);
 			gfxBG2Changed |= 1;
 #if THREADED_RENDERER
-			threaded_background2_dirty = true;
+			++threaded_background2_ver;
 #endif
 			break;
 		case 0x2C:
@@ -11768,7 +11762,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x2C, BG2Y_L);
 			gfxBG2Changed |= 2;
 #if THREADED_RENDERER
-			threaded_background2_dirty = true;
+			++threaded_background2_ver;
 #endif
 			break;
 		case 0x2E:
@@ -11776,7 +11770,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x2E, BG2Y_H);
 			gfxBG2Changed |= 2;
 #if THREADED_RENDERER
-			threaded_background2_dirty = true;
+			++threaded_background2_ver;
 #endif
 			break;
 		case 0x30: /* BG3PA */
@@ -11791,7 +11785,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x38, BG3X_L);
 			gfxBG3Changed |= 1;
 #if THREADED_RENDERER
-			threaded_background3_dirty = true;
+			++threaded_background3_ver;
 #endif
 			break;
 		case 0x3A:
@@ -11799,7 +11793,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x3A, BG3X_H);
 			gfxBG3Changed |= 1;
 #if THREADED_RENDERER
-			threaded_background3_dirty = true;
+			++threaded_background3_ver;
 #endif
 			break;
 		case 0x3C:
@@ -11807,7 +11801,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x3C, BG3Y_L);
 			gfxBG3Changed |= 2;
 #if THREADED_RENDERER
-			threaded_background3_dirty = true;
+			++threaded_background3_ver;
 #endif
 			break;
 		case 0x3E:
@@ -11815,7 +11809,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			UPDATE_REG(0x3E, BG3Y_H);
 			gfxBG3Changed |= 2;
 #if THREADED_RENDERER
-			threaded_background3_dirty = true;
+			++threaded_background3_ver;
 #endif
 			break;
 		case 0x40:
