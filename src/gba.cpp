@@ -67,8 +67,23 @@ typedef void (*renderfunc_t)(void);
 		uint16_t mosaic;
 		uint16_t graphics_layer_enable;
 		uint16_t bldmod;	
+
 		int bg2c;
+		int bg2x;
+		int bg2y;
 		int bg3c;
+		int bg3x;
+		int bg3y;
+		
+		uint16_t bg2x_l;
+		uint16_t bg2x_h;
+		uint16_t bg2y_l;
+		uint16_t bg2y_h;
+		uint16_t bg3x_l;
+		uint16_t bg3x_h;
+		uint16_t bg3y_l;
+		uint16_t bg3y_h;
+
 		renderfunc_t renderfunc;	
 		bool draw_objwin;
 		bool draw_sprites;
@@ -76,6 +91,7 @@ typedef void (*renderfunc_t)(void);
 		bool palette_dirty;
 		bool background2_dirty;
 		bool background3_dirty;
+		
 	} renderer_context;
 
 	static renderer_context threaded_context_array[THREADED_RENDERER_COUNT];
@@ -91,7 +107,20 @@ typedef void (*renderfunc_t)(void);
 	static bool threaded_background3_dirty = true;
 
 	#define RENDERER_BG2C threaded_context->bg2c
+	#define RENDERER_BG2X threaded_context->bg2x
+	#define RENDERER_BG2Y threaded_context->bg2y
 	#define RENDERER_BG3C threaded_context->bg3c
+	#define RENDERER_BG3X threaded_context->bg3x
+	#define RENDERER_BG3Y threaded_context->bg3y
+
+	#define RENDERER_BG2X_L threaded_context->bg2x_l
+	#define RENDERER_BG2X_H threaded_context->bg2x_h
+	#define RENDERER_BG2Y_L threaded_context->bg2y_l
+	#define RENDERER_BG2Y_H threaded_context->bg2y_h
+	#define RENDERER_BG3X_L threaded_context->bg3x_l
+	#define RENDERER_BG3X_H threaded_context->bg3x_h
+	#define RENDERER_BG3Y_L threaded_context->bg3y_l
+	#define RENDERER_BG3Y_H threaded_context->bg3y_h
 
 	#define RENDERER_PALETTE threaded_context->palette
 	#define RENDERER_IO_REGISTERS threaded_context->renderer_io_registers
@@ -132,7 +161,20 @@ typedef void (*renderfunc_t)(void);
 #else
 
     #define RENDERER_BG2C gfxBG2Changed
+	#define RENDERER_BG2X gfxBG2X
+	#define RENDERER_BG2Y gfxBG2Y
 	#define RENDERER_BG3C gfxBG3Changed
+	#define RENDERER_BG3X gfxBG3X
+	#define RENDERER_BG3Y gfxBG3Y
+
+	#define RENDERER_BG2X_L BG2X_L
+	#define RENDERER_BG2X_H BG2X_H
+	#define RENDERER_BG2Y_L BG2Y_L
+	#define RENDERER_BG2Y_H BG2Y_H
+	#define RENDERER_BG3X_L BG3X_L
+	#define RENDERER_BG3X_H BG3X_H
+	#define RENDERER_BG3Y_L BG3Y_L
+	#define RENDERER_BG3Y_H BG3Y_H
 
 	#define RENDERER_PALETTE graphics.paletteRAM
 	#define RENDERER_IO_REGISTERS io_registers
@@ -171,11 +213,6 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
 
 #endif    
-
-#define RENDERER_BG2X gfxBG2X
-#define RENDERER_BG2Y gfxBG2Y
-#define RENDERER_BG3X gfxBG3X
-#define RENDERER_BG3Y gfxBG3Y
 
 #define RENDERER_BACKDROP (READ16LE(&reinterpret_cast<uint16_t*>(RENDERER_PALETTE)[0]) | 0x30000000)
 #define RENDERER_R_BLDCNT_Color_Special_Effect ((RENDERER_BLDMOD >> 6) & 3)
@@ -6668,6 +6705,207 @@ inline static long min(long p, int q) { return p < q ? p : q; }
 inline static long min(int p, long q) { return p < q ? p : q; }
 inline static long min(long p, long q) { return p < q ? p : q; }
 
+static void fetchDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h, u16 pa, u16 pb, u16 pc, u16 pd, int& currentX, int& currentY, int changed)
+{
+#ifdef BRANCHLESS_GBA_GFX
+	int dx = pa & 0x7FFF;
+	int dmx = pb & 0x7FFF;
+	int dy = pc & 0x7FFF;
+	int dmy = pd & 0x7FFF;
+
+	dx |= isel(-(pa & 0x8000), 0, 0xFFFF8000);
+
+	dmx |= isel(-(pb & 0x8000), 0, 0xFFFF8000);
+
+	dy |= isel(-(pc & 0x8000), 0, 0xFFFF8000);
+
+	dmy |= isel(-(pd & 0x8000), 0, 0xFFFF8000);
+#else
+	int dx = pa & 0x7FFF;
+	if(pa & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = pb & 0x7FFF;
+	if(pb & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = pc & 0x7FFF;
+	if(pc & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = pd & 0x7FFF;
+	if(pd & 0x8000)
+		dmy |= 0xFFFF8000;
+#endif
+
+	if(io_registers[REG_VCOUNT] == 0)
+		changed = 3;
+
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
+		currentX = (x_l) | ((x_h & 0x07FF)<<16);
+		if(x_h & 0x0800)
+			currentX |= 0xF8000000;
+	}
+
+	if(changed & 2)
+	{
+		currentY = (y_l) | ((y_h & 0x07FF)<<16);
+		if(y_h & 0x0800)
+			currentY |= 0xF8000000;
+	}
+}
+
+static INLINE void fetchDrawRotScreen16Bit( int& currentX,  int& currentY, int changed)
+{
+#ifdef BRANCHLESS_GBA_GFX
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
+
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
+
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
+
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
+#else
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
+		dmy |= 0xFFFF8000;
+#endif
+
+	if(io_registers[REG_VCOUNT] == 0)
+		changed = 3;
+
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
+			currentX |= 0xF8000000;
+	}
+
+	if(changed & 2)
+	{
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
+			currentY |= 0xF8000000;
+	}
+}
+
+static INLINE void fetchDrawRotScreen256(int &currentX, int& currentY, int changed)
+{
+#ifdef BRANCHLESS_GBA_GFX
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
+
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
+
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
+
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
+#else
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
+		dmy |= 0xFFFF8000;
+#endif
+
+	if(io_registers[REG_VCOUNT] == 0)
+		changed = 3;
+
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
+			currentX |= 0xF8000000;
+	}
+
+	if(changed & 2)
+	{
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
+			currentY |= 0xF8000000;
+	}
+}
+
+static INLINE void fetchDrawRotScreen16Bit160(int& currentX, int& currentY, int changed)
+{
+#ifdef BRANCHLESS_GBA_GFX
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	dx |= isel(-(io_registers[REG_BG2PA] & 0x8000), 0, 0xFFFF8000);
+
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	dmx |= isel(-(io_registers[REG_BG2PB] & 0x8000), 0, 0xFFFF8000);
+
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	dy |= isel(-(io_registers[REG_BG2PC] & 0x8000), 0, 0xFFFF8000);
+
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	dmy |= isel(-(io_registers[REG_BG2PD] & 0x8000), 0, 0xFFFF8000);
+#else
+	int dx = io_registers[REG_BG2PA] & 0x7FFF;
+	if(io_registers[REG_BG2PA] & 0x8000)
+		dx |= 0xFFFF8000;
+	int dmx = io_registers[REG_BG2PB] & 0x7FFF;
+	if(io_registers[REG_BG2PB] & 0x8000)
+		dmx |= 0xFFFF8000;
+	int dy = io_registers[REG_BG2PC] & 0x7FFF;
+	if(io_registers[REG_BG2PC] & 0x8000)
+		dy |= 0xFFFF8000;
+	int dmy = io_registers[REG_BG2PD] & 0x7FFF;
+	if(io_registers[REG_BG2PD] & 0x8000)
+		dmy |= 0xFFFF8000;
+#endif
+
+	if(io_registers[REG_VCOUNT] == 0)
+		changed = 3;
+
+	currentX += dmx;
+	currentY += dmy;
+
+	if(changed & 1)
+	{
+		currentX = (BG2X_L) | ((BG2X_H & 0x07FF)<<16);
+		if(BG2X_H & 0x0800)
+			currentX |= 0xF8000000;
+	}
+
+	if(changed & 2)
+	{
+		currentY = (BG2Y_L) | ((BG2Y_H & 0x07FF)<<16);
+		if(BG2Y_H & 0x0800)
+			currentY |= 0xF8000000;
+	}
+}
+
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32* _line)
 {
@@ -9196,7 +9434,7 @@ static void mode1RenderLine (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
@@ -9293,7 +9531,7 @@ static void mode1RenderLineNoWindow (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
@@ -9458,7 +9696,7 @@ static void mode1RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
@@ -9600,13 +9838,13 @@ static void mode2RenderLine (void)
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_BG3X_L, RENDERER_BG3X_H, RENDERER_BG3Y_L, RENDERER_BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
 				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
@@ -9683,13 +9921,13 @@ static void mode2RenderLineNoWindow (void)
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_BG3X_L, RENDERER_BG3X_H, RENDERER_BG3Y_L, RENDERER_BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
 				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
@@ -9822,13 +10060,13 @@ static void mode2RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], RENDERER_BG2X_L, RENDERER_BG2X_H, RENDERER_BG2Y_L, RENDERER_BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
 				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
-		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], RENDERER_BG3X_L, RENDERER_BG3X_H, RENDERER_BG3Y_L, RENDERER_BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
 				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
@@ -10808,10 +11046,20 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	if(draw_sprites || draw_objwin)	memcpy(ctx->oam, oam, 0x400);
 
 	ctx->bg2c = gfxBG2Changed;
+	ctx->bg2x = gfxBG2X;
+	ctx->bg2y = gfxBG2Y;
 	ctx->bg3c = gfxBG3Changed;
-	
-	gfxBG2Changed = 0;
-	if(video_mode == 2) gfxBG3Changed = 0;
+	ctx->bg3x = gfxBG3X;
+	ctx->bg3y = gfxBG3Y;
+
+	ctx->bg2x_l = BG2X_L;
+	ctx->bg2x_h = BG2X_H;
+	ctx->bg2y_l = BG2Y_L;
+	ctx->bg2y_h = BG2Y_H;
+	ctx->bg3x_l = BG3X_L;
+	ctx->bg3x_h = BG3X_H;
+	ctx->bg3y_l = BG3Y_L;
+	ctx->bg3y_h = BG3Y_H;
 
 	ctx->renderfunc = renderfunc;
 	ctx->draw_objwin = draw_objwin;
@@ -10829,35 +11077,24 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	ctx->renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
 	ctx->renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];
 	ctx->renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
+
 	ctx->renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
 	ctx->renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
-
 	ctx->renderer_io_registers[REG_BG2HOFS] = io_registers[REG_BG2HOFS];
 	ctx->renderer_io_registers[REG_BG3HOFS] = io_registers[REG_BG3HOFS];
 	ctx->renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
 	ctx->renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
 	ctx->renderer_io_registers[REG_BG2VOFS] = io_registers[REG_BG2VOFS];
-
 	ctx->renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];
+
 	ctx->renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
 	ctx->renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
 	ctx->renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
-	ctx->renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];	
-
+	ctx->renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];
 	ctx->renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
 	ctx->renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
 	ctx->renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
 	ctx->renderer_io_registers[REG_BG3PD] = io_registers[REG_BG3PD];
-
-	ctx->renderer_io_registers[REG_BG2X_L] = io_registers[REG_BG2X_L];
-	ctx->renderer_io_registers[REG_BG2X_H] = io_registers[REG_BG2X_H];
-	ctx->renderer_io_registers[REG_BG2Y_L] = io_registers[REG_BG2Y_L];
-	ctx->renderer_io_registers[REG_BG2Y_H] = io_registers[REG_BG2Y_H];
-	ctx->renderer_io_registers[REG_BG3X_L] = io_registers[REG_BG3X_L];
-
-	ctx->renderer_io_registers[REG_BG3X_H] = io_registers[REG_BG3X_H];
-	ctx->renderer_io_registers[REG_BG3Y_L] = io_registers[REG_BG3Y_L];
-	ctx->renderer_io_registers[REG_BG3Y_H] = io_registers[REG_BG3Y_H];
 
 	ctx->renderer_io_registers[REG_WIN0H] = io_registers[REG_WIN0H];
 	ctx->renderer_io_registers[REG_WIN1H] = io_registers[REG_WIN1H];	
@@ -10887,6 +11124,37 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	ctx->renderer_io_registers[REG_IF] = io_registers[REG_IF];
 	ctx->renderer_io_registers[REG_IME] = io_registers[REG_IME];
 	ctx->renderer_io_registers[REG_HALTCNT] = io_registers[REG_HALTCNT];
+
+	switch(video_mode) {
+	case 0:
+		break;
+	case 1:
+		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
+			gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 2:
+		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
+			gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		fetchDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+			io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD],
+			gfxBG3X, gfxBG3Y, gfxBG3Changed);
+		gfxBG3Changed = 0;
+		break;
+	case 3:
+		fetchDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 4:
+		fetchDrawRotScreen256(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 5:
+		fetchDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	default:
+		return;
+	}
+	gfxBG2Changed = 0;
 	
 	ctx->renderer_state = 1;
 }
