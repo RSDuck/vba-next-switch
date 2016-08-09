@@ -52,8 +52,9 @@
 typedef void (*renderfunc_t)(void);
 
 #if THREADED_RENDERER
-
+	
 	#define THREADED_RENDERER_COUNT 2
+
 	#define THREADED_RENDERER_FIRST (threaded_idx == 0)
 
 	#include "thread.h"
@@ -96,7 +97,7 @@ typedef void (*renderfunc_t)(void);
 	} renderer_context;
 
 	static int threaded_ids[THREADED_RENDERER_COUNT];
-	static renderer_context threaded_context_array[THREADED_RENDERER_COUNT];
+	static renderer_context* threaded_context_array[THREADED_RENDERER_COUNT];
 	static volatile int threaded_renderer_running = 0;
 
 	static bool threaded_draw_objwin = false;
@@ -115,7 +116,7 @@ typedef void (*renderfunc_t)(void);
 		return -1;
 	}
 
-	#define RENDERER_CONTEXT renderer_context* threaded_context = &threaded_context_array[threaded_idx()]
+	#define RENDERER_CONTEXT renderer_context* threaded_context = threaded_context_array[threaded_idx()]
 
 	#define RENDERER_BG2C threaded_context->bg2c
 	#define RENDERER_BG2X threaded_context->bg2x
@@ -8905,10 +8906,11 @@ bool CPUSetupBuffers()
 	if(!threaded_renderer_running) {
 		threaded_renderer_running = 1;
 		for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
-			threaded_context_array[u].renderer_state = 0;
-			threaded_context_array[u].palette_ver = 0;
-			threaded_context_array[u].background2_ver = 0;
-			threaded_context_array[u].background3_ver = 0;
+			threaded_context_array[u] = new renderer_context();
+			threaded_context_array[u]->renderer_state = 0;
+			threaded_context_array[u]->palette_ver = 0;
+			threaded_context_array[u]->background2_ver = 0;
+			threaded_context_array[u]->background3_ver = 0;
 			thread_run(__threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)));
 		}
 	}
@@ -11028,7 +11030,7 @@ static void __threaded_renderer_loop(void* p) {
 
 	int idx = (int)reinterpret_cast<intptr_t>(p);
 	threaded_ids[idx] = thread_id();
-	renderer_context* threaded_context = &threaded_context_array[idx];
+	renderer_context* threaded_context = threaded_context_array[idx];
 
 	while(threaded_renderer_running) {
 		//buffer is not ready.
@@ -11054,16 +11056,16 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	int idx = -1;
 	while(true) {
 		for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
-			if(threaded_context_array[u].renderer_state == 0) {
-				//found idle renderer
+			if(threaded_context_array[u]->renderer_state == 0) {				
 				idx = u;
 				break;	
 			}
 		}
-		if(idx != -1) break;
+		if(idx != -1) break; //found idle renderer
+		else return; //skip
 	}
 
-	renderer_context* ctx = &threaded_context_array[idx];
+	renderer_context* ctx = threaded_context_array[idx];
 
 	int video_mode = R_DISPCNT_Video_Mode;
 	switch(video_mode) {
@@ -12818,6 +12820,8 @@ updateLoop:
 		            	}
 		            	CPUCheckDMA(1, 0x0f);
 
+#if THREADED_RENDERER
+						/*
 						//wait for renderer.
 						while(true) {
 							int count = 0;
@@ -12828,6 +12832,8 @@ updateLoop:
 							}
 							if(count == THREADED_RENDERER_COUNT) break;
 						}
+						*/
+#endif
 
 		            	systemDrawScreen();
 		            	framedone = true;
