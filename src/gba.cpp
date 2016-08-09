@@ -75,18 +75,10 @@ typedef void (*renderfunc_t)(void);
 	static renderfunc_t threaded_renderfunc = NULL;	
 	
 	static int threaded_bg2c = 0;
-	static int threaded_bg2x = 0;
-	static int threaded_bg2y = 0;
 	static int threaded_bg3c = 0;
-	static int threaded_bg3x = 0;
-	static int threaded_bg3y = 0;
 
 	#define RENDERER_BG2C threaded_bg2c
-	#define RENDERER_BG2X threaded_bg2x
-	#define RENDERER_BG2Y threaded_bg2y
 	#define RENDERER_BG3C threaded_bg3c
-	#define RENDERER_BG3X threaded_bg3x
-	#define RENDERER_BG3Y threaded_bg3y	
 
 	#define RENDERER_PALETTE threaded_palette
 	#define RENDERER_IO_REGISTERS threaded_renderer_io_registers
@@ -127,11 +119,7 @@ typedef void (*renderfunc_t)(void);
 #else
 
     #define RENDERER_BG2C gfxBG2Changed
-	#define RENDERER_BG2X gfxBG2X
-	#define RENDERER_BG2Y gfxBG2Y
 	#define RENDERER_BG3C gfxBG3Changed
-	#define RENDERER_BG3X gfxBG3X
-	#define RENDERER_BG3Y gfxBG3Y
 
 	#define RENDERER_PALETTE graphics.paletteRAM
 	#define RENDERER_IO_REGISTERS io_registers
@@ -9184,14 +9172,9 @@ static void mode1RenderLine (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		int changed = gfxBG2Changed;
-#if 0
-		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
-			changed = 3;
-#endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, RENDERER_LINE[Layer_BG2]);
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	for(uint32_t x = 0; x < 240u; ++x) {
@@ -9259,8 +9242,10 @@ static void mode1RenderLine (void)
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
-	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
+
+#if !THREADED_RENDERER
+	RENDERER_BG2C = 0;
+#endif
 }
 
 static void mode1RenderLineNoWindow (void)
@@ -9284,14 +9269,9 @@ static void mode1RenderLineNoWindow (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		int changed = gfxBG2Changed;
-#if 0
-		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
-			changed = 3;
-#endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, RENDERER_LINE[Layer_BG2]);
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9411,8 +9391,10 @@ static void mode1RenderLineNoWindow (void)
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
-	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
+
+#if !THREADED_RENDERER
+	RENDERER_BG2C = 0;
+#endif
 }
 
 static void mode1RenderLineAll (void)
@@ -9452,14 +9434,9 @@ static void mode1RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		int changed = gfxBG2Changed;
-#if 0
-		if(gfxLastVCOUNT > RENDERER_R_VCOUNT)
-			changed = 3;
-#endif
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, changed, RENDERER_LINE[Layer_BG2]);
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -9571,8 +9548,10 @@ static void mode1RenderLineAll (void)
 
 		lineMix[x] = CONVERT_COLOR(color);
 	}
-	gfxBG2Changed = 0;
-	//gfxLastVCOUNT = RENDERER_R_VCOUNT;
+
+#if !THREADED_RENDERER
+	RENDERER_BG2C = 0;
+#endif
 }
 
 /*
@@ -9598,14 +9577,14 @@ static void mode2RenderLine (void)
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD], 
-				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9682,13 +9661,13 @@ static void mode2RenderLineNoWindow (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9821,13 +9800,13 @@ static void mode2RenderLineAll (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -9950,7 +9929,7 @@ static void mode3RenderLine (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10001,7 +9980,7 @@ static void mode3RenderLineNoWindow (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10105,7 +10084,7 @@ static void mode3RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -10210,9 +10189,8 @@ static void mode4RenderLine (void)
 	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
-	{
-		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x)
@@ -10262,9 +10240,8 @@ static void mode4RenderLineNoWindow (void)
 	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t backdrop = RENDERER_BACKDROP;
 
-	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
-	{
-		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x)
@@ -10367,9 +10344,8 @@ static void mode4RenderLineAll (void)
 		inWindow1 = (uint8_t)(RENDERER_R_VCOUNT - v0) < (uint8_t)(v1 - v0) || ((v0 == v1) && (v0 >= 0xe8));
 	}
 
-	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
-	{
-		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -10477,7 +10453,7 @@ static void mode5RenderLine (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10527,7 +10503,7 @@ static void mode5RenderLineNoWindow (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10613,9 +10589,8 @@ static void mode5RenderLineAll (void)
 	uint16_t* lineMix = GET_LINE_MIX;
 	uint32_t background = RENDERER_BACKDROP;
 
-	if(RENDERER_R_DISPCNT_Screen_Display_BG2)
-	{
-		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
+	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
+		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
 	}
 
 	bool inWindow0 = false;
@@ -10788,13 +10763,9 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	if(draw_sprites || draw_objwin)	memcpy(threaded_oam, oam, 0x400);
 
 	threaded_bg2c = gfxBG2Changed;
-	threaded_bg2x = gfxBG2X;
-	threaded_bg2y = gfxBG2Y;
 	threaded_bg3c = gfxBG3Changed;
-	threaded_bg3x = gfxBG3X;
-	threaded_bg3y = gfxBG3Y;
 	
-	if(video_mode != 1) gfxBG2Changed = 0;
+	gfxBG2Changed = 0;
 	if(video_mode == 2) gfxBG3Changed = 0;
 
 	threaded_renderfunc = renderfunc;
