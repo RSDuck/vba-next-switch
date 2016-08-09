@@ -25,6 +25,16 @@ void thread_run(threadfunc_t func, void* p)
 	SceUID thid = sceKernelCreateThread("my_thread", (SceKernelThreadEntry)_thread_func, 0x10000100, 0x10000, 0, 0, NULL);
 	if (thid >= 0) sceKernelStartThread(thid, sizeof(argp), &argp);
 }
+
+//retro_sleep causes crash
+void thread_sleep(int ms) { 
+	sceKernelDelayThread(ms * 1000); 
+}
+
+int thread_id() {
+	return sceKernelGetThreadId();
+}
+
 #else
 #include <rthreads/rthreads.h>
 
@@ -47,8 +57,11 @@ void thread_run(threadfunc_t func, void* p)
 }
 #endif
 
+#ifndef VITA
 void thread_sleep(int ms)
 {
    retro_sleep(ms);
 }
+#endif
+
 #endif
