@@ -231,8 +231,8 @@ else ifeq ($(platform), vita)
 	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
-	USE_CHEATS=0
-	#USE_SPEEDHAX=1
+	USE_CHEATS=0 #For performance boost.
+	#USE_SPEEDHAX=1 #Unstable.
 	USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)
