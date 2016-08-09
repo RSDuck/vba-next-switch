@@ -129,7 +129,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_LINE threaded_context->renderer_line
 	#define RENDERER_OAM threaded_context->oam
 	#define RENDERER_MOSAIC threaded_context->mosaic
-	#define RENDERER_RENDERFUNC (*(threaded_context->renderfunc))
+	#define RENDERER_RENDERFUNC (*threaded_context->renderfunc)
 	#define RENDERER_BLDMOD threaded_context->bldmod
 	#define RENDERER_GRAPHICS_LAYER_ENABLE threaded_context->graphics_layer_enable
 
@@ -6979,7 +6979,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 	if(control & 0x40)
 	{
 		int mosaicY = ((RENDERER_MOSAIC & 0xF0)>>4) + 1;
-		int y = (R_VCOUNT % mosaicY);
+		int y = (RENDERER_R_VCOUNT % mosaicY);
 		realX -= y*dmx;
 		realY -= y*dmy;
 	}
@@ -7953,7 +7953,7 @@ static void gfxDrawOBJWin (void)
 			}
 			if((sy+fieldY) > 256)
 				sy -= 256;
-			int t = R_VCOUNT - sy;
+			int t = RENDERER_R_VCOUNT - sy;
 			if((t >= 0) && (t < fieldY))
 			{
 				int sx = (a1 & 0x1FF);
@@ -10979,6 +10979,22 @@ static void __threaded_renderer_loop(void* p) {
 		}
 
 		RENDERER_RENDERFUNC();
+
+#if 0
+		if(THREADED_RENDERER_FIRST) {
+			memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
+			if(threaded_context->draw_sprites) gfxDrawSprites();
+
+			if(threaded_context->render_line_all_enabled) {
+				memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+				if(threaded_context->draw_objwin) gfxDrawOBJWin();
+			}
+
+			RENDERER_RENDERFUNC();
+		} else {
+			thread_sleep(25);
+		}
+#endif
 
 		//rendering is done.
 		threaded_context->renderer_state = 0;
