@@ -28,9 +28,9 @@
 #define DEBUG_RENDERER_MODE5 1
 
 //use original vba-next speedhax.
-#define SPEEDHAX_SAFE 1
+#define SPEEDHAX_OLD 1
 
-#if SPEEDHAX_SAFE
+#if SPEEDHAX_OLD
 	#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
 	#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
 	#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
@@ -5849,7 +5849,7 @@ static  void thumbD0(u32 opcode)
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
 
-#if SPEEDHAX_SAFE && SPEEDHAX
+#if SPEEDHAX && SPEEDHAX_OLD
 		clockTicks = 30;
 #else
 		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
@@ -11062,15 +11062,6 @@ static void threaded_renderer_loop(void* p) {
 	}
 }
 
-static void swap_renderer_context(int idx) {
-	renderer_context* t = threaded_context_array[idx];
-	
-	threaded_context_swap->context_state = 1;
-	threaded_context_array[idx] = threaded_context_swap;
-	
-	threaded_context_swap = t;
-}
-
 static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
 	renderer_context* ctx = threaded_context_swap;
@@ -12832,7 +12823,7 @@ updateLoop:
 		            	CPUCheckDMA(1, 0x0f);
 
 						//wait for renderer
-						while(threaded_context_wait->context_state);
+						while(threaded_context_wait->context_state | threaded_context_work->context_state);
 
 		            	systemDrawScreen();
 		            	framedone = true;
