@@ -49,8 +49,6 @@
 	#endif
 #endif
 
-//static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
-
 typedef void (*renderfunc_t)(void);
 
 #if THREADED_RENDERER
@@ -157,7 +155,12 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
 	#define RENDERER_R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
 
-#endif
+#endif    
+
+#define RENDERER_BG2X gfxBG2X
+#define RENDERER_BG2Y gfxBG2Y
+#define RENDERER_BG3X gfxBG3X
+#define RENDERER_BG3Y gfxBG3Y
 
 #define RENDERER_BACKDROP (READ16LE(&reinterpret_cast<uint16_t*>(RENDERER_PALETTE)[0]) | 0x30000000)
 #define RENDERER_R_BLDCNT_Color_Special_Effect ((RENDERER_BLDMOD >> 6) & 3)
@@ -9174,7 +9177,7 @@ static void mode1RenderLine (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	for(uint32_t x = 0; x < 240u; ++x) {
@@ -9271,7 +9274,7 @@ static void mode1RenderLineNoWindow (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9436,7 +9439,7 @@ static void mode1RenderLineAll (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -9578,13 +9581,13 @@ static void mode2RenderLine (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9661,13 +9664,13 @@ static void mode2RenderLineNoWindow (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9800,13 +9803,13 @@ static void mode2RenderLineAll (void)
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
 				RENDERER_IO_REGISTERS[REG_BG2PA], RENDERER_IO_REGISTERS[REG_BG2PB], RENDERER_IO_REGISTERS[REG_BG2PC], RENDERER_IO_REGISTERS[REG_BG2PD],
-				gfxBG2X, gfxBG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
+				RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C, RENDERER_LINE[Layer_BG2]);
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG3) {
 		gfxDrawRotScreen(RENDERER_IO_REGISTERS[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
 				RENDERER_IO_REGISTERS[REG_BG3PA], RENDERER_IO_REGISTERS[REG_BG3PB], RENDERER_IO_REGISTERS[REG_BG3PC], RENDERER_IO_REGISTERS[REG_BG3PD],
-				gfxBG3X, gfxBG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
+				RENDERER_BG3X, RENDERER_BG3Y, RENDERER_BG3C, RENDERER_LINE[Layer_BG3]);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -9929,7 +9932,7 @@ static void mode3RenderLine (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -9980,7 +9983,7 @@ static void mode3RenderLineNoWindow (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10084,7 +10087,7 @@ static void mode3RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -10190,7 +10193,7 @@ static void mode4RenderLine (void)
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x)
@@ -10241,7 +10244,7 @@ static void mode4RenderLineNoWindow (void)
 	uint32_t backdrop = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x)
@@ -10345,7 +10348,7 @@ static void mode4RenderLineAll (void)
 	}
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen256(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen256(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	uint8_t inWin0Mask = RENDERER_R_WIN_Window0_Mask;
@@ -10453,7 +10456,7 @@ static void mode5RenderLine (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10503,7 +10506,7 @@ static void mode5RenderLineNoWindow (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	for(int x = 0; x < 240; ++x) {
@@ -10590,7 +10593,7 @@ static void mode5RenderLineAll (void)
 	uint32_t background = RENDERER_BACKDROP;
 
 	if(RENDERER_R_DISPCNT_Screen_Display_BG2) {
-		gfxDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, RENDERER_BG2C);
+		gfxDrawRotScreen16Bit160(RENDERER_BG2X, RENDERER_BG2Y, RENDERER_BG2C);
 	}
 
 	bool inWindow0 = false;
@@ -10721,7 +10724,8 @@ static void __threaded_renderer_loop(void* p) {
 
 static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
-	while(threaded_renderer_state > 0); //busy wait
+	//while(threaded_renderer_state > 0); //busy wait
+	while(threaded_renderer_state > 0) return; //skip row
 
 	int video_mode = R_DISPCNT_Video_Mode;
 	switch(video_mode) {
