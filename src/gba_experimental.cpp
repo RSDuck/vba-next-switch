@@ -11036,16 +11036,16 @@ static bool render_line_all_enabled = false;
 #if THREADED_RENDERER
 
 static void threaded_renderer_loop(void* p) {
-	renderer_context_t* threaded_context = NULL;
+	renderer_context_t* current_context = NULL;
 
 	while(threaded_renderer_running) {
 	
 		//buffer is not ready.
 		if(threaded_context_wait->context_state == 0) continue;
 		
-		threaded_context = threaded_context_wait;
+		current_context = threaded_context_wait;
 		threaded_context_wait = threaded_context_work;
-		threaded_context_work = threaded_context;
+		threaded_context_work = current_context;
 
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(current_context->draw_sprites) gfxDrawSprites();
