@@ -90,10 +90,10 @@ typedef void (*renderfunc_t)(void);
 		uint32_t background2_ver;
 		uint32_t background3_ver;
 		
-	} renderer_context;
+	} renderer_context_t;
 	
-	renderer_context* create_renderer_context() {
-		renderer_context* rv = new renderer_context();
+	static renderer_context_t* create_renderer_context() {
+		renderer_context_t* rv = new renderer_context_t();
 		rv->context_state = 0;
 		rv->palette_ver = 0;
 		rv->background2_ver = 0;
@@ -101,9 +101,9 @@ typedef void (*renderfunc_t)(void);
 		return rv;
 	}
 
-	static renderer_context* threaded_context_work;
-	static renderer_context* threaded_context_wait;
-	static renderer_context* threaded_context_swap;
+	static renderer_context_t* threaded_context_work;
+	static renderer_context_t* threaded_context_wait;
+	static renderer_context_t* threaded_context_swap;
 	static volatile int threaded_renderer_running = 0;
 
 	static bool threaded_draw_objwin = false;
@@ -114,32 +114,32 @@ typedef void (*renderfunc_t)(void);
 	static uint32_t threaded_background2_ver = 0;
 	static uint32_t threaded_background3_ver = 0;
 
-	#define RENDERER_CONTEXT renderer_context* threaded_context = threaded_context_work
+	#define RENDERER_CURRENT_CONTEXT renderer_context_t* current_context = threaded_context_work
 
-	#define RENDERER_BG2C threaded_context->bg2c
-	#define RENDERER_BG2X threaded_context->bg2x
-	#define RENDERER_BG2Y threaded_context->bg2y
-	#define RENDERER_BG3C threaded_context->bg3c
-	#define RENDERER_BG3X threaded_context->bg3x
-	#define RENDERER_BG3Y threaded_context->bg3y
+	#define RENDERER_BG2C current_context->bg2c
+	#define RENDERER_BG2X current_context->bg2x
+	#define RENDERER_BG2Y current_context->bg2y
+	#define RENDERER_BG3C current_context->bg3c
+	#define RENDERER_BG3X current_context->bg3x
+	#define RENDERER_BG3Y current_context->bg3y
 
-	#define RENDERER_BG2X_L threaded_context->bg2x_l
-	#define RENDERER_BG2X_H threaded_context->bg2x_h
-	#define RENDERER_BG2Y_L threaded_context->bg2y_l
-	#define RENDERER_BG2Y_H threaded_context->bg2y_h
-	#define RENDERER_BG3X_L threaded_context->bg3x_l
-	#define RENDERER_BG3X_H threaded_context->bg3x_h
-	#define RENDERER_BG3Y_L threaded_context->bg3y_l
-	#define RENDERER_BG3Y_H threaded_context->bg3y_h
+	#define RENDERER_BG2X_L current_context->bg2x_l
+	#define RENDERER_BG2X_H current_context->bg2x_h
+	#define RENDERER_BG2Y_L current_context->bg2y_l
+	#define RENDERER_BG2Y_H current_context->bg2y_h
+	#define RENDERER_BG3X_L current_context->bg3x_l
+	#define RENDERER_BG3X_H current_context->bg3x_h
+	#define RENDERER_BG3Y_L current_context->bg3y_l
+	#define RENDERER_BG3Y_H current_context->bg3y_h
 
-	#define RENDERER_PALETTE threaded_context->palette
-	#define RENDERER_IO_REGISTERS threaded_context->renderer_io_registers
-	#define RENDERER_LINE threaded_context->renderer_line
-	#define RENDERER_OAM threaded_context->oam
-	#define RENDERER_MOSAIC threaded_context->mosaic
-	#define RENDERER_RENDERFUNC (*threaded_context->renderfunc)
-	#define RENDERER_BLDMOD threaded_context->bldmod
-	#define RENDERER_GRAPHICS_LAYER_ENABLE threaded_context->graphics_layer_enable
+	#define RENDERER_PALETTE current_context->palette
+	#define RENDERER_IO_REGISTERS current_context->renderer_io_registers
+	#define RENDERER_LINE current_context->renderer_line
+	#define RENDERER_OAM current_context->oam
+	#define RENDERER_MOSAIC current_context->mosaic
+	#define RENDERER_RENDERFUNC (*current_context->renderfunc)
+	#define RENDERER_BLDMOD current_context->bldmod
+	#define RENDERER_GRAPHICS_LAYER_ENABLE current_context->graphics_layer_enable
 
 	#define RENDERER_R_VCOUNT RENDERER_IO_REGISTERS[REG_VCOUNT]
 	#define RENDERER_R_DISPCNT_Video_Mode (RENDERER_IO_REGISTERS[REG_DISPCNT] & 7)
@@ -169,7 +169,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_R_WIN_OBJ_Mask     (RENDERER_IO_REGISTERS[REG_WINOUT] >> 8)
 
 #else
-	#define RENDERER_CONTEXT 0
+	#define RENDERER_CURRENT_CONTEXT 0
 
     #define RENDERER_BG2C gfxBG2Changed
 	#define RENDERER_BG2X gfxBG2X
@@ -6438,7 +6438,7 @@ static inline void gfxDrawTileClipped(const TileLine &tileLine, u32* _line, cons
 template<TileReader readTile>
 static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
    u16 *palette = (u16 *)RENDERER_PALETTE;
    u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
@@ -6568,7 +6568,7 @@ void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
 #else
 static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32* _line)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
   u16 *palette = (u16 *)RENDERER_PALETTE;
   u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
@@ -6924,7 +6924,7 @@ static INLINE void fetchDrawRotScreen16Bit160(int& currentX, int& currentY, int 
 static INLINE void gfxDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h,
 u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32* _line)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	u16 *palette = (u16 *)RENDERER_PALETTE;
 	u8 *charBase = &vram[((control >> 2) & 0x03) << 14];
@@ -7123,7 +7123,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed, u32
 
 static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int changed)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	u16 *screenBase = (u16 *)&vram[0];
 	int prio = ((RENDERER_IO_REGISTERS[REG_BG2CNT] & 3) << 25) + 0x1000000;
@@ -7233,7 +7233,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 
 static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	u16 *palette = (u16 *)RENDERER_PALETTE;
 	u8 *screenBase = (RENDERER_IO_REGISTERS[REG_DISPCNT] & 0x0010) ? &vram[0xA000] : &vram[0x0000];
@@ -7345,7 +7345,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 
 static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int changed)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	u16 *screenBase = (RENDERER_IO_REGISTERS[REG_DISPCNT] & 0x0010) ? (u16 *)&vram[0xa000] :
 		(u16 *)&vram[0];
@@ -7459,7 +7459,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 
 static void gfxDrawSprites (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	unsigned lineOBJpix, m;
 
@@ -7919,7 +7919,7 @@ static void gfxDrawSprites (void)
 
 static void gfxDrawOBJWin (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 	uint32_t* p = RENDERER_LINE[Layer_WIN_OBJ];
 
@@ -9030,7 +9030,7 @@ void doMirroring (bool b)
 
 static void mode0RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE0
 	return;
@@ -9123,7 +9123,7 @@ static void mode0RenderLine (void)
 
 static void mode0RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE0
 	return;
@@ -9270,7 +9270,7 @@ static void mode0RenderLineNoWindow (void)
 
 static void mode0RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE0
 	return;
@@ -9460,7 +9460,7 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode1RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE1
 	return;
@@ -9559,7 +9559,7 @@ static void mode1RenderLine (void)
 
 static void mode1RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE1
 	return;
@@ -9710,7 +9710,7 @@ static void mode1RenderLineNoWindow (void)
 
 static void mode1RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE1
 	return;
@@ -9878,7 +9878,7 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode2RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE2
 	return;
@@ -9963,7 +9963,7 @@ static void mode2RenderLine (void)
 
 static void mode2RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE2
 	return;
@@ -10088,7 +10088,7 @@ static void mode2RenderLineNoWindow (void)
 
 static void mode2RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE2
 	return;
@@ -10238,7 +10238,7 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode3RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE3
 	return;
@@ -10291,7 +10291,7 @@ static void mode3RenderLine (void)
 
 static void mode3RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE3
 	return;
@@ -10380,7 +10380,7 @@ static void mode3RenderLineNoWindow (void)
 
 static void mode3RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE3
 	return;
@@ -10505,7 +10505,7 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode4RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE4
 	return;
@@ -10558,7 +10558,7 @@ static void mode4RenderLine (void)
 
 static void mode4RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE4
 	return;
@@ -10647,7 +10647,7 @@ static void mode4RenderLineNoWindow (void)
 
 static void mode4RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE4
 	return;
@@ -10774,7 +10774,7 @@ These routines only render a single line at a time, because of the way the GBA d
 
 static void mode5RenderLine (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE5
 	return;
@@ -10826,7 +10826,7 @@ static void mode5RenderLine (void)
 
 static void mode5RenderLineNoWindow (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE5
 	return;
@@ -10915,7 +10915,7 @@ static void mode5RenderLineNoWindow (void)
 
 static void mode5RenderLineAll (void)
 {
-	RENDERER_CONTEXT;
+	RENDERER_CURRENT_CONTEXT;
 
 #if !DEBUG_RENDERER_MODE5
 	return;
@@ -11036,7 +11036,7 @@ static bool render_line_all_enabled = false;
 #if THREADED_RENDERER
 
 static void threaded_renderer_loop(void* p) {
-	renderer_context* threaded_context = NULL;
+	renderer_context_t* threaded_context = NULL;
 
 	while(threaded_renderer_running) {
 	
@@ -11048,23 +11048,23 @@ static void threaded_renderer_loop(void* p) {
 		threaded_context_work = threaded_context;
 
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
-		if(threaded_context->draw_sprites) gfxDrawSprites();
+		if(current_context->draw_sprites) gfxDrawSprites();
 
-		if(threaded_context->render_line_all_enabled) {
+		if(current_context->render_line_all_enabled) {
 			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-			if(threaded_context->draw_objwin) gfxDrawOBJWin();
+			if(current_context->draw_objwin) gfxDrawOBJWin();
 		}
 
 		RENDERER_RENDERFUNC();
 
 		//rendering is done.
-		threaded_context->context_state = 0;
+		current_context->context_state = 0;
 	}
 }
 
 static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
-	renderer_context* ctx = threaded_context_swap;
+	renderer_context_t* ctx = threaded_context_swap;
 
 	int video_mode = R_DISPCNT_Video_Mode;
 	switch(video_mode) {
