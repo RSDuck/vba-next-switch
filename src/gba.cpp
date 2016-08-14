@@ -2134,12 +2134,18 @@ static void BIOS_SoftReset (void)
 	bus.reg[0].I = (int)((double)freq / tmp); \
 }
 
+/*
 #define BIOS_SND_DRIVER_JMP_TABLE_COPY() \
 	for(int i = 0; i < 36; i++) \
 	{ \
 		CPUWriteMemory(bus.reg[0].I, 0x9c); \
 		bus.reg[0].I += 4; \
 	}
+*/
+
+#define BIOS_SND_DRIVER_JMP_TABLE_COPY() \
+	CPUWriteMemory(bus.reg[0].I, 0x9c); \
+	bus.reg[0].I += 4;
 
 bool bios_init = false;
 
