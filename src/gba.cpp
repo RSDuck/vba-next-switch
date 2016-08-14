@@ -51,6 +51,41 @@
 
 typedef void (*renderfunc_t)(void);
 
+inline static long max(int p, int q) { return p > q ? p : q; }
+inline static long max(long p, int q) { return p > q ? p : q; }
+inline static long max(int p, long q) { return p > q ? p : q; }
+inline static long max(long p, long q) { return p > q ? p : q; }
+inline static long min(int p, int q) { return p < q ? p : q; }
+inline static long min(long p, int q) { return p < q ? p : q; }
+inline static long min(int p, long q) { return p < q ? p : q; }
+inline static long min(long p, long q) { return p < q ? p : q; }
+
+#if USE_TWEAK_MEMORY
+
+uint8_t *rom = 0;
+uint8_t bios[0x4000];
+uint8_t vram[0x20000];
+uint16_t pix[4 * PIX_BUFFER_SCREEN_WIDTH * 160];
+uint8_t oam[0x400];
+uint8_t ioMem[0x400];
+uint8_t internalRAM[0x8000];
+uint8_t workRAM[0x40000];
+uint8_t paletteRAM[0x400];
+
+#else
+
+uint8_t *rom = 0;
+uint8_t *bios = 0;
+uint8_t *vram = 0;
+uint16_t *pix = 0;
+uint8_t *oam = 0;
+uint8_t *ioMem = 0;
+uint8_t *internalRAM = 0;
+uint8_t *workRAM = 0;
+uint8_t *paletteRAM = 0;
+
+#endif
+
 #if THREADED_RENDERER
 
 	#define THREADED_RENDERER_COPY_BUFFER 0
@@ -115,7 +150,7 @@ typedef void (*renderfunc_t)(void);
 		#define RENDERER_BG3Y_L threaded_bg3y_l
 		#define RENDERER_BG3Y_H threaded_bg3y_h
 	#else
-		#define RENDERER_PALETTE graphics.paletteRAM
+		#define RENDERER_PALETTE paletteRAM
 		#define RENDERER_LINE line
 		#define RENDERER_OAM oam
 
@@ -184,7 +219,7 @@ typedef void (*renderfunc_t)(void);
 	#define RENDERER_BG3Y_L BG3Y_L
 	#define RENDERER_BG3Y_H BG3Y_H
 
-	#define RENDERER_PALETTE graphics.paletteRAM
+	#define RENDERER_PALETTE paletteRAM
 	#define RENDERER_IO_REGISTERS io_registers
 	#define RENDERER_LINE line
 	#define RENDERER_OAM oam
@@ -227,7 +262,7 @@ typedef void (*renderfunc_t)(void);
 #define RENDERER_R_BLDCNT_IsTarget2(target) ((target) & (RENDERER_BLDMOD >> 8))
 
 #if THREADED_RENDERER
-static void __threaded_renderer_loop(void* p);
+static void threaded_renderer_loop(void* p);
 #endif
 
 /*============================================================
@@ -712,7 +747,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 			break;
 		case 0x05:
 			/* palette RAM */
-			value = READ32LE(((u32 *)&graphics.paletteRAM[address & 0x3fC]));
+			value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
 			break;
 		case 0x06:
 			/* VRAM */
@@ -805,7 +840,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			else goto unreadable;
 			break;
 		case 5:
-			value = READ16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]));
+			value = READ16LE(((u16 *)&paletteRAM[address & 0x3fe]));
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -884,7 +919,7 @@ static INLINE u8 CPUReadByte(u32 address)
 				return ioMem[address & 0x3ff];
 			else goto unreadable;
 		case 5:
-			return graphics.paletteRAM[address & 0x3ff];
+			return paletteRAM[address & 0x3ff];
 		case 6:
 			address = (address & 0x1ffff);
 			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
@@ -947,7 +982,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			}
 			break;
 		case 0x05:
-			WRITE32LE(((u32 *)&graphics.paletteRAM[address & 0x3FC]), value);
+			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -995,7 +1030,7 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 				CPUUpdateRegister(address & 0x3fe, value);
 			break;
 		case 5:
-			WRITE16LE(((u16 *)&graphics.paletteRAM[address & 0x3fe]), value);
+			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -1113,7 +1148,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 5:
 			// no need to switch
-			*((u16 *)&graphics.paletteRAM[address & 0x3FE]) = (b << 8) | b;
+			*((u16 *)&paletteRAM[address & 0x3FE]) = (b << 8) | b;
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -1190,6 +1225,37 @@ s16 sineTable[256] = {
   (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
 };
 
+#if USE_TWEAK_ARCTAN
+s32 arctanTable[0x8000];
+
+//#define BIOS_ArcTan() bus.reg[0].I = (bus.reg[0].I & 0x80000000) | arctanTable[min(0x4000 - 1, (int)(bus.reg[0].I & 0x7FFFFFFF))];
+//#define BIOS_ArcTan() bus.reg[0].I = arctanTable[min(0x8000 - 1, max((int)(bus.reg[0].I + 0x4000), 0))];
+
+#define BIOS_ArcTan() { \
+	int p = bus.reg[0].I + 0x4000; \
+	if(p < 0) \
+		bus.reg[0].I = arctanTable[0]; \
+	else if(p >= 0x8000) \
+		bus.reg[0].I = arctanTable[0x8000 - 1]; \
+	else \
+		bus.reg[0].I = arctanTable[p];  \
+}
+		
+static s32 BIOS_ArcTan_Calc (s32 p)
+{
+	s32 a =  -(((s32)(p*p)) >> 14);
+	s32 b = ((0xA9 * a) >> 14) + 0x390;
+	b = ((b * a) >> 14) + 0x91C;
+	b = ((b * a) >> 14) + 0xFB6;
+	b = ((b * a) >> 14) + 0x16AA;
+	b = ((b * a) >> 14) + 0x2081;
+	b = ((b * a) >> 14) + 0x3651;
+	b = ((b * a) >> 14) + 0xA2F9;
+	return ((s32)p * b) >> 16;
+}
+
+#else
+
 static void BIOS_ArcTan (void)
 {
 	s32 a =  -(((s32)(bus.reg[0].I*bus.reg[0].I)) >> 14);
@@ -1203,6 +1269,8 @@ static void BIOS_ArcTan (void)
 	a = ((s32)bus.reg[0].I * b) >> 16;
 	bus.reg[0].I = a;
 }
+
+#endif
 
 static void BIOS_Div (void)
 {
@@ -1859,7 +1927,7 @@ static void BIOS_RegisterRamReset(u32 flags)
 			memset(internalRAM, 0, 0x7e00);		// don't clear 0x7e00-0x7fff, clear internal RAM
 
 		if(flags & 0x04)
-			memset(graphics.paletteRAM, 0, 0x400);	// clear palette RAM
+			memset(paletteRAM, 0, 0x400);	// clear palette RAM
 
 		if(flags & 0x08)
 			memset(vram, 0, 0x18000);		// clear VRAM
@@ -2063,7 +2131,17 @@ static void BIOS_SoftReset (void)
 		bus.reg[0].I += 4; \
 	}
 
+bool bios_init = false;
 
+static void BIOS_Init() {
+	if(bios_init) return;
+	bios_init = true;
+
+#if USE_TWEAK_ARCTAN
+	for(int u = 0; u < 0x8000; ++u)
+		arctanTable[u] = BIOS_ArcTan_Calc(u - 0x4000);
+#endif
+}
 
 #define CPU_UPDATE_CPSR() \
 { \
@@ -6706,15 +6784,6 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
 
 static u32 map_sizes_rot[] = { 128, 256, 512, 1024 };
 
-inline static long max(int p, int q) { return p > q ? p : q; }
-inline static long max(long p, int q) { return p > q ? p : q; }
-inline static long max(int p, long q) { return p > q ? p : q; }
-inline static long max(long p, long q) { return p > q ? p : q; }
-inline static long min(int p, int q) { return p < q ? p : q; }
-inline static long min(long p, int q) { return p < q ? p : q; }
-inline static long min(int p, long q) { return p < q ? p : q; }
-inline static long min(long p, long q) { return p < q ? p : q; }
-
 static INLINE void fetchDrawRotScreen(u16 control, u16 x_l, u16 x_h, u16 y_l, u16 y_h, u16 pa, u16 pb, u16 pc, u16 pd, int& currentX, int& currentY, int changed)
 {
 #ifdef BRANCHLESS_GBA_GFX
@@ -8241,15 +8310,6 @@ bool skipSaveGameBattery = false;
 
 int cpuDmaCount = 0;
 
-uint8_t *bios = 0;
-uint8_t *rom = 0;
-uint8_t *internalRAM = 0;
-uint8_t *workRAM = 0;
-uint8_t *vram = 0;
-uint16_t *pix = 0;
-uint8_t *oam = 0;
-uint8_t *ioMem = 0;
-
 #ifdef USE_SWITICKS
 int SWITicks = 0;
 #endif
@@ -8650,7 +8710,7 @@ unsigned CPUWriteState(uint8_t* data, unsigned size)
 	utilWriteIntMem(data, IRQTicks);
 
 	utilWriteMem(data, internalRAM, 0x8000);
-	utilWriteMem(data, graphics.paletteRAM, 0x400);
+	utilWriteMem(data, paletteRAM, 0x400);
 	utilWriteMem(data, workRAM, 0x40000);
 	utilWriteMem(data, vram, 0x20000);
 	utilWriteMem(data, oam, 0x400);
@@ -8806,14 +8866,15 @@ void CPUCleanUp (void)
 		rom = NULL;
 	}
 
+#if !USE_TWEAK_MEMORY
 	if(vram != NULL) {
 		free(vram);
 		vram = NULL;
 	}
 
-	if(graphics.paletteRAM != NULL) {
-		free(graphics.paletteRAM);
-		graphics.paletteRAM = NULL;
+	if(paletteRAM != NULL) {
+		free(paletteRAM);
+		paletteRAM = NULL;
 	}
 
 	if(internalRAM != NULL) {
@@ -8845,6 +8906,8 @@ void CPUCleanUp (void)
 		free(ioMem);
 		ioMem = NULL;
 	}
+#endif
+
 }
 
 bool CPUSetupBuffers()
@@ -8856,21 +8919,29 @@ bool CPUSetupBuffers()
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	rom = (uint8_t *)malloc(0x2000000);
+
+#if USE_TWEAK_MEMORY
+	if(rom == NULL) {
+		CPUCleanUp();
+		return false;
+	}
+#else
 	workRAM = (uint8_t *)calloc(1, 0x40000);
 	bios = (uint8_t *)calloc(1,0x4000);
 	internalRAM = (uint8_t *)calloc(1,0x8000);
-	graphics.paletteRAM = (uint8_t *)calloc(1,0x400);
+	paletteRAM = (uint8_t *)calloc(1,0x400);
 	vram = (uint8_t *)calloc(1, 0x20000);
 	oam = (uint8_t *)calloc(1, 0x400);
 	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 	ioMem = (uint8_t *)calloc(1, 0x400);
 
 	if(rom == NULL || workRAM == NULL || bios == NULL ||
-	   internalRAM == NULL || graphics.paletteRAM == NULL ||
+	   internalRAM == NULL || paletteRAM == NULL ||
 	   vram == NULL || oam == NULL || pix == NULL || ioMem == NULL) {
 		CPUCleanUp();
 		return false;
 	}
+#endif
 
 	flashInit();
 	eepromInit();
@@ -8884,9 +8955,11 @@ bool CPUSetupBuffers()
 #if THREADED_RENDERER
 	if(!threaded_renderer_running) {
 		threaded_renderer_running = 1;		
-		thread_run(__threaded_renderer_loop, NULL);
+		thread_run(threaded_renderer_loop, NULL);
 	}
 #endif
+
+	BIOS_Init();
 
 	return true;
 }
@@ -8905,8 +8978,10 @@ int CPULoadRom(const char * file)
 						romSize)) {
 				free(rom);
 				rom = NULL;
+#if !USE_TWEAK_MEMORY
 				free(workRAM);
 				workRAM = NULL;
+#endif
 				return 0;
 			}
 		}
@@ -10962,7 +11037,7 @@ static bool render_line_all_enabled = false;
 
 #if THREADED_RENDERER
 
-static void __threaded_renderer_loop(void* p) {
+static void threaded_renderer_loop(void* p) {
 	while(threaded_renderer_running) {
 		//buffer is not ready.
 		if(threaded_renderer_state == 0) continue;
@@ -11011,7 +11086,7 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_background_dirty = false;
 	
 	if(threaded_palette_dirty) {
-		memcpy(threaded_palette, graphics.paletteRAM, 0x400);
+		memcpy(threaded_palette, paletteRAM, 0x400);
 		threaded_palette_dirty = false;
 	}
 
@@ -11026,21 +11101,20 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_renderer_io_registers[REG_BG1CNT] = io_registers[REG_BG1CNT];
 	threaded_renderer_io_registers[REG_BG2CNT] = io_registers[REG_BG2CNT];
 	threaded_renderer_io_registers[REG_BG3CNT] = io_registers[REG_BG3CNT];
+
 	threaded_renderer_io_registers[REG_BG0HOFS] = io_registers[REG_BG0HOFS];
 	threaded_renderer_io_registers[REG_BG1HOFS] = io_registers[REG_BG1HOFS];
-
 	threaded_renderer_io_registers[REG_BG2HOFS] = io_registers[REG_BG2HOFS];
 	threaded_renderer_io_registers[REG_BG3HOFS] = io_registers[REG_BG3HOFS];
 	threaded_renderer_io_registers[REG_BG0VOFS] = io_registers[REG_BG0VOFS];
 	threaded_renderer_io_registers[REG_BG1VOFS] = io_registers[REG_BG1VOFS];
 	threaded_renderer_io_registers[REG_BG2VOFS] = io_registers[REG_BG2VOFS];
-
 	threaded_renderer_io_registers[REG_BG3VOFS] = io_registers[REG_BG3VOFS];
+
 	threaded_renderer_io_registers[REG_BG2PA] = io_registers[REG_BG2PA];
 	threaded_renderer_io_registers[REG_BG2PB] = io_registers[REG_BG2PB];
 	threaded_renderer_io_registers[REG_BG2PC] = io_registers[REG_BG2PC];
 	threaded_renderer_io_registers[REG_BG2PD] = io_registers[REG_BG2PD];	
-
 	threaded_renderer_io_registers[REG_BG3PA] = io_registers[REG_BG3PA];
 	threaded_renderer_io_registers[REG_BG3PB] = io_registers[REG_BG3PB];
 	threaded_renderer_io_registers[REG_BG3PC] = io_registers[REG_BG3PC];
@@ -11051,7 +11125,6 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_renderer_io_registers[REG_BG2Y_L] = io_registers[REG_BG2Y_L];
 	threaded_renderer_io_registers[REG_BG2Y_H] = io_registers[REG_BG2Y_H];
 	threaded_renderer_io_registers[REG_BG3X_L] = io_registers[REG_BG3X_L];
-
 	threaded_renderer_io_registers[REG_BG3X_H] = io_registers[REG_BG3X_H];
 	threaded_renderer_io_registers[REG_BG3Y_L] = io_registers[REG_BG3Y_L];
 	threaded_renderer_io_registers[REG_BG3Y_H] = io_registers[REG_BG3Y_H];
@@ -11247,7 +11320,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 	}
 
 	utilReadMem(internalRAM, data, 0x8000);
-	utilReadMem(graphics.paletteRAM, data, 0x400);
+	utilReadMem(paletteRAM, data, 0x400);
 	utilReadMem(workRAM, data, 0x40000);
 	utilReadMem(vram, data, 0x20000);
 	utilReadMem(oam, data, 0x400);
@@ -12274,8 +12347,8 @@ void CPUReset (void)
 	rtcReset();
 	memset(&bus.reg[0], 0, sizeof(bus.reg));	// clean registers
 	memset(oam, 0, 0x400);				// clean OAM
-	memset(graphics.paletteRAM, 0, 0x400);		// clean palette
-	memset(pix, 0, 4 * 160 * 240);			// clean picture
+	memset(paletteRAM, 0, 0x400);		// clean palette
+	memset(pix, 0, 4 * 160 * 240);		// clean picture
 	memset(vram, 0, 0x20000);			// clean vram
 	memset(ioMem, 0, 0x400);			// clean io memory
 
@@ -12464,7 +12537,7 @@ void CPUReset (void)
 	map[3].mask = 0x7FFF;
 	map[4].address = ioMem;
 	map[4].mask = 0x3FF;
-	map[5].address = graphics.paletteRAM;
+	map[5].address = paletteRAM;
 	map[5].mask = 0x3FF;
 	map[6].address = vram;
 	map[6].mask = 0x1FFFF;
