@@ -277,36 +277,50 @@ static void threaded_renderer_loop(void* p);
 	} \
 }
 
-/*
-//because of branches, loop unrolling drops performance.
-#define MOSAIC_LOOP(__layer__, __mosaicX__) { \
-	int m = 1; \
-	int i = 0; \
-	for (; i < 230; i += 8) { \
-		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+2] = RENDERER_LINE[__layer__][i+1]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+3] = RENDERER_LINE[__layer__][i+2]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+4] = RENDERER_LINE[__layer__][i+3]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+5] = RENDERER_LINE[__layer__][i+4]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+6] = RENDERER_LINE[__layer__][i+5]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+7] = RENDERER_LINE[__layer__][i+6]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-		RENDERER_LINE[__layer__][i+8] = RENDERER_LINE[__layer__][i+7]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-	} \
-	for (; i < 239; i++) { \
-		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
-		if (++m == __mosaicX__) { m = 1; i++; } \
-	} \
+static INLINE u32 gfxIncreaseBrightness(u32 color, int coeff) {
+	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
+	color += ((((0x3E07C1F - color) * coeff) >> 4) & 0x3E07C1F);
+	return (color >> 16) | color;
 }
-*/
- 
+
+static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff) {
+	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
+	color -= (((color * coeff) >> 4) & 0x3E07C1F);
+	return (color >> 16) | color;
+}
+
+static u32 AlphaClampLUT[64] = 
+{
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+	0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,
+	0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F
+};  
+
+#define GFX_ALPHA_BLEND(color, color2, ca, cb) {                                                         \
+	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)];                 \
+	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)];   \
+	int b = AlphaClampLUT[((((color >> 10) & 0x1F) * ca) >> 4) + ((((color2 >> 10) & 0x1F) * cb) >> 4)]; \
+	color = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;	\
+}
+
+#define brightness_switch()                                                                \
+	switch(RENDERER_R_BLDCNT_Color_Special_Effect) { \
+		case SpecialEffect_Brightness_Increase:                                            \
+			color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]); break;               \
+		case SpecialEffect_Brightness_Decrease:                                            \
+			color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]); break;               \
+	}
+
+#define alpha_blend_brightness_switch()                                                    \
+	if(RENDERER_R_BLDCNT_IsTarget2(top2)) { \
+		if(color < 0x80000000) {	\
+			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
+		} else if (RENDERER_R_BLDCNT_IsTarget1(top)) { \
+			brightness_switch();                                                           \
+		} \
+	}
+
 #ifdef USE_SWITICKS
 extern int SWITicks;
 #endif
@@ -335,7 +349,7 @@ const int table [0x40] =
 		0xFF38,0xFF39,0xFF3A,0xFF3B,0xFF3C,0xFF3D,0xFF3E,0xFF3F,
 };
 
-static int coeff[32] = {0,1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
+static int coeff[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
 			11, 12, 13, 14, 15, 16, 16, 16, 16,
 			16, 16, 16, 16, 16, 16, 16, 16, 16,
 			16, 16, 16};
@@ -745,31 +759,31 @@ static INLINE u32 CPUReadMemory(u32 address)
 				else goto unreadable;
 			}
 			else
-				value = READ32LE(((u32 *)&bios[address & 0x3FFC]));
+				value = READ32LE(bios + (address & 0x3FFC));
 			break;
 		case 0x02:
 			/* external work RAM */
-			value = READ32LE(((u32 *)&workRAM[address & 0x3FFFC]));
+			value = READ32LE(workRAM + (address & 0x3FFFC));
 			break;
 		case 0x03:
 			/* internal work RAM */
-			value = READ32LE(((u32 *)&internalRAM[address & 0x7ffC]));
+			value = READ32LE(internalRAM + (address & 0x7ffC));
 			break;
 		case 0x04:
 			/* I/O registers */
 			if((address < 0x4000400) && ioReadable[address & 0x3fc])
 			{
 				if(ioReadable[(address & 0x3fc) + 2])
-					value = READ32LE(((u32 *)&ioMem[address & 0x3fC]));
+					value = READ32LE(ioMem + (address & 0x3fC));
 				else
-					value = READ16LE(((u16 *)&ioMem[address & 0x3fc]));
+					value = READ16LE(ioMem + (address & 0x3fc));
 			}
 			else
 				goto unreadable;
 			break;
 		case 0x05:
 			/* palette RAM */
-			value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
+			value = READ32LE(paletteRAM + (address & 0x3fC));
 			break;
 		case 0x06:
 			/* VRAM */
@@ -781,11 +795,11 @@ static INLINE u32 CPUReadMemory(u32 address)
 			}
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
-			value = READ32LE(((u32 *)&vram[address]));
+			value = READ32LE(vram + address);
 			break;
 		case 0x07:
 			/* OAM RAM */
-			value = READ32LE(((u32 *)&oam[address & 0x3FC]));
+			value = READ32LE(oam + (address & 0x3FC));
 			break;
 		case 0x08:
 		case 0x09:
@@ -793,7 +807,7 @@ static INLINE u32 CPUReadMemory(u32 address)
 		case 0x0B: 
 		case 0x0C: 
 			/* gamepak ROM */
-			value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+			value = READ32LE(rom + (address&0x1FFFFFC));
 			break;
 		case 0x0D:
          value = eepromRead();
@@ -827,23 +841,23 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			if (bus.reg[15].I >> 24)
 			{
 				if(address < 0x4000)
-					value = READ16LE(((u16 *)&biosProtected[address&2]));
+					value = READ16LE(biosProtected + (address & 2));
 				else
 					goto unreadable;
 			}
 			else
-				value = READ16LE(((u16 *)&bios[address & 0x3FFE]));
+				value = READ16LE(bios + (address & 0x3FFE));
 			break;
 		case 2:
-			value = READ16LE(((u16 *)&workRAM[address & 0x3FFFE]));
+			value = READ16LE(workRAM + (address & 0x3FFFE));
 			break;
 		case 3:
-			value = READ16LE(((u16 *)&internalRAM[address & 0x7ffe]));
+			value = READ16LE(internalRAM + (address & 0x7ffe));
 			break;
 		case 4:
 			if((address < 0x4000400) && ioReadable[address & 0x3fe])
 			{
-				value =  READ16LE(((u16 *)&ioMem[address & 0x3fe]));
+				value =  READ16LE(ioMem + (address & 0x3fe));
 				if (((address & 0x3fe)>0xFF) && ((address & 0x3fe)<0x10E))
 				{
 					if (((address & 0x3fe) == 0x100) && timer0On)
@@ -862,7 +876,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			else goto unreadable;
 			break;
 		case 5:
-			value = READ16LE(((u16 *)&paletteRAM[address & 0x3fe]));
+			value = READ16LE(paletteRAM + (address & 0x3fe));
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -873,10 +887,10 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			}
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
-			value = READ16LE(((u16 *)&vram[address]));
+			value = READ16LE(vram + address);
 			break;
 		case 7:
-			value = READ16LE(((u16 *)&oam[address & 0x3fe]));
+			value = READ16LE(oam + (address & 0x3fe));
 			break;
 		case 8:
 		case 9:
@@ -886,7 +900,7 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
 				value = rtcRead(address);
 			else
-				value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
+				value = READ16LE(rom + (address & 0x1FFFFFE));
 			break;
 		case 13:
          value =  eepromRead();
@@ -991,10 +1005,10 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 	switch(address >> 24)
 	{
 		case 0x02:
-			WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
+			WRITE32LE(workRAM + (address & 0x3FFFC), value);
 			break;
 		case 0x03:
-			WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
+			WRITE32LE(internalRAM + (address & 0x7ffC), value);
 			break;
 		case 0x04:
 			if(address < 0x4000400)
@@ -1004,7 +1018,7 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			}
 			break;
 		case 0x05:
-			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
+			WRITE32LE(paletteRAM + (address & 0x3FC), value);
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -1017,10 +1031,10 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 				address &= 0x17fff;
 
 
-			WRITE32LE(((u32 *)&vram[address]), value);
+			WRITE32LE(vram + address, value);
 			break;
 		case 0x07:
-			WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
+			WRITE32LE(oam + (address & 0x3fc), value);
 			break;
 		case 0x0D:
 			if(cpuEEPROMEnabled) {
@@ -1042,17 +1056,17 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 	switch(address >> 24)
 	{
 		case 2:
-			WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
+			WRITE16LE(workRAM + (address & 0x3FFFE),value);
 			break;
 		case 3:
-			WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
+			WRITE16LE(internalRAM + (address & 0x7ffe), value);
 			break;
 		case 4:
 			if(address < 0x4000400)
 				CPUUpdateRegister(address & 0x3fe, value);
 			break;
 		case 5:
-			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
+			WRITE16LE(paletteRAM + (address & 0x3fe), value);
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -1063,10 +1077,10 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 				return;
 			if ((address & 0x18000) == 0x18000)
 				address &= 0x17fff;
-			WRITE16LE(((u16 *)&vram[address]), value);
+			WRITE16LE(vram + address, value);
 			break;
 		case 7:
-			WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
+			WRITE16LE(oam + (address & 0x3fe), value);
 			break;
 		case 8:
 		case 9:
@@ -1170,7 +1184,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			break;
 		case 5:
 			// no need to switch
-			*((u16 *)&paletteRAM[address & 0x3FE]) = (b << 8) | b;
+			*(u16 *)(paletteRAM + (address & 0x3FE)) = (b << 8) | b;
 #if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
 			threaded_palette_dirty = true;
 #endif
@@ -1185,7 +1199,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 			// no need to switch
 			// byte writes to OBJ VRAM are ignored
 			if ((address) < objTilesAddress[(R_DISPCNT_Video_Mode+1)>>2])
-				*((u16 *)&vram[address]) = (b << 8) | b;
+				*(u16 *)(vram + address) = (b << 8) | b;
 			break;
 		case 7:
 			// no need to switch
@@ -1248,7 +1262,7 @@ s16 sineTable[256] = {
 };
 
 #if USE_TWEAK_ARCTAN
-s32 arctanTable[0x8000];
+s32* arctanTable;
 
 //#define BIOS_ArcTan() bus.reg[0].I = (bus.reg[0].I & 0x80000000) | arctanTable[min(0x4000 - 1, (int)(bus.reg[0].I & 0x7FFFFFFF))];
 //#define BIOS_ArcTan() bus.reg[0].I = arctanTable[min(0x8000 - 1, max((int)(bus.reg[0].I + 0x4000), 0))];
@@ -2159,17 +2173,31 @@ static void BIOS_SoftReset (void)
 	CPUWriteMemory(bus.reg[0].I, 0x9c); \
 	bus.reg[0].I += 4;
 
-bool bios_init = false;
+#if USE_TWEAKS
+bool tweaks_init = false;
 
-static void BIOS_Init() {
-	if(bios_init) return;
-	bios_init = true;
+static void tweaksInit() {
+	if(tweaks_init) return;
+	tweaks_init = true;
 
 #if USE_TWEAK_ARCTAN
+	arctanTable = new s32[0x8000];
 	for(int u = 0; u < 0x8000; ++u)
 		arctanTable[u] = BIOS_ArcTan_Calc(u - 0x4000);
 #endif
+
+#if USE_TWEAK_BLEND
+	s32* brightnessIncreaseTable = new s32[0x10000 * 17];
+	s32* brightnessDecreaseTable = new s32[0x10000 * 17];
+	for(int u = 0; u < 17; ++u)
+		for(int v = 0; v < 0x10000; ++u) {
+			brightnessIncreaseTable[u * 0x10000 + v] = gfxIncreaseBrightness(v, u);
+			brightnessDecreaseTable[u * 0x10000 + v] = gfxDecreaseBrightness(v, u);
+		}
+
+#endif
 }
+#endif
 
 #define CPU_UPDATE_CPSR() \
 { \
@@ -7105,8 +7133,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed)
 
 				u8 color = charBase[(tile<<6) | (tileY<<3) | tileX];
 
-				if(color)
-					RENDERER_LINE[layer][x] = (READ16LE(&palette[color])|prio);
+				if(color) RENDERER_LINE[layer][x] = (READ16LE(&palette[color])|prio);
 
 				realX += dx;
 				realY += dy;
@@ -8233,38 +8260,6 @@ static void gfxDrawOBJWin (void)
 	}
 }
 
-static INLINE u32 gfxIncreaseBrightness(u32 color, int coeff)
-{
-	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
-
-	color += ((((0x3E07C1F - color) * coeff) >> 4) & 0x3E07C1F);
-
-	return (color >> 16) | color;
-}
-
-static INLINE u32 gfxDecreaseBrightness(u32 color, int coeff)
-{
-	color = (((color & 0xffff) << 16) | (color & 0xffff)) & 0x3E07C1F;
-
-	color -= (((color * coeff) >> 4) & 0x3E07C1F);
-
-	return (color >> 16) | color;
-}
-
-static u32 AlphaClampLUT[64] = 
-{
- 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
- 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
- 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,
- 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F
-};  
-
-#define GFX_ALPHA_BLEND(color, color2, ca, cb)                                                           \
-	int r = AlphaClampLUT[(((color & 0x1F) * ca) >> 4) + (((color2 & 0x1F) * cb) >> 4)];                 \
-	int g = AlphaClampLUT[((((color >> 5) & 0x1F) * ca) >> 4) + ((((color2 >> 5) & 0x1F) * cb) >> 4)];   \
-	int b = AlphaClampLUT[((((color >> 10) & 0x1F) * ca) >> 4) + ((((color2 >> 10) & 0x1F) * cb) >> 4)]; \
-	color = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
-
 /*============================================================
 	GBA.CPP
 ============================================================ */
@@ -8921,14 +8916,16 @@ bool CPUSetupBuffers()
 	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
 	
+#if USE_TWEAKS
+	tweaksInit();
+#endif
+
 #if THREADED_RENDERER
 	if(!threaded_renderer_running) {
 		threaded_renderer_running = 1;		
 		thread_run(threaded_renderer_loop, NULL);
 	}
 #endif
-
-	BIOS_Init();
 
 	return true;
 }
@@ -9002,31 +8999,6 @@ void doMirroring (bool b)
 		}
 	}
 }
-
-#define brightness_switch()                                                                \
-	switch(RENDERER_R_BLDCNT_Color_Special_Effect)                                                  \
-	{                                                                                      \
-		case SpecialEffect_Brightness_Increase:                                            \
-			color = gfxIncreaseBrightness(color, coeff[COLY & 0x1F]);                      \
-			break;                                                                         \
-		case SpecialEffect_Brightness_Decrease:                                            \
-			color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);                      \
-			break;                                                                         \
-	}
-
-#define alpha_blend_brightness_switch()                                                    \
-	if(RENDERER_R_BLDCNT_IsTarget2(top2))                                                           \
-        { \
-		if(color < 0x80000000)                                                             \
-		{                                                                                  \
-			GFX_ALPHA_BLEND(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]); \
-		}                                                                                  \
-		else                                                                               \
-		if (RENDERER_R_BLDCNT_IsTarget1(top))                                                       \
-		{                                                                                  \
-			brightness_switch();                                                           \
-		} \
-        }
 
 /* we only use 16bit color depth */
 #if THREADED_RENDERER
@@ -11014,8 +10986,7 @@ static void threaded_renderer_loop(void* p) {
 		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
 		if(threaded_draw_sprites) gfxDrawSprites();
 
-		if(threaded_render_line_all_enabled)
-		{
+		if(threaded_render_line_all_enabled) {
 			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
 			if(threaded_draw_objwin) gfxDrawOBJWin();
 		}
