@@ -232,7 +232,7 @@ else ifeq ($(platform), vita)
    STATIC_LINKING = 1
 	TILED_RENDERING=1
 	USE_CHEATS=0 #for performance boost.
-	USE_TWEAKS=0
+	USE_TWEAKS=1
 	USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)

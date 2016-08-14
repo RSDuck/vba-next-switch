@@ -267,6 +267,33 @@ static void threaded_renderer_loop(void* p);
     cpuPrefetch[0] = CPUReadHalfWordQuick(bus.armNextPC);\
     cpuPrefetch[1] = CPUReadHalfWordQuick(bus.armNextPC+2);\
   }
+
+#define MOSAIC_LOOP(__layer__, __mosaicX__) { \
+	int m = 1; \
+	int i = 0; \
+	for (; i < 230; i += 8) { \
+		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+2] = RENDERER_LINE[__layer__][i+1]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+3] = RENDERER_LINE[__layer__][i+2]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+4] = RENDERER_LINE[__layer__][i+3]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+5] = RENDERER_LINE[__layer__][i+4]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+6] = RENDERER_LINE[__layer__][i+5]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+7] = RENDERER_LINE[__layer__][i+6]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+		RENDERER_LINE[__layer__][i+8] = RENDERER_LINE[__layer__][i+7]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+	} \
+	for (; i < 239; i++) { \
+		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+	} \
+}
  
 #ifdef USE_SWITICKS
 extern int SWITicks;
@@ -6593,17 +6620,7 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
    {
       if (mosaicX > 1)
       {
-         int m = 1;
-         for (int i = 0; i < 239; i++)
-         {
-            RENDERER_LINE[layer][i+1] = RENDERER_LINE[layer][i];
-            m++;
-            if (m == mosaicX)
-            {
-               m = 1;
-               i++;
-            }
-         }
+		 MOSAIC_LOOP(layer, mosaicX);
       }
    }
 }
@@ -6746,15 +6763,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
   }
   if(mosaicOn) {
     if(mosaicX > 1) {
-      int m = 1;
-      for(int i = 0; i < 239; i++) {
-        RENDERER_LINE[layer][i+1] = RENDERER_LINE[layer][i];
-        m++;
-        if(m == mosaicX) {
-          m = 1;
-          i++;
-        }
-      }
+      MOSAIC_LOOP(layer, mosaicX);
     }
   }
 }
@@ -7145,16 +7154,7 @@ u16 pa,  u16 pb, u16 pc,  u16 pd, int& currentX, int& currentY, int changed)
 		int mosaicX = (RENDERER_MOSAIC & 0xF) + 1;
 		if(mosaicX > 1)
 		{
-			int m = 1;
-			for(u32 i = 0; i < 239u; ++i)
-			{
-				RENDERER_LINE[layer][i+1] = RENDERER_LINE[layer][i];
-				if(++m == mosaicX)
-				{
-					m = 1;
-					++i;
-				}
-			}
+			MOSAIC_LOOP(layer, mosaicX);
 		}
 	}
 }
@@ -7250,16 +7250,7 @@ static INLINE void gfxDrawRotScreen16Bit( int& currentX,  int& currentY, int cha
 	if(RENDERER_IO_REGISTERS[REG_BG2CNT] & 0x40) {
 		int mosaicX = (MOSAIC & 0xF) + 1;
 		if(mosaicX > 1) {
-			int m = 1;
-			for(u32 i = 0; i < 239u; ++i)
-			{
-				RENDERER_LINE[Layer_BG2][i+1] = RENDERER_LINE[Layer_BG2][i];
-				if(++m == mosaicX)
-				{
-					m = 1;
-					++i;
-				}
-			}
+			MOSAIC_LOOP(Layer_BG2, mosaicX);
 		}
 	}
 }
@@ -7357,16 +7348,7 @@ static INLINE void gfxDrawRotScreen256(int &currentX, int& currentY, int changed
 		int mosaicX = (RENDERER_MOSAIC & 0xF) + 1;
 		if(mosaicX > 1)
 		{
-			int m = 1;
-			for(u32 i = 0; i < 239u; ++i)
-			{
-				RENDERER_LINE[Layer_BG2][i+1] = RENDERER_LINE[Layer_BG2][i];
-				if(++m == mosaicX)
-				{
-					m = 1;
-					++i;
-				}
-			}
+			MOSAIC_LOOP(Layer_BG2, mosaicX);
 		}
 	}
 }
@@ -7463,16 +7445,7 @@ static INLINE void gfxDrawRotScreen16Bit160(int& currentX, int& currentY, int ch
 	int mosaicX = (RENDERER_MOSAIC & 0xF) + 1;
 	if(RENDERER_IO_REGISTERS[REG_BG2CNT] & 0x40 && (mosaicX > 1))
 	{
-		int m = 1;
-		for(u32 i = 0; i < 239u; ++i)
-		{
-			RENDERER_LINE[Layer_BG2][i+1] = RENDERER_LINE[Layer_BG2][i];
-			if(++m == mosaicX)
-			{
-				m = 1;
-				++i;
-			}
-		}
+		MOSAIC_LOOP(Layer_BG2, mosaicX);
 	}
 }
 
