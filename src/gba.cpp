@@ -271,6 +271,17 @@ static void threaded_renderer_loop(void* p);
 #define MOSAIC_LOOP(__layer__, __mosaicX__) { \
 	int m = 1; \
 	int i = 0; \
+	for (; i < 239; i++) { \
+		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
+		if (++m == __mosaicX__) { m = 1; i++; } \
+	} \
+}
+
+/*
+//because of branches, loop unrolling drops performance.
+#define MOSAIC_LOOP(__layer__, __mosaicX__) { \
+	int m = 1; \
+	int i = 0; \
 	for (; i < 230; i += 8) { \
 		RENDERER_LINE[__layer__][i+1] = RENDERER_LINE[__layer__][i]; \
 		if (++m == __mosaicX__) { m = 1; i++; } \
@@ -294,6 +305,7 @@ static void threaded_renderer_loop(void* p);
 		if (++m == __mosaicX__) { m = 1; i++; } \
 	} \
 }
+*/
  
 #ifdef USE_SWITICKS
 extern int SWITicks;
