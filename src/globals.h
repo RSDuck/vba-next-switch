@@ -5,8 +5,10 @@
 #include <stdint.h>
 
 //performance boost tweaks.
-#define USE_TWEAK_ARCTAN 1
-#define USE_TWEAK_MEMORY 1
+#if USE_TWEAKS
+    #define USE_TWEAK_ARCTAN 1
+    #define USE_TWEAK_MEMORY 1
+#endif
 
 #define PIX_BUFFER_SCREEN_WIDTH 256
 

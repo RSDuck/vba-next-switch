@@ -27,27 +27,10 @@
 #define DEBUG_RENDERER_MODE4 1
 #define DEBUG_RENDERER_MODE5 1
 
-//use original vba-next speedhax.
-#define SPEEDHAX_SAFE 1
-
-#if SPEEDHAX_SAFE
-	#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
-	#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
-	#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
-	#define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3	
-#else	
-	#if SPEEDHAX
-		#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
-		#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
-		#define CLOCKTICKS_UPDATE_TYPE16P 30
-		#define CLOCKTICKS_UPDATE_TYPE32P 35
-	#else
-		#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
-		#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
-		#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
-		#define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
-	#endif
-#endif
+#define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
+#define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
+#define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
+#define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
 
 typedef void (*renderfunc_t)(void);
 
@@ -5922,12 +5905,7 @@ static  void thumbD0(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
-
-#if SPEEDHAX_SAFE && SPEEDHAX
-		clockTicks = 30;
-#else
 		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
-#endif
 		bus.busPrefetchCount=0;
 	}
 }
