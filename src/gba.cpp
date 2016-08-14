@@ -75,6 +75,7 @@ uint8_t *paletteRAM = 0;
 
 	#include "thread.h"
 
+	static int threaded_renderer_flag = 0;
 	static volatile int threaded_renderer_running = 0;
 	static volatile int threaded_renderer_state = 0;
 	static uint16_t threaded_renderer_io_registers[1024 * 16];
@@ -2184,17 +2185,6 @@ static void tweaksInit() {
 	arctanTable = new s32[0x8000];
 	for(int u = 0; u < 0x8000; ++u)
 		arctanTable[u] = BIOS_ArcTan_Calc(u - 0x4000);
-#endif
-
-#if USE_TWEAK_BLEND
-	s32* brightnessIncreaseTable = new s32[0x10000 * 17];
-	s32* brightnessDecreaseTable = new s32[0x10000 * 17];
-	for(int u = 0; u < 17; ++u)
-		for(int v = 0; v < 0x10000; ++u) {
-			brightnessIncreaseTable[u * 0x10000 + v] = gfxIncreaseBrightness(v, u);
-			brightnessDecreaseTable[u * 0x10000 + v] = gfxDecreaseBrightness(v, u);
-		}
-
 #endif
 }
 #endif
@@ -10998,12 +10988,54 @@ static void threaded_renderer_loop(void* p) {
 	}
 }
 
-static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
+static void fetchBackgroundOffset(int video_mode) {
+	//update gfxBG2X, gfxBG2Y, gfxBG3X, gfxBG3Y
+	switch(video_mode) {
+	case 0:
+		break;
+	case 1:
+		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
+			gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 2:
+		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
+			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
+			gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		fetchDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
+			io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD],
+			gfxBG3X, gfxBG3Y, gfxBG3Changed);
+		break;
+	case 3:
+		fetchDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 4:
+		fetchDrawRotScreen256(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	case 5:
+		fetchDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, gfxBG2Changed);
+		break;
+	default:
+		return;
+	}
+}
 
-	while(threaded_renderer_state > 0); //busy wait
-	//if(threaded_renderer_state > 0) return; //skip
+static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all_enabled) {
 	
 	int video_mode = R_DISPCNT_Video_Mode;
+
+#if USE_TWEAK_INTERLACE
+	if((io_registers[REG_VCOUNT] % 2) == threaded_renderer_flag) {
+		fetchBackgroundOffset(video_mode);
+		gfxBG2Changed = 0;
+		if(video_mode == 2)	gfxBG3Changed = 0;
+		return;
+	}
+	while(threaded_renderer_state > 0); //busy wait
+#else
+	while(threaded_renderer_state > 0); //busy wait
+	//if(threaded_renderer_state > 0) return; //skip
+#endif
 
 #if THREADED_RENDERER_COPY_BUFFER
 	if(video_mode == 0 || video_mode == 1) {
@@ -11107,49 +11139,24 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	threaded_bldmod = BLDMOD;
 
 #if THREADED_RENDERER_COPY_BUFFER
-	//update gfxBG2X, gfxBG2Y, gfxBG3X, gfxBG3Y
-	switch(video_mode) {
-	case 0:
-		break;
-	case 1:
-		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-			gfxBG2X, gfxBG2Y, gfxBG2Changed);
-		break;
-	case 2:
-		fetchDrawRotScreen(io_registers[REG_BG2CNT], BG2X_L, BG2X_H, BG2Y_L, BG2Y_H,
-			io_registers[REG_BG2PA], io_registers[REG_BG2PB], io_registers[REG_BG2PC], io_registers[REG_BG2PD],
-			gfxBG2X, gfxBG2Y, gfxBG2Changed);
-		fetchDrawRotScreen(io_registers[REG_BG3CNT], BG3X_L, BG3X_H, BG3Y_L, BG3Y_H,
-			io_registers[REG_BG3PA], io_registers[REG_BG3PB], io_registers[REG_BG3PC], io_registers[REG_BG3PD],
-			gfxBG3X, gfxBG3Y, gfxBG3Changed);
-
-		threaded_bg3c = gfxBG3Changed;
-		threaded_bg3x_l = BG3X_L;
-		threaded_bg3x_h = BG3X_H;
-		threaded_bg3y_l = BG3Y_L;
-		threaded_bg3y_h = BG3Y_H;
-		gfxBG3Changed = 0;
-		break;
-	case 3:
-		fetchDrawRotScreen16Bit(gfxBG2X, gfxBG2Y, gfxBG2Changed);
-		break;
-	case 4:
-		fetchDrawRotScreen256(gfxBG2X, gfxBG2Y, gfxBG2Changed);
-		break;
-	case 5:
-		fetchDrawRotScreen16Bit160(gfxBG2X, gfxBG2Y, gfxBG2Changed);
-		break;
-	default:
-		return;
-	}
-
 	threaded_bg2c = gfxBG2Changed;
 	threaded_bg2x_l = BG2X_L;
 	threaded_bg2x_h = BG2X_H;
 	threaded_bg2y_l = BG2Y_L;
 	threaded_bg2y_h = BG2Y_H;
+
+	if(video_mode == 2) {
+		threaded_bg3c = gfxBG3Changed;
+		threaded_bg3x_l = BG3X_L;
+		threaded_bg3x_h = BG3X_H;
+		threaded_bg3y_l = BG3Y_L;
+		threaded_bg3y_h = BG3Y_H;
+	}
+
+	fetchBackgroundOffset(video_mode);
+
 	gfxBG2Changed = 0;
+	if(video_mode == 2)	gfxBG3Changed = 0;
 #else
 	threaded_bg2c = gfxBG2Changed;
 	gfxBG2Changed = 0;
@@ -12749,9 +12756,12 @@ updateLoop:
 						//wait for renderer
 						//while(threaded_renderer_state);
 #endif
-
 		            	systemDrawScreen();
 		            	framedone = true;
+
+#if USE_TWEAK_INTERLACE
+						threaded_renderer_flag ^= 1;
+#endif
 		        	}
 
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
