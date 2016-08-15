@@ -3,7 +3,7 @@ FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 STATIC_LINKING=0
 USE_CHEATS=1
-USE_SPEEDHAX=0
+USE_TWEAKS=1
 USE_THREADED_RENDERER=0
 
 CORE_DIR := .
@@ -231,8 +231,8 @@ else ifeq ($(platform), vita)
 	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
-	USE_CHEATS=0 #For performance boost.
-	#USE_SPEEDHAX=1 #Unstable.
+	USE_CHEATS=0 #for performance boost.
+	USE_TWEAKS=1
 	USE_THREADED_RENDERER=1
 # Libxenon
 else ifeq ($(platform), xenon)
@@ -343,9 +343,9 @@ CFLAGS += -DUSE_CHEATS
 CXXFLAGS += -DUSE_CHEATS
 endif
 
-ifeq ($(USE_SPEEDHAX), 1)
-CFLAGS += -DSPEEDHAX
-CXXFLAGS += -DSPEEDHAX
+ifeq ($(USE_TWEAKS), 1)
+CFLAGS += -DUSE_TWEAKS
+CXXFLAGS += -DUSE_TWEAKS
 endif
 
 ifeq ($(USE_THREADED_RENDERER), 1)

@@ -197,6 +197,10 @@ void retro_init(void)
 #ifdef PROFILE_ANDROID
    monstartup("vba_next_libretro_android.so");
 #endif
+
+#if THREADED_RENDERER
+	ThreadedRendererStart();
+#endif
 }
 
 static unsigned serialize_size = 0;
@@ -406,6 +410,10 @@ void retro_deinit(void)
 	moncleanup();
 #endif
 	CPUCleanUp();
+
+#if THREADED_RENDERER
+	ThreadedRendererStop();
+#endif
 }
 
 void retro_reset(void)

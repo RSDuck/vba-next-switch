@@ -43,8 +43,6 @@
 #define R14_FIQ  43
 #define SPSR_FIQ 44
 
-#define PIX_BUFFER_SCREEN_WIDTH 256
-
 typedef struct {
 	uint8_t *address;
 	uint32_t mask;
@@ -91,7 +89,6 @@ typedef struct
 
 typedef struct
 {
-	uint8_t * paletteRAM;
 	int layerEnable;
 	int layerEnableDelay;
 	int lcdTicks;
@@ -115,5 +112,10 @@ extern void CPUReset (void);
 extern void CPULoop(void);
 extern void UpdateJoypad(void);
 extern void CPUCheckDMA(int,int);
+
+#if THREADED_RENDERER
+extern void ThreadedRendererStart();
+extern void ThreadedRendererStop();
+#endif
 
 #endif // GBA_H
