@@ -8996,7 +8996,7 @@ void ThreadedRendererStart() {
 void ThreadedRendererStop() {
 	if(threaded_renderer_control != 1) return;
 	threaded_renderer_control = 2;
-	while(threaded_renderer_control != 3); //join
+	while(threaded_renderer_control == 2); //join
 }
 #endif
 
@@ -10997,7 +10997,7 @@ static void threaded_renderer_loop(void* p) {
 		threaded_renderer_state = 0;
 	}
 
-	threaded_renderer_control = 2; //loop is terminated.
+	threaded_renderer_control = 0; //loop is terminated.
 }
 
 static void fetchBackgroundOffset(int video_mode) {

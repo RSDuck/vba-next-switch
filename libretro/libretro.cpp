@@ -406,14 +406,14 @@ static void gba_init(void)
 
 void retro_deinit(void)
 {
+#if THREADED_RENDERER
+	ThreadedRendererStop();
+#endif
+
 #ifdef PROFILE_ANDROID
 	moncleanup();
 #endif
 	CPUCleanUp();
-
-#if THREADED_RENDERER
-	ThreadedRendererStop();
-#endif
 }
 
 void retro_reset(void)
