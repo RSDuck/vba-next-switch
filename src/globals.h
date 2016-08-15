@@ -7,7 +7,7 @@
 //performance boost tweaks.
 #if USE_TWEAKS
     #define USE_TWEAK_ARCTAN 1
-    #define USE_TWEAK_MEMORY 1
+    #define USE_TWEAK_MEMORY 0
 	#define USE_TWEAK_INTERLACE 0
 #endif
 

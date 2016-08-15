@@ -27,7 +27,7 @@
 #define DEBUG_RENDERER_MODE4 1
 #define DEBUG_RENDERER_MODE5 1
 
-#define DEBUG_RENDERER_NOSYNC 1
+#define DEBUG_RENDERER_NOSYNC 0
 
 #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
 #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1

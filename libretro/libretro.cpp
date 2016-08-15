@@ -199,7 +199,7 @@ void retro_init(void)
 #endif
 
 #if THREADED_RENDERER
-	StartThreadedRenderer();
+	ThreadedRendererStart();
 #endif
 }
 
@@ -412,7 +412,7 @@ void retro_deinit(void)
 	CPUCleanUp();
 
 #if THREADED_RENDERER
-	StopThreadedRenderer();
+	ThreadedRendererStop();
 #endif
 }
 
