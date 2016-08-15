@@ -113,4 +113,9 @@ extern void CPULoop(void);
 extern void UpdateJoypad(void);
 extern void CPUCheckDMA(int,int);
 
+#if THREADED_RENDERER
+extern void ThreadedRendererStart();
+extern void ThreadedRendererStop();
+#endif
+
 #endif // GBA_H

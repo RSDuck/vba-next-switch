@@ -27,6 +27,8 @@
 #define DEBUG_RENDERER_MODE4 1
 #define DEBUG_RENDERER_MODE5 1
 
+#define DEBUG_RENDERER_NOSYNC 1
+
 #define CLOCKTICKS_UPDATE_TYPE16  codeTicksAccessSeq16(bus.armNextPC) + 1
 #define CLOCKTICKS_UPDATE_TYPE32  codeTicksAccessSeq32(bus.armNextPC) + 1
 #define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
@@ -76,8 +78,9 @@ uint8_t *paletteRAM = 0;
 	#include "thread.h"
 
 	static int threaded_renderer_flag = 0;
-	static volatile int threaded_renderer_running = 0;
+	static volatile int threaded_renderer_control = 0;
 	static volatile int threaded_renderer_state = 0;
+
 	static uint16_t threaded_renderer_io_registers[1024 * 16];
 	static bool threaded_draw_objwin = false;
 	static bool threaded_draw_sprites = false;
@@ -8910,13 +8913,6 @@ bool CPUSetupBuffers()
 	tweaksInit();
 #endif
 
-#if THREADED_RENDERER
-	if(!threaded_renderer_running) {
-		threaded_renderer_running = 1;		
-		thread_run(threaded_renderer_loop, NULL);
-	}
-#endif
-
 	return true;
 }
 
@@ -8989,6 +8985,20 @@ void doMirroring (bool b)
 		}
 	}
 }
+
+#if THREADED_RENDERER
+void ThreadedRendererStart() {
+	if(threaded_renderer_control != 0) return;
+	threaded_renderer_control = 1;		
+	thread_run(threaded_renderer_loop, NULL);	
+}
+
+void ThreadedRendererStop() {
+	if(threaded_renderer_control != 1) return;
+	threaded_renderer_control = 2;
+	while(threaded_renderer_control != 3); //join
+}
+#endif
 
 /* we only use 16bit color depth */
 #if THREADED_RENDERER
@@ -10969,7 +10979,7 @@ static bool render_line_all_enabled = false;
 #if THREADED_RENDERER
 
 static void threaded_renderer_loop(void* p) {
-	while(threaded_renderer_running) {
+	while(threaded_renderer_control == 1) {
 		//buffer is not ready.
 		if(threaded_renderer_state == 0) continue;
 	
@@ -10986,6 +10996,8 @@ static void threaded_renderer_loop(void* p) {
 		//rendering is done.
 		threaded_renderer_state = 0;
 	}
+
+	threaded_renderer_control = 2; //loop is terminated.
 }
 
 static void fetchBackgroundOffset(int video_mode) {
@@ -11024,6 +11036,10 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	
 	int video_mode = R_DISPCNT_Video_Mode;
 
+#if DEBUG_RENDERER_NOSYNC
+	if(threaded_renderer_state > 0) return; //skip
+#else
+
 #if USE_TWEAK_INTERLACE
 	if((io_registers[REG_VCOUNT] % 2) == threaded_renderer_flag) {
 		fetchBackgroundOffset(video_mode);
@@ -11034,7 +11050,8 @@ static void postRender(bool draw_objwin, bool draw_sprites, bool render_line_all
 	while(threaded_renderer_state > 0); //busy wait
 #else
 	while(threaded_renderer_state > 0); //busy wait
-	//if(threaded_renderer_state > 0) return; //skip
+#endif
+
 #endif
 
 #if THREADED_RENDERER_COPY_BUFFER
@@ -12714,7 +12731,7 @@ updateLoop:
 							UPDATE_REG(0x202, io_registers[REG_IF]);
 						}
 					}
-
+	
 					if(R_VCOUNT >= 228)
 					{
 						//Reaching last line

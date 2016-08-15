@@ -8,7 +8,7 @@
 #if USE_TWEAKS
     #define USE_TWEAK_ARCTAN 1
     #define USE_TWEAK_MEMORY 1
-	#define USE_TWEAK_INTERLACE 1
+	#define USE_TWEAK_INTERLACE 0
 #endif
 
 #define PIX_BUFFER_SCREEN_WIDTH 256
