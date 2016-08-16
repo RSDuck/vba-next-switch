@@ -45,20 +45,6 @@ inline static long min(long p, int q) { return p < q ? p : q; }
 inline static long min(int p, long q) { return p < q ? p : q; }
 inline static long min(long p, long q) { return p < q ? p : q; }
 
-#if USE_TWEAK_MEMORY
-
-uint8_t *rom = 0;
-uint8_t bios[0x4000];
-uint8_t vram[0x20000];
-uint16_t pix[4 * PIX_BUFFER_SCREEN_WIDTH * 160];
-uint8_t oam[0x400];
-uint8_t ioMem[0x400];
-uint8_t internalRAM[0x8000];
-uint8_t workRAM[0x40000];
-uint8_t paletteRAM[0x400];
-
-#else
-
 uint8_t *rom = 0;
 uint8_t *bios = 0;
 uint8_t *vram = 0;
@@ -68,8 +54,6 @@ uint8_t *ioMem = 0;
 uint8_t *internalRAM = 0;
 uint8_t *workRAM = 0;
 uint8_t *paletteRAM = 0;
-
-#endif
 
 #if THREADED_RENDERER
 
@@ -5971,7 +5955,11 @@ static  void thumbD0(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH;
+#if USE_TWEAK_SPEEDHAX
+		clockTicks = 30;
+#else
 		clockTicks = CLOCKTICKS_UPDATE_TYPE16P;
+#endif		
 		bus.busPrefetchCount=0;
 	}
 }
@@ -8823,7 +8811,6 @@ void CPUCleanUp (void)
 		rom = NULL;
 	}
 
-#if !USE_TWEAK_MEMORY
 	if(vram != NULL) {
 		free(vram);
 		vram = NULL;
@@ -8863,7 +8850,6 @@ void CPUCleanUp (void)
 		free(ioMem);
 		ioMem = NULL;
 	}
-#endif
 
 }
 
@@ -8877,12 +8863,6 @@ bool CPUSetupBuffers()
 
 	rom = (uint8_t *)malloc(0x2000000);
 
-#if USE_TWEAK_MEMORY
-	if(rom == NULL) {
-		CPUCleanUp();
-		return false;
-	}
-#else
 	workRAM = (uint8_t *)calloc(1, 0x40000);
 	bios = (uint8_t *)calloc(1,0x4000);
 	internalRAM = (uint8_t *)calloc(1,0x8000);
@@ -8898,7 +8878,6 @@ bool CPUSetupBuffers()
 		CPUCleanUp();
 		return false;
 	}
-#endif
 
 	flashInit();
 	eepromInit();
@@ -8930,10 +8909,8 @@ int CPULoadRom(const char * file)
 						romSize)) {
 				free(rom);
 				rom = NULL;
-#if !USE_TWEAK_MEMORY
 				free(workRAM);
 				workRAM = NULL;
-#endif
 				return 0;
 			}
 		}
