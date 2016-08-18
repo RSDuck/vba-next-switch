@@ -7,8 +7,7 @@
 //performance boost tweaks.
 #if USE_TWEAKS
     #define USE_TWEAK_ARCTAN 1
-    #define USE_TWEAK_SPEEDHAX 1
-	#define USE_TWEAK_INTERLACE 0
+    #define USE_TWEAK_SPEEDHACK 1
 #endif
 
 #define PIX_BUFFER_SCREEN_WIDTH 256
