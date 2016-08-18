@@ -11037,30 +11037,34 @@ static void mode5RenderLineAll (void)
 }
 
 #if THREADED_RENDERER
-
 static void threaded_renderer_loop(void* p) {
 	int renderer_idx = reinterpret_cast<intptr_t>(p);
 	INIT_RENDERER_CONTEXT(renderer_idx);
 
 	renderfunc_t drawSprites = NULL;
 	renderfunc_t drawOBJWin = NULL;
+	renderfunc_t (*getRenderFunc)(int, int) = NULL;
 
 	switch(renderer_idx) {
 	case 0:
 		drawSprites = gfxDrawSprites<0>;
 		drawOBJWin = gfxDrawOBJWin<0>;
+		getRenderFunc = GetRenderFunc<0>;
 		break;
 	case 1:
 		drawSprites = gfxDrawSprites<1>;
 		drawOBJWin = gfxDrawOBJWin<1>;
+		getRenderFunc = GetRenderFunc<1>;
 		break;
 	case 2:
 		drawSprites = gfxDrawSprites<2>;
 		drawOBJWin = gfxDrawOBJWin<2>;
+		getRenderFunc = GetRenderFunc<2>;
 		break;
 	case 3:
 		drawSprites = gfxDrawSprites<3>;
 		drawOBJWin = gfxDrawOBJWin<3>;
+		getRenderFunc = GetRenderFunc<3>;
 		break;
 	default:
 		return;
@@ -11078,13 +11082,7 @@ static void threaded_renderer_loop(void* p) {
 			if(renderer_ctx.draw_objwin) (*drawOBJWin)();
 		}
 
-		switch(renderer_idx) {
-		case 0: GetRenderFunc<0>(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); break;
-		case 1: GetRenderFunc<1>(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); break;
-		case 2: GetRenderFunc<2>(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); break;
-		case 3: GetRenderFunc<3>(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); break;
-		default: break;
-		}
+		(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)();
 
 		//rendering is done.
 		renderer_ctx.renderer_state = 0;
