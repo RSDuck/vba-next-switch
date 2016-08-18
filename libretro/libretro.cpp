@@ -141,6 +141,7 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    struct retro_variable variables[] = {
+	  { "vbanext_bios", "Use bios (if available); enabled|disabled" },
       { NULL, NULL },
    };
 
@@ -405,7 +406,22 @@ static void gba_init(void)
    soundSetSampleRate(32000);
 
 #if HAVE_HLE_BIOS
-	if(filename_bios[0])
+   bool usebios = false;
+
+   struct retro_variable var;
+
+   var.key = "vbanext_bios";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+     if (strcmp(var.value, "disabled") == 0)
+        usebios = false;
+     else if (strcmp(var.value, "enabled") == 0)
+        usebios = true;  
+   }
+
+	if(usebios && filename_bios[0])
 		CPUInit(filename_bios, true);
 	else
    		CPUInit(NULL, false);
