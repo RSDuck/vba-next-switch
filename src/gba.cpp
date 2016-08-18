@@ -127,10 +127,6 @@ int renderfunc_type = 0;
 	#define RENDERER_BG2C renderer_ctx.bg2c
 	#define RENDERER_BG3C renderer_ctx.bg3c
 
-	#define RENDERER_PALETTE renderer_ctx.palette
-	#define RENDERER_LINE renderer_ctx.line
-	#define RENDERER_OAM renderer_ctx.oam
-
 	#define RENDERER_BG2X renderer_ctx.bg2x
 	#define RENDERER_BG2Y renderer_ctx.bg2y
 	#define RENDERER_BG3X renderer_ctx.bg3x
@@ -145,6 +141,9 @@ int renderfunc_type = 0;
 	#define RENDERER_BG3Y_L renderer_ctx.bg3y_l
 	#define RENDERER_BG3Y_H renderer_ctx.bg3y_h
 
+	#define RENDERER_PALETTE renderer_ctx.palette
+	#define RENDERER_LINE renderer_ctx.line
+	#define RENDERER_OAM renderer_ctx.oam
 	#define RENDERER_IO_REGISTERS renderer_ctx.io_registers
 	#define RENDERER_MOSAIC renderer_ctx.mosaic
 	#define RENDERER_BLDMOD renderer_ctx.bldmod
@@ -181,9 +180,10 @@ int renderfunc_type = 0;
 	#define INIT_RENDERER_CONTEXT(__renderer_idx__) 0
 
     #define RENDERER_BG2C gfxBG2Changed
+	#define RENDERER_BG3C gfxBG3Changed
+
 	#define RENDERER_BG2X gfxBG2X
 	#define RENDERER_BG2Y gfxBG2Y
-	#define RENDERER_BG3C gfxBG3Changed
 	#define RENDERER_BG3X gfxBG3X
 	#define RENDERER_BG3Y gfxBG3Y
 
@@ -202,33 +202,34 @@ int renderfunc_type = 0;
 	#define RENDERER_OAM oam
 	#define RENDERER_MOSAIC MOSAIC
 	#define RENDERER_BLDMOD BLDMOD
+	#define RENDERER_GRAPHICS_LAYERS graphics.layerEnable
 
 	#define RENDERER_R_VCOUNT (io_registers[REG_VCOUNT])
 	#define RENDERER_R_DISPCNT_Video_Mode (io_registers[REG_DISPCNT] & 7)
 
-	#define RENDERER_R_DISPCNT_Screen_Display_BG0 (graphics.layerEnable & (1 <<  8))
-	#define RENDERER_R_DISPCNT_Screen_Display_BG1 (graphics.layerEnable & (1 <<  9))
-	#define RENDERER_R_DISPCNT_Screen_Display_BG2 (graphics.layerEnable & (1 << 10))
-	#define RENDERER_R_DISPCNT_Screen_Display_BG3 (graphics.layerEnable & (1 << 11))
-	#define RENDERER_R_DISPCNT_Screen_Display_OBJ (graphics.layerEnable & (1 << 12))
-	#define RENDERER_R_DISPCNT_Window_0_Display   (graphics.layerEnable & (1 << 13))
-	#define RENDERER_R_DISPCNT_Window_1_Display   (graphics.layerEnable & (1 << 14))
-	#define RENDERER_R_DISPCNT_OBJ_Window_Display (graphics.layerEnable & (1 << 15))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG0 (RENDERER_GRAPHICS_LAYERS & (1 <<  8))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG1 (RENDERER_GRAPHICS_LAYERS & (1 <<  9))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG2 (RENDERER_GRAPHICS_LAYERS & (1 << 10))
+	#define RENDERER_R_DISPCNT_Screen_Display_BG3 (RENDERER_GRAPHICS_LAYERS & (1 << 11))
+	#define RENDERER_R_DISPCNT_Screen_Display_OBJ (RENDERER_GRAPHICS_LAYERS & (1 << 12))
+	#define RENDERER_R_DISPCNT_Window_0_Display   (RENDERER_GRAPHICS_LAYERS & (1 << 13))
+	#define RENDERER_R_DISPCNT_Window_1_Display   (RENDERER_GRAPHICS_LAYERS & (1 << 14))
+	#define RENDERER_R_DISPCNT_OBJ_Window_Display (RENDERER_GRAPHICS_LAYERS & (1 << 15))
 
-	#define RENDERER_R_WIN_Window0_X1 (io_registers[REG_WIN0H] >> 8)
-	#define RENDERER_R_WIN_Window0_X2 (io_registers[REG_WIN0H] & 0xFF)
-	#define RENDERER_R_WIN_Window0_Y1 (io_registers[REG_WIN0V] >> 8)
-	#define RENDERER_R_WIN_Window0_Y2 (io_registers[REG_WIN0V] & 0xFF)
+	#define RENDERER_R_WIN_Window0_X1 (RENDERER_IO_REGISTERS[REG_WIN0H] >> 8)
+	#define RENDERER_R_WIN_Window0_X2 (RENDERER_IO_REGISTERS[REG_WIN0H] & 0xFF)
+	#define RENDERER_R_WIN_Window0_Y1 (RENDERER_IO_REGISTERS[REG_WIN0V] >> 8)
+	#define RENDERER_R_WIN_Window0_Y2 (RENDERER_IO_REGISTERS[REG_WIN0V] & 0xFF)
 
-	#define RENDERER_R_WIN_Window1_X1 (io_registers[REG_WIN1H] >> 8)
-	#define RENDERER_R_WIN_Window1_X2 (io_registers[REG_WIN1H] & 0xFF)
-	#define RENDERER_R_WIN_Window1_Y1 (io_registers[REG_WIN1V] >> 8)
-	#define RENDERER_R_WIN_Window1_Y2 (io_registers[REG_WIN1V] & 0xFF)
+	#define RENDERER_R_WIN_Window1_X1 (RENDERER_IO_REGISTERS[REG_WIN1H] >> 8)
+	#define RENDERER_R_WIN_Window1_X2 (RENDERER_IO_REGISTERS[REG_WIN1H] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Y1 (RENDERER_IO_REGISTERS[REG_WIN1V] >> 8)
+	#define RENDERER_R_WIN_Window1_Y2 (RENDERER_IO_REGISTERS[REG_WIN1V] & 0xFF)
 
-	#define RENDERER_R_WIN_Window0_Mask (io_registers[REG_WININ] & 0xFF)
-	#define RENDERER_R_WIN_Window1_Mask (io_registers[REG_WININ] >> 8)
-	#define RENDERER_R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
-	#define RENDERER_R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
+	#define RENDERER_R_WIN_Window0_Mask (RENDERER_IO_REGISTERS[REG_WININ] & 0xFF)
+	#define RENDERER_R_WIN_Window1_Mask (RENDERER_IO_REGISTERS[REG_WININ] >> 8)
+	#define RENDERER_R_WIN_Outside_Mask (RENDERER_IO_REGISTERS[REG_WINOUT] & 0xFF)
+	#define RENDERER_R_WIN_OBJ_Mask     (RENDERER_IO_REGISTERS[REG_WINOUT] >> 8)
 
 #endif
 
@@ -11232,7 +11233,9 @@ static void postRender() {
 	renderer_ctx.mosaic = MOSAIC;
 	renderer_ctx.bldmod = BLDMOD;
 
-	renderer_ctx.bg2c = gfxBG2Changed;
+	renderer_ctx.bg2c = gfxBG2Changed;	
+	renderer_ctx.bg2x = gfxBG2X;
+	renderer_ctx.bg2y = gfxBG2Y;
 	renderer_ctx.bg2x_l = BG2X_L;
 	renderer_ctx.bg2x_h = BG2X_H;
 	renderer_ctx.bg2y_l = BG2Y_L;
@@ -11240,6 +11243,8 @@ static void postRender() {
 
 	if(video_mode == 2) {
 		renderer_ctx.bg3c = gfxBG3Changed;
+		renderer_ctx.bg3x = gfxBG3X;
+		renderer_ctx.bg3y = gfxBG3Y;
 		renderer_ctx.bg3x_l = BG3X_L;
 		renderer_ctx.bg3x_h = BG3X_H;
 		renderer_ctx.bg3y_l = BG3Y_L;
