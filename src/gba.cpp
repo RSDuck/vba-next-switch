@@ -11906,12 +11906,10 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 		case 0x78:
 		case 0x7c:
 		case 0x80:
-		case 0x84:
-			{
-				soundEvent_u8(table[(int32_t)(address & 0xFF) - 0x60], (uint32_t)(address & 0xFF), (uint8_t)(value & 0xFF));
-				soundEvent_u8(table[(int32_t)((address & 0xFF) + 1) - 0x60], (uint32_t)((address & 0xFF) + 1), (uint8_t)(value >> 8));
-				break;
-			}
+		case 0x84:			
+			soundEvent_u8(table[(int32_t)(address & 0xFF) - 0x60], (uint32_t)(address & 0xFF), (uint8_t)(value & 0xFF));
+			soundEvent_u8(table[(int32_t)((address & 0xFF) + 1) - 0x60], (uint32_t)((address & 0xFF) + 1), (uint8_t)(value >> 8));
+			break;			
 		case 0x82:
 		case 0x88:
 		case 0xa0:
