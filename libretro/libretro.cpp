@@ -25,6 +25,8 @@ extern uint64_t joy;
 static bool can_dupe;
 unsigned device_type = 0;
 
+char filename_bios[0x100] = {0};
+
 uint8_t libretro_save_buf[0x20000 + 0x2000];	/* Workaround for broken-by-design GBA save semantics. */
 
 static unsigned libretro_save_size = sizeof(libretro_save_buf);
@@ -185,6 +187,14 @@ void retro_init(void)
       log_cb = log.log;
    else
       log_cb = NULL;
+
+#if HAVE_HLE_BIOS
+   const char* dir = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir) {
+      strncpy(filename_bios, dir, sizeof(filename_bios));
+      strncat(filename_bios, "/gba_bios.bin", sizeof(filename_bios));
+   }
+#endif
 
 #ifdef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format rgb565 = RETRO_PIXEL_FORMAT_RGB565;
@@ -394,7 +404,14 @@ static void gba_init(void)
 
    soundSetSampleRate(32000);
 
-   CPUInit(0, false);
+#if HAVE_HLE_BIOS
+	if(filename_bios[0])
+		CPUInit(filename_bios, true);
+	else
+   		CPUInit(NULL, false);
+#else
+   CPUInit(NULL, false);
+#endif
    CPUReset();
 
    soundReset();

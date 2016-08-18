@@ -55,8 +55,9 @@ static int utilGetSize(int size)
 
 uint8_t *utilLoad(const char *file, bool (*accept)(const char *), uint8_t *data, int &size)
 {
-   uint8_t *image = NULL;
+    uint8_t *image = NULL;
 	FILE *fp       = fopen(file,"rb");
+    if(!fp) return NULL;
 
 	fseek(fp, 0, SEEK_END); /*go to end*/
 	size = ftell(fp); /* get position at end (length)*/
