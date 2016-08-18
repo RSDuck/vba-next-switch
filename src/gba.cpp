@@ -11329,7 +11329,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 	utilReadMem(workRAM, data, 0x40000);
 	utilReadMem(vram, data, 0x20000);
 	utilReadMem(oam, data, 0x400);
-	utilReadMem(pix, data, 4* PIX_BUFFER_SCREEN_WIDTH * 160);
+	utilReadMem(pix, data, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 	utilReadMem(ioMem, data, 0x400);
 
 	eepromReadGameMem(data, version);
@@ -11780,7 +11780,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 						memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG3)
 						memset(line[Layer_BG3], -1, 240 * sizeof(u32));
-#if THREADED_RENDERER && THREADED_RENDERER_COPY_BUFFER
+#if THREADED_RENDERER
 					++threaded_background_ver;
 #endif
 				}
