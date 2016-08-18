@@ -577,6 +577,10 @@ static int cpuDmaTicksToUpdate = 0;
 static const uint32_t TIMER_TICKS[4] = {0, 6, 8, 10};
 
 static const uint8_t gamepakRamWaitState[4] = { 4, 3, 2, 8 };
+static const uint8_t gamepakWaitState[4] = { 4, 3, 2, 8 };
+static const uint8_t gamepakWaitState0[2] = { 2, 1 };
+static const uint8_t gamepakWaitState1[2] = { 4, 1 };
+static const uint8_t gamepakWaitState2[2] = { 8, 1 };
 
 static int IRQTicks = 0;
 static bool intState = false;
@@ -12131,21 +12135,12 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
             memoryWait[0x0c] = memoryWait[0x0d] = 3;
             memoryWaitSeq[0x0c] = memoryWaitSeq[0x0d] = 1;
 #else
-#if 1
-            memoryWait[0x08] = memoryWait[0x09] = 3;
-            memoryWaitSeq[0x08] = memoryWaitSeq[0x09] = 1;
-            memoryWait[0x0a] = memoryWait[0x0b] = 3;
-            memoryWaitSeq[0x0a] = memoryWaitSeq[0x0b] = 1;
-            memoryWait[0x0c] = memoryWait[0x0d] = 3;
-            memoryWaitSeq[0x0c] = memoryWaitSeq[0x0d] = 1;
-#else
             memoryWait[0x08] = memoryWait[0x09] = gamepakWaitState[(value >> 2) & 3];
             memoryWaitSeq[0x08] = memoryWaitSeq[0x09] = gamepakWaitState0[(value >> 4) & 1];
             memoryWait[0x0a] = memoryWait[0x0b] = gamepakWaitState[(value >> 5) & 3];
             memoryWaitSeq[0x0a] = memoryWaitSeq[0x0b] = gamepakWaitState1[(value >> 7) & 1];
             memoryWait[0x0c] = memoryWait[0x0d] = gamepakWaitState[(value >> 8) & 3];
             memoryWaitSeq[0x0c] = memoryWaitSeq[0x0d] = gamepakWaitState2[(value >> 10) & 1];
-#endif
 #endif
 
 			memoryWait32[8] = memoryWait[8] + memoryWaitSeq[8] + 1;
