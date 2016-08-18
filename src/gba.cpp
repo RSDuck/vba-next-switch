@@ -34,6 +34,22 @@
 #define CLOCKTICKS_UPDATE_TYPE16P (codeTicksAccessSeq16(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_16) + 3
 #define CLOCKTICKS_UPDATE_TYPE32P (codeTicksAccessSeq32(bus.armNextPC) << 1) + codeTicksAccess(bus.armNextPC, BITS_32) + 3
 
+// Indexes into the line array
+#define Layer_BG0 0
+#define Layer_BG1 1
+#define Layer_BG2 2
+#define Layer_BG3 3
+#define Layer_OBJ 4
+#define Layer_WIN_OBJ 5 // Used by VBA for OBJ opacity tests
+
+#define LayerMask_BG0  (1 << Layer_BG0)
+#define LayerMask_BG1  (1 << Layer_BG1)
+#define LayerMask_BG2  (1 << Layer_BG2)
+#define LayerMask_BG3  (1 << Layer_BG3)
+#define LayerMask_OBJ  (1 << Layer_OBJ)
+// Used in R_WIN_* to indicate whether color effects are enabled
+#define LayerMask_SFX  (1 << 5)
+
 typedef void (*renderfunc_t)(void);
 
 template<int renderer_idx>
@@ -73,7 +89,6 @@ int renderfunc_type = 0;
 	#include "thread.h"
 
 	static int threaded_renderer_idx = 0;
-	static uint32_t threaded_palette_ver = 0;
 	static uint32_t threaded_background_ver = 0;
 
 	typedef struct {
@@ -83,12 +98,9 @@ int renderfunc_type = 0;
 		int renderfunc_type;
 
 		uint32_t background_ver;
-		uint32_t palette_ver;
 
 		uint16_t io_registers[1024 * 16];
 		uint32_t line[6][240];
-		uint8_t palette[0x400];
-		uint8_t oam[0x400];
 
 		bool draw_objwin;
 		bool draw_sprites;
@@ -117,7 +129,10 @@ int renderfunc_type = 0;
 		ctx.renderer_control = 0;
 		ctx.renderer_state = 0;
 		ctx.background_ver = 0;
-		ctx.palette_ver = 0;
+		memset(ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
+		memset(ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
+		memset(ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
+		memset(ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
 	}
 
 	static renderer_context threaded_renderer_contexts[THREADED_RENDERER_COUNT];
@@ -141,9 +156,10 @@ int renderfunc_type = 0;
 	#define RENDERER_BG3Y_L renderer_ctx.bg3y_l
 	#define RENDERER_BG3Y_H renderer_ctx.bg3y_h
 
-	#define RENDERER_PALETTE renderer_ctx.palette
+	#define RENDERER_PALETTE paletteRAM
+	#define RENDERER_OAM oam
+
 	#define RENDERER_LINE renderer_ctx.line
-	#define RENDERER_OAM renderer_ctx.oam
 	#define RENDERER_IO_REGISTERS renderer_ctx.io_registers
 	#define RENDERER_MOSAIC renderer_ctx.mosaic
 	#define RENDERER_BLDMOD renderer_ctx.bldmod
@@ -461,22 +477,6 @@ static uint16_t io_registers[1024 * 16];
 #define R_WIN_Window1_Mask (io_registers[REG_WININ] >> 8)
 #define R_WIN_Outside_Mask (io_registers[REG_WINOUT] & 0xFF)
 #define R_WIN_OBJ_Mask     (io_registers[REG_WINOUT] >> 8)
-
-// Indexes into the line array
-#define Layer_BG0 0
-#define Layer_BG1 1
-#define Layer_BG2 2
-#define Layer_BG3 3
-#define Layer_OBJ 4
-#define Layer_WIN_OBJ 5 // Used by VBA for OBJ opacity tests
-
-#define LayerMask_BG0  (1 << Layer_BG0)
-#define LayerMask_BG1  (1 << Layer_BG1)
-#define LayerMask_BG2  (1 << Layer_BG2)
-#define LayerMask_BG3  (1 << Layer_BG3)
-#define LayerMask_OBJ  (1 << Layer_OBJ)
-// Used in R_WIN_* to indicate whether color effects are enabled
-#define LayerMask_SFX  (1 << 5)
 
 // Indicates the currently drawn scanline, values in range from
 // 160..227 indicate 'hidden' scanlines within VBlank area.
@@ -1014,9 +1014,6 @@ static INLINE void CPUWriteMemory(u32 address, u32 value)
 			break;
 		case 0x05:
 			WRITE32LE(paletteRAM + (address & 0x3FC), value);
-#if THREADED_RENDERER
-			++threaded_palette_ver;
-#endif
 			break;
 		case 0x06:
 			address = (address & 0x1fffc);
@@ -1062,9 +1059,6 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 5:
 			WRITE16LE(paletteRAM + (address & 0x3fe), value);
-#if THREADED_RENDERER
-			++threaded_palette_ver;
-#endif
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -1180,9 +1174,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 		case 5:
 			// no need to switch
 			*(u16 *)(paletteRAM + (address & 0x3FE)) = (b << 8) | b;
-#if THREADED_RENDERER
-			++threaded_palette_ver;
-#endif
 			break;
 		case 6:
 			address = (address & 0x1fffe);
@@ -8909,10 +8900,12 @@ bool CPUSetupBuffers()
 	eepromInit();
 
 	//CPUUpdateRenderBuffers(true);
+#if !THREADED_RENDERER
 	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
+#endif
 	
 #if USE_TWEAKS
 	tweaksInit();
@@ -11138,25 +11131,15 @@ static void postRender() {
 	INIT_RENDERER_CONTEXT(threaded_renderer_idx);
 
 	if(renderer_ctx.background_ver < threaded_background_ver) {
-		renderer_ctx.background_ver = threaded_background_ver;
-		memcpy(renderer_ctx.line[Layer_BG2], line[Layer_BG2], 240 * 4);
-
-		if(video_mode == 0 || video_mode == 1) {
-			memcpy(renderer_ctx.line[Layer_BG0], line[Layer_BG0], 240 * 4);
-			memcpy(renderer_ctx.line[Layer_BG1], line[Layer_BG1], 240 * 4);	
-		}
-
-		if(video_mode == 0 || video_mode == 2) {
-			memcpy(renderer_ctx.line[Layer_BG3], line[Layer_BG3], 240 * 4);
-		}
+		if(!R_DISPCNT_Screen_Display_BG0)
+			memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
+		if(!R_DISPCNT_Screen_Display_BG1)
+			memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
+		if(!R_DISPCNT_Screen_Display_BG2)
+			memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
+		if(!R_DISPCNT_Screen_Display_BG3)
+			memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
 	}
-
-	if(renderer_ctx.palette_ver < threaded_palette_ver) {
-		renderer_ctx.palette_ver = threaded_palette_ver;
-		memcpy(renderer_ctx.palette, paletteRAM, 0x400);
-	}
-
-	if(draw_sprites || draw_objwin)	memcpy(renderer_ctx.oam, oam, 0x400);
 
 	renderer_ctx.io_registers[REG_DISPCNT] = io_registers[REG_DISPCNT];
 	renderer_ctx.io_registers[REG_DISPSTAT] = io_registers[REG_DISPSTAT];
@@ -11346,10 +11329,12 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	CPUUpdateRender();
 
+#if !THREADED_RENDERER
 	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
+#endif
 
 	CPUUpdateWindow0();
 	CPUUpdateWindow1();
@@ -11775,6 +11760,9 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 				// we only care about changes in BG0-BG3
 				if(changeBG)
 				{
+#if THREADED_RENDERER
+					++threaded_background_ver;
+#else
 					if(!R_DISPCNT_Screen_Display_BG0)
 						memset(line[Layer_BG0], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG1)
@@ -11783,8 +11771,6 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 						memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 					if(!R_DISPCNT_Screen_Display_BG3)
 						memset(line[Layer_BG3], -1, 240 * sizeof(u32));
-#if THREADED_RENDERER
-					++threaded_background_ver;
 #endif
 				}
 				break;
@@ -12519,10 +12505,12 @@ void CPUReset (void)
 	saveType = 0;
 	graphics.layerEnable = io_registers[REG_DISPCNT];
 
+#if !THREADED_RENDERER
 	memset(line[Layer_BG0], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
+#endif
 
 	for(int i = 0; i < 256; i++) {
 		map[i].address = 0;
