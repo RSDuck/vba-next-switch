@@ -90,8 +90,10 @@ int renderfunc_type = 0;
 
 	static int threaded_renderer_idx = 0;
 	static uint32_t threaded_background_ver = 0;
+	#if USE_TWEAK_DRAWCALL
 	static volatile int threaded_renderer_ready = 0;
 	static uint16_t* threaded_pix = NULL;
+	#endif
 
 	typedef struct {
 		volatile int renderer_control;
@@ -164,7 +166,6 @@ int renderfunc_type = 0;
 
 	#define RENDERER_LINE renderer_ctx.line
 	#define RENDERER_IO_REGISTERS renderer_ctx.io_registers
-	//#define RENDERER_IO_REGISTERS io_registers
 	#define RENDERER_MOSAIC renderer_ctx.mosaic
 	#define RENDERER_BLDMOD renderer_ctx.bldmod
 	#define RENDERER_GRAPHICS_LAYERS renderer_ctx.layers
@@ -8894,7 +8895,7 @@ bool CPUSetupBuffers()
 	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 	ioMem = (uint8_t *)calloc(1, 0x400);
 
-#if THREADED_RENDERER	
+#if USE_TWEAK_DRAWCALL	
 	threaded_pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 #endif
 
@@ -9013,7 +9014,11 @@ _join:;
 
 /* we only use 16bit color depth */
 #if THREADED_RENDERER
-	#define GET_LINE_MIX (threaded_pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
+	#if USE_TWEAK_DRAWCALL
+		#define GET_LINE_MIX (threaded_pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
+	#else
+		#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
+	#endif
 #else
 	#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
 #endif
@@ -11073,6 +11078,7 @@ static void threaded_renderer_loop(void* p) {
 	}
 
 	while(renderer_ctx.renderer_control == 1) {
+		#if USE_TWEAK_DRAWCALL
 		if(renderer_idx == 0) {
 			if(threaded_renderer_ready) {
 				threaded_renderer_ready = 0;
@@ -11080,6 +11086,7 @@ static void threaded_renderer_loop(void* p) {
 				systemDrawScreen();
 			}
 		}
+		#endif
 
 		//buffer is not ready.
 		if(renderer_ctx.renderer_state == 0) continue;
@@ -12809,7 +12816,7 @@ updateLoop:
 		            	}
 		            	CPUCheckDMA(1, 0x0f);
 
-#if THREADED_RENDERER
+#if USE_TWEAK_DRAWCALL
 						//wait for renderer
 						while(threaded_renderer_ready);
 						threaded_renderer_ready = 1;
