@@ -1254,17 +1254,14 @@ s16 sineTable[256] = {
 #if USE_TWEAK_ARCTAN
 s32* table_atan;
 
-//#define BIOS_ArcTan() bus.reg[0].I = (bus.reg[0].I & 0x80000000) | table_atan[min(0x4000 - 1, (int)(bus.reg[0].I & 0x7FFFFFFF))];
-//#define BIOS_ArcTan() bus.reg[0].I = table_atan[min(0x8000 - 1, max((int)(bus.reg[0].I + 0x4000), 0))];
-
 #define BIOS_ArcTan() { \
 	int p = bus.reg[0].I + 0x4000; \
 	if(p < 0) \
 		bus.reg[0].I = table_atan[0]; \
 	else if(p >= 0x8000) \
-		bus.reg[0].I = table_atan[0x8000 - 1]; \
+		bus.reg[0].I = table_atan[0x800 - 1]; \
 	else \
-		bus.reg[0].I = table_atan[p];  \
+		bus.reg[0].I = table_atan[p >> 4];  \
 }
 		
 static s32 BIOS_ArcTan_Calc (s32 p)
@@ -2171,9 +2168,9 @@ static void tweaksInit() {
 	tweaks_init = true;
 
 	#if USE_TWEAK_ARCTAN
-	table_atan = new s32[0x8000];
-	for(int u = 0; u < 0x8000; ++u)
-		table_atan[u] = BIOS_ArcTan_Calc(u - 0x4000);
+	table_atan = new s32[0x800];
+	for(int u = 0; u < 0x800; ++u)
+		table_atan[u] = BIOS_ArcTan_Calc((u - 0x400) << 4);
 	#endif
 }
 #endif
