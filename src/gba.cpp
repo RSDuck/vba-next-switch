@@ -92,7 +92,6 @@ int renderfunc_type = 0;
 	static uint32_t threaded_background_ver = 0;
 	#if USE_TWEAK_DRAWCALL
 	static volatile int threaded_renderer_ready = 0;
-	static uint16_t* threaded_pix = NULL;
 	#endif
 
 	typedef struct {
@@ -8895,10 +8894,6 @@ bool CPUSetupBuffers()
 	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 	ioMem = (uint8_t *)calloc(1, 0x400);
 
-#if USE_TWEAK_DRAWCALL	
-	threaded_pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-#endif
-
 	if(rom == NULL || workRAM == NULL || bios == NULL ||
 	   internalRAM == NULL || paletteRAM == NULL ||
 	   vram == NULL || oam == NULL || pix == NULL || ioMem == NULL) {
@@ -9014,11 +9009,7 @@ _join:;
 
 /* we only use 16bit color depth */
 #if THREADED_RENDERER
-	#if USE_TWEAK_DRAWCALL
-		#define GET_LINE_MIX (threaded_pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
-	#else
-		#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
-	#endif
+	#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * RENDERER_R_VCOUNT)
 #else
 	#define GET_LINE_MIX (pix + PIX_BUFFER_SCREEN_WIDTH * R_VCOUNT)
 #endif
@@ -11082,7 +11073,6 @@ static void threaded_renderer_loop(void* p) {
 		if(renderer_idx == 0) {
 			if(threaded_renderer_ready) {
 				threaded_renderer_ready = 0;
-				memcpy(pix, threaded_pix, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
 				systemDrawScreen();
 			}
 		}
@@ -12817,8 +12807,6 @@ updateLoop:
 		            	CPUCheckDMA(1, 0x0f);
 
 #if USE_TWEAK_DRAWCALL
-						//wait for renderer
-						while(threaded_renderer_ready);
 						threaded_renderer_ready = 1;
 #else
 		            	systemDrawScreen();
