@@ -105,6 +105,7 @@ int renderfunc_type = 0;
 
 		uint16_t io_registers[1024 * 16];
 		uint32_t line[6][240];
+		int lineOBJpixleft[128];
 
 		bool draw_objwin;
 		bool draw_sprites;
@@ -168,6 +169,7 @@ int renderfunc_type = 0;
 	#define RENDERER_MOSAIC renderer_ctx.mosaic
 	#define RENDERER_BLDMOD renderer_ctx.bldmod
 	#define RENDERER_GRAPHICS_LAYERS renderer_ctx.layers
+	#define RENDERER_LINE_OBJ_PIX_LEFT renderer_ctx.lineOBJpixleft
 
 	#define RENDERER_R_VCOUNT renderer_ctx.vcount
 	#define RENDERER_R_DISPCNT_Video_Mode renderer_ctx.renderfunc_mode
@@ -223,6 +225,7 @@ int renderfunc_type = 0;
 	#define RENDERER_MOSAIC MOSAIC
 	#define RENDERER_BLDMOD BLDMOD
 	#define RENDERER_GRAPHICS_LAYERS graphics.layerEnable
+	#define RENDERER_LINE_OBJ_PIX_LEFT lineOBJpixleft
 
 	#define RENDERER_R_VCOUNT (RENDERER_IO_REGISTERS[REG_VCOUNT])
 	#define RENDERER_R_DISPCNT_Video_Mode (RENDERER_IO_REGISTERS[REG_DISPCNT] & 7)
@@ -7516,7 +7519,7 @@ static void gfxDrawSprites (void)
 		u16 a2 = READ16LE(sprites++);
 		++sprites;
 
-		lineOBJpixleft[x]=lineOBJpix;
+		RENDERER_LINE_OBJ_PIX_LEFT[x]=lineOBJpix;
 
 		lineOBJpix-=2;
 		if (lineOBJpix<=0)
@@ -7961,7 +7964,7 @@ static void gfxDrawOBJWin (void)
 	u16 *sprites = (u16 *)RENDERER_OAM;
 	for(int x = 0; x < 128 ; x++)
 	{
-		int lineOBJpix = lineOBJpixleft[x];
+		int lineOBJpix = RENDERER_LINE_OBJ_PIX_LEFT[x];
 		u16 a0 = READ16LE(sprites++);
 		u16 a1 = READ16LE(sprites++);
 		u16 a2 = READ16LE(sprites++);
@@ -11082,6 +11085,7 @@ static void threaded_renderer_loop(void* p) {
 		if(renderer_ctx.renderer_state == 0) continue;
 
 		if(renderer_ctx.background_ver < threaded_background_ver) {
+			renderer_ctx.background_ver = threaded_background_ver;
 			if(!RENDERER_R_DISPCNT_Screen_Display_BG0)
 				memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
 			if(!RENDERER_R_DISPCNT_Screen_Display_BG1)
