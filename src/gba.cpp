@@ -90,6 +90,7 @@ int renderfunc_type = 0;
 
 	static int threaded_renderer_idx = 0;
 	static uint32_t threaded_background_ver = 0;
+	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
 	#if USE_TWEAK_DRAWCALL
 	static volatile int threaded_renderer_ready = 0;
 	#endif
@@ -102,10 +103,12 @@ int renderfunc_type = 0;
 		int vcount;
 
 		uint32_t background_ver;
+		uint32_t gfxinwin_ver[2];
 
 		uint16_t io_registers[1024 * 16];
 		uint32_t line[6][240];
 		int lineOBJpixleft[128];
+		bool gfxInWin[2][240];
 
 		bool draw_objwin;
 		bool draw_sprites;
@@ -134,6 +137,8 @@ int renderfunc_type = 0;
 		ctx.renderer_control = 0;
 		ctx.renderer_state = 0;
 		ctx.background_ver = 0;
+		ctx.gfxinwin_ver[0] = 0;
+		ctx.gfxinwin_ver[1] = 0;
 		memset(ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
 		memset(ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
 		memset(ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
@@ -170,6 +175,7 @@ int renderfunc_type = 0;
 	#define RENDERER_BLDMOD renderer_ctx.bldmod
 	#define RENDERER_GRAPHICS_LAYERS renderer_ctx.layers
 	#define RENDERER_LINE_OBJ_PIX_LEFT renderer_ctx.lineOBJpixleft
+	#define RENDERER_GFX_IN_WIN renderer_ctx.gfxInWin
 
 	#define RENDERER_R_VCOUNT renderer_ctx.vcount
 	#define RENDERER_R_DISPCNT_Video_Mode renderer_ctx.renderfunc_mode
@@ -226,6 +232,7 @@ int renderfunc_type = 0;
 	#define RENDERER_BLDMOD BLDMOD
 	#define RENDERER_GRAPHICS_LAYERS graphics.layerEnable
 	#define RENDERER_LINE_OBJ_PIX_LEFT lineOBJpixleft
+	#define RENDERER_GFX_IN_WIN gfxInWin
 
 	#define RENDERER_R_VCOUNT (RENDERER_IO_REGISTERS[REG_VCOUNT])
 	#define RENDERER_R_DISPCNT_Video_Mode (RENDERER_IO_REGISTERS[REG_DISPCNT] & 7)
@@ -8623,23 +8630,49 @@ static INLINE int CPUUpdateTicks (void)
 	return cpuLoopTicks;
 }
 
-#define CPUUpdateWindow0() \
-{ \
-  int x00_window0 = R_WIN_Window0_X1; \
-  int x01_window0 = R_WIN_Window0_X2; \
-  int x00_lte_x01 = x00_window0 <= x01_window0; \
-  for(int i = 0; i < 240; i++) \
-      gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
-}
+#if THREADED_RENDERER
 
-#define CPUUpdateWindow1() \
-{ \
-  int x00_window1 = R_WIN_Window1_X1; \
-  int x01_window1 = R_WIN_Window1_X2; \
-  int x00_lte_x01 = x00_window1 <= x01_window1; \
-  for(int i = 0; i < 240; i++) \
-   gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
-}
+	#define CPUUpdateWindow0() \
+	{ \
+	  int x00_window0 = R_WIN_Window0_X1; \
+	  int x01_window0 = R_WIN_Window0_X2; \
+	  int x00_lte_x01 = x00_window0 <= x01_window0; \
+	  for(int i = 0; i < 240; i++) \
+		  gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
+	  ++threaded_gfxinwin_ver[0]; \
+	}
+
+	#define CPUUpdateWindow1() \
+	{ \
+	  int x00_window1 = R_WIN_Window1_X1; \
+	  int x01_window1 = R_WIN_Window1_X2; \
+	  int x00_lte_x01 = x00_window1 <= x01_window1; \
+	  for(int i = 0; i < 240; i++) \
+	   gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
+	  ++threaded_gfxinwin_ver[1]; \
+	}
+
+#else
+
+	#define CPUUpdateWindow0() \
+	{ \
+	  int x00_window0 = R_WIN_Window0_X1; \
+	  int x01_window0 = R_WIN_Window0_X2; \
+	  int x00_lte_x01 = x00_window0 <= x01_window0; \
+	  for(int i = 0; i < 240; i++) \
+		  gfxInWin[0][i] = ((i >= x00_window0 && i < x01_window0) & x00_lte_x01) | ((i >= x00_window0 || i < x01_window0) & ~x00_lte_x01); \
+	}
+
+	#define CPUUpdateWindow1() \
+	{ \
+	  int x00_window1 = R_WIN_Window1_X1; \
+	  int x01_window1 = R_WIN_Window1_X2; \
+	  int x00_lte_x01 = x00_window1 <= x01_window1; \
+	  for(int i = 0; i < 240; i++) \
+	   gfxInWin[1][i] = ((i >= x00_window1 && i < x01_window1) & x00_lte_x01) | ((i >= x00_window1 || i < x01_window1) & ~x00_lte_x01); \
+	}
+
+#endif
 
 #define CPUCompareVCOUNT() \
   if(R_VCOUNT == (io_registers[REG_DISPSTAT] >> 8)) \
@@ -9325,8 +9358,8 @@ static void mode0RenderLineAll (void)
 			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG0) && (RENDERER_LINE[Layer_BG0][x] < color)) {
 			color = RENDERER_LINE[Layer_BG0][x];
@@ -9760,8 +9793,8 @@ static void mode1RenderLineAll (void)
 			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		// At the very least, move the inexpensive 'mask' operation up front
 		if((mask & LayerMask_BG0) && RENDERER_LINE[Layer_BG0][x] < backdrop) {
@@ -10139,8 +10172,8 @@ static void mode2RenderLineAll (void)
 			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && RENDERER_LINE[Layer_BG2][x] < color) {
 			color = RENDERER_LINE[Layer_BG2][x];
@@ -10426,8 +10459,8 @@ static void mode3RenderLineAll (void)
 			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && RENDERER_LINE[Layer_BG2][x] < background) {
 			color = RENDERER_LINE[Layer_BG2][x];
@@ -10695,8 +10728,8 @@ static void mode4RenderLineAll (void)
 		if(!(RENDERER_LINE[Layer_WIN_OBJ][x] & 0x80000000))
 			mask = RENDERER_R_WIN_OBJ_Mask;
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && (RENDERER_LINE[Layer_BG2][x] < backdrop))
 		{
@@ -10967,8 +11000,8 @@ static void mode5RenderLineAll (void)
 			mask = RENDERER_R_WIN_OBJ_Mask;
 		}
 
-		mask = SELECT(inWindow1 && gfxInWin[1][x], inWin1Mask, mask);
-		mask = SELECT(inWindow0 && gfxInWin[0][x], inWin0Mask, mask);
+		mask = SELECT(inWindow1 && RENDERER_GFX_IN_WIN[1][x], inWin1Mask, mask);
+		mask = SELECT(inWindow0 && RENDERER_GFX_IN_WIN[0][x], inWin0Mask, mask);
 
 		if((mask & LayerMask_BG2) && (RENDERER_LINE[Layer_BG2][x] < background)) {
 			color = RENDERER_LINE[Layer_BG2][x];
@@ -11249,6 +11282,13 @@ static void postRender() {
 		renderer_ctx.bg3x_h = BG3X_H;
 		renderer_ctx.bg3y_l = BG3Y_L;
 		renderer_ctx.bg3y_h = BG3Y_H;
+	}
+
+	for(int u = 0; u < 2; ++u) {
+		if(renderer_ctx.gfxinwin_ver[u] < threaded_gfxinwin_ver[u]) {
+			renderer_ctx.gfxinwin_ver[u] = threaded_gfxinwin_ver[u];
+			memcpy(renderer_ctx.gfxInWin[u], gfxInWin[u], sizeof(gfxInWin) / 2);
+		}
 	}
 
 	fetchBackgroundOffset(video_mode);
