@@ -988,6 +988,7 @@ static INLINE u8 CPUReadByte(u32 address)
          return eepromRead();
 		case 14:
 #ifdef USE_MOTION_SENSOR
+/*
 			if(cpuEEPROMSensorEnabled)
          {
 				switch(address & 0x00008f00)
@@ -1000,6 +1001,19 @@ static INLINE u8 CPUReadByte(u32 address)
 						return systemGetSensorY() & 255;
 					case 0x8500:
 						return systemGetSensorY() >> 8;
+				}
+			}
+*/
+			if(cpuEEPROMSensorEnabled)
+         {
+				switch(address & 0x00008f00)
+            {
+					case 0x8200:
+					case 0x8300:
+						return (systemGetSensorX() >> 21) + 0x3A0;
+					case 0x8400:
+					case 0x8500:
+						return (systemGetSensorY() >> 21) + 0x3A0;
 				}
 			}
 #endif
@@ -12663,6 +12677,8 @@ void CPUReset (void)
 			break;
 	}
 
+	systemSetSensorState(cpuEEPROMSensorEnabled);
+
 	ARM_PREFETCH;
 
 #ifdef USE_SWITICKS
@@ -12700,7 +12716,7 @@ void UpdateJoypad(void)
 {
    /* update joystick information */
    io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
-#if 0
+#if USE_MOTION_SENSOR
    if(cpuEEPROMSensorEnabled)
       systemUpdateMotionSensor();
 #endif

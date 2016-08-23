@@ -11,6 +11,7 @@ extern void systemMessage(const char *, ...);
 extern void systemUpdateMotionSensor (void);
 extern int  systemGetSensorX (void);
 extern int  systemGetSensorY (void);
+extern void systemSetSensorState(bool);
 #endif
 
 // sound functions
