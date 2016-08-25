@@ -23,16 +23,8 @@ int systemGetAccelY (void) {
 	return state.accelerometer.y * 0x30000000;
 }
 
-int systemGetGyroX (void) {
-	return state.gyro.x * -0x10000000;
-}
-
-int systemGetGyroY (void) {
-	return state.gyro.y * -0x10000000;
-}
-
 int systemGetGyroZ (void) {
-	return state.gyro.z * -0x10000000;
+	return state.gyro.z * 1000;
 }
 
 void systemSetSensorState(bool val) {

@@ -599,14 +599,17 @@ static u8 toBCD(u8 value)
 	int l = value % 10;
 	int h = value / 10;
 	return h * 16 + l;
-}
+};
+
+static u16 gyro_data[3];
 
 u16 gyroRead(u32 address) {
-	return READ16LE((&rom[address & 0x1FFFFFE]));
+	return gyro_data[(address - 0x80000c4) >> 1];
 }
 
 bool gyroWrite(u32 address, u16 value) {
-	return false;
+	gyro_data[(address - 0x80000c4) >> 1] = value;
+	return true;
 }
 
 bool rtcWrite(u32 address, u16 value)

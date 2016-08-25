@@ -11,8 +11,6 @@ extern void systemMessage(const char *, ...);
 extern void systemUpdateMotionSensor (void);
 extern int  systemGetAccelX (void);
 extern int  systemGetAccelY (void);
-extern int  systemGetGyroX (void);
-extern int  systemGetGyroY (void);
 extern int  systemGetGyroZ (void);
 extern void systemSetSensorState(bool);
 #endif

@@ -83,8 +83,6 @@ typedef struct {
 	int sensor;
 	int tilt_x;
 	int tilt_y;	
-	//int gyro_x;
-	//int gyro_y;
 	int gyro_z;
 } hardware_t;
 
@@ -932,11 +930,11 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 			case 0x80000c6:
 			case 0x80000c8:
 #if USE_MOTION_SENSOR
-				if(hardware.sensor & HARDWARE_SENSOR_GYRO) 
-					value = gyroRead(address);
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
+					return gyroRead(address);
 				else
 #endif
-					value = rtcRead(address);
+					return rtcRead(address);
 				break;
 			default:
 				value = READ16LE(rom + (address & 0x1FFFFFE)); break;
@@ -1123,9 +1121,12 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			case 0x80000c6:
 			case 0x80000c8:
 #if USE_MOTION_SENSOR
-				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
-					gyroWrite(address, value);
-				else
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO) {
+					if(address == 0x80000c4)
+						gyroWrite(address, hardware.gyro_z);
+					else
+						gyroWrite(address, 0x6C0);
+				} else
 #endif
 					rtcWrite(address, value);
 				break;
@@ -12772,11 +12773,9 @@ void UpdateJoypad(void)
 #if USE_MOTION_SENSOR
 	if(hardware.sensor) {
 		systemUpdateMotionSensor();
-		if(hardware.sensor & HARDWARE_SENSOR_TILT) {
-			hardware.tilt_x = (systemGetAccelX() >> 21) + 0x3A0; // Crop off an extra bit so that we can't go negative
-			hardware.tilt_y = (systemGetAccelY() >> 21) + 0x3A0;
-			hardware.gyro_z = (systemGetGyroZ() >> 21) + 0x6C0;
-		}
+		hardware.tilt_x = (systemGetAccelX() >> 21) + 0x3A0;
+		hardware.tilt_y = (systemGetAccelY() >> 21) + 0x3A0;
+		hardware.gyro_z = systemGetGyroZ() + 0x6C0;		
 	}
 #endif
    UPDATE_REG(0x130, io_registers[REG_P1]);
