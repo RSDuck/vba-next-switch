@@ -79,7 +79,7 @@ int renderfunc_mode = 0;
 int renderfunc_type = 0;
 
 #if USE_MOTION_SENSOR
-int hardware_sensor;
+static int hardware_sensor;
 
 #define HARDWARE_SENSOR_NONE 0
 #define HARDWARE_SENSOR_TILT 0x1
@@ -2478,7 +2478,7 @@ static void CPUSoftwareInterrupt(int comment)
  // Disable "empty statement" warnings
  #pragma warning(disable: 4390)
  // Visual C's inline assembler treats "offset" as a reserved word, so we
- // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.
+ // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.e
  #define offset offset_
 #endif
 
@@ -8289,6 +8289,7 @@ static void gfxDrawOBJWin (void)
 int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
+bool cpuIsMultiBoot = false; 
 int cpuSaveType = 0;
 bool enableRtc = false;
 bool mirroringEnable = false;
@@ -8963,32 +8964,33 @@ bool CPUSetupBuffers()
 	return true;
 }
 
-void applyCartridgeOverride(char* code) {
+static void applyCartridgeOverride(char* code) {
 #if USE_MOTION_SENSOR
 	hardware_sensor = HARDWARE_SENSOR_NONE;
 
 	do {
 		// Koro Koro Puzzle - Happy Panechu!
-		if(memcmp(code, "KHPJ") == 0) {
-			hardware_sensor = HARDWARE_SENSOR_NONE;
-			break;
-		}
-
-		// Wario Ware Twisted
-		if(memcmp(code, "RZWJ") == 0 || memcmp(code, "RZWE") == 0 || memcmp(code, "RZWP") == 0) {
-			hardware_sensor = HARDWARE_SENSOR_GYRO;
-			break;
-		}
-
-		// Yoshi's Universal Gravitation
-		if(memcmp(code, "KYGJ") == 0 || memcmp(code, "KYGE") == 0 || memcmp(code, "KYGP") == 0) {
+		if(memcmp(code, "KHPJ", 4) == 0) {
 			hardware_sensor = HARDWARE_SENSOR_TILT;
 			break;
 		}
 
+		// Yoshi's Universal Gravitation
+		if(memcmp(code, "KYGJ", 4) == 0 || memcmp(code, "KYGE", 4) == 0 || memcmp(code, "KYGP", 4) == 0) {
+			hardware_sensor = HARDWARE_SENSOR_TILT;
+			break;
+		}
+
+		// Wario Ware Twisted
+		if(memcmp(code, "RZWJ", 4) == 0 || memcmp(code, "RZWE", 4) == 0 || memcmp(code, "RZWP", 4) == 0) {
+			hardware_sensor = HARDWARE_SENSOR_GYRO;
+			break;
+		}
 	} while(0);
 
 	systemSetSensorState(hardware_sensor);
+
+	//if(hardware_sensor) while(1);
 #endif
 }
 
@@ -8996,7 +8998,7 @@ int CPULoadRom(const char * file)
 {
 	if (!CPUSetupBuffers()) return 0;
 	
-	uint8_t *whereToLoad = rom;
+	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
 	if(file != NULL)
 	{
@@ -9010,10 +9012,6 @@ int CPULoadRom(const char * file)
 			workRAM = NULL;
 			return 0;
 		}
-
-		//load cartridge code
-		memcpy(cartridgeCode, whereToLoad + 0xAC, 4);
-		applyCartridgeOverride(cartridgeCode);
 	}
 
 	uint16_t *temp = (uint16_t *)(rom+((romSize+1)&~1));
@@ -9030,11 +9028,15 @@ int CPULoadRom(const char * file)
 int CPULoadRomData(const char *data, int size)
 {
 	if (!CPUSetupBuffers()) return 0;
-	
-	uint8_t *whereToLoad = rom;
+
+	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
 	romSize = size % 2 == 0 ? size : size + 1;
 	memcpy(whereToLoad, data, size);
+
+	//load cartridge code
+	memcpy(cartridgeCode, whereToLoad + 0xAC, 4);
+	applyCartridgeOverride(cartridgeCode);
 
 	uint16_t *temp = (u16 *)(rom+((romSize+1)&~1));
 	int i;
@@ -12517,25 +12519,34 @@ void CPUReset (void)
 
 	armMode = 0x1F;
 
-#ifdef HAVE_HLE_BIOS
-	if(useBios && !skipBios)
-	{
-		bus.reg[15].I = 0x00000000;
-		armMode = 0x13;
-		armIrqEnable = false;
-	}
-	else
-	{
-#endif
+	if(cpuIsMultiBoot) {
 		bus.reg[13].I = 0x03007F00;
-		bus.reg[15].I = 0x08000000;
+		bus.reg[15].I = 0x02000000;
 		bus.reg[16].I = 0x00000000;
 		bus.reg[R13_IRQ].I = 0x03007FA0;
 		bus.reg[R13_SVC].I = 0x03007FE0;
 		armIrqEnable = true;
+	} else {
 #ifdef HAVE_HLE_BIOS
-	}
+		if(useBios && !skipBios)
+		{
+			bus.reg[15].I = 0x00000000;
+			armMode = 0x13;
+			armIrqEnable = false;
+		}
+		else
+		{
 #endif
+			bus.reg[13].I = 0x03007F00;
+			bus.reg[15].I = 0x08000000;
+			bus.reg[16].I = 0x00000000;
+			bus.reg[R13_IRQ].I = 0x03007FA0;
+			bus.reg[R13_SVC].I = 0x03007FE0;
+			armIrqEnable = true;
+#ifdef HAVE_HLE_BIOS
+		}
+#endif
+	}
 	
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
@@ -12641,7 +12652,10 @@ void CPUReset (void)
 	CPUUpdateWindow1();
 
 	// make sure registers are correctly initialized if not using BIOS
-	if(!useBios) BIOS_RegisterRamReset(0xff);
+	if(cpuIsMultiBoot) 
+		BIOS_RegisterRamReset(0xfe); 
+	else if(!useBios && !cpuIsMultiBoot) 
+		BIOS_RegisterRamReset(0xff); 
 		
 	switch(cpuSaveType) {
 		case 0: // automatic
