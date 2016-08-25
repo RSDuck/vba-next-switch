@@ -16,11 +16,11 @@ void systemUpdateMotionSensor (void) {
 }
 
 int systemGetSensorX (void) {
-	return state.accelerometer.x * 0x30000000;
+	return state.accelerometer.x * -0x30000000;
 }
 
 int systemGetSensorY (void) {
-	return state.accelerometer.y * -0x30000000;
+	return state.accelerometer.y * 0x30000000;
 }
 
 void systemSetSensorState(bool val) {

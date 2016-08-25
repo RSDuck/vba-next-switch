@@ -1013,7 +1013,7 @@ static INLINE u8 CPUReadByte(u32 address)
 				case 0x8400:
 					return hardware.tilt_y & 0xFF;
 				case 0x8500:
-					return (hardware.tilt_y >> 8) * 0xF;
+					return ((hardware.tilt_y >> 8) & 0xF) | 0x80;
 			}
 		}
 #endif
