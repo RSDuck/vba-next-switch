@@ -58,6 +58,9 @@ extern void rtcReset (void);
 extern void rtcReadGameMem(const uint8_t *& data);
 extern void rtcSaveGameMem(uint8_t *& data);
 
+extern u16 gyroRead(u32 address);
+extern bool gyroWrite(u32 address, u16 value);
+
 bool utilIsGBAImage(const char *);
 uint8_t *utilLoad(const char *, bool (*)(const char*), uint8_t *, int &);
 

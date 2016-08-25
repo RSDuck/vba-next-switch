@@ -601,6 +601,14 @@ static u8 toBCD(u8 value)
 	return h * 16 + l;
 }
 
+u16 gyroRead(u32 address) {
+	return READ16LE((&rom[address & 0x1FFFFFE]));
+}
+
+bool gyroWrite(u32 address, u16 value) {
+	return false;
+}
+
 bool rtcWrite(u32 address, u16 value)
 {
 	if(!rtcEnabled)

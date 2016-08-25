@@ -15,12 +15,24 @@ void systemUpdateMotionSensor (void) {
 	sceMotionGetSensorState(&state, 1);
 }
 
-int systemGetSensorX (void) {
+int systemGetAccelX (void) {
 	return state.accelerometer.x * -0x30000000;
 }
 
-int systemGetSensorY (void) {
+int systemGetAccelY (void) {
 	return state.accelerometer.y * 0x30000000;
+}
+
+int systemGetGyroX (void) {
+	return state.gyro.x * -0x10000000;
+}
+
+int systemGetGyroY (void) {
+	return state.gyro.y * -0x10000000;
+}
+
+int systemGetGyroZ (void) {
+	return state.gyro.z * -0x10000000;
 }
 
 void systemSetSensorState(bool val) {

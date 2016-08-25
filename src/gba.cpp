@@ -83,6 +83,9 @@ typedef struct {
 	int sensor;
 	int tilt_x;
 	int tilt_y;	
+	//int gyro_x;
+	//int gyro_y;
+	int gyro_z;
 } hardware_t;
 
 hardware_t hardware;
@@ -924,10 +927,20 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 		case 10:
 		case 11:
 		case 12:
-			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-				value = rtcRead(address);
-			else
-				value = READ16LE(rom + (address & 0x1FFFFFE));
+			switch(address) {
+			case 0x80000c4:
+			case 0x80000c6:
+			case 0x80000c8:
+#if USE_MOTION_SENSOR
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO) 
+					value = gyroRead(address);
+				else
+#endif
+					value = rtcRead(address);
+				break;
+			default:
+				value = READ16LE(rom + (address & 0x1FFFFFE)); break;
+			}
 			break;
 		case 13:
          value =  eepromRead();
@@ -999,7 +1012,7 @@ static INLINE u8 CPUReadByte(u32 address)
 		case 12:
 			return rom[address & 0x1FFFFFF];
 		case 13:
-         return eepromRead();
+         	return eepromRead();
 		case 14:
 #ifdef USE_MOTION_SENSOR
 		if(hardware.sensor)
@@ -1017,7 +1030,7 @@ static INLINE u8 CPUReadByte(u32 address)
 			}
 		}
 #endif
-         return flashRead(address);
+         	return flashRead(address);
 		default:
 unreadable:
 			if(armState)
@@ -1105,9 +1118,18 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 8:
 		case 9:
-			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-				if(!rtcWrite(address, value))
-					break;
+			switch(address) {
+			case 0x80000c4:
+			case 0x80000c6:
+			case 0x80000c8:
+#if USE_MOTION_SENSOR
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
+					gyroWrite(address, value);
+				else
+#endif
+					rtcWrite(address, value);
+				break;
+			}	
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
@@ -12751,8 +12773,9 @@ void UpdateJoypad(void)
 	if(hardware.sensor) {
 		systemUpdateMotionSensor();
 		if(hardware.sensor & HARDWARE_SENSOR_TILT) {
-			hardware.tilt_x = (systemGetSensorX() >> 21) + 0x3A0; // Crop off an extra bit so that we can't go negative
-			hardware.tilt_y = (systemGetSensorY() >> 21) + 0x3A0;
+			hardware.tilt_x = (systemGetAccelX() >> 21) + 0x3A0; // Crop off an extra bit so that we can't go negative
+			hardware.tilt_y = (systemGetAccelY() >> 21) + 0x3A0;
+			hardware.gyro_z = (systemGetGyroZ() >> 21) + 0x6C0;
 		}
 	}
 #endif
