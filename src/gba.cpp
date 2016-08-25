@@ -79,7 +79,13 @@ int renderfunc_mode = 0;
 int renderfunc_type = 0;
 
 #if USE_MOTION_SENSOR
-static int hardware_sensor;
+typedef struct {
+	int sensor;
+	int tilt_x;
+	int tilt_y;	
+} hardware_t;
+
+hardware_t hardware;
 
 #define HARDWARE_SENSOR_NONE 0
 #define HARDWARE_SENSOR_TILT 0x1
@@ -996,22 +1002,20 @@ static INLINE u8 CPUReadByte(u32 address)
          return eepromRead();
 		case 14:
 #ifdef USE_MOTION_SENSOR
-/*
-		if(cpuEEPROMSensorEnabled)
+		if(hardware.sensor)
         {
 			switch(address & 0x00008f00)
             {
 				case 0x8200:
-					return systemGetSensorX() & 255;
+					return hardware.tilt_x & 0xFF;
 				case 0x8300:
-					return (systemGetSensorX() >> 8)|0x80;
+					return ((hardware.tilt_x >> 8) & 0xF) | 0x80;
 				case 0x8400:
-					return systemGetSensorY() & 255;
+					return hardware.tilt_y & 0xFF;
 				case 0x8500:
-					return systemGetSensorY() >> 8;
+					return (hardware.tilt_y >> 8) * 0xF;
 			}
 		}
-*/
 #endif
          return flashRead(address);
 		default:
@@ -8966,31 +8970,36 @@ bool CPUSetupBuffers()
 
 static void applyCartridgeOverride(char* code) {
 #if USE_MOTION_SENSOR
-	hardware_sensor = HARDWARE_SENSOR_NONE;
+	hardware.sensor = HARDWARE_SENSOR_NONE;
 
 	do {
 		// Koro Koro Puzzle - Happy Panechu!
 		if(memcmp(code, "KHPJ", 4) == 0) {
-			hardware_sensor = HARDWARE_SENSOR_TILT;
+			hardware.sensor = HARDWARE_SENSOR_TILT;
 			break;
 		}
 
 		// Yoshi's Universal Gravitation
 		if(memcmp(code, "KYGJ", 4) == 0 || memcmp(code, "KYGE", 4) == 0 || memcmp(code, "KYGP", 4) == 0) {
-			hardware_sensor = HARDWARE_SENSOR_TILT;
+			hardware.sensor = HARDWARE_SENSOR_TILT;
 			break;
 		}
 
 		// Wario Ware Twisted
 		if(memcmp(code, "RZWJ", 4) == 0 || memcmp(code, "RZWE", 4) == 0 || memcmp(code, "RZWP", 4) == 0) {
-			hardware_sensor = HARDWARE_SENSOR_GYRO;
+			hardware.sensor = HARDWARE_SENSOR_GYRO;
 			break;
 		}
 	} while(0);
 
-	systemSetSensorState(hardware_sensor);
+	systemSetSensorState(hardware.sensor);
 
-	//if(hardware_sensor) while(1);
+	if(hardware.sensor) {
+		hardware.tilt_x = 0xFFF;
+		hardware.tilt_y = 0xFFF;
+	}
+
+	//if(hardware.sensor) while(1);
 #endif
 }
 
@@ -12739,7 +12748,13 @@ void UpdateJoypad(void)
    /* update joystick information */
    io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
 #if USE_MOTION_SENSOR
-	if(hardware_sensor) systemUpdateMotionSensor();
+	if(hardware.sensor) {
+		systemUpdateMotionSensor();
+		if(hardware.sensor & HARDWARE_SENSOR_TILT) {
+			hardware.tilt_x = (systemGetSensorX() >> 21) + 0x3A0; // Crop off an extra bit so that we can't go negative
+			hardware.tilt_y = (systemGetSensorY() >> 21) + 0x3A0;
+		}
+	}
 #endif
    UPDATE_REG(0x130, io_registers[REG_P1]);
    io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));

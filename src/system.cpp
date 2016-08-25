@@ -9,7 +9,7 @@
 //-lSceMotion_stub is required.
 
 static SceMotionSensorState state;
-static bool state_flag = false;
+static bool sensor_state = false;
 
 void systemUpdateMotionSensor (void) {
 	sceMotionGetSensorState(&state, 1);
@@ -24,14 +24,14 @@ int systemGetSensorY (void) {
 }
 
 void systemSetSensorState(bool val) {
-	if(val == state_flag) return;
+	if(val == sensor_state) return;
 	
 	if(val) {
 		sceMotionStartSampling();
 	} else {
 		sceMotionStopSampling();
 	}
-	state_flag = val;
+	sensor_state = val;
 }
 #endif
 
