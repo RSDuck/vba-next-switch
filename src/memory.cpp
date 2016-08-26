@@ -538,6 +538,69 @@ void sramWrite(u32 address, u8 byte)
 }
 
 /*============================================================
+	GYRO
+============================================================ */
+
+#if USE_MOTION_SENSOR
+static u16 gyro_data[3];
+
+static void gyroWritePins(unsigned pins) {
+	if (!hardware.readWrite) return;
+
+	uint16_t& t = gyro_data[0];
+	t &= hardware.direction;
+	hardware.pinState = t | (pins & ~hardware.direction & 0xF);
+	t = hardware.pinState;
+}
+
+static void gyroReadPins() {
+	if (hardware.pinState & 1) {
+		// Normalize to ~12 bits, focused on 0x6C0
+		hardware.gyroSample = (systemGetGyroZ() >> 21) + 0x6C0; // Crop off an extra bit so that we can't go negative
+	}
+
+	if (hardware.gyroEdge && !(hardware.pinState & 2)) {
+		// Write bit on falling edge
+		unsigned bit = hardware.gyroSample >> 15;
+		hardware.gyroSample <<= 1;
+		gyroWritePins(bit << 2);
+	}
+
+	hardware.gyroEdge = !!(hardware.pinState & 2);
+}
+
+bool gyroWrite(u32 address, u16 value) {
+	switch (address) {
+	case 0x80000c4:
+		hardware.pinState &= ~hardware.direction;
+		hardware.pinState |= value;
+		gyroReadPins();
+		break;
+	case 0x80000c6:
+		hardware.direction = value;
+		break;
+	case 0x80000c8:
+		hardware.readWrite = value;
+		break;
+	default:
+		break;
+	}
+	if (hardware.readWrite) {
+		uint16_t& t = gyro_data[0];
+		t &= ~hardware.direction;
+		t |= hardware.pinState;
+	} else {
+		gyro_data[0] = 0;
+	}
+	return true;
+}
+
+u16 gyroRead(u32 address) {
+	return gyro_data[(address - 0x80000c4) >> 1];
+}
+#endif
+
+/*============================================================
 	RTC
 ============================================================ */
 
@@ -599,7 +662,7 @@ static u8 toBCD(u8 value)
 	int l = value % 10;
 	int h = value / 10;
 	return h * 16 + l;
-}
+};
 
 bool rtcWrite(u32 address, u16 value)
 {

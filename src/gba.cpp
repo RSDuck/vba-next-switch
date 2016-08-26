@@ -73,9 +73,24 @@ uint8_t *ioMem = 0;
 uint8_t *internalRAM = 0;
 uint8_t *workRAM = 0;
 uint8_t *paletteRAM = 0;
+char cartridgeCode[4];
 
 int renderfunc_mode = 0;
 int renderfunc_type = 0;
+
+#if USE_MOTION_SENSOR
+hardware_t hardware;
+
+static void hardware_reset() {
+	hardware.tilt_x = 0;
+	hardware.tilt_y = 0;
+	hardware.direction = 0;
+	hardware.pinState = 0;	
+	hardware.gyroSample = 0;
+	hardware.readWrite = false;
+	hardware.gyroEdge = false;
+}
+#endif
 
 #if THREADED_RENDERER
 
@@ -733,9 +748,7 @@ static bool stopState = false;
 extern bool cpuSramEnabled;
 extern bool cpuFlashEnabled;
 extern bool cpuEEPROMEnabled;
-#ifdef USE_MOTION_SENSOR
-extern bool cpuEEPROMSensorEnabled;
-#endif
+
 static bool timer0On = false;
 static int timer0Ticks = 0;
 static int timer0Reload = 0;
@@ -910,10 +923,20 @@ static INLINE u32 CPUReadHalfWord(u32 address)
 		case 10:
 		case 11:
 		case 12:
-			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-				value = rtcRead(address);
-			else
-				value = READ16LE(rom + (address & 0x1FFFFFE));
+			switch(address) {
+			case 0x80000c4:
+			case 0x80000c6:
+			case 0x80000c8:
+#if USE_MOTION_SENSOR
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
+					return gyroRead(address);
+				else
+#endif
+					return rtcRead(address);
+				break;
+			default:
+				value = READ16LE(rom + (address & 0x1FFFFFE)); break;
+			}
 			break;
 		case 13:
          value =  eepromRead();
@@ -985,25 +1008,25 @@ static INLINE u8 CPUReadByte(u32 address)
 		case 12:
 			return rom[address & 0x1FFFFFF];
 		case 13:
-         return eepromRead();
+         	return eepromRead();
 		case 14:
 #ifdef USE_MOTION_SENSOR
-			if(cpuEEPROMSensorEnabled)
-         {
-				switch(address & 0x00008f00)
+		if(hardware.sensor)
+        {
+			switch(address & 0x00008f00)
             {
-					case 0x8200:
-						return systemGetSensorX() & 255;
-					case 0x8300:
-						return (systemGetSensorX() >> 8)|0x80;
-					case 0x8400:
-						return systemGetSensorY() & 255;
-					case 0x8500:
-						return systemGetSensorY() >> 8;
-				}
+				case 0x8200:
+					return hardware.tilt_x & 0xFF;
+				case 0x8300:
+					return ((hardware.tilt_x >> 8) & 0xF) | 0x80;
+				case 0x8400:
+					return hardware.tilt_y & 0xFF;
+				case 0x8500:
+					return ((hardware.tilt_y >> 8) & 0xF) | 0x80;
 			}
+		}
 #endif
-         return flashRead(address);
+         	return flashRead(address);
 		default:
 unreadable:
 			if(armState)
@@ -1091,9 +1114,18 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			break;
 		case 8:
 		case 9:
-			if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-				if(!rtcWrite(address, value))
-					break;
+			switch(address) {
+			case 0x80000c4:
+			case 0x80000c6:
+			case 0x80000c8:
+#if USE_MOTION_SENSOR
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
+					gyroWrite(address, value);
+				else
+#endif
+					rtcWrite(address, value);
+				break;
+			}	
 			break;
 		case 13:
 			if(cpuEEPROMEnabled)
@@ -2468,7 +2500,7 @@ static void CPUSoftwareInterrupt(int comment)
  // Disable "empty statement" warnings
  #pragma warning(disable: 4390)
  // Visual C's inline assembler treats "offset" as a reserved word, so we
- // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.
+ // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.e
  #define offset offset_
 #endif
 
@@ -8279,7 +8311,7 @@ static void gfxDrawOBJWin (void)
 int saveType = 0;
 bool useBios = false;
 bool skipBios = false;
-bool cpuIsMultiBoot = false;
+bool cpuIsMultiBoot = false; 
 int cpuSaveType = 0;
 bool enableRtc = false;
 bool mirroringEnable = false;
@@ -8294,7 +8326,6 @@ int SWITicks = 0;
 bool cpuSramEnabled = true;
 bool cpuFlashEnabled = true;
 bool cpuEEPROMEnabled = true;
-bool cpuEEPROMSensorEnabled = false;
 
 #ifdef MSB_FIRST
 bool cpuBiosSwapped = false;
@@ -8955,25 +8986,60 @@ bool CPUSetupBuffers()
 	return true;
 }
 
+static void applyCartridgeOverride(char* code) {
+#if USE_MOTION_SENSOR
+	hardware.sensor = HARDWARE_SENSOR_NONE;
+
+	do {
+		// Koro Koro Puzzle - Happy Panechu!
+		if(memcmp(code, "KHPJ", 4) == 0) {
+			hardware.sensor = HARDWARE_SENSOR_TILT;
+			break;
+		}
+
+		// Yoshi's Universal Gravitation
+		if(memcmp(code, "KYGJ", 4) == 0 || memcmp(code, "KYGE", 4) == 0 || memcmp(code, "KYGP", 4) == 0) {
+			hardware.sensor = HARDWARE_SENSOR_TILT;
+			break;
+		}
+
+		// Wario Ware Twisted
+		if(memcmp(code, "RZWJ", 4) == 0 || memcmp(code, "RZWE", 4) == 0 || memcmp(code, "RZWP", 4) == 0) {
+			hardware.sensor = HARDWARE_SENSOR_GYRO;
+			break;
+		}
+	} while(0);
+
+	systemSetSensorState(hardware.sensor);
+
+	if(hardware.sensor) {
+		hardware.tilt_x = 0xFFF;
+		hardware.tilt_y = 0xFFF;
+	}
+
+	//if(hardware.sensor) while(1);
+#endif
+}
+
 int CPULoadRom(const char * file)
 {
 	if (!CPUSetupBuffers()) return 0;
 	
 	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
-		if(file != NULL)
-		{
-			if(!utilLoad(file,
-						utilIsGBAImage,
-						whereToLoad,
-						romSize)) {
-				free(rom);
-				rom = NULL;
-				free(workRAM);
-				workRAM = NULL;
-				return 0;
-			}
+	if(file != NULL)
+	{
+		if(!utilLoad(file,
+					utilIsGBAImage,
+					whereToLoad,
+					romSize)) {
+			free(rom);
+			rom = NULL;
+			free(workRAM);
+			workRAM = NULL;
+			return 0;
 		}
+	}
 
 	uint16_t *temp = (uint16_t *)(rom+((romSize+1)&~1));
 	int i;
@@ -8989,11 +9055,15 @@ int CPULoadRom(const char * file)
 int CPULoadRomData(const char *data, int size)
 {
 	if (!CPUSetupBuffers()) return 0;
-	
+
 	uint8_t *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
 	romSize = size % 2 == 0 ? size : size + 1;
 	memcpy(whereToLoad, data, size);
+
+	//load cartridge code
+	memcpy(cartridgeCode, whereToLoad + 0xAC, 4);
+	applyCartridgeOverride(cartridgeCode);
 
 	uint16_t *temp = (u16 *)(rom+((romSize+1)&~1));
 	int i;
@@ -12389,6 +12459,9 @@ void CPUReset (void)
 			}
 	}
 	rtcReset();
+#if USE_MOTION_SENSOR
+	hardware_reset();
+#endif
 	memset(&bus.reg[0], 0, sizeof(bus.reg));	// clean registers
 	memset(oam, 0, 0x400);				// clean OAM
 	memset(paletteRAM, 0, 0x400);		// clean palette
@@ -12504,6 +12577,7 @@ void CPUReset (void)
 		}
 #endif
 	}
+	
 	armState = true;
 	C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
 	UPDATE_REG(0x00, io_registers[REG_DISPCNT]);
@@ -12608,24 +12682,22 @@ void CPUReset (void)
 	CPUUpdateWindow1();
 
 	// make sure registers are correctly initialized if not using BIOS
-	if(cpuIsMultiBoot)
-		BIOS_RegisterRamReset(0xfe);
-	else if(!useBios && !cpuIsMultiBoot)
-		BIOS_RegisterRamReset(0xff);
+	if(cpuIsMultiBoot) 
+		BIOS_RegisterRamReset(0xfe); 
+	else if(!useBios && !cpuIsMultiBoot) 
+		BIOS_RegisterRamReset(0xff); 
 		
 	switch(cpuSaveType) {
 		case 0: // automatic
 			cpuSramEnabled = true;
 			cpuFlashEnabled = true;
 			cpuEEPROMEnabled = true;
-			cpuEEPROMSensorEnabled = false;
 			saveType = gbaSaveType = 0;
 			break;
 		case 1: // EEPROM
 			cpuSramEnabled = false;
 			cpuFlashEnabled = false;
 			cpuEEPROMEnabled = true;
-			cpuEEPROMSensorEnabled = false;
 			saveType = gbaSaveType = 3;
 			// EEPROM usage is automatically detected
 			break;
@@ -12633,7 +12705,6 @@ void CPUReset (void)
 			cpuSramEnabled = true;
 			cpuFlashEnabled = false;
 			cpuEEPROMEnabled = false;
-			cpuEEPROMSensorEnabled = false;
 			cpuSaveGameFunc = sramDelayedWrite; // to insure we detect the write
 			saveType = gbaSaveType = 1;
 			break;
@@ -12641,7 +12712,6 @@ void CPUReset (void)
 			cpuSramEnabled = false;
 			cpuFlashEnabled = true;
 			cpuEEPROMEnabled = false;
-			cpuEEPROMSensorEnabled = false;
 			cpuSaveGameFunc = flashDelayedWrite; // to insure we detect the write
 			saveType = gbaSaveType = 2;
 			break;
@@ -12649,7 +12719,6 @@ void CPUReset (void)
 			cpuSramEnabled = false;
 			cpuFlashEnabled = false;
 			cpuEEPROMEnabled = true;
-			cpuEEPROMSensorEnabled = true;
 			// EEPROM usage is automatically detected
 			saveType = gbaSaveType = 3;
 			break;
@@ -12657,7 +12726,6 @@ void CPUReset (void)
 			cpuSramEnabled = false;
 			cpuFlashEnabled = false;
 			cpuEEPROMEnabled = false;
-			cpuEEPROMSensorEnabled = false;
 			// no save at all
 			saveType = gbaSaveType = 5;
 			break;
@@ -12700,9 +12768,12 @@ void UpdateJoypad(void)
 {
    /* update joystick information */
    io_registers[REG_P1] = 0x03FF ^ (joy & 0x3FF);
-#if 0
-   if(cpuEEPROMSensorEnabled)
-      systemUpdateMotionSensor();
+#if USE_MOTION_SENSOR
+	if(hardware.sensor) {
+		systemUpdateMotionSensor();
+		hardware.tilt_x = (systemGetAccelX() >> 21) + 0x3A0;
+		hardware.tilt_y = (systemGetAccelY() >> 21) + 0x3A0;
+	}
 #endif
    UPDATE_REG(0x130, io_registers[REG_P1]);
    io_registers[REG_P1CNT] = READ16LE(((uint16_t *)&ioMem[0x132]));

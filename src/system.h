@@ -9,8 +9,10 @@ extern uint32_t systemGetClock (void);
 extern void systemMessage(const char *, ...);
 #ifdef USE_MOTION_SENSOR
 extern void systemUpdateMotionSensor (void);
-extern int  systemGetSensorX (void);
-extern int  systemGetSensorY (void);
+extern int  systemGetAccelX (void);
+extern int  systemGetAccelY (void);
+extern int  systemGetGyroZ (void);
+extern void systemSetSensorState(bool);
 #endif
 
 // sound functions
