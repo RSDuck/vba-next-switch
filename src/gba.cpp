@@ -79,20 +79,18 @@ int renderfunc_mode = 0;
 int renderfunc_type = 0;
 
 #if USE_MOTION_SENSOR
-typedef struct {
-	int sensor;
-	int tilt_x;
-	int tilt_y;	
-	int gyro_z;
-} hardware_t;
-
 hardware_t hardware;
-
-#define HARDWARE_SENSOR_NONE 0
-#define HARDWARE_SENSOR_TILT 0x1
-#define HARDWARE_SENSOR_GYRO 0x2
-
 #endif
+
+static void hardware_reset() {
+	hardware.tilt_x = 0;
+	hardware.tilt_y = 0;
+	hardware.direction = 0;
+	hardware.pinState = 0;	
+	hardware.gyroSample = 0;
+	hardware.readWrite = false;
+	hardware.gyroEdge = false;
+}
 
 #if THREADED_RENDERER
 
@@ -1121,12 +1119,9 @@ static INLINE void CPUWriteHalfWord(u32 address, u16 value)
 			case 0x80000c6:
 			case 0x80000c8:
 #if USE_MOTION_SENSOR
-				if(hardware.sensor & HARDWARE_SENSOR_GYRO) {
-					if(address == 0x80000c4)
-						gyroWrite(address, hardware.gyro_z);
-					else
-						gyroWrite(address, 0x6C0);
-				} else
+				if(hardware.sensor & HARDWARE_SENSOR_GYRO)
+					gyroWrite(address, value);
+				else
 #endif
 					rtcWrite(address, value);
 				break;
@@ -12464,6 +12459,7 @@ void CPUReset (void)
 			}
 	}
 	rtcReset();
+	hardware_reset();
 	memset(&bus.reg[0], 0, sizeof(bus.reg));	// clean registers
 	memset(oam, 0, 0x400);				// clean OAM
 	memset(paletteRAM, 0, 0x400);		// clean palette
@@ -12775,7 +12771,6 @@ void UpdateJoypad(void)
 		systemUpdateMotionSensor();
 		hardware.tilt_x = (systemGetAccelX() >> 21) + 0x3A0;
 		hardware.tilt_y = (systemGetAccelY() >> 21) + 0x3A0;
-		hardware.gyro_z = systemGetGyroZ() + 0x6C0;		
 	}
 #endif
    UPDATE_REG(0x130, io_registers[REG_P1]);

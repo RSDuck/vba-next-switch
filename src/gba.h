@@ -118,4 +118,27 @@ extern void ThreadedRendererStart();
 extern void ThreadedRendererStop();
 #endif
 
+#if USE_MOTION_SENSOR
+
+#define HARDWARE_SENSOR_NONE 0
+#define HARDWARE_SENSOR_TILT 0x1
+#define HARDWARE_SENSOR_GYRO 0x2
+
+typedef struct {
+	int sensor;
+
+	int tilt_x;
+	int tilt_y;
+
+	uint16_t pinState;
+	uint16_t direction;
+	uint16_t gyroSample;
+	bool readWrite;
+	bool gyroEdge;
+} hardware_t;
+
+extern hardware_t hardware;
+
+#endif
+
 #endif // GBA_H

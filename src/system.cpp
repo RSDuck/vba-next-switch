@@ -24,7 +24,7 @@ int systemGetAccelY (void) {
 }
 
 int systemGetGyroZ (void) {
-	return state.gyro.z * 1000;
+	return state.gyro.z * -0x10000000;
 }
 
 void systemSetSensorState(bool val) {
