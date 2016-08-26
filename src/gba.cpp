@@ -96,7 +96,7 @@ static void hardware_reset() {
 
 	//THREADED_RENDERER_COUNT: 1 to 4
 	#if VITA
-		#define THREADED_RENDERER_COUNT 2
+		#define THREADED_RENDERER_COUNT 1
 	#else
 		#define THREADED_RENDERER_COUNT 1
 	#endif
@@ -9098,7 +9098,7 @@ void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
-		thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)));	
+		thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);	
 	}
 }
 
