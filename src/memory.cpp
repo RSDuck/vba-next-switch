@@ -541,6 +541,7 @@ void sramWrite(u32 address, u8 byte)
 	GYRO
 ============================================================ */
 
+#if USE_MOTION_SENSOR
 static u16 gyro_data[3];
 
 static void gyroWritePins(unsigned pins) {
@@ -597,6 +598,7 @@ bool gyroWrite(u32 address, u16 value) {
 u16 gyroRead(u32 address) {
 	return gyro_data[(address - 0x80000c4) >> 1];
 }
+#endif
 
 /*============================================================
 	RTC

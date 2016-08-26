@@ -80,7 +80,6 @@ int renderfunc_type = 0;
 
 #if USE_MOTION_SENSOR
 hardware_t hardware;
-#endif
 
 static void hardware_reset() {
 	hardware.tilt_x = 0;
@@ -91,6 +90,7 @@ static void hardware_reset() {
 	hardware.readWrite = false;
 	hardware.gyroEdge = false;
 }
+#endif
 
 #if THREADED_RENDERER
 
@@ -12459,7 +12459,9 @@ void CPUReset (void)
 			}
 	}
 	rtcReset();
+#if USE_MOTION_SENSOR
 	hardware_reset();
+#endif
 	memset(&bus.reg[0], 0, sizeof(bus.reg));	// clean registers
 	memset(oam, 0, 0x400);				// clean OAM
 	memset(paletteRAM, 0, 0x400);		// clean palette
