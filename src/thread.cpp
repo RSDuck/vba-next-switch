@@ -48,7 +48,10 @@
 	}
 
 	void waithandle_lock(waithandle_t* wh) {
-		sceKernelWaitSema(wh->handle, 1, 0);
+		int rv = 0;
+		do {
+			rv = sceKernelWaitSema(wh->handle, 1, NULL);
+		} while(rv < 0);
 	}
 
 	void waithandle_unlock(waithandle_t* wh) {
