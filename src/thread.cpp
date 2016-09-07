@@ -5,12 +5,6 @@
 #ifdef THREADED_RENDERER
 
 #if VITA
-
-	struct waithandle_impl {
-		SceUID handle;
-	};
-
-	#include <psp2/types.h>
 	#include <psp2/kernel/threadmgr.h>
 
 	static int _thread_func(SceSize args, void* p)
@@ -21,42 +15,54 @@
 		return sceKernelExitDeleteThread(0);
 	}
 
+	static int _thread_map_priority(int priority)
+	{
+		switch(priority) {
+		case THREAD_PRIORITY_LOW:
+			return 0x10000101;
+		case THREAD_PRIORITY_HIGH:
+		case THREAD_PRIORITY_NORMAL:
+			return 0x10000100;
+		}		
+	}
+
 	void thread_run(threadfunc_t func, void* p, int priority)
 	{
 		void* argp[2];
 		argp[0] = reinterpret_cast<void*>(func);
 		argp[1] = p;
 
-		SceUID thid = sceKernelCreateThread("my_thread", (SceKernelThreadEntry)_thread_func, priority == THREAD_PRIORITY_LOW ? 0x10000101 : 0x10000100, 0x10000, 0, 0, NULL);
+		SceUID thid = sceKernelCreateThread("my_thread", (SceKernelThreadEntry)_thread_func, _thread_map_priority(priority), 0x10000, 0, 0, NULL);
 		if (thid >= 0) sceKernelStartThread(thid, sizeof(argp), &argp);
 	}
 
 	//retro_sleep causes crash
 	void thread_sleep(int ms) { sceKernelDelayThread(ms * 1000); }
 
-	int thread_id() { return sceKernelGetThreadId(); }
+	threadhandle_t thread_id() { return sceKernelGetThreadId(); }
 	
-	waithandle_t* waithandle_create() {
-		waithandle_t* rv = new waithandle_t();
-		rv->handle = sceKernelCreateSema("my_sema", 0, 1, 1, 0);
-		return rv;
+	void thread_set_priority(threadhandle_t id, int priority) { sceKernelChangeThreadPriority(id, _thread_map_priority(priority)); }
+
+#if 0
+	waithandle_t waithandle_create() {
+		return sceKernelCreateSema("my_sema", 0, 1, 1, 0);
 	}
 
-	void waithandle_release(waithandle_t* wh) {
-		sceKernelDeleteSema(wh->handle);
-		delete wh;
+	void waithandle_release(waithandle_t wh) {
+		sceKernelDeleteSema(wh);
 	}
 
-	void waithandle_lock(waithandle_t* wh) {
+	void waithandle_lock(waithandle_t wh) {
 		int rv = 0;
 		do {
-			rv = sceKernelWaitSema(wh->handle, 1, NULL);
+			rv = sceKernelWaitSema(wh, 1, NULL);
 		} while(rv < 0);
 	}
 
-	void waithandle_unlock(waithandle_t* wh) {
-		sceKernelSignalSema(wh->handle, 1);
+	void waithandle_unlock(waithandle_t wh) {
+		sceKernelSignalSema(wh, 1);
 	}
+#endif
 
 #else //non-vita
 
@@ -82,7 +88,9 @@
 
 	void thread_sleep(int ms) { retro_sleep(ms); }
 
-	int thread_id() { return 0; }
+	threadhandle_t thread_id() { return 0; }
+
+	void thread_set_priority(threadhandle id, int priority) { }
 
 	#endif
 
