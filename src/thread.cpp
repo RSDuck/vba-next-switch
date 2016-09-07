@@ -18,10 +18,14 @@
 	static int _thread_map_priority(int priority)
 	{
 		switch(priority) {
+		case THREAD_PRIORITY_LOWEST:
+			return 0x10000102;
 		case THREAD_PRIORITY_LOW:
 			return 0x10000101;
-		case THREAD_PRIORITY_HIGH:
 		case THREAD_PRIORITY_NORMAL:
+		case THREAD_PRIORITY_HIGH:
+		case THREAD_PRIORITY_HIGHEST:
+		default:
 			return 0x10000100;
 		}		
 	}
