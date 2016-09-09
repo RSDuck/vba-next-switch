@@ -1,5 +1,5 @@
-LIBRETRO_COMMON_DIR := $(CORE_DIR)/libretro-common
-INCFLAGS := -I$(CORE_DIR) -I$(LIBRETRO_COMMON_DIR)/include
+LIBRETRO_COMM_DIR := $(CORE_DIR)/libretro-common
+INCFLAGS := -I$(CORE_DIR) -I$(LIBRETRO_COMM_DIR)/include
 
 SOURCES_CXX := \
 	$(CORE_DIR)/src/sound.cpp \
@@ -12,7 +12,7 @@ SOURCES_C :=
 
 ifeq ($(USE_THREADED_RENDERER), 1)
 ifneq ($(platform), vita)
-SOURCES_C +=  $(LIBRETRO_COMMON_DIR)/rthreads/rthreads.c
+SOURCES_C +=  $(LIBRETRO_COMM_DIR)/rthreads/rthreads.c
 endif
 SOURCES_CXX += $(CORE_DIR)/src/thread.cpp
 endif
