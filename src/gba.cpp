@@ -96,7 +96,7 @@ static void hardware_reset() {
 
 	//THREADED_RENDERER_COUNT: 1 to 4
 	#if VITA
-		#define THREADED_RENDERER_COUNT 1
+		#define THREADED_RENDERER_COUNT 2
 	#else
 		#define THREADED_RENDERER_COUNT 1
 	#endif
@@ -109,6 +109,8 @@ static void hardware_reset() {
 	static volatile int threaded_renderer_ready = 0;
 
 	typedef struct {
+		thread_t renderer_thread_id;
+
 		volatile int renderer_control;
 		volatile int renderer_state;
 		int renderfunc_mode;
@@ -9096,7 +9098,13 @@ void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
-		thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_LOW);	
+#if VITA
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
+#else
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
+#endif
 	}
 }
 

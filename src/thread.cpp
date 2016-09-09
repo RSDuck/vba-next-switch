@@ -30,7 +30,7 @@
 		}		
 	}
 
-	void thread_run(threadfunc_t func, void* p, int priority)
+	thread_t thread_run(threadfunc_t func, void* p, int priority)
 	{
 		void* argp[2];
 		argp[0] = reinterpret_cast<void*>(func);
@@ -38,14 +38,16 @@
 
 		SceUID thid = sceKernelCreateThread("my_thread", (SceKernelThreadEntry)_thread_func, _thread_map_priority(priority), 0x10000, 0, 0, NULL);
 		if (thid >= 0) sceKernelStartThread(thid, sizeof(argp), &argp);
+
+		return thid;
 	}
 
 	//retro_sleep causes crash
 	void thread_sleep(int ms) { sceKernelDelayThread(ms * 1000); }
 
-	threadhandle_t thread_id() { return sceKernelGetThreadId(); }
+	thread_t thread_get() { return sceKernelGetThreadId(); }
 	
-	void thread_set_priority(threadhandle_t id, int priority) { sceKernelChangeThreadPriority(id, _thread_map_priority(priority)); }
+	void thread_set_priority(thread_t id, int priority) { sceKernelChangeThreadPriority(id, 0xFF & _thread_map_priority(priority)); }
 
 #if 0
 	waithandle_t waithandle_create() {
@@ -79,7 +81,7 @@
 		(*func)(argp[1]);
 	}
 
-	void thread_run(threadfunc_t func, void* p, int priority)
+	thread_t thread_run(threadfunc_t func, void* p, int priority)
 	{
 		void* argp[2];
 		sthread_t *thid = NULL;
@@ -88,13 +90,15 @@
 
 		thid = sthread_create(_thread_func, &argp);
 		sthread_detach(thid);
+			
+		return thid;	
 	}
 
 	void thread_sleep(int ms) { retro_sleep(ms); }
 
-	threadhandle_t thread_id() { return 0; }
+	thread_t thread_get() { return 0; }
 
-	void thread_set_priority(threadhandle id, int priority) { }
+	void thread_set_priority(thread_t id, int priority) { }
 
 	#endif
 

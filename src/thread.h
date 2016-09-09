@@ -11,20 +11,20 @@
 
 #if VITA
 	#include <psp2/types.h>
-	typedef SceUID threadhandle_t;
+	typedef SceUID thread_t;
 	typedef SceUID waithandle_t;
 #else
-	typedef intptr_t threadhandle_t;
-	typedef intptr_t waithandle_t;
+	typedef void* thread_t;
+	typedef void* waithandle_t;
 #endif
 
 #ifdef THREADED_RENDERER
 typedef void(*threadfunc_t)(void*);
 
-threadhandle_t thread_id();
-void thread_run(threadfunc_t func, void* p, int priority);
+thread_t thread_get();
+thread_t thread_run(threadfunc_t func, void* p, int priority);
 void thread_sleep(int ms);
-void thread_set_priority(threadhandle_t id, int priority);
+void thread_set_priority(thread_t id, int priority);
 
 #if 0
 waithandle_t waithandle_create();
