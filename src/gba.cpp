@@ -106,11 +106,11 @@ static void hardware_reset() {
 	static int threaded_renderer_idx = 0;
 	static uint32_t threaded_background_ver = 0;
 	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
-	#if USE_TWEAK_DRAWCALL
 	static volatile int threaded_renderer_ready = 0;
-	#endif
 
 	typedef struct {
+		thread_t renderer_thread_id;
+
 		volatile int renderer_control;
 		volatile int renderer_state;
 		int renderfunc_mode;
@@ -9098,7 +9098,13 @@ void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
-		thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)));	
+#if VITA
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
+#else
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
+#endif
 	}
 }
 
@@ -11175,14 +11181,12 @@ static void threaded_renderer_loop(void* p) {
 	}
 
 	while(renderer_ctx.renderer_control == 1) {
-		#if USE_TWEAK_DRAWCALL
 		if(renderer_idx == 0) {
 			if(threaded_renderer_ready) {
 				threaded_renderer_ready = 0;
 				systemDrawScreen();
 			}
 		}
-		#endif
 
 		//buffer is not ready.
 		if(renderer_ctx.renderer_state == 0) continue;
@@ -12921,7 +12925,7 @@ updateLoop:
 		            	}
 		            	CPUCheckDMA(1, 0x0f);
 
-#if USE_TWEAK_DRAWCALL
+#if THREADED_RENDERER
 						threaded_renderer_ready = 1;
 #else
 		            	systemDrawScreen();

@@ -1,12 +1,37 @@
 #ifndef __THREAD_H__
 #define __THREAD_H__
 
+#define THREAD_PRIORITY_HIGHEST 	1
+#define THREAD_PRIORITY_HIGH 		2
+#define THREAD_PRIORITY_NORMAL 		3
+#define THREAD_PRIORITY_LOW 		4
+#define THREAD_PRIORITY_LOWEST 		5
+
+#include <stdint.h>
+
+#if VITA
+	#include <psp2/types.h>
+	typedef SceUID thread_t;
+	typedef SceUID waithandle_t;
+#else
+	typedef void* thread_t;
+	typedef void* waithandle_t;
+#endif
+
 #ifdef THREADED_RENDERER
 typedef void(*threadfunc_t)(void*);
 
-void thread_run(threadfunc_t func, void* p);
+thread_t thread_get();
+thread_t thread_run(threadfunc_t func, void* p, int priority);
 void thread_sleep(int ms);
-int thread_id();
+void thread_set_priority(thread_t id, int priority);
+
+#if 0
+waithandle_t waithandle_create();
+void waithandle_release(waithandle_t wh);
+void waithandle_lock(waithandle_t wh);
+void waithandle_unlock(waithandle_t wh);
+#endif
 
 #endif
 
