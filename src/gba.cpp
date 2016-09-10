@@ -285,6 +285,7 @@ static void hardware_reset() {
 
 #if THREADED_RENDERER
 static void threaded_renderer_loop(void* p);
+static void threaded_renderer_loop0(void* p);
 #endif
 
 /*============================================================
@@ -9093,8 +9094,8 @@ void ThreadedRendererStart() {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
 
-		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);
+		threaded_renderer_contexts[u].renderer_thread_id = thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop,
+			reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);
 	}
 }
 
@@ -11146,11 +11147,6 @@ static void threaded_renderer_loop(void* p) {
 	renderfunc_t (*getRenderFunc)(int, int) = NULL;
 
 	switch(renderer_idx) {
-	case 0:
-		drawSprites = gfxDrawSprites<0>;
-		drawOBJWin = gfxDrawOBJWin<0>;
-		getRenderFunc = GetRenderFunc<0>;
-		break;
 	case 1:
 		drawSprites = gfxDrawSprites<1>;
 		drawOBJWin = gfxDrawOBJWin<1>;
@@ -11171,12 +11167,51 @@ static void threaded_renderer_loop(void* p) {
 	}
 
 	while(renderer_ctx.renderer_control == 1) {
-		if(renderer_idx == 0) {
-			if(threaded_renderer_ready) {
-				threaded_renderer_ready = 0;
-				systemDrawScreen();
-			}
+		//buffer is not ready.
+		if(renderer_ctx.renderer_state == 0) continue;
+
+		if(renderer_ctx.background_ver < threaded_background_ver) {
+			renderer_ctx.background_ver = threaded_background_ver;
+			if(!RENDERER_R_DISPCNT_Screen_Display_BG0)
+				memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
+			if(!RENDERER_R_DISPCNT_Screen_Display_BG1)
+				memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
+			if(!RENDERER_R_DISPCNT_Screen_Display_BG2)
+				memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
+			if(!RENDERER_R_DISPCNT_Screen_Display_BG3)
+				memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
 		}
+	
+		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
+		if(renderer_ctx.draw_sprites) (*drawSprites)();
+
+		if(renderer_ctx.renderfunc_type == 2) {
+			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+			if(renderer_ctx.draw_objwin) (*drawOBJWin)();
+		}
+
+		(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)();
+
+		//rendering is done.
+		renderer_ctx.renderer_state = 0;
+	}
+
+	renderer_ctx.renderer_control = 0; //loop is terminated.
+}
+
+static void threaded_renderer_loop0(void* p) {
+	int renderer_idx = 0;
+	INIT_RENDERER_CONTEXT(renderer_idx);
+
+	renderfunc_t drawSprites = gfxDrawSprites<0>;
+	renderfunc_t drawOBJWin = gfxDrawOBJWin<0>;
+	renderfunc_t (*getRenderFunc)(int, int) = GetRenderFunc<0>;
+
+	while(renderer_ctx.renderer_control == 1) {
+		if(threaded_renderer_ready) {
+			threaded_renderer_ready = 0;
+			systemDrawScreen();
+		}		
 
 		//buffer is not ready.
 		if(renderer_ctx.renderer_state == 0) continue;

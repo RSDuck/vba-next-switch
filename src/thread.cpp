@@ -46,10 +46,11 @@
 	void thread_sleep(int ms) { sceKernelDelayThread(ms * 1000); } //retro_sleep causes crash
 	void thread_set_priority(thread_t id, int priority) { sceKernelChangeThreadPriority(id, 0xFF & _thread_map_priority(priority)); }
 
-	waithandle_t waithandle_create() { return sceKernelCreateMutex("my_mutex", 0, 1, NULL);	}
-	void waithandle_release(waithandle_t wh) { sceKernelDeleteMutex(wh); }
-	void waithandle_lock(waithandle_t wh) { sceKernelLockMutex(wh, 1, NULL); }
-	void waithandle_unlock(waithandle_t wh) { sceKernelUnlockMutex(wh, 1); }
+	sema_t sema_create(int init, int max) { return sceKernelCreateSema("my_sema", 0, init, max, 0); }
+	void sema_release(sema_t s) { sceKernelDeleteSema(s); }
+	void sema_wait(sema_t s) { sceKernelWaitSema(s, 1, NULL); }
+	void sema_signal(sema_t s) { sceKernelSignalSema(s, 1); }
+	
 
 #else //non-vita
 
@@ -75,11 +76,14 @@
 		return thid;	
 	}
 
-	void thread_sleep(int ms) { retro_sleep(ms); }
-
 	thread_t thread_get() { return 0; }
-
+	void thread_sleep(int ms) { retro_sleep(ms); }
 	void thread_set_priority(thread_t id, int priority) { }
+
+	sema_t sema_create(int init, int max) { return NULL; }
+	void sema_release(sema_t s) { }
+	void sema_wait(sema_t s) { }
+	void sema_signal(sema_t s) { }
 
 	#endif
 
