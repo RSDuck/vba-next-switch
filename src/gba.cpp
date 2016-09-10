@@ -1407,7 +1407,7 @@ static void BIOS_BitUnPack (void)
 	int revbits = 8 - bits;
 	// u32 value = 0;
 	u32 base = CPUReadMemory(header+4);
-	bool addBase = (base & 0x80000000) ? true : false;
+	bool addBase = (base & 0x80000000);
 	base &= 0x7fffffff;
 	int dataSize = CPUReadByte(header+3);
 
@@ -2556,18 +2556,18 @@ static void armUnknownInsn(u32 opcode)
     N_FLAG = (res >> 31);             \
     Z_FLAG = !res;                 \
     V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) |        \
-              (POS(lhs) & POS(rhs) & NEG(res))) ? true : false;\
+              (POS(lhs) & POS(rhs) & NEG(res)));\
     C_FLAG = ((NEG(lhs) & NEG(rhs)) |                   \
               (NEG(lhs) & POS(res)) |                   \
-              (NEG(rhs) & POS(res))) ? true : false;
+              (NEG(rhs) & POS(res)));
 #define C_SETCOND_SUB \
     N_FLAG = (res >> 31);             \
     Z_FLAG = !res;                 \
     V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) |        \
-              (POS(lhs) & NEG(rhs) & NEG(res))) ? true : false;\
+              (POS(lhs) & NEG(rhs) & NEG(res)));\
     C_FLAG = ((NEG(lhs) & POS(rhs)) |                   \
               (NEG(lhs) & POS(res)) |                   \
-              (POS(rhs) & POS(res))) ? true : false;
+              (POS(rhs) & POS(res)));
 
 #ifndef ALU_INIT_C
  #define ALU_INIT_C \
@@ -2583,7 +2583,7 @@ static void armUnknownInsn(u32 opcode)
         value = bus.reg[opcode & 0x0F].I;                   \
     } else {                                            \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
+        C_OUT = ((v >> (32 - shift)) & 1); \
         value = v << shift;                             \
     }
 #endif
@@ -2594,10 +2594,10 @@ static void armUnknownInsn(u32 opcode)
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (bus.reg[opcode & 0x0F].I & 1 ? true : false);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 1);\
         } else if (shift < 32) {                \
             u32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
+            C_OUT = ((v >> (32 - shift)) & 1);\
             value = v << shift;                         \
         } else {                                        \
             value = 0;                                  \
@@ -2613,11 +2613,11 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = ((v >> (shift - 1)) & 1);  \
         value = v >> shift;                             \
     } else {                                            \
         value = 0;                                      \
-        C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000) ? true : false;\
+        C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000);\
     }
 #endif
 // OP Rd,Rb,Rm LSR Rs
@@ -2627,10 +2627,10 @@ static void armUnknownInsn(u32 opcode)
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000);\
         } else if (shift < 32) {                \
             u32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
+            C_OUT = ((v >> (shift - 1)) & 1);\
             value = v >> shift;                         \
         } else {                                        \
             value = 0;                                  \
@@ -2646,7 +2646,7 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         s32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
+        C_OUT = ((v >> (int)(shift - 1)) & 1);\
         value = v >> (int)shift;                        \
     } else {                                            \
         if (bus.reg[opcode & 0x0F].I & 0x80000000) {        \
@@ -2665,7 +2665,7 @@ static void armUnknownInsn(u32 opcode)
     if (shift < 32) {                           \
         if (shift) {                            \
             s32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
+            C_OUT = ((v >> (int)(shift - 1)) & 1);\
             value = v >> (int)shift;                    \
         } else {                                        \
             value = bus.reg[opcode & 0x0F].I;               \
@@ -2686,12 +2686,12 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = ((v >> (shift - 1)) & 1);  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v & 1) ? true : false;                 \
+        C_OUT = (v & 1);                 \
         value = ((v >> 1) |                             \
                  (C_FLAG << 31));                       \
     }
@@ -2702,13 +2702,13 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift & 0x1F) {                         \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = ((v >> (shift - 1)) & 1);  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         value = bus.reg[opcode & 0x0F].I;                   \
         if (shift)                                      \
-            C_OUT = (value & 0x80000000 ? true : false);\
+            C_OUT = (value & 0x80000000);\
     }
 #endif
 // OP Rd,Rb,# ROR #
@@ -2717,7 +2717,7 @@ static void armUnknownInsn(u32 opcode)
     int shift = (opcode & 0xF00) >> 7;                  \
     if (shift) {                              \
         u32 v = opcode & 0xFF;                          \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = ((v >> (shift - 1)) & 1);  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
@@ -4808,26 +4808,26 @@ static  void thumbUnknownInsn(u32 opcode)
  #define ADDCARRY(a, b, c) \
   C_FLAG = ((NEG(a) & NEG(b)) |\
             (NEG(a) & POS(c)) |\
-            (NEG(b) & POS(c))) ? true : false;
+            (NEG(b) & POS(c)));
 #endif
 
 #ifndef ADDOVERFLOW
  #define ADDOVERFLOW(a, b, c) \
   V_FLAG = ((NEG(a) & NEG(b) & POS(c)) |\
-            (POS(a) & POS(b) & NEG(c))) ? true : false;
+            (POS(a) & POS(b) & NEG(c)));
 #endif
 
 #ifndef SUBCARRY
  #define SUBCARRY(a, b, c) \
   C_FLAG = ((NEG(a) & POS(b)) |\
             (NEG(a) & POS(c)) |\
-            (POS(b) & POS(c))) ? true : false;
+            (POS(b) & POS(c)));
 #endif
 
 #ifndef SUBOVERFLOW
  #define SUBOVERFLOW(a, b, c)\
   V_FLAG = ((NEG(a) & POS(b) & POS(c)) |\
-            (POS(a) & NEG(b) & NEG(c))) ? true : false;
+            (POS(a) & NEG(b) & NEG(c)));
 #endif
 
 #ifndef ADD_RD_RS_RN
@@ -4856,10 +4856,6 @@ static  void thumbUnknownInsn(u32 opcode)
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#endif
-
-#ifndef ADD_RD_RS_O3_0
-# define ADD_RD_RS_O3_0 ADD_RD_RS_O3
 #endif
 
 #ifndef ADD_RN_O8
@@ -4931,9 +4927,6 @@ static  void thumbUnknownInsn(u32 opcode)
    }
 #endif
 
-#ifndef SUB_RD_RS_O3_0
-# define SUB_RD_RS_O3_0 SUB_RD_RS_O3
-#endif
 #ifndef SUB_RN_O8
  #define SUB_RN_O8(d) \
    {\
@@ -4985,49 +4978,49 @@ static  void thumbUnknownInsn(u32 opcode)
 #ifndef LSL_RD_RM_I5
  #define LSL_RD_RM_I5 \
    {\
-     C_FLAG = (bus.reg[source].I >> (32 - shift)) & 1 ? true : false;\
+     C_FLAG = ((bus.reg[source].I >> (32 - shift)) & 1);\
      value = bus.reg[source].I << shift;\
    }
 #endif
 #ifndef LSL_RD_RS
  #define LSL_RD_RS \
    {\
-     C_FLAG = (bus.reg[dest].I >> (32 - value)) & 1 ? true : false;\
+     C_FLAG = ((bus.reg[dest].I >> (32 - value)) & 1);\
      value = bus.reg[dest].I << value;\
    }
 #endif
 #ifndef LSR_RD_RM_I5
  #define LSR_RD_RM_I5 \
    {\
-     C_FLAG = (bus.reg[source].I >> (shift - 1)) & 1 ? true : false;\
+     C_FLAG = ((bus.reg[source].I >> (shift - 1)) & 1);\
      value = bus.reg[source].I >> shift;\
    }
 #endif
 #ifndef LSR_RD_RS
  #define LSR_RD_RS \
    {\
-     C_FLAG = (bus.reg[dest].I >> (value - 1)) & 1 ? true : false;\
+     C_FLAG = ((bus.reg[dest].I >> (value - 1)) & 1);\
      value = bus.reg[dest].I >> value;\
    }
 #endif
 #ifndef ASR_RD_RM_I5
  #define ASR_RD_RM_I5 \
    {\
-     C_FLAG = ((s32)bus.reg[source].I >> (int)(shift - 1)) & 1 ? true : false;\
+     C_FLAG = (((s32)bus.reg[source].I >> (int)(shift - 1)) & 1);\
      value = (s32)bus.reg[source].I >> (int)shift;\
    }
 #endif
 #ifndef ASR_RD_RS
  #define ASR_RD_RS \
    {\
-     C_FLAG = ((s32)bus.reg[dest].I >> (int)(value - 1)) & 1 ? true : false;\
+     C_FLAG = (((s32)bus.reg[dest].I >> (int)(value - 1)) & 1);\
      value = (s32)bus.reg[dest].I >> (int)value;\
    }
 #endif
 #ifndef ROR_RD_RS
  #define ROR_RD_RS \
    {\
-     C_FLAG = (bus.reg[dest].I >> (value - 1)) & 1 ? true : false;\
+     C_FLAG = ((bus.reg[dest].I >> (value - 1)) & 1);\
      value = ((bus.reg[dest].I << (32 - value)) |\
               (bus.reg[dest].I >> value));\
    }
@@ -5083,7 +5076,7 @@ static  void thumbUnknownInsn(u32 opcode)
   int shift = N;\
   LSR_RD_RM_I5;
  #define IMM5_LSR_0 \
-  C_FLAG = bus.reg[source].I & 0x80000000 ? true : false;\
+  C_FLAG = (bus.reg[source].I & 0x80000000);\
   value = 0;
  #define IMM5_ASR(N) \
   int shift = N;\
@@ -5107,7 +5100,7 @@ static  void thumbUnknownInsn(u32 opcode)
 // Shift instructions /////////////////////////////////////////////////////
 
 #define DEFINE_IMM5_INSN(OP,BASE) \
-  static  void thumb##BASE##_00(u32 opcode) { IMM5_INSN(OP, 0); } \
+  static  void thumb##BASE##_00(u32 opcode) { IMM5_INSN_0(OP##_0); } \
   static  void thumb##BASE##_01(u32 opcode) { IMM5_INSN(OP, 1); } \
   static  void thumb##BASE##_02(u32 opcode) { IMM5_INSN(OP, 2); } \
   static  void thumb##BASE##_03(u32 opcode) { IMM5_INSN(OP, 3); } \
@@ -5282,7 +5275,7 @@ static  void thumb40_2(u32 opcode)
   if(val) {
     if(val == 32) {
       value = 0;
-      C_FLAG = (bus.reg[dest].I & 1 ? true : false);
+      C_FLAG = (bus.reg[dest].I & 1);
     } else if(val < 32) {
       LSL_RD_RS;
     } else {
@@ -5305,7 +5298,7 @@ static  void thumb40_3(u32 opcode)
   if(val) {
     if(val == 32) {
       value = 0;
-      C_FLAG = (bus.reg[dest].I & 0x80000000 ? true : false);
+      C_FLAG = (bus.reg[dest].I & 0x80000000);
     } else if(val < 32) {
       LSR_RD_RS;
     } else {
@@ -5369,7 +5362,7 @@ static  void thumb41_3(u32 opcode)
   if(val) {
     value = value & 0x1f;
     if(val == 0) {
-      C_FLAG = (bus.reg[dest].I & 0x80000000 ? true : false);
+      C_FLAG = (bus.reg[dest].I & 0x80000000);
     } else {
       ROR_RD_RS;
       bus.reg[dest].I = value;
@@ -6238,146 +6231,6 @@ typedef  void (*insnfunc_t)(u32 opcode);
 #define thumbUI thumbUnknownInsn
 #define thumbBP thumbUnknownInsn
 
-//(*thumbInsnTable[opcode>>6])(opcode);
-
-#define thumbInst(__opcode__) \
-do { \
-	u32 __opcode_shifted__ = __opcode__ >> 6; \
-	switch(__opcode_shifted__) { \
-		case 0x00 ... 0x1F: { IMM5_INSN(IMM5_LSL, __opcode_shifted__) } break;  \
-		case 0x20 ... 0x3F: { IMM5_INSN(IMM5_LSR, __opcode_shifted__ - 0x20) } break;  \
-		case 0x40 ... 0x5F: { IMM5_INSN(IMM5_ASR, __opcode_shifted__ - 0x40) } break;  \
-		case 0x60 ... 0x67: { THREEARG_INSN(ADD_RD_RS_RN, __opcode_shifted__ - 0x60) } break;	\
-		case 0x68 ... 0x6F: { THREEARG_INSN(SUB_RD_RS_RN, __opcode_shifted__ - 0x68) } break;	\
-		case 0x70 ... 0x77: { THREEARG_INSN(ADD_RD_RS_O3, __opcode_shifted__ - 0x70) } break;	\
-		case 0x78 ... 0x7F: { THREEARG_INSN(SUB_RD_RS_O3, __opcode_shifted__ - 0x78) } break;	\
-\
-		case 0x80 ... 0x83: thumb20(__opcode__); break; \
-		case 0x84 ... 0x87: thumb21(__opcode__); break; \
-		case 0x88 ... 0x8B: thumb22(__opcode__); break; \
-		case 0x8C ... 0x8F: thumb23(__opcode__); break; \
-		case 0x90 ... 0x93: thumb24(__opcode__); break; \
-		case 0x94 ... 0x97: thumb25(__opcode__); break; \
-		case 0x98 ... 0x9B: thumb26(__opcode__); break; \
-		case 0x9C ... 0x9F: thumb27(__opcode__); break; \
-		case 0xA0 ... 0xA3: thumb28(__opcode__); break; \
-		case 0xA4 ... 0xA7: thumb29(__opcode__); break; \
-		case 0xA8 ... 0xAB: thumb2A(__opcode__); break; \
-		case 0xAC ... 0xAF: thumb2B(__opcode__); break; \
-		case 0xB0 ... 0xB3: thumb2C(__opcode__); break; \
-		case 0xB4 ... 0xB7: thumb2D(__opcode__); break; \
-		case 0xB8 ... 0xBB: thumb2E(__opcode__); break; \
-		case 0xBC ... 0xBF: thumb2F(__opcode__); break; \
-		case 0xC0 ... 0xC3: thumb30(__opcode__); break; \
-		case 0xC4 ... 0xC7: thumb31(__opcode__); break; \
-		case 0xC8 ... 0xCB: thumb32(__opcode__); break; \
-		case 0xCC ... 0xCF: thumb33(__opcode__); break; \
-		case 0xD0 ... 0xD3: thumb34(__opcode__); break; \
-		case 0xD4 ... 0xD7: thumb35(__opcode__); break; \
-		case 0xD8 ... 0xDB: thumb36(__opcode__); break; \
-		case 0xDC ... 0xDF: thumb37(__opcode__); break; \
-		case 0xE0 ... 0xE3: thumb38(__opcode__); break; \
-		case 0xE4 ... 0xE7: thumb39(__opcode__); break; \
-		case 0xE8 ... 0xEB: thumb3A(__opcode__); break; \
-		case 0xEC ... 0xEF: thumb3B(__opcode__); break; \
-		case 0xF0 ... 0xF3: thumb3C(__opcode__); break; \
-		case 0xF4 ... 0xF7: thumb3D(__opcode__); break; \
-		case 0xF8 ... 0xFB: thumb3E(__opcode__); break; \
-		case 0xFC ... 0xFF: thumb3F(__opcode__); break; \
-\
-		case 0x100: thumb40_0(__opcode__); break; \
-		case 0x101: thumb40_1(__opcode__); break; \
-		case 0x102: thumb40_2(__opcode__); break; \
-		case 0x103: thumb40_3(__opcode__); break; \
-		case 0x104: thumb41_0(__opcode__); break; \
-		case 0x105: thumb41_1(__opcode__); break; \
-		case 0x106: thumb41_2(__opcode__); break; \
-		case 0x107: thumb41_3(__opcode__); break; \
-		case 0x108: thumb42_0(__opcode__); break; \
-		case 0x109: thumb42_1(__opcode__); break; \
-		case 0x10A: thumb42_2(__opcode__); break; \
-		case 0x10B: thumb42_3(__opcode__); break; \
-		case 0x10C: thumb43_0(__opcode__); break; \
-		case 0x10D: thumb43_1(__opcode__); break; \
-		case 0x10E: thumb43_2(__opcode__); break; \
-		case 0x10F: thumb43_3(__opcode__); break; \
-\
-		case 0x110: thumbUI(__opcode__); break; \
-		case 0x111: thumb44_1(__opcode__); break; \
-		case 0x112: thumb44_2(__opcode__); break; \
-		case 0x113: thumb44_3(__opcode__); break; \
-		case 0x114: thumbUI(__opcode__); break; \
-		case 0x115: thumb45_1(__opcode__); break; \
-		case 0x116: thumb45_2(__opcode__); break; \
-		case 0x117: thumb45_3(__opcode__); break; \
-		case 0x118: thumbUI(__opcode__); break; \
-		case 0x119: thumb46_1(__opcode__); break; \
-		case 0x11A: thumb46_2(__opcode__); break; \
-		case 0x11B: thumb46_3(__opcode__); break; \
-		case 0x11C: thumb47(__opcode__); break; \
-		case 0x11D: thumb47(__opcode__); break; \
-		case 0x11E: thumbUI(__opcode__); break; \
-		case 0x11F: thumbUI(__opcode__); break; \
-\
-		case 0x120 ... 0x13F: thumb48(__opcode__); break; \
-		case 0x140 ... 0x147: thumb50(__opcode__); break; \
-		case 0x148 ... 0x14F: thumb52(__opcode__); break; \
-		case 0x150 ... 0x157: thumb54(__opcode__); break; \
-		case 0x158 ... 0x15F: thumb56(__opcode__); break; \
-		case 0x160 ... 0x167: thumb58(__opcode__); break; \
-		case 0x168 ... 0x16F: thumb5A(__opcode__); break; \
-		case 0x170 ... 0x177: thumb5C(__opcode__); break; \
-		case 0x178 ... 0x17F: thumb5E(__opcode__); break; \
-		case 0x180 ... 0x19F: thumb60(__opcode__); break; \
-		case 0x1A0 ... 0x1BF: thumb68(__opcode__); break; \
-		case 0x1C0 ... 0x1DF: thumb70(__opcode__); break; \
-		case 0x1E0 ... 0x1FF: thumb78(__opcode__); break; \
-		case 0x200 ... 0x21F: thumb80(__opcode__); break; \
-		case 0x220 ... 0x23F: thumb88(__opcode__); break; \
-		case 0x240 ... 0x25F: thumb90(__opcode__); break; \
-		case 0x260 ... 0x27F: thumb98(__opcode__); break; \
-		case 0x280 ... 0x29F: thumbA0(__opcode__); break; \
-		case 0x2A0 ... 0x2BF: thumbA8(__opcode__); break; \
-\
-		case 0x2C0 ... 0x2C3: thumbB0(__opcode__); break; \
-		case 0x2C4 ... 0x2CF: thumbUI(__opcode__); break; \
-		case 0x2D0 ... 0x2D3: thumbB4(__opcode__); break; \
-		case 0x2D4 ... 0x2D7: thumbB5(__opcode__); break; \
-		case 0x2D8 ... 0x2EF: thumbUI(__opcode__); break; \
-		case 0x2F0 ... 0x2F3: thumbBC(__opcode__); break; \
-		case 0x2F4 ... 0x2F7: thumbBD(__opcode__); break; \
-		case 0x2F8 ... 0x2FB: thumbBP(__opcode__); break; \
-		case 0x2FC ... 0x2FF: thumbUI(__opcode__); break; \
-\
-		case 0x300 ... 0x31F: thumbC0(__opcode__); break; \
-		case 0x320 ... 0x33F: thumbC8(__opcode__); break; \
-\
-		case 0x340 ... 0x343: thumbD0(__opcode__); break; \
-		case 0x344 ... 0x347: thumbD1(__opcode__); break; \
-		case 0x348 ... 0x34B: thumbD2(__opcode__); break; \
-		case 0x34C ... 0x34F: thumbD3(__opcode__); break; \
-		case 0x350 ... 0x353: thumbD4(__opcode__); break; \
-		case 0x354 ... 0x357: thumbD5(__opcode__); break; \
-		case 0x358 ... 0x35B: thumbD6(__opcode__); break; \
-		case 0x35C ... 0x35F: thumbD7(__opcode__); break; \
-		case 0x360 ... 0x363: thumbD8(__opcode__); break; \
-		case 0x364 ... 0x367: thumbD9(__opcode__); break; \
-		case 0x368 ... 0x36B: thumbDA(__opcode__); break; \
-		case 0x36C ... 0x36F: thumbDB(__opcode__); break; \
-		case 0x370 ... 0x373: thumbDC(__opcode__); break; \
-		case 0x374 ... 0x377: thumbDD(__opcode__); break; \
-		case 0x378 ... 0x37B: thumbUI(__opcode__); break; \
-		case 0x37C ... 0x37F: thumbDF(__opcode__); break; \
-\
-		case 0x380 ... 0x39F: thumbE0(__opcode__); break; \
-		case 0x3A0 ... 0x3BF: thumbUI(__opcode__); break; \
-		case 0x3C0 ... 0x3CF: thumbF0(__opcode__); break; \
-		case 0x3D0 ... 0x3DF: thumbF4(__opcode__); break; \
-		case 0x3E0 ... 0x3FF: thumbF8(__opcode__); break; \
-	} \
-} while(0) \
-
-/*
 static insnfunc_t thumbInsnTable[1024] = {
   thumb00_00,thumb00_01,thumb00_02,thumb00_03,thumb00_04,thumb00_05,thumb00_06,thumb00_07,  // 00
   thumb00_08,thumb00_09,thumb00_0A,thumb00_0B,thumb00_0C,thumb00_0D,thumb00_0E,thumb00_0F,
@@ -6508,7 +6361,6 @@ static insnfunc_t thumbInsnTable[1024] = {
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
 };
-*/
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
@@ -6547,8 +6399,7 @@ static int thumbExecute (void)
 		bus.reg[15].I += 2;
 		THUMB_PREFETCH_NEXT;
 
-		thumbInst(opcode);
-		//(*thumbInsnTable[opcode>>6])(opcode);
+		(*thumbInsnTable[opcode>>6])(opcode);
 
 		ct = clockTicks;
 
@@ -6759,7 +6610,7 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
    int maskX = sizeX-1;
    int maskY = sizeY-1;
 
-   bool mosaicOn = (control & 0x40) ? true : false;
+   bool mosaicOn = (control & 0x40);
 
    int xxx = hofs & maskX;
    int yyy = (vofs + RENDERER_R_VCOUNT) & maskY;
@@ -6879,7 +6730,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
   int maskX = sizeX-1;
   int maskY = sizeY-1;
 
-  bool mosaicOn = (control & 0x40) ? true : false;
+  bool mosaicOn = (control & 0x40);
 
   int xxx = hofs & maskX;
   int yyy = (vofs + RENDERER_R_VCOUNT) & maskY;
@@ -9241,13 +9092,9 @@ void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
-#if VITA
+
 		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
-#else
-		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
-#endif
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);
 	}
 }
 
@@ -11575,7 +11422,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	utilReadDataMem(data, saveGameStruct);
 
-	stopState = utilReadIntMem(data) ? true : false;
+	stopState = utilReadIntMem(data);
 
 	IRQTicks = utilReadIntMem(data);
 	if (IRQTicks > 0)
@@ -11782,7 +11629,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	dm = ((((15) & dm_gt_15_mask) | ((((dm) & ~(dm_gt_15_mask))))));
 
 	//if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-	//    blank = (((io_registers[REG_DISPSTAT] | ((io_registers[REG_DISPSTAT] >> 1)&1))==1) ?  true : false);
+	//    blank = (((io_registers[REG_DISPSTAT] | ((io_registers[REG_DISPSTAT] >> 1)&1))==1));
 
 	if(transfer32)
 	{
@@ -12019,7 +11866,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 					graphics.layerEnable &= ~changeBGon;
 				}
 
-				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
+				windowOn = (graphics.layerEnable & 0x6000);
 				if(change && !((value & 0x80)))
 				{
 					if(!(io_registers[REG_DISPSTAT] & 1))
@@ -12224,7 +12071,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xBA:
 			{
-				bool start = ((DM0CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = ((DM0CNT_H ^ value) & 0x8000);
 				value &= 0xF7E0;
 
 				DM0CNT_H = value;
@@ -12260,7 +12107,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xC6:
 			{
-				bool start = ((DM1CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = ((DM1CNT_H ^ value) & 0x8000);
 				value &= 0xF7E0;
 
 				DM1CNT_H = value;
@@ -12296,7 +12143,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xD2:
 			{
-				bool start = ((DM2CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = ((DM2CNT_H ^ value) & 0x8000);
 
 				value &= 0xF7E0;
 
@@ -12333,7 +12180,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xDE:
 			{
-				bool start = ((DM3CNT_H ^ value) & 0x8000) ? true : false;
+				bool start = ((DM3CNT_H ^ value) & 0x8000);
 
 				value &= 0xFFE0;
 
@@ -13307,7 +13154,7 @@ updateLoop:
 						timer0Ticks = (0x10000 - io_registers[REG_TM0D]) << timer0ClockReload;
 						UPDATE_REG(0x100, io_registers[REG_TM0D]);
 					}
-					timer0On = timer0Value & 0x80 ? true : false;
+					timer0On = timer0Value & 0x80;
 					io_registers[REG_TM0CNT] = timer0Value & 0xC7;
 					UPDATE_REG(0x102, io_registers[REG_TM0CNT]);
 				}
@@ -13320,7 +13167,7 @@ updateLoop:
 						timer1Ticks = (0x10000 - io_registers[REG_TM1D]) << timer1ClockReload;
 						UPDATE_REG(0x104, io_registers[REG_TM1D]);
 					}
-					timer1On = timer1Value & 0x80 ? true : false;
+					timer1On = timer1Value & 0x80;
 					io_registers[REG_TM1CNT] = timer1Value & 0xC7;
 					UPDATE_REG(0x106, io_registers[REG_TM1CNT]);
 				}
@@ -13333,7 +13180,7 @@ updateLoop:
 						timer2Ticks = (0x10000 - io_registers[REG_TM2D]) << timer2ClockReload;
 						UPDATE_REG(0x108, io_registers[REG_TM2D]);
 					}
-					timer2On = timer2Value & 0x80 ? true : false;
+					timer2On = timer2Value & 0x80;
 					io_registers[REG_TM2CNT] = timer2Value & 0xC7;
 					UPDATE_REG(0x10A, io_registers[REG_TM2CNT]);
 				}
@@ -13346,7 +13193,7 @@ updateLoop:
 						timer3Ticks = (0x10000 - io_registers[REG_TM3D]) << timer3ClockReload;
 						UPDATE_REG(0x10C, io_registers[REG_TM3D]);
 					}
-					timer3On = timer3Value & 0x80 ? true : false;
+					timer3On = timer3Value & 0x80;
 					io_registers[REG_TM3CNT] = timer3Value & 0xC7;
 					UPDATE_REG(0x10E, io_registers[REG_TM3CNT]);
 				}
@@ -16019,7 +15866,7 @@ bool cheatsLoadCheatList(const char *file)
       fread(&cheatsList[i].size, 1, sizeof(int),f);
       fread(&cheatsList[i].status, 1, sizeof(int),f);
       fread(&cheatsList[i].enabled, 1, sizeof(int),f);
-      cheatsList[i].enabled = cheatsList[i].enabled ? true : false;
+      cheatsList[i].enabled = cheatsList[i].enabled;
       fread(&cheatsList[i].address, 1, sizeof(u32),f);
       cheatsList[i].rawaddress = cheatsList[i].address;
       fread(&cheatsList[i].value, 1, sizeof(u32),f);
