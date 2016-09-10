@@ -41,34 +41,15 @@
 
 		return thid;
 	}
-
-	//retro_sleep causes crash
-	void thread_sleep(int ms) { sceKernelDelayThread(ms * 1000); }
-
-	thread_t thread_get() { return sceKernelGetThreadId(); }
 	
+	thread_t thread_get() { return sceKernelGetThreadId(); }	
+	void thread_sleep(int ms) { sceKernelDelayThread(ms * 1000); } //retro_sleep causes crash
 	void thread_set_priority(thread_t id, int priority) { sceKernelChangeThreadPriority(id, 0xFF & _thread_map_priority(priority)); }
 
-#if 0
-	waithandle_t waithandle_create() {
-		return sceKernelCreateSema("my_sema", 0, 1, 1, 0);
-	}
-
-	void waithandle_release(waithandle_t wh) {
-		sceKernelDeleteSema(wh);
-	}
-
-	void waithandle_lock(waithandle_t wh) {
-		int rv = 0;
-		do {
-			rv = sceKernelWaitSema(wh, 1, NULL);
-		} while(rv < 0);
-	}
-
-	void waithandle_unlock(waithandle_t wh) {
-		sceKernelSignalSema(wh, 1);
-	}
-#endif
+	waithandle_t waithandle_create() { return sceKernelCreateMutex("my_mutex", 0, 1, NULL);	}
+	void waithandle_release(waithandle_t wh) { sceKernelDeleteMutex(wh); }
+	void waithandle_lock(waithandle_t wh) { sceKernelLockMutex(wh, 1, NULL); }
+	void waithandle_unlock(waithandle_t wh) { sceKernelUnlockMutex(wh, 1); }
 
 #else //non-vita
 

@@ -26,12 +26,10 @@ thread_t thread_run(threadfunc_t func, void* p, int priority);
 void thread_sleep(int ms);
 void thread_set_priority(thread_t id, int priority);
 
-#if 0
 waithandle_t waithandle_create();
 void waithandle_release(waithandle_t wh);
 void waithandle_lock(waithandle_t wh);
 void waithandle_unlock(waithandle_t wh);
-#endif
 
 #endif
 
