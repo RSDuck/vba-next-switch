@@ -1,4 +1,4 @@
-DEBUG = 0
+DEBUG=0
 FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 STATIC_LINKING=0
@@ -227,8 +227,8 @@ else ifeq ($(platform), vita)
 	CXX = arm-vita-eabi-g++$(EXE_EXT)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
-	CFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math -mthumb -fsingle-precision-constant
-	CXXFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math -mthumb -fsingle-precision-constant
+	CFLAGS += -mthumb -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -ffast-math -fsingle-precision-constant 
+	CXXFLAGS += -mthumb -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -ffast-math -fsingle-precision-constant 
 	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
@@ -322,8 +322,13 @@ ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -g
 	CXXFLAGS += -O0 -g
 else
-	CFLAGS += -O3
-	CXXFLAGS += -O3
+	ifeq ($(platform), vita)
+		CFLAGS += -O2
+		CXXFLAGS += -O2
+	else
+		CFLAGS += -O3
+		CXXFLAGS += -O3
+	endif
 endif
 
 include build/Makefile.common

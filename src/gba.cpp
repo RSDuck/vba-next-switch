@@ -772,6 +772,77 @@ static int timer3ClockReload  = 0;
 
 static const uint32_t  objTilesAddress [3] = {0x010000, 0x014000, 0x014000};
 
+static uint8_t* CPUDecodeAddress(uint32_t address) {
+
+	switch(address >> 24) {
+		case 0:
+			/* BIOS */
+			if(bus.reg[15].I >> 24) {
+				if(address < 0x4000)
+					return biosProtected;
+				else
+					goto unreadable;
+			} else
+				return bios + (address & 0x3FFC);
+		case 0x02:
+			/* external work RAM */
+			return workRAM + (address & 0x3FFFC);
+		case 0x03:
+			/* internal work RAM */
+			return internalRAM + (address & 0x7ffC);
+		case 0x04:
+			/* I/O registers */
+			if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
+				if(ioReadable[(address & 0x3fc) + 2])
+					return ioMem + (address & 0x3fC);
+				else
+					return ioMem + (address & 0x3fc);
+			}
+			else
+				goto unreadable;
+			break;
+		case 0x05:
+			/* palette RAM */
+			return paletteRAM + (address & 0x3fC);
+		case 0x06:
+			/* VRAM */
+			address = (address & 0x1fffc);
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
+				break;
+			if ((address & 0x18000) == 0x18000)
+				address &= 0x17fff;
+			return vram + address;
+		case 0x07:
+			/* OAM RAM */
+			return oam + (address & 0x3FC);
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0B: 
+		case 0x0C: 
+			/* gamepak ROM */
+			return rom + (address & 0x1FFFFFC);
+		case 0x0D:
+        	//value = eepromRead();
+			break;
+		case 14:
+      	case 15:
+			//value = flashRead(address) * 0x01010101;
+			break;
+		default:
+unreadable:
+			/*
+			if(armState)
+				value = CPUReadHalfWordQuick(bus.reg[15].I + (address & 2));
+			else
+				value = CPUReadHalfWordQuick(bus.reg[15].I);
+			*/
+			break;
+	}
+
+	return NULL;
+}
+
 static INLINE u32 CPUReadMemory(u32 address)
 {
 	u32 value;
@@ -1465,6 +1536,7 @@ static void BIOS_BitUnPack (void)
 	}
 }
 
+#if MSB_FIRST || !USE_TWEAK_AFFINE
 static void BIOS_BgAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -1502,6 +1574,7 @@ static void BIOS_BgAffineSet (void)
 		CPUWriteHalfWord(dest, dy);
 		dest += 2;
 		CPUWriteHalfWord(dest, dmy);
+
 		dest += 2;
 
 		s32 startx = cx - dx * dispx + dmx * dispy;
@@ -1513,6 +1586,58 @@ static void BIOS_BgAffineSet (void)
 		dest += 4;
 	}
 }
+#else
+typedef struct {
+	s32 cx;
+	s32 cy;
+	s16 dispx;
+	s16 dispy;
+	s16 rx;
+	s16 ry;
+	u16 theta;
+	u16 dummy;
+} BgAffineInput;
+
+typedef struct {
+	s16 dx;
+	s16 dmx;
+	s16 dy;
+	s16 dmy;
+	s32 startx;
+	s32 starty;
+} BgAffineOutput;
+
+static void BIOS_BgAffineSet (void)
+{
+	BgAffineInput input;
+	BgAffineOutput output;
+
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+
+	uint8_t* addr_src = CPUDecodeAddress(src);
+	uint8_t* addr_dst = CPUDecodeAddress(dest);
+
+	for(int i = 0; i < num; i++) {
+		memcpy(&input, addr_src, sizeof(BgAffineInput) - 2);
+		addr_src += sizeof(BgAffineInput);
+
+		s32 a = fast_cos(input.theta);
+		s32 b = fast_sin(input.theta);
+
+		output.dx  = (input.rx * a)>>14;
+		output.dmx = -((input.rx * b)>>14);
+		output.dy  = (input.ry * b)>>14;
+		output.dmy = (input.ry * a)>>14;
+		output.startx = input.cx - output.dx * input.dispx - output.dmx * input.dispy;
+		output.starty = input.cy - output.dy * input.dispx - output.dmy * input.dispy;
+
+		memcpy(addr_dst, &output, sizeof(BgAffineOutput));
+		addr_dst += sizeof(BgAffineOutput);
+	}
+}
+#endif
 
 static void BIOS_CpuSet (void)
 {
@@ -1967,6 +2092,7 @@ static void BIOS_LZ77UnCompWram (void)
 	}
 }
 
+#if MSB_FIRST || !USE_TWEAK_AFFINE
 static void BIOS_ObjAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -2000,6 +2126,51 @@ static void BIOS_ObjAffineSet (void)
 		dest += offset;
 	}
 }
+#else
+typedef struct {
+	s16 rx;
+	s16 ry;
+	u16 theta;
+	u16 dummy;
+} ObjAffineInput;
+
+typedef struct {
+	s16 dx;
+	s16 dmx;
+	s16 dy;
+	s16 dmy;
+} ObjAffineOutput;
+
+static void BIOS_ObjAffineSet (void)
+{
+	ObjAffineInput input;
+	ObjAffineOutput output;
+
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+	int offset = bus.reg[3].I;
+
+	uint8_t* addr_src = CPUDecodeAddress(src);
+	uint8_t* addr_dst = CPUDecodeAddress(dest);
+
+	for(int i = 0; i < num; i++) {
+		memcpy(&input, addr_src, sizeof(ObjAffineInput) - 2);
+		addr_src += sizeof(ObjAffineInput);
+
+		s32 a = fast_cos(input.theta);
+		s32 b = fast_sin(input.theta);
+
+		output.dx =  ((s32)input.rx * a)>>14;
+		output.dmx = -(((s32)input.rx * b)>>14);
+		output.dy =  ((s32)input.ry * b)>>14;
+		output.dmy = ((s32)input.ry * a)>>14;
+
+		memcpy(addr_dst, &output, sizeof(ObjAffineOutput));
+		addr_dst += sizeof(ObjAffineOutput);
+	}
+}
+#endif
 
 static void BIOS_RegisterRamReset(u32 flags)
 {
