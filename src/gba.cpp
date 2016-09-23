@@ -1263,6 +1263,7 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 	BIOS
 ============================================================ */
 
+#if USE_TWEAK_SINE
 s16 sineTable[256] = {
   (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
   (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
@@ -1298,17 +1299,36 @@ s16 sineTable[256] = {
   (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
 };
 
+#define fast_sin(__val__) sineTable[__val__ & 0xFF]
+#define fast_cos(__val__) sineTable[(__val__ + 0x40) & 0xFF]
+
+#else
+
+static inline int16_t fast_sin(uint8_t val)
+{
+	uint8_t p = 0x7F & val;
+	int16_t q = 1 - ((0x80 & val) >> 6);
+	return ((p << 9) + (-4 * p * p)) * q;
+}
+
+static inline int16_t fast_cos(uint8_t val)
+{
+	return fast_sin(val + 0x40);
+}
+
+#endif
+
 #if USE_TWEAK_ARCTAN
-s32* table_atan;
+s32 table_atan[0x200];
 
 #define BIOS_ArcTan() { \
 	int p = (int)bus.reg[0].I + 0x4000; \
 	if(p < 0) \
 		bus.reg[0].I = table_atan[0]; \
 	else if(p >= 0x8000) \
-		bus.reg[0].I = table_atan[0x800 - 1]; \
+		bus.reg[0].I = table_atan[0x200 - 1]; \
 	else \
-		bus.reg[0].I = table_atan[p >> 4];  \
+		bus.reg[0].I = table_atan[p >> 6];  \
 }
 		
 static s32 BIOS_ArcTan_Calc (s32 p)
@@ -1467,8 +1487,8 @@ static void BIOS_BgAffineSet (void)
 		src+=2;
 		u16 theta = CPUReadHalfWord(src)>>8;
 		src+=4; // keep structure alignment
-		s32 a = sineTable[(theta+0x40)&255];
-		s32 b = sineTable[theta];
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
 
 		s16 dx =  (rx * a)>>14;
 		s16 dmx = (rx * b)>>14;
@@ -1962,8 +1982,8 @@ static void BIOS_ObjAffineSet (void)
 		u16 theta = CPUReadHalfWord(src)>>8;
 		src+=4; // keep structure alignment
 
-		s32 a = (s32)sineTable[(theta+0x40)&255];
-		s32 b = (s32)sineTable[theta];
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
 
 		s16 dx =  ((s32)rx * a)>>14;
 		s16 dmx = ((s32)rx * b)>>14;
@@ -2215,9 +2235,8 @@ static void tweaksInit() {
 	tweaks_init = true;
 
 	#if USE_TWEAK_ARCTAN
-	table_atan = new s32[0x800];
-	for(int u = 0; u < 0x800; ++u)
-		table_atan[u] = BIOS_ArcTan_Calc((u - 0x400) << 4);
+	for(int u = 0; u < 0x200; ++u)
+		table_atan[u] = BIOS_ArcTan_Calc((u - 0x100) << 6);
 	#endif
 }
 #endif
@@ -9094,8 +9113,13 @@ void ThreadedRendererStart() {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
 
+#if VITA
 		threaded_renderer_contexts[u].renderer_thread_id = thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop,
 			reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);
+#else
+		threaded_renderer_contexts[u].renderer_thread_id = thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop,
+			reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL);
+#endif
 	}
 }
 
