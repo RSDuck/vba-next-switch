@@ -108,6 +108,9 @@ static void hardware_reset() {
 	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
 	static volatile int threaded_renderer_ready = 0;
 
+	static void threaded_renderer_loop(void* p);
+	static void threaded_renderer_loop0(void* p);
+
 	typedef struct {
 		thread_t renderer_thread_id;
 
@@ -282,11 +285,6 @@ static void hardware_reset() {
 #define RENDERER_R_BLDCNT_Color_Special_Effect ((RENDERER_BLDMOD >> 6) & 3)
 #define RENDERER_R_BLDCNT_IsTarget1(target) ((target) & (RENDERER_BLDMOD     ))
 #define RENDERER_R_BLDCNT_IsTarget2(target) ((target) & (RENDERER_BLDMOD >> 8))
-
-#if THREADED_RENDERER
-static void threaded_renderer_loop(void* p);
-static void threaded_renderer_loop0(void* p);
-#endif
 
 /*============================================================
 	GBA INLINE
@@ -1499,7 +1497,7 @@ static void BIOS_BitUnPack (void)
 	int revbits = 8 - bits;
 	// u32 value = 0;
 	u32 base = CPUReadMemory(header+4);
-	bool addBase = (base & 0x80000000);
+	bool addBase = (base & 0x80000000) ? true : false;
 	base &= 0x7fffffff;
 	int dataSize = CPUReadByte(header+3);
 
@@ -1536,57 +1534,7 @@ static void BIOS_BitUnPack (void)
 	}
 }
 
-#if MSB_FIRST || !USE_TWEAK_AFFINE
-static void BIOS_BgAffineSet (void)
-{
-	u32 src = bus.reg[0].I;
-	u32 dest = bus.reg[1].I;
-	int num = bus.reg[2].I;
-
-	for(int i = 0; i < num; i++)
-	{
-		s32 cx = CPUReadMemory(src);
-		src+=4;
-		s32 cy = CPUReadMemory(src);
-		src+=4;
-		s16 dispx = CPUReadHalfWord(src);
-		src+=2;
-		s16 dispy = CPUReadHalfWord(src);
-		src+=2;
-		s16 rx = CPUReadHalfWord(src);
-		src+=2;
-		s16 ry = CPUReadHalfWord(src);
-		src+=2;
-		u16 theta = CPUReadHalfWord(src)>>8;
-		src+=4; // keep structure alignment
-		s32 a = fast_cos(theta);
-		s32 b = fast_sin(theta);
-
-		s16 dx =  (rx * a)>>14;
-		s16 dmx = (rx * b)>>14;
-		s16 dy =  (ry * b)>>14;
-		s16 dmy = (ry * a)>>14;
-
-		CPUWriteHalfWord(dest, dx);
-		dest += 2;
-		CPUWriteHalfWord(dest, -dmx);
-		dest += 2;
-		CPUWriteHalfWord(dest, dy);
-		dest += 2;
-		CPUWriteHalfWord(dest, dmy);
-
-		dest += 2;
-
-		s32 startx = cx - dx * dispx + dmx * dispy;
-		s32 starty = cy - dy * dispx - dmy * dispy;
-
-		CPUWriteMemory(dest, startx);
-		dest += 4;
-		CPUWriteMemory(dest, starty);
-		dest += 4;
-	}
-}
-#else
+#if USE_TWEAK_AFFINE
 typedef struct {
 	s32 cx;
 	s32 cy;
@@ -1635,6 +1583,56 @@ static void BIOS_BgAffineSet (void)
 
 		memcpy(addr_dst, &output, sizeof(BgAffineOutput));
 		addr_dst += sizeof(BgAffineOutput);
+	}
+}
+#else
+static void BIOS_BgAffineSet (void)
+{
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+
+	for(int i = 0; i < num; i++)
+	{
+		s32 cx = CPUReadMemory(src);
+		src+=4;
+		s32 cy = CPUReadMemory(src);
+		src+=4;
+		s16 dispx = CPUReadHalfWord(src);
+		src+=2;
+		s16 dispy = CPUReadHalfWord(src);
+		src+=2;
+		s16 rx = CPUReadHalfWord(src);
+		src+=2;
+		s16 ry = CPUReadHalfWord(src);
+		src+=2;
+		u16 theta = CPUReadHalfWord(src)>>8;
+		src+=4; // keep structure alignment
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
+
+		s16 dx =  (rx * a)>>14;
+		s16 dmx = (rx * b)>>14;
+		s16 dy =  (ry * b)>>14;
+		s16 dmy = (ry * a)>>14;
+
+		CPUWriteHalfWord(dest, dx);
+		dest += 2;
+		CPUWriteHalfWord(dest, -dmx);
+		dest += 2;
+		CPUWriteHalfWord(dest, dy);
+		dest += 2;
+		CPUWriteHalfWord(dest, dmy);
+
+		dest += 2;
+
+		s32 startx = cx - dx * dispx + dmx * dispy;
+		s32 starty = cy - dy * dispx - dmy * dispy;
+
+		CPUWriteMemory(dest, startx);
+		dest += 4;
+		CPUWriteMemory(dest, starty);
+		dest += 4;
 	}
 }
 #endif
@@ -2092,41 +2090,7 @@ static void BIOS_LZ77UnCompWram (void)
 	}
 }
 
-#if MSB_FIRST || !USE_TWEAK_AFFINE
-static void BIOS_ObjAffineSet (void)
-{
-	u32 src = bus.reg[0].I;
-	u32 dest = bus.reg[1].I;
-	int num = bus.reg[2].I;
-	int offset = bus.reg[3].I;
-
-	for(int i = 0; i < num; i++) {
-		s16 rx = CPUReadHalfWord(src);
-		src+=2;
-		s16 ry = CPUReadHalfWord(src);
-		src+=2;
-		u16 theta = CPUReadHalfWord(src)>>8;
-		src+=4; // keep structure alignment
-
-		s32 a = fast_cos(theta);
-		s32 b = fast_sin(theta);
-
-		s16 dx =  ((s32)rx * a)>>14;
-		s16 dmx = ((s32)rx * b)>>14;
-		s16 dy =  ((s32)ry * b)>>14;
-		s16 dmy = ((s32)ry * a)>>14;
-
-		CPUWriteHalfWord(dest, dx);
-		dest += offset;
-		CPUWriteHalfWord(dest, -dmx);
-		dest += offset;
-		CPUWriteHalfWord(dest, dy);
-		dest += offset;
-		CPUWriteHalfWord(dest, dmy);
-		dest += offset;
-	}
-}
-#else
+#if USE_TWEAK_AFFINE
 typedef struct {
 	s16 rx;
 	s16 ry;
@@ -2168,6 +2132,40 @@ static void BIOS_ObjAffineSet (void)
 
 		memcpy(addr_dst, &output, sizeof(ObjAffineOutput));
 		addr_dst += sizeof(ObjAffineOutput);
+	}
+}
+#else
+static void BIOS_ObjAffineSet (void)
+{
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+	int offset = bus.reg[3].I;
+
+	for(int i = 0; i < num; i++) {
+		s16 rx = CPUReadHalfWord(src);
+		src+=2;
+		s16 ry = CPUReadHalfWord(src);
+		src+=2;
+		u16 theta = CPUReadHalfWord(src)>>8;
+		src+=4; // keep structure alignment
+
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
+
+		s16 dx =  ((s32)rx * a)>>14;
+		s16 dmx = ((s32)rx * b)>>14;
+		s16 dy =  ((s32)ry * b)>>14;
+		s16 dmy = ((s32)ry * a)>>14;
+
+		CPUWriteHalfWord(dest, dx);
+		dest += offset;
+		CPUWriteHalfWord(dest, -dmx);
+		dest += offset;
+		CPUWriteHalfWord(dest, dy);
+		dest += offset;
+		CPUWriteHalfWord(dest, dmy);
+		dest += offset;
 	}
 }
 #endif
@@ -2451,12 +2449,12 @@ static void CPUUpdateFlags(bool breakLoop)
 {
 	uint32_t CPSR = bus.reg[16].I;
 
-	N_FLAG = (CPSR & 0x80000000);
-	Z_FLAG = (CPSR & 0x40000000);
-	C_FLAG = (CPSR & 0x20000000);
-	V_FLAG = (CPSR & 0x10000000);
-	armState = !(CPSR & 0x20);
-	armIrqEnable = !(CPSR & 0x80);
+	N_FLAG = (CPSR & 0x80000000) ? true: false;
+	Z_FLAG = (CPSR & 0x40000000) ? true: false;
+	C_FLAG = (CPSR & 0x20000000) ? true: false;
+	V_FLAG = (CPSR & 0x10000000) ? true: false;
+	armState = (CPSR & 0x20) ? false : true;
+	armIrqEnable = (CPSR & 0x80) ? false : true;
 	if (breakLoop && armIrqEnable && (io_registers[REG_IF] & io_registers[REG_IE]) && (io_registers[REG_IME] & 1))
 		cpuNextEvent = cpuTotalTicks;
 }
@@ -2740,25 +2738,25 @@ static void armUnknownInsn(u32 opcode)
 // C core
 
 #define C_SETCOND_LOGICAL \
-    N_FLAG = (res >> 31);             \
-    Z_FLAG = !res;                 		\
+    N_FLAG = ((s32)res < 0) ? true : false;             \
+    Z_FLAG = (res == 0) ? true : false;                 \
     C_FLAG = C_OUT;
 #define C_SETCOND_ADD \
-    N_FLAG = (res >> 31);             \
-    Z_FLAG = !res;                 \
+    N_FLAG = ((s32)res < 0) ? true : false;             \
+    Z_FLAG = (res == 0) ? true : false;                 \
     V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) |        \
-              (POS(lhs) & POS(rhs) & NEG(res)));\
+              (POS(lhs) & POS(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & NEG(rhs)) |                   \
               (NEG(lhs) & POS(res)) |                   \
-              (NEG(rhs) & POS(res)));
+              (NEG(rhs) & POS(res))) ? true : false;
 #define C_SETCOND_SUB \
-    N_FLAG = (res >> 31);             \
-    Z_FLAG = !res;                 \
+    N_FLAG = ((s32)res < 0) ? true : false;             \
+    Z_FLAG = (res == 0) ? true : false;                 \
     V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) |        \
-              (POS(lhs) & NEG(rhs) & NEG(res)));\
+              (POS(lhs) & NEG(rhs) & NEG(res))) ? true : false;\
     C_FLAG = ((NEG(lhs) & POS(rhs)) |                   \
               (NEG(lhs) & POS(res)) |                   \
-              (POS(rhs) & POS(res)));
+              (POS(rhs) & POS(res))) ? true : false;
 
 #ifndef ALU_INIT_C
  #define ALU_INIT_C \
@@ -2774,7 +2772,7 @@ static void armUnknownInsn(u32 opcode)
         value = bus.reg[opcode & 0x0F].I;                   \
     } else {                                            \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = ((v >> (32 - shift)) & 1); \
+        C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
         value = v << shift;                             \
     }
 #endif
@@ -2785,10 +2783,10 @@ static void armUnknownInsn(u32 opcode)
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (bus.reg[opcode & 0x0F].I & 1);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 1 ? true : false);\
         } else if (shift < 32) {                \
             u32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = ((v >> (32 - shift)) & 1);\
+            C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
             value = v << shift;                         \
         } else {                                        \
             value = 0;                                  \
@@ -2804,11 +2802,11 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = ((v >> (shift - 1)) & 1);  \
+        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = v >> shift;                             \
     } else {                                            \
         value = 0;                                      \
-        C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000);\
+        C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000) ? true : false;\
     }
 #endif
 // OP Rd,Rb,Rm LSR Rs
@@ -2818,10 +2816,10 @@ static void armUnknownInsn(u32 opcode)
     if (shift) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000);\
+            C_OUT = (bus.reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
         } else if (shift < 32) {                \
             u32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = ((v >> (shift - 1)) & 1);\
+            C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
             value = v >> shift;                         \
         } else {                                        \
             value = 0;                                  \
@@ -2837,7 +2835,7 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         s32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = ((v >> (int)(shift - 1)) & 1);\
+        C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
         value = v >> (int)shift;                        \
     } else {                                            \
         if (bus.reg[opcode & 0x0F].I & 0x80000000) {        \
@@ -2856,7 +2854,7 @@ static void armUnknownInsn(u32 opcode)
     if (shift < 32) {                           \
         if (shift) {                            \
             s32 v = bus.reg[opcode & 0x0F].I;               \
-            C_OUT = ((v >> (int)(shift - 1)) & 1);\
+            C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
             value = v >> (int)shift;                    \
         } else {                                        \
             value = bus.reg[opcode & 0x0F].I;               \
@@ -2877,12 +2875,12 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (shift) {                                \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = ((v >> (shift - 1)) & 1);  \
+        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = (v & 1);                 \
+        C_OUT = (v & 1) ? true : false;                 \
         value = ((v >> 1) |                             \
                  (C_FLAG << 31));                       \
     }
@@ -2893,13 +2891,13 @@ static void armUnknownInsn(u32 opcode)
     unsigned int shift = bus.reg[(opcode >> 8)&15].B.B0;    \
     if (shift & 0x1F) {                         \
         u32 v = bus.reg[opcode & 0x0F].I;                   \
-        C_OUT = ((v >> (shift - 1)) & 1);  \
+        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         value = bus.reg[opcode & 0x0F].I;                   \
         if (shift)                                      \
-            C_OUT = (value & 0x80000000);\
+            C_OUT = (value & 0x80000000 ? true : false);\
     }
 #endif
 // OP Rd,Rb,# ROR #
@@ -2908,7 +2906,7 @@ static void armUnknownInsn(u32 opcode)
     int shift = (opcode & 0xF00) >> 7;                  \
     if (shift) {                              \
         u32 v = opcode & 0xFF;                          \
-        C_OUT = ((v >> (shift - 1)) & 1);  \
+        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
@@ -3088,13 +3086,13 @@ static void armUnknownInsn(u32 opcode)
 #endif
 #ifndef SETCOND_MUL
  #define SETCOND_MUL \
-     N_FLAG = (bus.reg[dest].I >> 31);    \
-     Z_FLAG = !bus.reg[dest].I;
+     N_FLAG = ((s32)bus.reg[dest].I < 0) ? true : false;    \
+     Z_FLAG = bus.reg[dest].I ? false : true;
 #endif
 #ifndef SETCOND_MULL
  #define SETCOND_MULL \
-     N_FLAG = (bus.reg[dest].I >> 31);\
-     Z_FLAG = !(bus.reg[dest].I || bus.reg[acc].I);
+     N_FLAG = (bus.reg[dest].I & 0x80000000) ? true : false;\
+     Z_FLAG = bus.reg[dest].I || bus.reg[acc].I ? false : true;
 #endif
 
 #ifndef ROR_IMM_MSR
@@ -4999,26 +4997,26 @@ static  void thumbUnknownInsn(u32 opcode)
  #define ADDCARRY(a, b, c) \
   C_FLAG = ((NEG(a) & NEG(b)) |\
             (NEG(a) & POS(c)) |\
-            (NEG(b) & POS(c)));
+            (NEG(b) & POS(c))) ? true : false;
 #endif
 
 #ifndef ADDOVERFLOW
  #define ADDOVERFLOW(a, b, c) \
   V_FLAG = ((NEG(a) & NEG(b) & POS(c)) |\
-            (POS(a) & POS(b) & NEG(c)));
+            (POS(a) & POS(b) & NEG(c))) ? true : false;
 #endif
 
 #ifndef SUBCARRY
  #define SUBCARRY(a, b, c) \
   C_FLAG = ((NEG(a) & POS(b)) |\
             (NEG(a) & POS(c)) |\
-            (POS(b) & POS(c)));
+            (POS(b) & POS(c))) ? true : false;
 #endif
 
 #ifndef SUBOVERFLOW
  #define SUBOVERFLOW(a, b, c)\
   V_FLAG = ((NEG(a) & POS(b) & POS(c)) |\
-            (POS(a) & NEG(b) & NEG(c)));
+            (POS(a) & NEG(b) & NEG(c))) ? true : false;
 #endif
 
 #ifndef ADD_RD_RS_RN
@@ -5028,8 +5026,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = bus.reg[N].I;\
      u32 res = lhs + rhs;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -5042,11 +5040,15 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = N;\
      u32 res = lhs + rhs;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
+#endif
+
+#ifndef ADD_RD_RS_O3_0
+# define ADD_RD_RS_O3_0 ADD_RD_RS_O3
 #endif
 
 #ifndef ADD_RN_O8
@@ -5056,8 +5058,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = (opcode & 255);\
      u32 res = lhs + rhs;\
      bus.reg[(d)].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -5069,8 +5071,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 lhs = bus.reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs + rhs;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -5083,8 +5085,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = value;\
      u32 res = lhs + rhs + (u32)C_FLAG;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -5097,8 +5099,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = bus.reg[N].I;\
      u32 res = lhs - rhs;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -5111,13 +5113,16 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = N;\
      u32 res = lhs - rhs;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #endif
 
+#ifndef SUB_RD_RS_O3_0
+# define SUB_RD_RS_O3_0 SUB_RD_RS_O3
+#endif
 #ifndef SUB_RN_O8
  #define SUB_RN_O8(d) \
    {\
@@ -5125,8 +5130,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
      bus.reg[(d)].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -5138,7 +5143,7 @@ static  void thumbUnknownInsn(u32 opcode)
 	 val = (opcode & 255);\
      bus.reg[d].I = val;\
      N_FLAG = false;\
-     Z_FLAG = !val;\
+     Z_FLAG = (val ? false : true);\
    }
 #endif
 #ifndef CMP_RN_O8
@@ -5147,8 +5152,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 lhs = bus.reg[(d)].I;\
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -5160,8 +5165,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = value;\
      u32 res = lhs - rhs - !((u32)C_FLAG);\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -5169,49 +5174,49 @@ static  void thumbUnknownInsn(u32 opcode)
 #ifndef LSL_RD_RM_I5
  #define LSL_RD_RM_I5 \
    {\
-     C_FLAG = ((bus.reg[source].I >> (32 - shift)) & 1);\
+     C_FLAG = (bus.reg[source].I >> (32 - shift)) & 1 ? true : false;\
      value = bus.reg[source].I << shift;\
    }
 #endif
 #ifndef LSL_RD_RS
  #define LSL_RD_RS \
    {\
-     C_FLAG = ((bus.reg[dest].I >> (32 - value)) & 1);\
+     C_FLAG = (bus.reg[dest].I >> (32 - value)) & 1 ? true : false;\
      value = bus.reg[dest].I << value;\
    }
 #endif
 #ifndef LSR_RD_RM_I5
  #define LSR_RD_RM_I5 \
    {\
-     C_FLAG = ((bus.reg[source].I >> (shift - 1)) & 1);\
+     C_FLAG = (bus.reg[source].I >> (shift - 1)) & 1 ? true : false;\
      value = bus.reg[source].I >> shift;\
    }
 #endif
 #ifndef LSR_RD_RS
  #define LSR_RD_RS \
    {\
-     C_FLAG = ((bus.reg[dest].I >> (value - 1)) & 1);\
+     C_FLAG = (bus.reg[dest].I >> (value - 1)) & 1 ? true : false;\
      value = bus.reg[dest].I >> value;\
    }
 #endif
 #ifndef ASR_RD_RM_I5
  #define ASR_RD_RM_I5 \
    {\
-     C_FLAG = (((s32)bus.reg[source].I >> (int)(shift - 1)) & 1);\
+     C_FLAG = ((s32)bus.reg[source].I >> (int)(shift - 1)) & 1 ? true : false;\
      value = (s32)bus.reg[source].I >> (int)shift;\
    }
 #endif
 #ifndef ASR_RD_RS
  #define ASR_RD_RS \
    {\
-     C_FLAG = (((s32)bus.reg[dest].I >> (int)(value - 1)) & 1);\
+     C_FLAG = ((s32)bus.reg[dest].I >> (int)(value - 1)) & 1 ? true : false;\
      value = (s32)bus.reg[dest].I >> (int)value;\
    }
 #endif
 #ifndef ROR_RD_RS
  #define ROR_RD_RS \
    {\
-     C_FLAG = ((bus.reg[dest].I >> (value - 1)) & 1);\
+     C_FLAG = (bus.reg[dest].I >> (value - 1)) & 1 ? true : false;\
      value = ((bus.reg[dest].I << (32 - value)) |\
               (bus.reg[dest].I >> value));\
    }
@@ -5223,8 +5228,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 rhs = 0;\
      u32 res = rhs - lhs;\
      bus.reg[dest].I = res;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(rhs, lhs, res);\
      SUBOVERFLOW(rhs, lhs, res);\
    }
@@ -5235,8 +5240,8 @@ static  void thumbUnknownInsn(u32 opcode)
      u32 lhs = bus.reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs - rhs;\
-     Z_FLAG = !res;\
-     N_FLAG = (res >> 31);\
+     Z_FLAG = (res == 0) ? true : false;\
+     N_FLAG = NEG(res) ? true : false;\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -5248,16 +5253,16 @@ static  void thumbUnknownInsn(u32 opcode)
   u32 value;\
   OP(N);\
   bus.reg[dest].I = value;\
-  N_FLAG = (value & 0x80000000);\
-  Z_FLAG = !value;
+  N_FLAG = (value & 0x80000000 ? true : false);\
+  Z_FLAG = (value ? false : true);
  #define IMM5_INSN_0(OP) \
   int dest = opcode & 0x07;\
   int source = (opcode >> 3) & 0x07;\
   u32 value;\
   OP;\
   bus.reg[dest].I = value;\
-  N_FLAG = (value & 0x80000000);\
-  Z_FLAG = !value;
+  N_FLAG = (value & 0x80000000 ? true : false);\
+  Z_FLAG = (value ? false : true);
  #define IMM5_LSL(N) \
   int shift = N;\
   LSL_RD_RM_I5;
@@ -5267,7 +5272,7 @@ static  void thumbUnknownInsn(u32 opcode)
   int shift = N;\
   LSR_RD_RM_I5;
  #define IMM5_LSR_0 \
-  C_FLAG = (bus.reg[source].I & 0x80000000);\
+  C_FLAG = bus.reg[source].I & 0x80000000 ? true : false;\
   value = 0;
  #define IMM5_ASR(N) \
   int shift = N;\
@@ -5344,7 +5349,7 @@ DEFINE_IMM5_INSN(IMM5_ASR,10)
   static  void thumb##BASE##_7(u32 opcode) { THREEARG_INSN(OP,7); }
 
 #define DEFINE_IMM3_INSN(OP,BASE) \
-  static  void thumb##BASE##_0(u32 opcode) { THREEARG_INSN(OP,0); } \
+  static  void thumb##BASE##_0(u32 opcode) { THREEARG_INSN(OP##_0,0); } \
   static  void thumb##BASE##_1(u32 opcode) { THREEARG_INSN(OP,1); } \
   static  void thumb##BASE##_2(u32 opcode) { THREEARG_INSN(OP,2); } \
   static  void thumb##BASE##_3(u32 opcode) { THREEARG_INSN(OP,3); } \
@@ -5441,8 +5446,8 @@ static  void thumb40_0(u32 opcode)
   u32 val = (bus.reg[dest].I & bus.reg[(opcode >> 3)&7].I);
   
   //bus.reg[dest].I &= bus.reg[(opcode >> 3)&7].I;
-  N_FLAG = (val & 0x80000000);
-  Z_FLAG = !val;
+  N_FLAG = val & 0x80000000 ? true : false;
+  Z_FLAG = val ? false : true;
 
   bus.reg[dest].I = val;
 
@@ -5453,8 +5458,8 @@ static  void thumb40_1(u32 opcode)
 {
   int dest = opcode & 7;
   bus.reg[dest].I ^= bus.reg[(opcode >> 3)&7].I;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
-  Z_FLAG = !bus.reg[dest].I;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = bus.reg[dest].I ? false : true;
 }
 
 // LSL Rd, Rs
@@ -5466,7 +5471,7 @@ static  void thumb40_2(u32 opcode)
   if(val) {
     if(val == 32) {
       value = 0;
-      C_FLAG = (bus.reg[dest].I & 1);
+      C_FLAG = (bus.reg[dest].I & 1 ? true : false);
     } else if(val < 32) {
       LSL_RD_RS;
     } else {
@@ -5475,8 +5480,8 @@ static  void thumb40_2(u32 opcode)
     }
     bus.reg[dest].I = value;
   }
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
-  Z_FLAG = !bus.reg[dest].I;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = bus.reg[dest].I ? false : true;
   clockTicks = codeTicksAccess(bus.armNextPC, BITS_16)+2;
 }
 
@@ -5489,7 +5494,7 @@ static  void thumb40_3(u32 opcode)
   if(val) {
     if(val == 32) {
       value = 0;
-      C_FLAG = (bus.reg[dest].I & 0x80000000);
+      C_FLAG = (bus.reg[dest].I & 0x80000000 ? true : false);
     } else if(val < 32) {
       LSR_RD_RS;
     } else {
@@ -5498,8 +5503,8 @@ static  void thumb40_3(u32 opcode)
     }
     bus.reg[dest].I = value;
   }
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
-  Z_FLAG = !bus.reg[dest].I;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = bus.reg[dest].I ? false : true;
   clockTicks = codeTicksAccess(bus.armNextPC, BITS_16)+2;
 }
 
@@ -5523,8 +5528,8 @@ static  void thumb41_0(u32 opcode)
       }
     }
   }
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
-  Z_FLAG = !bus.reg[dest].I;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = bus.reg[dest].I ? false : true;
   clockTicks = codeTicksAccess(bus.armNextPC, BITS_16)+2;
 }
 
@@ -5553,23 +5558,23 @@ static  void thumb41_3(u32 opcode)
   if(val) {
     value = value & 0x1f;
     if(val == 0) {
-      C_FLAG = (bus.reg[dest].I & 0x80000000);
+      C_FLAG = (bus.reg[dest].I & 0x80000000 ? true : false);
     } else {
       ROR_RD_RS;
       bus.reg[dest].I = value;
     }
   }
   clockTicks = codeTicksAccess(bus.armNextPC, BITS_16)+2;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
-  Z_FLAG = !bus.reg[dest].I;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = bus.reg[dest].I ? false : true;
 }
 
 // TST Rd, Rs
 static  void thumb42_0(u32 opcode)
 {
   u32 value = bus.reg[opcode & 7].I & bus.reg[(opcode >> 3) & 7].I;
-  N_FLAG = (value & 0x80000000);
-  Z_FLAG = !value;
+  N_FLAG = value & 0x80000000 ? true : false;
+  Z_FLAG = value ? false : true;
 }
 
 // NEG Rd, Rs
@@ -5601,8 +5606,8 @@ static  void thumb43_0(u32 opcode)
 {
   int dest = opcode & 7;
   bus.reg[dest].I |= bus.reg[(opcode >> 3) & 7].I;
-  Z_FLAG = !bus.reg[dest].I;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
+  Z_FLAG = bus.reg[dest].I ? false : true;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
 }
 
 // MUL Rd, Rs
@@ -5622,8 +5627,8 @@ static  void thumb43_1(u32 opcode)
     clockTicks += 3;
   bus.busPrefetchCount = (bus.busPrefetchCount<<clockTicks) | (0xFF>>(8-clockTicks));
   clockTicks += codeTicksAccess(bus.armNextPC, BITS_16) + 1;
-  Z_FLAG = !bus.reg[dest].I;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
+  Z_FLAG = bus.reg[dest].I ? false : true;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
 }
 
 // BIC Rd, Rs
@@ -5631,8 +5636,8 @@ static  void thumb43_2(u32 opcode)
 {
   int dest = opcode & 7;
   bus.reg[dest].I &= (~bus.reg[(opcode >> 3) & 7].I);
-  Z_FLAG = !bus.reg[dest].I;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
+  Z_FLAG = bus.reg[dest].I ? false : true;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
 }
 
 // MVN Rd, Rs
@@ -5640,8 +5645,8 @@ static  void thumb43_3(u32 opcode)
 {
   int dest = opcode & 7;
   bus.reg[dest].I = ~bus.reg[(opcode >> 3) & 7].I;
-  Z_FLAG = !bus.reg[dest].I;
-  N_FLAG = (bus.reg[dest].I & 0x80000000);
+  Z_FLAG = bus.reg[dest].I ? false : true;
+  N_FLAG = bus.reg[dest].I & 0x80000000 ? true : false;
 }
 
 // High-register instructions and BX //////////////////////////////////////
@@ -6421,7 +6426,6 @@ static  void thumbF8(u32 opcode)
 typedef  void (*insnfunc_t)(u32 opcode);
 #define thumbUI thumbUnknownInsn
 #define thumbBP thumbUnknownInsn
-
 static insnfunc_t thumbInsnTable[1024] = {
   thumb00_00,thumb00_01,thumb00_02,thumb00_03,thumb00_04,thumb00_05,thumb00_06,thumb00_07,  // 00
   thumb00_08,thumb00_09,thumb00_0A,thumb00_0B,thumb00_0C,thumb00_0D,thumb00_0E,thumb00_0F,
@@ -6801,7 +6805,7 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
    int maskX = sizeX-1;
    int maskY = sizeY-1;
 
-   bool mosaicOn = (control & 0x40);
+   bool mosaicOn = (control & 0x40) ? true : false;
 
    int xxx = hofs & maskX;
    int yyy = (vofs + RENDERER_R_VCOUNT) & maskY;
@@ -6921,7 +6925,7 @@ static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs)
   int maskX = sizeX-1;
   int maskY = sizeY-1;
 
-  bool mosaicOn = (control & 0x40);
+  bool mosaicOn = (control & 0x40) ? true : false;
 
   int xxx = hofs & maskX;
   int yyy = (vofs + RENDERER_R_VCOUNT) & maskY;
@@ -9283,13 +9287,13 @@ void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
 		threaded_renderer_contexts[u].renderer_control = 1;		
-
 #if VITA
-		threaded_renderer_contexts[u].renderer_thread_id = thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop,
-			reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)),
+				(u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
 #else
-		threaded_renderer_contexts[u].renderer_thread_id = thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop,
-			reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL);
+		threaded_renderer_contexts[u].renderer_thread_id =
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
 #endif
 	}
 }
@@ -11333,6 +11337,55 @@ static void mode5RenderLineAll (void)
 }
 
 #if THREADED_RENDERER
+#define threaded_renderer_loop_impl() \
+do { \
+	if(renderer_ctx.renderer_state == 0) continue; \
+	\
+	if(renderer_ctx.background_ver < threaded_background_ver) { \
+		renderer_ctx.background_ver = threaded_background_ver; \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG0) \
+			memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG1) \
+			memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG2) \
+			memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG3) \
+			memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32)); \
+	} \
+	\
+	memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32)); \
+	if(renderer_ctx.draw_sprites) (*drawSprites)(); \
+	\
+	if(renderer_ctx.renderfunc_type == 2) { \
+		memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32)); \
+		if(renderer_ctx.draw_objwin) (*drawOBJWin)(); \
+	} \
+	\
+	(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); \
+	\
+	renderer_ctx.renderer_state = 0;\
+} while (0)
+
+/*
+static void threaded_renderer_loop0(void* p) {
+	int renderer_idx = 0;
+	INIT_RENDERER_CONTEXT(renderer_idx);
+
+	renderfunc_t drawSprites = gfxDrawSprites<0>;
+	renderfunc_t drawOBJWin = gfxDrawOBJWin<0>;
+	renderfunc_t (*getRenderFunc)(int, int) = GetRenderFunc<0>;
+
+	while(renderer_ctx.renderer_control == 1) {
+		if(threaded_renderer_ready) {
+			threaded_renderer_ready = 0;
+			systemDrawScreen();
+		}
+		threaded_renderer_loop_impl();
+	}
+
+	renderer_ctx.renderer_control = 0; //loop is terminated.
+}
+
 static void threaded_renderer_loop(void* p) {
 	int renderer_idx = reinterpret_cast<intptr_t>(p);
 	INIT_RENDERER_CONTEXT(renderer_idx);
@@ -11361,80 +11414,55 @@ static void threaded_renderer_loop(void* p) {
 		return;
 	}
 
-	while(renderer_ctx.renderer_control == 1) {
-		//buffer is not ready.
-		if(renderer_ctx.renderer_state == 0) continue;
-
-		if(renderer_ctx.background_ver < threaded_background_ver) {
-			renderer_ctx.background_ver = threaded_background_ver;
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG0)
-				memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG1)
-				memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG2)
-				memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG3)
-				memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
-		}
-	
-		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
-		if(renderer_ctx.draw_sprites) (*drawSprites)();
-
-		if(renderer_ctx.renderfunc_type == 2) {
-			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-			if(renderer_ctx.draw_objwin) (*drawOBJWin)();
-		}
-
-		(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)();
-
-		//rendering is done.
-		renderer_ctx.renderer_state = 0;
+	while(renderer_ctx.renderer_control == 1) {		
+		threaded_renderer_loop_impl();
 	}
 
 	renderer_ctx.renderer_control = 0; //loop is terminated.
 }
+*/
 
-static void threaded_renderer_loop0(void* p) {
-	int renderer_idx = 0;
+static void threaded_renderer_loop(void* p) {
+	int renderer_idx = reinterpret_cast<intptr_t>(p);
 	INIT_RENDERER_CONTEXT(renderer_idx);
 
-	renderfunc_t drawSprites = gfxDrawSprites<0>;
-	renderfunc_t drawOBJWin = gfxDrawOBJWin<0>;
-	renderfunc_t (*getRenderFunc)(int, int) = GetRenderFunc<0>;
+	renderfunc_t drawSprites = NULL;
+	renderfunc_t drawOBJWin = NULL;
+	renderfunc_t (*getRenderFunc)(int, int) = NULL;
+
+	switch(renderer_idx) {
+	case 0:
+		drawSprites = gfxDrawSprites<0>;
+		drawOBJWin = gfxDrawOBJWin<0>;
+		getRenderFunc = GetRenderFunc<0>;
+		break;
+	case 1:
+		drawSprites = gfxDrawSprites<1>;
+		drawOBJWin = gfxDrawOBJWin<1>;
+		getRenderFunc = GetRenderFunc<1>;
+		break;
+	case 2:
+		drawSprites = gfxDrawSprites<2>;
+		drawOBJWin = gfxDrawOBJWin<2>;
+		getRenderFunc = GetRenderFunc<2>;
+		break;
+	case 3:
+		drawSprites = gfxDrawSprites<3>;
+		drawOBJWin = gfxDrawOBJWin<3>;
+		getRenderFunc = GetRenderFunc<3>;
+		break;
+	default:
+		return;
+	}
 
 	while(renderer_ctx.renderer_control == 1) {
-		if(threaded_renderer_ready) {
-			threaded_renderer_ready = 0;
-			systemDrawScreen();
-		}		
-
-		//buffer is not ready.
-		if(renderer_ctx.renderer_state == 0) continue;
-
-		if(renderer_ctx.background_ver < threaded_background_ver) {
-			renderer_ctx.background_ver = threaded_background_ver;
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG0)
-				memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG1)
-				memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG2)
-				memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG3)
-				memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
+		if(renderer_idx == 0) {
+			if(threaded_renderer_ready) {
+				threaded_renderer_ready = 0;
+				systemDrawScreen();
+			}
 		}
-	
-		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
-		if(renderer_ctx.draw_sprites) (*drawSprites)();
-
-		if(renderer_ctx.renderfunc_type == 2) {
-			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-			if(renderer_ctx.draw_objwin) (*drawOBJWin)();
-		}
-
-		(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)();
-
-		//rendering is done.
-		renderer_ctx.renderer_state = 0;
+		threaded_renderer_loop_impl();
 	}
 
 	renderer_ctx.renderer_control = 0; //loop is terminated.
@@ -11652,7 +11680,7 @@ bool CPUReadState(const uint8_t* data, unsigned size)
 
 	utilReadDataMem(data, saveGameStruct);
 
-	stopState = utilReadIntMem(data);
+	stopState = utilReadIntMem(data) ? true : false;
 
 	IRQTicks = utilReadIntMem(data);
 	if (IRQTicks > 0)
@@ -11859,7 +11887,7 @@ void doDMA(uint32_t &s, uint32_t &d, uint32_t si, uint32_t di, uint32_t c, int t
 	dm = ((((15) & dm_gt_15_mask) | ((((dm) & ~(dm_gt_15_mask))))));
 
 	//if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-	//    blank = (((io_registers[REG_DISPSTAT] | ((io_registers[REG_DISPSTAT] >> 1)&1))==1));
+	//    blank = (((io_registers[REG_DISPSTAT] | ((io_registers[REG_DISPSTAT] >> 1)&1))==1) ?  true : false);
 
 	if(transfer32)
 	{
@@ -12096,7 +12124,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 					graphics.layerEnable &= ~changeBGon;
 				}
 
-				windowOn = (graphics.layerEnable & 0x6000);
+				windowOn = (graphics.layerEnable & 0x6000) ? true : false;
 				if(change && !((value & 0x80)))
 				{
 					if(!(io_registers[REG_DISPSTAT] & 1))
@@ -12301,7 +12329,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xBA:
 			{
-				bool start = ((DM0CNT_H ^ value) & 0x8000);
+				bool start = ((DM0CNT_H ^ value) & 0x8000) ? true : false;
 				value &= 0xF7E0;
 
 				DM0CNT_H = value;
@@ -12337,7 +12365,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xC6:
 			{
-				bool start = ((DM1CNT_H ^ value) & 0x8000);
+				bool start = ((DM1CNT_H ^ value) & 0x8000) ? true : false;
 				value &= 0xF7E0;
 
 				DM1CNT_H = value;
@@ -12373,7 +12401,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xD2:
 			{
-				bool start = ((DM2CNT_H ^ value) & 0x8000);
+				bool start = ((DM2CNT_H ^ value) & 0x8000) ? true : false;
 
 				value &= 0xF7E0;
 
@@ -12410,7 +12438,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 			break;
 		case 0xDE:
 			{
-				bool start = ((DM3CNT_H ^ value) & 0x8000);
+				bool start = ((DM3CNT_H ^ value) & 0x8000) ? true : false;
 
 				value &= 0xFFE0;
 
@@ -13384,7 +13412,7 @@ updateLoop:
 						timer0Ticks = (0x10000 - io_registers[REG_TM0D]) << timer0ClockReload;
 						UPDATE_REG(0x100, io_registers[REG_TM0D]);
 					}
-					timer0On = timer0Value & 0x80;
+					timer0On = timer0Value & 0x80 ? true : false;
 					io_registers[REG_TM0CNT] = timer0Value & 0xC7;
 					UPDATE_REG(0x102, io_registers[REG_TM0CNT]);
 				}
@@ -13397,7 +13425,7 @@ updateLoop:
 						timer1Ticks = (0x10000 - io_registers[REG_TM1D]) << timer1ClockReload;
 						UPDATE_REG(0x104, io_registers[REG_TM1D]);
 					}
-					timer1On = timer1Value & 0x80;
+					timer1On = timer1Value & 0x80 ? true : false;
 					io_registers[REG_TM1CNT] = timer1Value & 0xC7;
 					UPDATE_REG(0x106, io_registers[REG_TM1CNT]);
 				}
@@ -13410,7 +13438,7 @@ updateLoop:
 						timer2Ticks = (0x10000 - io_registers[REG_TM2D]) << timer2ClockReload;
 						UPDATE_REG(0x108, io_registers[REG_TM2D]);
 					}
-					timer2On = timer2Value & 0x80;
+					timer2On = timer2Value & 0x80 ? true : false;
 					io_registers[REG_TM2CNT] = timer2Value & 0xC7;
 					UPDATE_REG(0x10A, io_registers[REG_TM2CNT]);
 				}
@@ -13423,7 +13451,7 @@ updateLoop:
 						timer3Ticks = (0x10000 - io_registers[REG_TM3D]) << timer3ClockReload;
 						UPDATE_REG(0x10C, io_registers[REG_TM3D]);
 					}
-					timer3On = timer3Value & 0x80;
+					timer3On = timer3Value & 0x80 ? true : false;
 					io_registers[REG_TM3CNT] = timer3Value & 0xC7;
 					UPDATE_REG(0x10E, io_registers[REG_TM3CNT]);
 				}
@@ -16096,7 +16124,7 @@ bool cheatsLoadCheatList(const char *file)
       fread(&cheatsList[i].size, 1, sizeof(int),f);
       fread(&cheatsList[i].status, 1, sizeof(int),f);
       fread(&cheatsList[i].enabled, 1, sizeof(int),f);
-      cheatsList[i].enabled = cheatsList[i].enabled;
+      cheatsList[i].enabled = cheatsList[i].enabled ? true : false;
       fread(&cheatsList[i].address, 1, sizeof(u32),f);
       cheatsList[i].rawaddress = cheatsList[i].address;
       fread(&cheatsList[i].value, 1, sizeof(u32),f);
