@@ -1557,8 +1557,8 @@ typedef struct {
 
 static void BIOS_BgAffineSet (void)
 {
-	BgAffineInput input;
-	BgAffineOutput output;
+	BgAffineInput inputs[0x40];
+	BgAffineOutput outputs[0x40];
 
 	u32 src = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -1567,9 +1567,10 @@ static void BIOS_BgAffineSet (void)
 	uint8_t* addr_src = CPUDecodeAddress(src);
 	uint8_t* addr_dst = CPUDecodeAddress(dest);
 
+	memcpy(inputs, addr_src, sizeof(BgAffineInput) * num);
 	for(int i = 0; i < num; i++) {
-		memcpy(&input, addr_src, sizeof(BgAffineInput) - 2);
-		addr_src += sizeof(BgAffineInput);
+		BgAffineInput& input = inputs[i];
+		BgAffineOutput& output = outputs[i];
 
 		s32 a = fast_cos(input.theta);
 		s32 b = fast_sin(input.theta);
@@ -1580,10 +1581,8 @@ static void BIOS_BgAffineSet (void)
 		output.dmy = (input.ry * a)>>14;
 		output.startx = input.cx - output.dx * input.dispx - output.dmx * input.dispy;
 		output.starty = input.cy - output.dy * input.dispx - output.dmy * input.dispy;
-
-		memcpy(addr_dst, &output, sizeof(BgAffineOutput));
-		addr_dst += sizeof(BgAffineOutput);
 	}
+	memcpy(addr_dst, outputs, sizeof(BgAffineOutput) * num);
 }
 #else
 static void BIOS_BgAffineSet (void)
@@ -2107,8 +2106,8 @@ typedef struct {
 
 static void BIOS_ObjAffineSet (void)
 {
-	ObjAffineInput input;
-	ObjAffineOutput output;
+	ObjAffineInput inputs[0x100];
+	ObjAffineOutput outputs[0x100];
 
 	u32 src = bus.reg[0].I;
 	u32 dest = bus.reg[1].I;
@@ -2118,9 +2117,10 @@ static void BIOS_ObjAffineSet (void)
 	uint8_t* addr_src = CPUDecodeAddress(src);
 	uint8_t* addr_dst = CPUDecodeAddress(dest);
 
+	memcpy(inputs, addr_src, sizeof(ObjAffineInput) * num);
 	for(int i = 0; i < num; i++) {
-		memcpy(&input, addr_src, sizeof(ObjAffineInput) - 2);
-		addr_src += sizeof(ObjAffineInput);
+		ObjAffineInput& input = inputs[i];
+		ObjAffineOutput& output = outputs[i];
 
 		s32 a = fast_cos(input.theta);
 		s32 b = fast_sin(input.theta);
@@ -2129,10 +2129,8 @@ static void BIOS_ObjAffineSet (void)
 		output.dmx = -(((s32)input.rx * b)>>14);
 		output.dy =  ((s32)input.ry * b)>>14;
 		output.dmy = ((s32)input.ry * a)>>14;
-
-		memcpy(addr_dst, &output, sizeof(ObjAffineOutput));
-		addr_dst += sizeof(ObjAffineOutput);
 	}
+	memcpy(addr_dst, outputs, sizeof(ObjAffineOutput) * num);
 }
 #else
 static void BIOS_ObjAffineSet (void)
