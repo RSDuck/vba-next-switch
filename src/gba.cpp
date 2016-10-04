@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <stddef.h>
+#include <malloc.h>
 
 #include "system.h"
 #include "globals.h"
@@ -9172,16 +9173,25 @@ bool CPUSetupBuffers()
 
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	rom = (uint8_t *)malloc(0x2000000);
+	rom = (uint8_t *)memalign(64, 0x2000000);
+	workRAM = (uint8_t *)memalign(64, 0x40000);
+	bios = (uint8_t *)memalign(64, 0x4000);
+	internalRAM = (uint8_t *)memalign(64, 0x8000);
+	paletteRAM = (uint8_t *)memalign(64, 0x400);
+	vram = (uint8_t *)memalign(64, 0x20000);
+	oam = (uint8_t *)memalign(64, 0x400);
+	pix = (uint16_t *)memalign(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	ioMem = (uint8_t *)memalign(64, 0x400);
 
-	workRAM = (uint8_t *)calloc(1, 0x40000);
-	bios = (uint8_t *)calloc(1,0x4000);
-	internalRAM = (uint8_t *)calloc(1,0x8000);
-	paletteRAM = (uint8_t *)calloc(1,0x400);
-	vram = (uint8_t *)calloc(1, 0x20000);
-	oam = (uint8_t *)calloc(1, 0x400);
-	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-	ioMem = (uint8_t *)calloc(1, 0x400);
+	memset(rom, 0, 0x2000000);
+	memset(workRAM, 1, 0x40000);
+	memset(bios, 1, 0x4000);
+	memset(internalRAM, 1, 0x8000);
+	memset(paletteRAM, 1, 0x400);
+	memset(vram, 1, 0x20000);
+	memset(oam, 1, 0x400);
+	memset(pix, 1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	memset(ioMem, 1, 0x400);
 
 	if(rom == NULL || workRAM == NULL || bios == NULL ||
 	   internalRAM == NULL || paletteRAM == NULL ||
