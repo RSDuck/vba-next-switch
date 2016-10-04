@@ -324,6 +324,8 @@ ifeq ($(DEBUG), 1)
 	CXXFLAGS += -O0 -g
 else
 	ifeq ($(platform), vita)
+		#Currently, plain -O3 doesn't work with vita.
+		
 		CFLAGS += -O1
 		CXXFLAGS += -O1
 
