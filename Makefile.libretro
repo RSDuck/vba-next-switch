@@ -1,9 +1,9 @@
-DEBUG = 0
+DEBUG=0
 FRONTEND_SUPPORTS_RGB565=1
 TILED_RENDERING=0
 STATIC_LINKING=0
 USE_CHEATS=1
-USE_TWEAKS=0 
+USE_TWEAKS=1 
 USE_THREADED_RENDERER=0
 USE_MOTION_SENSOR=0
 
@@ -227,8 +227,9 @@ else ifeq ($(platform), vita)
 	CXX = arm-vita-eabi-g++$(EXE_EXT)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
-	CFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
-	CXXFLAGS += -march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math
+	__FLAGS := -marm -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations -ffast-math -fsingle-precision-constant 
+	CFLAGS += $(__FLAGS)
+	CXXFLAGS += $(__FLAGS)
 	CXXFLAGS += -fno-exceptions -fno-rtti 
    STATIC_LINKING = 1
 	TILED_RENDERING=1
@@ -322,8 +323,30 @@ ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -g
 	CXXFLAGS += -O0 -g
 else
-	CFLAGS += -O3
-	CXXFLAGS += -O3
+	ifeq ($(platform), vita)
+		CFLAGS += -O1
+		CXXFLAGS += -O1
+
+		#O2 flags.
+		__OPT_EXTRA := -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels -fcaller-saves -fcrossjumping 
+		__OPT_EXTRA += -fcse-follow-jumps -fcse-skip-blocks -fdelete-null-pointer-checks -fdevirtualize -fdevirtualize-speculatively 
+		__OPT_EXTRA += -fexpensive-optimizations -fgcse -fgcse-lm -fhoist-adjacent-loads -finline-small-functions -findirect-inlining 
+		__OPT_EXTRA += -fipa-cp -fipa-ra -fipa-cp-alignment -fipa-sra -fipa-icf -flra-remat -foptimize-strlen
+		__OPT_EXTRA += -fpeephole2 -freorder-functions -frerun-cse-after-loop -fsched-interblock -fsched-spec -fstrict-overflow
+		__OPT_EXTRA += -ftree-builtin-call-dce -ftree-switch-conversion -ftree-tail-merge
+		__OPT_EXTRA += -ftree-pre -fisolate-erroneous-paths-dereference
+		__OPT_EXTRA += -fschedule-insns -fschedule-insns2
+
+		#O3 flags.
+		__OPT_EXTRA += -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-loop-vectorize
+		__OPT_EXTRA += -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -fpeel-loops -fipa-cp-clone
+
+		CFLAGS += $(__OPT_EXTRA)
+		CXXFLAGS += $(__OPT_EXTRA)
+	else
+		CFLAGS += -O3
+		CXXFLAGS += -O3
+	endif
 endif
 
 include build/Makefile.common

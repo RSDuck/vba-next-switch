@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <stddef.h>
+#include <malloc.h>
 
 #include "system.h"
 #include "globals.h"
@@ -107,6 +108,9 @@ static void hardware_reset() {
 	static uint32_t threaded_background_ver = 0;
 	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
 	static volatile int threaded_renderer_ready = 0;
+
+	static void threaded_renderer_loop(void* p);
+	static void threaded_renderer_loop0(void* p);
 
 	typedef struct {
 		thread_t renderer_thread_id;
@@ -282,10 +286,6 @@ static void hardware_reset() {
 #define RENDERER_R_BLDCNT_Color_Special_Effect ((RENDERER_BLDMOD >> 6) & 3)
 #define RENDERER_R_BLDCNT_IsTarget1(target) ((target) & (RENDERER_BLDMOD     ))
 #define RENDERER_R_BLDCNT_IsTarget2(target) ((target) & (RENDERER_BLDMOD >> 8))
-
-#if THREADED_RENDERER
-static void threaded_renderer_loop(void* p);
-#endif
 
 /*============================================================
 	GBA INLINE
@@ -770,6 +770,77 @@ static int timer3Reload = 0;
 static int timer3ClockReload  = 0;
 
 static const uint32_t  objTilesAddress [3] = {0x010000, 0x014000, 0x014000};
+
+static uint8_t* CPUDecodeAddress(uint32_t address) {
+
+	switch(address >> 24) {
+		case 0:
+			/* BIOS */
+			if(bus.reg[15].I >> 24) {
+				if(address < 0x4000)
+					return biosProtected;
+				else
+					goto unreadable;
+			} else
+				return bios + (address & 0x3FFC);
+		case 0x02:
+			/* external work RAM */
+			return workRAM + (address & 0x3FFFC);
+		case 0x03:
+			/* internal work RAM */
+			return internalRAM + (address & 0x7ffC);
+		case 0x04:
+			/* I/O registers */
+			if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
+				if(ioReadable[(address & 0x3fc) + 2])
+					return ioMem + (address & 0x3fC);
+				else
+					return ioMem + (address & 0x3fc);
+			}
+			else
+				goto unreadable;
+			break;
+		case 0x05:
+			/* palette RAM */
+			return paletteRAM + (address & 0x3fC);
+		case 0x06:
+			/* VRAM */
+			address = (address & 0x1fffc);
+			if ((R_DISPCNT_Video_Mode >2) && ((address & 0x1C000) == 0x18000))
+				break;
+			if ((address & 0x18000) == 0x18000)
+				address &= 0x17fff;
+			return vram + address;
+		case 0x07:
+			/* OAM RAM */
+			return oam + (address & 0x3FC);
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0B: 
+		case 0x0C: 
+			/* gamepak ROM */
+			return rom + (address & 0x1FFFFFC);
+		case 0x0D:
+        	//value = eepromRead();
+			break;
+		case 14:
+      	case 15:
+			//value = flashRead(address) * 0x01010101;
+			break;
+		default:
+unreadable:
+			/*
+			if(armState)
+				value = CPUReadHalfWordQuick(bus.reg[15].I + (address & 2));
+			else
+				value = CPUReadHalfWordQuick(bus.reg[15].I);
+			*/
+			break;
+	}
+
+	return NULL;
+}
 
 static INLINE u32 CPUReadMemory(u32 address)
 {
@@ -1262,7 +1333,8 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 	BIOS
 ============================================================ */
 
-s16 sineTable[256] = {
+#if USE_TWEAK_SINE
+s16 table_sin[256] = {
   (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
   (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
   (s16)0x187D, (s16)0x19EF, (s16)0x1B5D, (s16)0x1CC6, (s16)0x1E2B, (s16)0x1F8B, (s16)0x20E7, (s16)0x223D,
@@ -1297,17 +1369,71 @@ s16 sineTable[256] = {
   (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
 };
 
+s16 table_cos[256] = {
+  (s16)0x4000, (s16)0x3FFB, (s16)0x3FEC, (s16)0x3FD3, (s16)0x3FB1, (s16)0x3F84, (s16)0x3F4E, (s16)0x3F0E,
+  (s16)0x3EC5, (s16)0x3E71, (s16)0x3E14, (s16)0x3DAE, (s16)0x3D3E, (s16)0x3CC5, (s16)0x3C42, (s16)0x3BB6,
+  (s16)0x3B20, (s16)0x3A82, (s16)0x39DA, (s16)0x392A, (s16)0x3871, (s16)0x37AF, (s16)0x36E5, (s16)0x3612,
+  (s16)0x3536, (s16)0x3453, (s16)0x3367, (s16)0x3274, (s16)0x3179, (s16)0x3076, (s16)0x2F6B, (s16)0x2E5A,
+  (s16)0x2D41, (s16)0x2C21, (s16)0x2AFA, (s16)0x29CD, (s16)0x2899, (s16)0x275F, (s16)0x261F, (s16)0x24DA,
+  (s16)0x238E, (s16)0x223D, (s16)0x20E7, (s16)0x1F8B, (s16)0x1E2B, (s16)0x1CC6, (s16)0x1B5D, (s16)0x19EF,
+  (s16)0x187D, (s16)0x1708, (s16)0x158F, (s16)0x1413, (s16)0x1294, (s16)0x1111, (s16)0x0F8C, (s16)0x0E05,
+  (s16)0x0C7C, (s16)0x0AF1, (s16)0x0964, (s16)0x07D5, (s16)0x0645, (s16)0x04B5, (s16)0x0323, (s16)0x0192,
+  (s16)0x0000, (s16)0xFE6E, (s16)0xFCDD, (s16)0xFB4B, (s16)0xF9BB, (s16)0xF82B, (s16)0xF69C, (s16)0xF50F,
+  (s16)0xF384, (s16)0xF1FB, (s16)0xF074, (s16)0xEEEF, (s16)0xED6C, (s16)0xEBED, (s16)0xEA71, (s16)0xE8F8,
+  (s16)0xE783, (s16)0xE611, (s16)0xE4A3, (s16)0xE33A, (s16)0xE1D5, (s16)0xE075, (s16)0xDF19, (s16)0xDDC3,
+  (s16)0xDC72, (s16)0xDB26, (s16)0xD9E1, (s16)0xD8A1, (s16)0xD767, (s16)0xD633, (s16)0xD506, (s16)0xD3DF,
+  (s16)0xD2BF, (s16)0xD1A6, (s16)0xD095, (s16)0xCF8A, (s16)0xCE87, (s16)0xCD8C, (s16)0xCC99, (s16)0xCBAD,
+  (s16)0xCACA, (s16)0xC9EE, (s16)0xC91B, (s16)0xC851, (s16)0xC78F, (s16)0xC6D6, (s16)0xC626, (s16)0xC57E,
+  (s16)0xC4E0, (s16)0xC44A, (s16)0xC3BE, (s16)0xC33B, (s16)0xC2C2, (s16)0xC252, (s16)0xC1EC, (s16)0xC18F,
+  (s16)0xC13B, (s16)0xC0F2, (s16)0xC0B2, (s16)0xC07C, (s16)0xC04F, (s16)0xC02D, (s16)0xC014, (s16)0xC005,
+  (s16)0xC000, (s16)0xC005, (s16)0xC014, (s16)0xC02D, (s16)0xC04F, (s16)0xC07C, (s16)0xC0B2, (s16)0xC0F2,
+  (s16)0xC13B, (s16)0xC18F, (s16)0xC1EC, (s16)0xC252, (s16)0xC2C2, (s16)0xC33B, (s16)0xC3BE, (s16)0xC44A,
+  (s16)0xC4E0, (s16)0xC57E, (s16)0xC626, (s16)0xC6D6, (s16)0xC78F, (s16)0xC851, (s16)0xC91B, (s16)0xC9EE,
+  (s16)0xCACA, (s16)0xCBAD, (s16)0xCC99, (s16)0xCD8C, (s16)0xCE87, (s16)0xCF8A, (s16)0xD095, (s16)0xD1A6,
+  (s16)0xD2BF, (s16)0xD3DF, (s16)0xD506, (s16)0xD633, (s16)0xD767, (s16)0xD8A1, (s16)0xD9E1, (s16)0xDB26,
+  (s16)0xDC72, (s16)0xDDC3, (s16)0xDF19, (s16)0xE075, (s16)0xE1D5, (s16)0xE33A, (s16)0xE4A3, (s16)0xE611,
+  (s16)0xE783, (s16)0xE8F8, (s16)0xEA71, (s16)0xEBED, (s16)0xED6C, (s16)0xEEEF, (s16)0xF074, (s16)0xF1FB,
+  (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E,
+  (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
+  (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
+  (s16)0x187D, (s16)0x19EF, (s16)0x1B5D, (s16)0x1CC6, (s16)0x1E2B, (s16)0x1F8B, (s16)0x20E7, (s16)0x223D,
+  (s16)0x238E, (s16)0x24DA, (s16)0x261F, (s16)0x275F, (s16)0x2899, (s16)0x29CD, (s16)0x2AFA, (s16)0x2C21,
+  (s16)0x2D41, (s16)0x2E5A, (s16)0x2F6B, (s16)0x3076, (s16)0x3179, (s16)0x3274, (s16)0x3367, (s16)0x3453,
+  (s16)0x3536, (s16)0x3612, (s16)0x36E5, (s16)0x37AF, (s16)0x3871, (s16)0x392A, (s16)0x39DA, (s16)0x3A82,
+  (s16)0x3B20, (s16)0x3BB6, (s16)0x3C42, (s16)0x3CC5, (s16)0x3D3E, (s16)0x3DAE, (s16)0x3E14, (s16)0x3E71,
+  (s16)0x3EC5, (s16)0x3F0E, (s16)0x3F4E, (s16)0x3F84, (s16)0x3FB1, (s16)0x3FD3, (s16)0x3FEC, (s16)0x3FFB
+};
+
+#define fast_sin(__val__) table_sin[__val__ & 0xFF]
+#define fast_cos(__val__) table_cos[__val__ & 0xFF]
+
+#else
+
+static inline int16_t fast_sin(uint8_t val)
+{
+	uint8_t p = 0x7F & val;
+	int16_t q = 1 - ((0x80 & val) >> 6);
+	return ((p << 9) + (-4 * p * p)) * q;
+}
+
+static inline int16_t fast_cos(uint8_t val)
+{
+	return fast_sin(val + 0x40);
+}
+
+#endif
+
 #if USE_TWEAK_ARCTAN
-s32* table_atan;
+s32 table_atan[0x200];
 
 #define BIOS_ArcTan() { \
 	int p = (int)bus.reg[0].I + 0x4000; \
 	if(p < 0) \
 		bus.reg[0].I = table_atan[0]; \
 	else if(p >= 0x8000) \
-		bus.reg[0].I = table_atan[0x800 - 1]; \
+		bus.reg[0].I = table_atan[0x200 - 1]; \
 	else \
-		bus.reg[0].I = table_atan[p >> 4];  \
+		bus.reg[0].I = table_atan[p >> 6];  \
 }
 		
 static s32 BIOS_ArcTan_Calc (s32 p)
@@ -1444,6 +1570,57 @@ static void BIOS_BitUnPack (void)
 	}
 }
 
+#if USE_TWEAK_AFFINE
+typedef struct {
+	s32 cx;
+	s32 cy;
+	s16 dispx;
+	s16 dispy;
+	s16 rx;
+	s16 ry;
+	u16 theta;
+	u16 dummy;
+} BgAffineInput;
+
+typedef struct {
+	s16 dx;
+	s16 dmx;
+	s16 dy;
+	s16 dmy;
+	s32 startx;
+	s32 starty;
+} BgAffineOutput;
+
+static void BIOS_BgAffineSet (void)
+{
+	BgAffineInput inputs[0x40];
+	BgAffineOutput outputs[0x40];
+
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+
+	uint8_t* addr_src = CPUDecodeAddress(src);
+	uint8_t* addr_dst = CPUDecodeAddress(dest);
+
+	memcpy(inputs, addr_src, sizeof(BgAffineInput) * num);
+	for(int i = 0; i < num; i++) {
+		BgAffineInput& input = inputs[i];
+		BgAffineOutput& output = outputs[i];
+
+		s32 a = fast_cos(input.theta);
+		s32 b = fast_sin(input.theta);
+
+		output.dx  = (input.rx * a)>>14;
+		output.dmx = -((input.rx * b)>>14);
+		output.dy  = (input.ry * b)>>14;
+		output.dmy = (input.ry * a)>>14;
+		output.startx = input.cx - output.dx * input.dispx - output.dmx * input.dispy;
+		output.starty = input.cy - output.dy * input.dispx - output.dmy * input.dispy;
+	}
+	memcpy(addr_dst, outputs, sizeof(BgAffineOutput) * num);
+}
+#else
 static void BIOS_BgAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -1466,8 +1643,8 @@ static void BIOS_BgAffineSet (void)
 		src+=2;
 		u16 theta = CPUReadHalfWord(src)>>8;
 		src+=4; // keep structure alignment
-		s32 a = sineTable[(theta+0x40)&255];
-		s32 b = sineTable[theta];
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
 
 		s16 dx =  (rx * a)>>14;
 		s16 dmx = (rx * b)>>14;
@@ -1481,6 +1658,7 @@ static void BIOS_BgAffineSet (void)
 		CPUWriteHalfWord(dest, dy);
 		dest += 2;
 		CPUWriteHalfWord(dest, dmy);
+
 		dest += 2;
 
 		s32 startx = cx - dx * dispx + dmx * dispy;
@@ -1492,6 +1670,7 @@ static void BIOS_BgAffineSet (void)
 		dest += 4;
 	}
 }
+#endif
 
 static void BIOS_CpuSet (void)
 {
@@ -1946,6 +2125,50 @@ static void BIOS_LZ77UnCompWram (void)
 	}
 }
 
+#if USE_TWEAK_AFFINE
+typedef struct {
+	s16 rx;
+	s16 ry;
+	u16 theta;
+	u16 dummy;
+} ObjAffineInput;
+
+typedef struct {
+	s16 dx;
+	s16 dmx;
+	s16 dy;
+	s16 dmy;
+} ObjAffineOutput;
+
+static void BIOS_ObjAffineSet (void)
+{
+	ObjAffineInput inputs[0x100];
+	ObjAffineOutput outputs[0x100];
+
+	u32 src = bus.reg[0].I;
+	u32 dest = bus.reg[1].I;
+	int num = bus.reg[2].I;
+	int offset = bus.reg[3].I;
+
+	uint8_t* addr_src = CPUDecodeAddress(src);
+	uint8_t* addr_dst = CPUDecodeAddress(dest);
+
+	memcpy(inputs, addr_src, sizeof(ObjAffineInput) * num);
+	for(int i = 0; i < num; i++) {
+		ObjAffineInput& input = inputs[i];
+		ObjAffineOutput& output = outputs[i];
+
+		s32 a = fast_cos(input.theta);
+		s32 b = fast_sin(input.theta);
+
+		output.dx =  ((s32)input.rx * a)>>14;
+		output.dmx = -(((s32)input.rx * b)>>14);
+		output.dy =  ((s32)input.ry * b)>>14;
+		output.dmy = ((s32)input.ry * a)>>14;
+	}
+	memcpy(addr_dst, outputs, sizeof(ObjAffineOutput) * num);
+}
+#else
 static void BIOS_ObjAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -1961,8 +2184,8 @@ static void BIOS_ObjAffineSet (void)
 		u16 theta = CPUReadHalfWord(src)>>8;
 		src+=4; // keep structure alignment
 
-		s32 a = (s32)sineTable[(theta+0x40)&255];
-		s32 b = (s32)sineTable[theta];
+		s32 a = fast_cos(theta);
+		s32 b = fast_sin(theta);
 
 		s16 dx =  ((s32)rx * a)>>14;
 		s16 dmx = ((s32)rx * b)>>14;
@@ -1979,6 +2202,7 @@ static void BIOS_ObjAffineSet (void)
 		dest += offset;
 	}
 }
+#endif
 
 static void BIOS_RegisterRamReset(u32 flags)
 {
@@ -2214,9 +2438,8 @@ static void tweaksInit() {
 	tweaks_init = true;
 
 	#if USE_TWEAK_ARCTAN
-	table_atan = new s32[0x800];
-	for(int u = 0; u < 0x800; ++u)
-		table_atan[u] = BIOS_ArcTan_Calc((u - 0x400) << 4);
+	for(int u = 0; u < 0x200; ++u)
+		table_atan[u] = BIOS_ArcTan_Calc((u - 0x100) << 6);
 	#endif
 }
 #endif
@@ -8950,16 +9173,25 @@ bool CPUSetupBuffers()
 
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	rom = (uint8_t *)malloc(0x2000000);
+	rom = (uint8_t *)memalign(64, 0x2000000);
+	workRAM = (uint8_t *)memalign(64, 0x40000);
+	bios = (uint8_t *)memalign(64, 0x4000);
+	internalRAM = (uint8_t *)memalign(64, 0x8000);
+	paletteRAM = (uint8_t *)memalign(64, 0x400);
+	vram = (uint8_t *)memalign(64, 0x20000);
+	oam = (uint8_t *)memalign(64, 0x400);
+	pix = (uint16_t *)memalign(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	ioMem = (uint8_t *)memalign(64, 0x400);
 
-	workRAM = (uint8_t *)calloc(1, 0x40000);
-	bios = (uint8_t *)calloc(1,0x4000);
-	internalRAM = (uint8_t *)calloc(1,0x8000);
-	paletteRAM = (uint8_t *)calloc(1,0x400);
-	vram = (uint8_t *)calloc(1, 0x20000);
-	oam = (uint8_t *)calloc(1, 0x400);
-	pix = (uint16_t *)calloc(1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-	ioMem = (uint8_t *)calloc(1, 0x400);
+	memset(rom, 0, 0x2000000);
+	memset(workRAM, 1, 0x40000);
+	memset(bios, 1, 0x4000);
+	memset(internalRAM, 1, 0x8000);
+	memset(paletteRAM, 1, 0x400);
+	memset(vram, 1, 0x20000);
+	memset(oam, 1, 0x400);
+	memset(pix, 1, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	memset(ioMem, 1, 0x400);
 
 	if(rom == NULL || workRAM == NULL || bios == NULL ||
 	   internalRAM == NULL || paletteRAM == NULL ||
@@ -9100,7 +9332,8 @@ void ThreadedRendererStart() {
 		threaded_renderer_contexts[u].renderer_control = 1;		
 #if VITA
 		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), (u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
+			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)),
+				(u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
 #else
 		threaded_renderer_contexts[u].renderer_thread_id =
 			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
@@ -11147,6 +11380,91 @@ static void mode5RenderLineAll (void)
 }
 
 #if THREADED_RENDERER
+#define threaded_renderer_loop_impl() \
+do { \
+	if(renderer_ctx.renderer_state == 0) continue; \
+	\
+	if(renderer_ctx.background_ver < threaded_background_ver) { \
+		renderer_ctx.background_ver = threaded_background_ver; \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG0) \
+			memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG1) \
+			memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG2) \
+			memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32)); \
+		if(!RENDERER_R_DISPCNT_Screen_Display_BG3) \
+			memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32)); \
+	} \
+	\
+	memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32)); \
+	if(renderer_ctx.draw_sprites) (*drawSprites)(); \
+	\
+	if(renderer_ctx.renderfunc_type == 2) { \
+		memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32)); \
+		if(renderer_ctx.draw_objwin) (*drawOBJWin)(); \
+	} \
+	\
+	(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)(); \
+	\
+	renderer_ctx.renderer_state = 0;\
+} while (0)
+
+/*
+static void threaded_renderer_loop0(void* p) {
+	int renderer_idx = 0;
+	INIT_RENDERER_CONTEXT(renderer_idx);
+
+	renderfunc_t drawSprites = gfxDrawSprites<0>;
+	renderfunc_t drawOBJWin = gfxDrawOBJWin<0>;
+	renderfunc_t (*getRenderFunc)(int, int) = GetRenderFunc<0>;
+
+	while(renderer_ctx.renderer_control == 1) {
+		if(threaded_renderer_ready) {
+			threaded_renderer_ready = 0;
+			systemDrawScreen();
+		}
+		threaded_renderer_loop_impl();
+	}
+
+	renderer_ctx.renderer_control = 0; //loop is terminated.
+}
+
+static void threaded_renderer_loop(void* p) {
+	int renderer_idx = reinterpret_cast<intptr_t>(p);
+	INIT_RENDERER_CONTEXT(renderer_idx);
+
+	renderfunc_t drawSprites = NULL;
+	renderfunc_t drawOBJWin = NULL;
+	renderfunc_t (*getRenderFunc)(int, int) = NULL;
+
+	switch(renderer_idx) {
+	case 1:
+		drawSprites = gfxDrawSprites<1>;
+		drawOBJWin = gfxDrawOBJWin<1>;
+		getRenderFunc = GetRenderFunc<1>;
+		break;
+	case 2:
+		drawSprites = gfxDrawSprites<2>;
+		drawOBJWin = gfxDrawOBJWin<2>;
+		getRenderFunc = GetRenderFunc<2>;
+		break;
+	case 3:
+		drawSprites = gfxDrawSprites<3>;
+		drawOBJWin = gfxDrawOBJWin<3>;
+		getRenderFunc = GetRenderFunc<3>;
+		break;
+	default:
+		return;
+	}
+
+	while(renderer_ctx.renderer_control == 1) {		
+		threaded_renderer_loop_impl();
+	}
+
+	renderer_ctx.renderer_control = 0; //loop is terminated.
+}
+*/
+
 static void threaded_renderer_loop(void* p) {
 	int renderer_idx = reinterpret_cast<intptr_t>(p);
 	INIT_RENDERER_CONTEXT(renderer_idx);
@@ -11187,34 +11505,7 @@ static void threaded_renderer_loop(void* p) {
 				systemDrawScreen();
 			}
 		}
-
-		//buffer is not ready.
-		if(renderer_ctx.renderer_state == 0) continue;
-
-		if(renderer_ctx.background_ver < threaded_background_ver) {
-			renderer_ctx.background_ver = threaded_background_ver;
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG0)
-				memset(renderer_ctx.line[Layer_BG0], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG1)
-				memset(renderer_ctx.line[Layer_BG1], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG2)
-				memset(renderer_ctx.line[Layer_BG2], -1, 240 * sizeof(u32));
-			if(!RENDERER_R_DISPCNT_Screen_Display_BG3)
-				memset(renderer_ctx.line[Layer_BG3], -1, 240 * sizeof(u32));
-		}
-	
-		memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
-		if(renderer_ctx.draw_sprites) (*drawSprites)();
-
-		if(renderer_ctx.renderfunc_type == 2) {
-			memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-			if(renderer_ctx.draw_objwin) (*drawOBJWin)();
-		}
-
-		(*getRenderFunc)(renderer_ctx.renderfunc_mode, renderer_ctx.renderfunc_type)();
-
-		//rendering is done.
-		renderer_ctx.renderer_state = 0;
+		threaded_renderer_loop_impl();
 	}
 
 	renderer_ctx.renderer_control = 0; //loop is terminated.
