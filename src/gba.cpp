@@ -22,21 +22,19 @@
 
 #if _WIN32
 #include <malloc.h>
-static void* malloc_aligned(size_t alignment, size_t size) {
+static void* aalloc(size_t alignment, size_t size) {
 	return _aligned_malloc(size, alignment);
 }
-#else
-/*
-#include <stdlib.h>
-static void* malloc_aligned(size_t alignment, size_t size) {
-	void* p = NULL;
-	posix_memalign(&p, alignment, size);
-	return p;
+static void *afree(void* p) {
+	_aligned_free(p);
 }
-*/
+#else
 #include <malloc.h>
-static void* malloc_aligned(size_t alignment, size_t size) {
+static void* aalloc(size_t alignment, size_t size) {
 	return memalign(alignment, size);
+}
+static void *afree(void* p) {
+	free(p);
 }
 #endif
 
@@ -9138,47 +9136,47 @@ static bool CPUIsELF(const char *file)
 void CPUCleanUp (void)
 {
 	if(rom != NULL) {
-		free(rom);
+		afree(rom);
 		rom = NULL;
 	}
 
 	if(vram != NULL) {
-		free(vram);
+		afree(vram);
 		vram = NULL;
 	}
 
 	if(paletteRAM != NULL) {
-		free(paletteRAM);
+		afree(paletteRAM);
 		paletteRAM = NULL;
 	}
 
 	if(internalRAM != NULL) {
-		free(internalRAM);
+		afree(internalRAM);
 		internalRAM = NULL;
 	}
 
 	if(workRAM != NULL) {
-		free(workRAM);
+		afree(workRAM);
 		workRAM = NULL;
 	}
 
 	if(bios != NULL) {
-		free(bios);
+		afree(bios);
 		bios = NULL;
 	}
 
 	if(pix != NULL) {
-		free(pix);
+		afree(pix);
 		pix = NULL;
 	}
 
 	if(oam != NULL) {
-		free(oam);
+		afree(oam);
 		oam = NULL;
 	}
 
 	if(ioMem != NULL) {
-		free(ioMem);
+		afree(ioMem);
 		ioMem = NULL;
 	}
 
@@ -9192,15 +9190,15 @@ bool CPUSetupBuffers()
 
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	rom = (uint8_t *)malloc_aligned(64, 0x2000000);
-	workRAM = (uint8_t *)malloc_aligned(64, 0x40000);
-	bios = (uint8_t *)malloc_aligned(64, 0x4000);
-	internalRAM = (uint8_t *)malloc_aligned(64, 0x8000);
-	paletteRAM = (uint8_t *)malloc_aligned(64, 0x400);
-	vram = (uint8_t *)malloc_aligned(64, 0x20000);
-	oam = (uint8_t *)malloc_aligned(64, 0x400);
-	pix = (uint16_t *)malloc_aligned(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-	ioMem = (uint8_t *)malloc_aligned(64, 0x400);
+	rom = (uint8_t *)aalloc(64, 0x2000000);
+	workRAM = (uint8_t *)aalloc(64, 0x40000);
+	bios = (uint8_t *)aalloc(64, 0x4000);
+	internalRAM = (uint8_t *)aalloc(64, 0x8000);
+	paletteRAM = (uint8_t *)aalloc(64, 0x400);
+	vram = (uint8_t *)aalloc(64, 0x20000);
+	oam = (uint8_t *)aalloc(64, 0x400);
+	pix = (uint16_t *)aalloc(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	ioMem = (uint8_t *)aalloc(64, 0x400);
 
 	memset(rom, 0, 0x2000000);
 	memset(workRAM, 1, 0x40000);
@@ -9284,9 +9282,9 @@ int CPULoadRom(const char * file)
 					utilIsGBAImage,
 					whereToLoad,
 					romSize)) {
-			free(rom);
+			afree(rom);
 			rom = NULL;
-			free(workRAM);
+			afree(workRAM);
 			workRAM = NULL;
 			return 0;
 		}
