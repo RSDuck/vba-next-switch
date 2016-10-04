@@ -3,7 +3,6 @@
 #include <string.h>
 #include <math.h>
 #include <stddef.h>
-#include <malloc.h>
 
 #include "system.h"
 #include "globals.h"
@@ -19,6 +18,26 @@
 
 #ifdef ELF
 #include "elf.h"
+#endif
+
+#if _WIN32
+#include <malloc.h>
+static void* malloc_aligned(size_t alignment, size_t size) {
+	return _aligned_malloc(size, alignment);
+}
+#else
+/*
+#include <stdlib.h>
+static void* malloc_aligned(size_t alignment, size_t size) {
+	void* p = NULL;
+	posix_memalign(&p, alignment, size);
+	return p;
+}
+*/
+#include <malloc.h>
+static void* malloc_aligned(size_t alignment, size_t size) {
+	return memalign(alignment, size);
+}
 #endif
 
 #define DEBUG_RENDERER_MODE0 1
@@ -9173,15 +9192,15 @@ bool CPUSetupBuffers()
 
 	//systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	rom = (uint8_t *)memalign(64, 0x2000000);
-	workRAM = (uint8_t *)memalign(64, 0x40000);
-	bios = (uint8_t *)memalign(64, 0x4000);
-	internalRAM = (uint8_t *)memalign(64, 0x8000);
-	paletteRAM = (uint8_t *)memalign(64, 0x400);
-	vram = (uint8_t *)memalign(64, 0x20000);
-	oam = (uint8_t *)memalign(64, 0x400);
-	pix = (uint16_t *)memalign(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
-	ioMem = (uint8_t *)memalign(64, 0x400);
+	rom = (uint8_t *)malloc_aligned(64, 0x2000000);
+	workRAM = (uint8_t *)malloc_aligned(64, 0x40000);
+	bios = (uint8_t *)malloc_aligned(64, 0x4000);
+	internalRAM = (uint8_t *)malloc_aligned(64, 0x8000);
+	paletteRAM = (uint8_t *)malloc_aligned(64, 0x400);
+	vram = (uint8_t *)malloc_aligned(64, 0x20000);
+	oam = (uint8_t *)malloc_aligned(64, 0x400);
+	pix = (uint16_t *)malloc_aligned(64, 4 * PIX_BUFFER_SCREEN_WIDTH * 160);
+	ioMem = (uint8_t *)malloc_aligned(64, 0x400);
 
 	memset(rom, 0, 0x2000000);
 	memset(workRAM, 1, 0x40000);
