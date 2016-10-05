@@ -162,7 +162,7 @@ LIBRARY_NAME = $(TARGET_NAME)_libretro_ios
 # QNX
 else ifeq ($(platform), qnx)
 	EXT    ?= so
-	TARGET := $(TARGET_NAME)_libretro_qnx.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
    fpic := -fPIC
    SHARED := -lcpp -lm -shared -Wl,-version-script=$(LIBRETRO_DIR)/link.T -Wl,-no-undefined
 	CC = qcc -Vgcc_ntoarmv7le
@@ -174,7 +174,7 @@ else ifeq ($(platform), qnx)
 # PS3
 else ifeq ($(platform), ps3)
 	EXT=a
-	TARGET := $(TARGET_NAME)_libretro_ps3.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
    CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
@@ -209,7 +209,7 @@ else ifeq ($(platform), psl1ght)
 # PSP1
 else ifeq ($(platform), psp1)
 	EXT=a
-	TARGET := $(TARGET_NAME)_libretro_psp1.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
 	CC = psp-gcc$(EXE_EXT)
 	CXX = psp-g++$(EXE_EXT)
 	AR = psp-ar$(EXE_EXT)
@@ -222,7 +222,7 @@ else ifeq ($(platform), psp1)
 # Vita
 else ifeq ($(platform), vita)
 	EXT=a
-	TARGET := $(TARGET_NAME)_libretro_vita.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
 	CC = arm-vita-eabi-gcc$(EXE_EXT)
 	CXX = arm-vita-eabi-g++$(EXE_EXT)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
@@ -252,7 +252,7 @@ else ifeq ($(platform), xenon)
 # Nintendo Game Cube
 else ifeq ($(platform), ngc)
 	EXT=a
-	TARGET := $(TARGET_NAME)_libretro_ngc.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
@@ -264,7 +264,7 @@ else ifeq ($(platform), ngc)
 # Nintendo Wii
 else ifeq ($(platform), wii)
 	EXT=a
-	TARGET := $(TARGET_NAME)_libretro_wii.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
@@ -298,7 +298,8 @@ endif
 # Emscripten
 else ifeq ($(platform), emscripten)
 	EXT    ?= bc
-	TARGET := $(TARGET_NAME)_libretro_emscripten.$(EXT)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
+   STATIC_LINKING = 1
 
 # Windows
 else
