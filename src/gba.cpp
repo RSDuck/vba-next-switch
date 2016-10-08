@@ -105,8 +105,8 @@ static void hardware_reset() {
 	#include "thread.h"
 
 	static int threaded_renderer_idx = 0;
-	static uint32_t threaded_background_ver = 0;
 	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
+	static volatile uint32_t threaded_background_ver = 0;
 	static volatile int threaded_renderer_ready = 0;
 
 	static void threaded_renderer_loop(void* p);
