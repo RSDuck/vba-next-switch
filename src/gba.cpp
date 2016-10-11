@@ -105,8 +105,8 @@ static void hardware_reset() {
 	#include "thread.h"
 
 	static int threaded_renderer_idx = 0;
-	static uint32_t threaded_background_ver = 0;
 	static uint32_t threaded_gfxinwin_ver[2] = {1, 1};
+	static volatile uint32_t threaded_background_ver = 0;
 	static volatile int threaded_renderer_ready = 0;
 
 	static void threaded_renderer_loop(void* p);
@@ -9329,14 +9329,14 @@ void doMirroring (bool b)
 void ThreadedRendererStart() {
 	for(int u = 0; u < THREADED_RENDERER_COUNT; ++u) {
 		init_renderer_context(threaded_renderer_contexts[u]);
-		threaded_renderer_contexts[u].renderer_control = 1;		
-#if VITA
+		threaded_renderer_contexts[u].renderer_control = 1;
+
 		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)),
+			thread_run((u == 0) ? threaded_renderer_loop0 : threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)),
+#if VITA
 				(u == 0) ? THREAD_PRIORITY_NORMAL : THREAD_PRIORITY_LOW);	
 #else
-		threaded_renderer_contexts[u].renderer_thread_id =
-			thread_run(threaded_renderer_loop, reinterpret_cast<void*>(intptr_t(u)), THREAD_PRIORITY_NORMAL);
+				THREAD_PRIORITY_NORMAL);
 #endif
 	}
 }
@@ -11409,7 +11409,6 @@ do { \
 	renderer_ctx.renderer_state = 0;\
 } while (0)
 
-/*
 static void threaded_renderer_loop0(void* p) {
 	int renderer_idx = 0;
 	INIT_RENDERER_CONTEXT(renderer_idx);
@@ -11463,8 +11462,8 @@ static void threaded_renderer_loop(void* p) {
 
 	renderer_ctx.renderer_control = 0; //loop is terminated.
 }
-*/
 
+/*
 static void threaded_renderer_loop(void* p) {
 	int renderer_idx = reinterpret_cast<intptr_t>(p);
 	INIT_RENDERER_CONTEXT(renderer_idx);
@@ -11510,6 +11509,7 @@ static void threaded_renderer_loop(void* p) {
 
 	renderer_ctx.renderer_control = 0; //loop is terminated.
 }
+*/
 
 static void fetchBackgroundOffset(int video_mode) {
 	//update gfxBG2X, gfxBG2Y, gfxBG3X, gfxBG3Y
