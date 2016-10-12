@@ -230,7 +230,6 @@ else ifeq ($(platform), vita)
 	__FLAGS := -marm -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations
 	__FLAGS += -fno-optimize-sibling-calls -fno-strict-aliasing -fno-partial-inlining -fno-tree-vrp
 	__FLAGS += -ffast-math -fsingle-precision-constant -funroll-loops
-	__FLAGS += --param allow-store-data-races=1
 
 	CFLAGS += $(__FLAGS)
 	CXXFLAGS += $(__FLAGS)
