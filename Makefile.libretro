@@ -229,7 +229,7 @@ else ifeq ($(platform), vita)
 	PLATFORM_DEFINES := -DBRANCHLESS_GBA_GFX -DVITA
 	__FLAGS := -marm -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -mword-relocations
 	__FLAGS += -fno-optimize-sibling-calls -fno-strict-aliasing -fno-partial-inlining -fno-tree-vrp
-	__FLAGS += -ffast-math -fsingle-precision-constant -fprofile-use
+	__FLAGS += -ffast-math -fsingle-precision-constant -funroll-loops -ftracer
 
 	CFLAGS += $(__FLAGS)
 	CXXFLAGS += $(__FLAGS)
