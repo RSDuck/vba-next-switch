@@ -11664,6 +11664,9 @@ static void postRender() {
 	//buffer is ready.
 	renderer_ctx.renderer_state = 1;
 
+	//notify screen is done.
+	if(renderer_ctx.vcount == 159) threaded_renderer_ready = 1;
+
 	threaded_renderer_idx = (threaded_renderer_idx + 1) % THREADED_RENDERER_COUNT;
 }
 
@@ -13216,9 +13219,7 @@ updateLoop:
 		            	}
 		            	CPUCheckDMA(1, 0x0f);
 
-#if THREADED_RENDERER
-						threaded_renderer_ready = 1;
-#else
+#if !THREADED_RENDERER
 		            	systemDrawScreen();
 #endif
 		            	framedone = true;
