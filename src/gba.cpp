@@ -6801,12 +6801,20 @@ inline const TileLine gfxReadTilePal(const u16 *screenSource, const int yyy, con
 
 static inline void gfxDrawTile(const TileLine &tileLine, u32* _line)
 {
+#if HAVE_NEON
+   neon_memcpy(_line, tileLine.pixels, sizeof(tileLine.pixels));
+#else
    memcpy(_line, tileLine.pixels, sizeof(tileLine.pixels));
+#endif
 }
 
 static inline void gfxDrawTileClipped(const TileLine &tileLine, u32* _line, const int start, int w)
 {
+#if HAVE_NEON
+   neon_memcpy(_line, tileLine.pixels + start, w * sizeof(u32));
+#else
    memcpy(_line, tileLine.pixels + start, w * sizeof(u32));
+#endif
 }
 
 template<TileReader readTile, int layer, int renderer_idx>
@@ -11652,7 +11660,11 @@ static void postRender() {
 	for(int u = 0; u < 2; ++u) {
 		if(renderer_ctx.gfxinwin_ver[u] < threaded_gfxinwin_ver[u]) {
 			renderer_ctx.gfxinwin_ver[u] = threaded_gfxinwin_ver[u];
+#if HAVE_NEON
+			neon_memcpy(renderer_ctx.gfxInWin[u], gfxInWin[u], sizeof(gfxInWin) / 2);
+#else
 			memcpy(renderer_ctx.gfxInWin[u], gfxInWin[u], sizeof(gfxInWin) / 2);
+#endif
 		}
 	}
 
