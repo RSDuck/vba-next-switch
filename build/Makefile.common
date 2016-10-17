@@ -19,3 +19,7 @@ SOURCES_C +=  $(LIBRETRO_COMM_DIR)/rthreads/rthreads.c
 endif
 SOURCES_CXX += $(CORE_DIR)/src/thread.cpp
 endif
+
+ifeq ($(HAVE_NEON), 1)
+SOURCES_ASM += $(CORE_DIR)/src/neon.S
+endif

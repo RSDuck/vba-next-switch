@@ -6,6 +6,7 @@ USE_CHEATS=1
 USE_TWEAKS=1
 USE_THREADED_RENDERER=0
 USE_MOTION_SENSOR=0
+HAVE_NEON=0
 
 CORE_DIR := .
 BUILD_DIR = build
@@ -240,6 +241,7 @@ else ifeq ($(platform), vita)
 	USE_TWEAKS=1
 	USE_THREADED_RENDERER=1
 	USE_MOTION_SENSOR=1
+	HAVE_NEON=1
 # Libxenon
 else ifeq ($(platform), xenon)
 	EXT=a
@@ -333,7 +335,7 @@ endif
 
 include build/Makefile.common
 
-OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
+OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o)
 
 DEFINES += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DINLINE=inline -DHAVE_HLE_BIOS
 
