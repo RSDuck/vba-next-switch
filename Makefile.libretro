@@ -393,9 +393,11 @@ endif
 
 clean-objs:
 	rm -f $(OBJECTS)
+	rm -f $(OBJECTS_COND)
 
 clean:
 	rm -f $(OBJECTS)
+	rm -f $(OBJECTS_COND)
 	rm -f $(TARGET)
 
 .PHONY: clean clean-objs

@@ -1,5 +1,6 @@
 LIBRETRO_COMM_DIR := $(CORE_DIR)/libretro-common
 INCFLAGS := -I$(CORE_DIR) -I$(LIBRETRO_COMM_DIR)/include
+OBJECTS_COND :=
 
 SOURCES_CXX := \
 	$(CORE_DIR)/src/sound.cpp \
@@ -12,14 +13,18 @@ SOURCES_C   :=
 ifneq ($(STATIC_LINKING),1)
 SOURCES_C += $(LIBRETRO_COMM_DIR)/memalign.c
 endif
+OBJECTS_COND += $(LIBRETRO_COMM_DIR)/memalign.o
 
 ifeq ($(USE_THREADED_RENDERER), 1)
 ifneq ($(platform), vita)
-SOURCES_C +=  $(LIBRETRO_COMM_DIR)/rthreads/rthreads.c
+SOURCES_C += $(LIBRETRO_COMM_DIR)/rthreads/rthreads.c
 endif
 SOURCES_CXX += $(CORE_DIR)/src/thread.cpp
 endif
+OBJECTS_COND += $(LIBRETRO_COMM_DIR)/rthreads/rthreads.o
+OBJECTS_COND += $(CORE_DIR)/src/thread.o
 
 ifeq ($(HAVE_NEON), 1)
-SOURCES_ASM += $(CORE_DIR)/src/neon.S
+SOURCES_ASM += $(CORE_DIR)/src/neon_memcpy.S
 endif
+OBJECTS_COND += $(CORE_DIR)/src/neon_memcpy.o
