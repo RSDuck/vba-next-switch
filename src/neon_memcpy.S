@@ -8,8 +8,6 @@
  * tweaked for Android by Jim Huang <jserv@0xlab.org>
  */
 
-//#include <machine/cpu-features.h>
-
 		.text
 		.fpu	neon
 
