@@ -12,10 +12,8 @@
 #if VITA
 	#include <psp2/types.h>
 	typedef SceUID thread_t;
-	typedef SceUID sema_t;
 #else
 	typedef void* thread_t;
-	typedef void* sema_t;
 #endif
 
 #ifdef THREADED_RENDERER
@@ -25,11 +23,6 @@ thread_t thread_get();
 thread_t thread_run(threadfunc_t func, void* p, int priority);
 void thread_sleep(int ms);
 void thread_set_priority(thread_t id, int priority);
-
-sema_t sema_create(int init, int max);
-void sema_release(sema_t s);
-void sema_wait(sema_t s);
-void sema_signal(sema_t s);
 
 #endif
 
