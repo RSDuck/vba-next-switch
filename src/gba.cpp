@@ -1689,19 +1689,36 @@ static void BIOS_CpuSet (void)
 		// fill ?
 		if((cnt >> 24) & 1) {
 			u32 value = (source>0x0EFFFFFF ? 0x1CAD1CAD : CPUReadMemory(source));
-			while(count) {
+			while(count > 0) {
 				CPUWriteMemory(dest, value);
 				dest += 4;
 				count--;
 			}
 		} else {
+#if USE_TWEAK_MEMFUNC
+			if(source > 0x0EFFFFFF) {	
+				while(count > 0) {
+					CPUWriteMemory(dest, 0x1CAD1CAD);
+					dest += 4;
+					count--;
+				}
+			} else {	
+				while(count > 0) {
+					CPUWriteMemory(dest, CPUReadMemory(source));
+					source += 4;
+					dest += 4;
+					count--;
+				}
+			}
+#else
 			// copy
-			while(count) {
+			while(count > 0) {
 				CPUWriteMemory(dest, (source>0x0EFFFFFF ? 0x1CAD1CAD : CPUReadMemory(source)));
 				source += 4;
 				dest += 4;
 				count--;
 			}
+#endif
 		}
 	}
 	else
@@ -1709,19 +1726,36 @@ static void BIOS_CpuSet (void)
 		// 16-bit fill?
 		if((cnt >> 24) & 1) {
 			u16 value = (source>0x0EFFFFFF ? 0x1CAD : CPUReadHalfWord(source));
-			while(count) {
+			while(count > 0) {
 				CPUWriteHalfWord(dest, value);
 				dest += 2;
 				count--;
 			}
 		} else {
+#if USE_TWEAK_MEMFUNC
+			if(source > 0x0EFFFFFF) {
+				while(count > 0) {
+					CPUWriteHalfWord(dest, 0x1CAD);
+					dest += 2;
+					count--;
+				}
+			} else {
+				while(count > 0) {
+					CPUWriteHalfWord(dest, CPUReadHalfWord(source));
+					source += 2;
+					dest += 2;
+					count--;
+				}
+			}
+#else
 			// copy
-			while(count) {
+			while(count > 0) {
 				CPUWriteHalfWord(dest, (source>0x0EFFFFFF ? 0x1CAD : CPUReadHalfWord(source)));
 				source += 2;
 				dest += 2;
 				count--;
 			}
+#endif
 		}
 	}
 }
@@ -1750,6 +1784,26 @@ static void BIOS_CpuFastSet (void)
 			count -= 8;
 		}
 	} else {
+#if USE_TWEAK_MEMFUNC
+		if(source > 0x0EFFFFFF) {
+			while(count > 0) {
+				for(int i = 0; i < 8; i++) {
+					CPUWriteMemory(dest, 0xBAFFFFFB);
+					dest += 4;
+				}
+				count -= 8;
+			}
+		} else {
+			while(count > 0) {
+				for(int i = 0; i < 8; i++) {
+					CPUWriteMemory(dest, CPUReadMemory(source));
+					source += 4;
+					dest += 4;
+				}
+				count -= 8;
+			}
+		}
+#else
 		// copy
 		while(count > 0) {
 			// BIOS always transfers 32 bytes at a time
@@ -1760,6 +1814,7 @@ static void BIOS_CpuFastSet (void)
 			}
 			count -= 8;
 		}
+#endif
 	}
 }
 

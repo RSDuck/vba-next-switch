@@ -9,6 +9,7 @@
 	#define USE_TWEAK_SINE 0
     #define USE_TWEAK_ARCTAN 0
     #define USE_TWEAK_SPEEDHACK 1
+	#define USE_TWEAK_MEMFUNC 1
 	#if !MSB_FIRST
 		#define USE_TWEAK_AFFINE 0
 	#endif
