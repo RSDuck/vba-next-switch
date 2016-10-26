@@ -1332,83 +1332,6 @@ static INLINE void CPUWriteByte(u32 address, u8 b)
 /*============================================================
 	BIOS
 ============================================================ */
-
-#if USE_TWEAK_SINE
-s16 table_sin[256] = {
-  (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
-  (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
-  (s16)0x187D, (s16)0x19EF, (s16)0x1B5D, (s16)0x1CC6, (s16)0x1E2B, (s16)0x1F8B, (s16)0x20E7, (s16)0x223D,
-  (s16)0x238E, (s16)0x24DA, (s16)0x261F, (s16)0x275F, (s16)0x2899, (s16)0x29CD, (s16)0x2AFA, (s16)0x2C21,
-  (s16)0x2D41, (s16)0x2E5A, (s16)0x2F6B, (s16)0x3076, (s16)0x3179, (s16)0x3274, (s16)0x3367, (s16)0x3453,
-  (s16)0x3536, (s16)0x3612, (s16)0x36E5, (s16)0x37AF, (s16)0x3871, (s16)0x392A, (s16)0x39DA, (s16)0x3A82,
-  (s16)0x3B20, (s16)0x3BB6, (s16)0x3C42, (s16)0x3CC5, (s16)0x3D3E, (s16)0x3DAE, (s16)0x3E14, (s16)0x3E71,
-  (s16)0x3EC5, (s16)0x3F0E, (s16)0x3F4E, (s16)0x3F84, (s16)0x3FB1, (s16)0x3FD3, (s16)0x3FEC, (s16)0x3FFB,
-  (s16)0x4000, (s16)0x3FFB, (s16)0x3FEC, (s16)0x3FD3, (s16)0x3FB1, (s16)0x3F84, (s16)0x3F4E, (s16)0x3F0E,
-  (s16)0x3EC5, (s16)0x3E71, (s16)0x3E14, (s16)0x3DAE, (s16)0x3D3E, (s16)0x3CC5, (s16)0x3C42, (s16)0x3BB6,
-  (s16)0x3B20, (s16)0x3A82, (s16)0x39DA, (s16)0x392A, (s16)0x3871, (s16)0x37AF, (s16)0x36E5, (s16)0x3612,
-  (s16)0x3536, (s16)0x3453, (s16)0x3367, (s16)0x3274, (s16)0x3179, (s16)0x3076, (s16)0x2F6B, (s16)0x2E5A,
-  (s16)0x2D41, (s16)0x2C21, (s16)0x2AFA, (s16)0x29CD, (s16)0x2899, (s16)0x275F, (s16)0x261F, (s16)0x24DA,
-  (s16)0x238E, (s16)0x223D, (s16)0x20E7, (s16)0x1F8B, (s16)0x1E2B, (s16)0x1CC6, (s16)0x1B5D, (s16)0x19EF,
-  (s16)0x187D, (s16)0x1708, (s16)0x158F, (s16)0x1413, (s16)0x1294, (s16)0x1111, (s16)0x0F8C, (s16)0x0E05,
-  (s16)0x0C7C, (s16)0x0AF1, (s16)0x0964, (s16)0x07D5, (s16)0x0645, (s16)0x04B5, (s16)0x0323, (s16)0x0192,
-  (s16)0x0000, (s16)0xFE6E, (s16)0xFCDD, (s16)0xFB4B, (s16)0xF9BB, (s16)0xF82B, (s16)0xF69C, (s16)0xF50F,
-  (s16)0xF384, (s16)0xF1FB, (s16)0xF074, (s16)0xEEEF, (s16)0xED6C, (s16)0xEBED, (s16)0xEA71, (s16)0xE8F8,
-  (s16)0xE783, (s16)0xE611, (s16)0xE4A3, (s16)0xE33A, (s16)0xE1D5, (s16)0xE075, (s16)0xDF19, (s16)0xDDC3,
-  (s16)0xDC72, (s16)0xDB26, (s16)0xD9E1, (s16)0xD8A1, (s16)0xD767, (s16)0xD633, (s16)0xD506, (s16)0xD3DF,
-  (s16)0xD2BF, (s16)0xD1A6, (s16)0xD095, (s16)0xCF8A, (s16)0xCE87, (s16)0xCD8C, (s16)0xCC99, (s16)0xCBAD,
-  (s16)0xCACA, (s16)0xC9EE, (s16)0xC91B, (s16)0xC851, (s16)0xC78F, (s16)0xC6D6, (s16)0xC626, (s16)0xC57E,
-  (s16)0xC4E0, (s16)0xC44A, (s16)0xC3BE, (s16)0xC33B, (s16)0xC2C2, (s16)0xC252, (s16)0xC1EC, (s16)0xC18F,
-  (s16)0xC13B, (s16)0xC0F2, (s16)0xC0B2, (s16)0xC07C, (s16)0xC04F, (s16)0xC02D, (s16)0xC014, (s16)0xC005,
-  (s16)0xC000, (s16)0xC005, (s16)0xC014, (s16)0xC02D, (s16)0xC04F, (s16)0xC07C, (s16)0xC0B2, (s16)0xC0F2,
-  (s16)0xC13B, (s16)0xC18F, (s16)0xC1EC, (s16)0xC252, (s16)0xC2C2, (s16)0xC33B, (s16)0xC3BE, (s16)0xC44A,
-  (s16)0xC4E0, (s16)0xC57E, (s16)0xC626, (s16)0xC6D6, (s16)0xC78F, (s16)0xC851, (s16)0xC91B, (s16)0xC9EE,
-  (s16)0xCACA, (s16)0xCBAD, (s16)0xCC99, (s16)0xCD8C, (s16)0xCE87, (s16)0xCF8A, (s16)0xD095, (s16)0xD1A6,
-  (s16)0xD2BF, (s16)0xD3DF, (s16)0xD506, (s16)0xD633, (s16)0xD767, (s16)0xD8A1, (s16)0xD9E1, (s16)0xDB26,
-  (s16)0xDC72, (s16)0xDDC3, (s16)0xDF19, (s16)0xE075, (s16)0xE1D5, (s16)0xE33A, (s16)0xE4A3, (s16)0xE611,
-  (s16)0xE783, (s16)0xE8F8, (s16)0xEA71, (s16)0xEBED, (s16)0xED6C, (s16)0xEEEF, (s16)0xF074, (s16)0xF1FB,
-  (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E
-};
-
-s16 table_cos[256] = {
-  (s16)0x4000, (s16)0x3FFB, (s16)0x3FEC, (s16)0x3FD3, (s16)0x3FB1, (s16)0x3F84, (s16)0x3F4E, (s16)0x3F0E,
-  (s16)0x3EC5, (s16)0x3E71, (s16)0x3E14, (s16)0x3DAE, (s16)0x3D3E, (s16)0x3CC5, (s16)0x3C42, (s16)0x3BB6,
-  (s16)0x3B20, (s16)0x3A82, (s16)0x39DA, (s16)0x392A, (s16)0x3871, (s16)0x37AF, (s16)0x36E5, (s16)0x3612,
-  (s16)0x3536, (s16)0x3453, (s16)0x3367, (s16)0x3274, (s16)0x3179, (s16)0x3076, (s16)0x2F6B, (s16)0x2E5A,
-  (s16)0x2D41, (s16)0x2C21, (s16)0x2AFA, (s16)0x29CD, (s16)0x2899, (s16)0x275F, (s16)0x261F, (s16)0x24DA,
-  (s16)0x238E, (s16)0x223D, (s16)0x20E7, (s16)0x1F8B, (s16)0x1E2B, (s16)0x1CC6, (s16)0x1B5D, (s16)0x19EF,
-  (s16)0x187D, (s16)0x1708, (s16)0x158F, (s16)0x1413, (s16)0x1294, (s16)0x1111, (s16)0x0F8C, (s16)0x0E05,
-  (s16)0x0C7C, (s16)0x0AF1, (s16)0x0964, (s16)0x07D5, (s16)0x0645, (s16)0x04B5, (s16)0x0323, (s16)0x0192,
-  (s16)0x0000, (s16)0xFE6E, (s16)0xFCDD, (s16)0xFB4B, (s16)0xF9BB, (s16)0xF82B, (s16)0xF69C, (s16)0xF50F,
-  (s16)0xF384, (s16)0xF1FB, (s16)0xF074, (s16)0xEEEF, (s16)0xED6C, (s16)0xEBED, (s16)0xEA71, (s16)0xE8F8,
-  (s16)0xE783, (s16)0xE611, (s16)0xE4A3, (s16)0xE33A, (s16)0xE1D5, (s16)0xE075, (s16)0xDF19, (s16)0xDDC3,
-  (s16)0xDC72, (s16)0xDB26, (s16)0xD9E1, (s16)0xD8A1, (s16)0xD767, (s16)0xD633, (s16)0xD506, (s16)0xD3DF,
-  (s16)0xD2BF, (s16)0xD1A6, (s16)0xD095, (s16)0xCF8A, (s16)0xCE87, (s16)0xCD8C, (s16)0xCC99, (s16)0xCBAD,
-  (s16)0xCACA, (s16)0xC9EE, (s16)0xC91B, (s16)0xC851, (s16)0xC78F, (s16)0xC6D6, (s16)0xC626, (s16)0xC57E,
-  (s16)0xC4E0, (s16)0xC44A, (s16)0xC3BE, (s16)0xC33B, (s16)0xC2C2, (s16)0xC252, (s16)0xC1EC, (s16)0xC18F,
-  (s16)0xC13B, (s16)0xC0F2, (s16)0xC0B2, (s16)0xC07C, (s16)0xC04F, (s16)0xC02D, (s16)0xC014, (s16)0xC005,
-  (s16)0xC000, (s16)0xC005, (s16)0xC014, (s16)0xC02D, (s16)0xC04F, (s16)0xC07C, (s16)0xC0B2, (s16)0xC0F2,
-  (s16)0xC13B, (s16)0xC18F, (s16)0xC1EC, (s16)0xC252, (s16)0xC2C2, (s16)0xC33B, (s16)0xC3BE, (s16)0xC44A,
-  (s16)0xC4E0, (s16)0xC57E, (s16)0xC626, (s16)0xC6D6, (s16)0xC78F, (s16)0xC851, (s16)0xC91B, (s16)0xC9EE,
-  (s16)0xCACA, (s16)0xCBAD, (s16)0xCC99, (s16)0xCD8C, (s16)0xCE87, (s16)0xCF8A, (s16)0xD095, (s16)0xD1A6,
-  (s16)0xD2BF, (s16)0xD3DF, (s16)0xD506, (s16)0xD633, (s16)0xD767, (s16)0xD8A1, (s16)0xD9E1, (s16)0xDB26,
-  (s16)0xDC72, (s16)0xDDC3, (s16)0xDF19, (s16)0xE075, (s16)0xE1D5, (s16)0xE33A, (s16)0xE4A3, (s16)0xE611,
-  (s16)0xE783, (s16)0xE8F8, (s16)0xEA71, (s16)0xEBED, (s16)0xED6C, (s16)0xEEEF, (s16)0xF074, (s16)0xF1FB,
-  (s16)0xF384, (s16)0xF50F, (s16)0xF69C, (s16)0xF82B, (s16)0xF9BB, (s16)0xFB4B, (s16)0xFCDD, (s16)0xFE6E,
-  (s16)0x0000, (s16)0x0192, (s16)0x0323, (s16)0x04B5, (s16)0x0645, (s16)0x07D5, (s16)0x0964, (s16)0x0AF1,
-  (s16)0x0C7C, (s16)0x0E05, (s16)0x0F8C, (s16)0x1111, (s16)0x1294, (s16)0x1413, (s16)0x158F, (s16)0x1708,
-  (s16)0x187D, (s16)0x19EF, (s16)0x1B5D, (s16)0x1CC6, (s16)0x1E2B, (s16)0x1F8B, (s16)0x20E7, (s16)0x223D,
-  (s16)0x238E, (s16)0x24DA, (s16)0x261F, (s16)0x275F, (s16)0x2899, (s16)0x29CD, (s16)0x2AFA, (s16)0x2C21,
-  (s16)0x2D41, (s16)0x2E5A, (s16)0x2F6B, (s16)0x3076, (s16)0x3179, (s16)0x3274, (s16)0x3367, (s16)0x3453,
-  (s16)0x3536, (s16)0x3612, (s16)0x36E5, (s16)0x37AF, (s16)0x3871, (s16)0x392A, (s16)0x39DA, (s16)0x3A82,
-  (s16)0x3B20, (s16)0x3BB6, (s16)0x3C42, (s16)0x3CC5, (s16)0x3D3E, (s16)0x3DAE, (s16)0x3E14, (s16)0x3E71,
-  (s16)0x3EC5, (s16)0x3F0E, (s16)0x3F4E, (s16)0x3F84, (s16)0x3FB1, (s16)0x3FD3, (s16)0x3FEC, (s16)0x3FFB
-};
-
-#define fast_sin(__val__) table_sin[__val__ & 0xFF]
-#define fast_cos(__val__) table_cos[__val__ & 0xFF]
-
-#else
-
 static inline int16_t fast_sin(uint8_t val)
 {
 	uint8_t p = 0x7F & val;
@@ -1420,36 +1343,6 @@ static inline int16_t fast_cos(uint8_t val)
 {
 	return fast_sin(val + 0x40);
 }
-
-#endif
-
-#if USE_TWEAK_ARCTAN
-s32 table_atan[0x200];
-
-#define BIOS_ArcTan() { \
-	int p = (int)bus.reg[0].I + 0x4000; \
-	if(p < 0) \
-		bus.reg[0].I = table_atan[0]; \
-	else if(p >= 0x8000) \
-		bus.reg[0].I = table_atan[0x200 - 1]; \
-	else \
-		bus.reg[0].I = table_atan[p >> 6];  \
-}
-		
-static s32 BIOS_ArcTan_Calc (s32 p)
-{
-	s32 a =  -(((s32)(p*p)) >> 14);
-	s32 b = ((0xA9 * a) >> 14) + 0x390;
-	b = ((b * a) >> 14) + 0x91C;
-	b = ((b * a) >> 14) + 0xFB6;
-	b = ((b * a) >> 14) + 0x16AA;
-	b = ((b * a) >> 14) + 0x2081;
-	b = ((b * a) >> 14) + 0x3651;
-	b = ((b * a) >> 14) + 0xA2F9;
-	return ((s32)p * b) >> 16;
-}
-
-#else
 
 static void BIOS_ArcTan (void)
 {
@@ -1464,8 +1357,6 @@ static void BIOS_ArcTan (void)
 	a = ((s32)bus.reg[0].I * b) >> 16;
 	bus.reg[0].I = a;
 }
-
-#endif
 
 static void BIOS_Div (void)
 {
@@ -1570,57 +1461,6 @@ static void BIOS_BitUnPack (void)
 	}
 }
 
-#if USE_TWEAK_AFFINE
-typedef struct {
-	s32 cx;
-	s32 cy;
-	s16 dispx;
-	s16 dispy;
-	s16 rx;
-	s16 ry;
-	u16 theta;
-	u16 dummy;
-} BgAffineInput;
-
-typedef struct {
-	s16 dx;
-	s16 dmx;
-	s16 dy;
-	s16 dmy;
-	s32 startx;
-	s32 starty;
-} BgAffineOutput;
-
-static void BIOS_BgAffineSet (void)
-{
-	BgAffineInput inputs[0x40];
-	BgAffineOutput outputs[0x40];
-
-	u32 src = bus.reg[0].I;
-	u32 dest = bus.reg[1].I;
-	int num = bus.reg[2].I;
-
-	uint8_t* addr_src = CPUDecodeAddress(src);
-	uint8_t* addr_dst = CPUDecodeAddress(dest);
-
-	memcpy(inputs, addr_src, sizeof(BgAffineInput) * num);
-	for(int i = 0; i < num; i++) {
-		BgAffineInput& input = inputs[i];
-		BgAffineOutput& output = outputs[i];
-
-		s32 a = fast_cos(input.theta);
-		s32 b = fast_sin(input.theta);
-
-		output.dx  = (input.rx * a)>>14;
-		output.dmx = -((input.rx * b)>>14);
-		output.dy  = (input.ry * b)>>14;
-		output.dmy = (input.ry * a)>>14;
-		output.startx = input.cx - output.dx * input.dispx - output.dmx * input.dispy;
-		output.starty = input.cy - output.dy * input.dispx - output.dmy * input.dispy;
-	}
-	memcpy(addr_dst, outputs, sizeof(BgAffineOutput) * num);
-}
-#else
 static void BIOS_BgAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -1670,7 +1510,6 @@ static void BIOS_BgAffineSet (void)
 		dest += 4;
 	}
 }
-#endif
 
 static void BIOS_CpuSet (void)
 {
@@ -2180,50 +2019,6 @@ static void BIOS_LZ77UnCompWram (void)
 	}
 }
 
-#if USE_TWEAK_AFFINE
-typedef struct {
-	s16 rx;
-	s16 ry;
-	u16 theta;
-	u16 dummy;
-} ObjAffineInput;
-
-typedef struct {
-	s16 dx;
-	s16 dmx;
-	s16 dy;
-	s16 dmy;
-} ObjAffineOutput;
-
-static void BIOS_ObjAffineSet (void)
-{
-	ObjAffineInput inputs[0x100];
-	ObjAffineOutput outputs[0x100];
-
-	u32 src = bus.reg[0].I;
-	u32 dest = bus.reg[1].I;
-	int num = bus.reg[2].I;
-	int offset = bus.reg[3].I;
-
-	uint8_t* addr_src = CPUDecodeAddress(src);
-	uint8_t* addr_dst = CPUDecodeAddress(dest);
-
-	memcpy(inputs, addr_src, sizeof(ObjAffineInput) * num);
-	for(int i = 0; i < num; i++) {
-		ObjAffineInput& input = inputs[i];
-		ObjAffineOutput& output = outputs[i];
-
-		s32 a = fast_cos(input.theta);
-		s32 b = fast_sin(input.theta);
-
-		output.dx =  ((s32)input.rx * a)>>14;
-		output.dmx = -(((s32)input.rx * b)>>14);
-		output.dy =  ((s32)input.ry * b)>>14;
-		output.dmy = ((s32)input.ry * a)>>14;
-	}
-	memcpy(addr_dst, outputs, sizeof(ObjAffineOutput) * num);
-}
-#else
 static void BIOS_ObjAffineSet (void)
 {
 	u32 src = bus.reg[0].I;
@@ -2257,7 +2052,6 @@ static void BIOS_ObjAffineSet (void)
 		dest += offset;
 	}
 }
-#endif
 
 static void BIOS_RegisterRamReset(u32 flags)
 {
@@ -2484,20 +2278,6 @@ static void BIOS_SoftReset (void)
 #define BIOS_SND_DRIVER_JMP_TABLE_COPY() \
 	CPUWriteMemory(bus.reg[0].I, 0x9c); \
 	bus.reg[0].I += 4;
-
-#if USE_TWEAKS
-bool tweaks_init = false;
-
-static void tweaksInit() {
-	if(tweaks_init) return;
-	tweaks_init = true;
-
-	#if USE_TWEAK_ARCTAN
-	for(int u = 0; u < 0x200; ++u)
-		table_atan[u] = BIOS_ArcTan_Calc((u - 0x100) << 6);
-	#endif
-}
-#endif
 
 #define CPU_UPDATE_CPSR() \
 { \
@@ -9272,10 +9052,6 @@ bool CPUSetupBuffers()
 	memset(line[Layer_BG1], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG2], -1, 240 * sizeof(u32));
 	memset(line[Layer_BG3], -1, 240 * sizeof(u32));
-#endif
-	
-#if USE_TWEAKS
-	tweaksInit();
 #endif
 
 	return true;
