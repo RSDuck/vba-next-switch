@@ -142,6 +142,9 @@ void retro_set_environment(retro_environment_t cb)
 
    struct retro_variable variables[] = {
 	  { "vbanext_bios", "Use bios (if available); enabled|disabled" },
+#if USE_FRAME_SKIP
+	  { "vbanext_frameskip", "Frameskip; 0|1/3|1/2|1|2|3|4" },
+#endif
       { NULL, NULL },
    };
 
@@ -386,6 +389,27 @@ static void load_image_preferences (void)
    }
 }
 
+#if USE_FRAME_SKIP
+static int get_frameskip_code()
+{
+	struct retro_variable var;
+
+	var.key = "vbanext_frameskip";
+	var.value = NULL;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "1/3") == 0) return 0x13;
+		if (strcmp(var.value, "1/2") == 0) return 0x12;
+		if (strcmp(var.value, "1") == 0) return 0x1;
+		if (strcmp(var.value, "2") == 0) return 0x2;
+		if (strcmp(var.value, "3") == 0) return 0x3;
+		if (strcmp(var.value, "4") == 0) return 0x4;
+	}
+	return 0;
+}
+#endif
+
 static void gba_init(void)
 {
    cpuSaveType = 0;
@@ -435,6 +459,11 @@ static void gba_init(void)
    uint8_t * state_buf = (uint8_t*)malloc(2000000);
    serialize_size = CPUWriteState(state_buf, 2000000);
    free(state_buf);
+
+#if USE_FRAME_SKIP
+   SetFrameskip(get_frameskip_code());
+#endif
+
 }
 
 void retro_deinit(void)
@@ -484,15 +513,8 @@ static unsigned has_frame;
 
 static void update_variables(void)
 {
-#if 0
-   struct retro_variable var;
-   
-   var.key = "vbam-next-undefined";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-   }
+#if USE_FRAME_SKIP
+   SetFrameskip(get_frameskip_code());
 #endif
 }
 
