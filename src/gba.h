@@ -112,6 +112,9 @@ extern void CPUReset (void);
 extern void CPULoop(void);
 extern void UpdateJoypad(void);
 extern void CPUCheckDMA(int,int);
+#if USE_FRAME_SKIP
+extern void SetFrameskip(int);
+#endif
 
 #if THREADED_RENDERER
 extern void ThreadedRendererStart();

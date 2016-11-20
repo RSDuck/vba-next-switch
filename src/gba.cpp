@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <memalign.h>
+#include <time.h>
 
 #include "system.h"
 #include "globals.h"
@@ -50,6 +51,22 @@
 #define LayerMask_OBJ  (1 << Layer_OBJ)
 // Used in R_WIN_* to indicate whether color effects are enabled
 #define LayerMask_SFX  (1 << 5)
+
+#if USE_FRAME_SKIP
+
+int fs_count = 0;
+int fs_type = 0;
+int fs_type_a = 0;
+int fs_type_b = 0;
+bool fs_draw = false;
+
+void SetFrameskip(int code)
+{
+	fs_type = code;
+	fs_type_a = (0xF0 & fs_type) >> 4;
+	fs_type_b = 0xF & fs_type;
+}
+#endif
 
 typedef void (*renderfunc_t)(void);
 
@@ -11302,54 +11319,6 @@ static void threaded_renderer_loop(void* p) {
 	renderer_ctx.renderer_control = 0; //loop is terminated.
 }
 
-/*
-static void threaded_renderer_loop(void* p) {
-	int renderer_idx = reinterpret_cast<intptr_t>(p);
-	INIT_RENDERER_CONTEXT(renderer_idx);
-
-	renderfunc_t drawSprites = NULL;
-	renderfunc_t drawOBJWin = NULL;
-	renderfunc_t (*getRenderFunc)(int, int) = NULL;
-
-	switch(renderer_idx) {
-	case 0:
-		drawSprites = gfxDrawSprites<0>;
-		drawOBJWin = gfxDrawOBJWin<0>;
-		getRenderFunc = GetRenderFunc<0>;
-		break;
-	case 1:
-		drawSprites = gfxDrawSprites<1>;
-		drawOBJWin = gfxDrawOBJWin<1>;
-		getRenderFunc = GetRenderFunc<1>;
-		break;
-	case 2:
-		drawSprites = gfxDrawSprites<2>;
-		drawOBJWin = gfxDrawOBJWin<2>;
-		getRenderFunc = GetRenderFunc<2>;
-		break;
-	case 3:
-		drawSprites = gfxDrawSprites<3>;
-		drawOBJWin = gfxDrawOBJWin<3>;
-		getRenderFunc = GetRenderFunc<3>;
-		break;
-	default:
-		return;
-	}
-
-	while(renderer_ctx.renderer_control == 1) {
-		if(renderer_idx == 0) {
-			if(threaded_renderer_ready) {
-				threaded_renderer_ready = 0;
-				systemDrawScreen();
-			}
-		}
-		threaded_renderer_loop_impl();
-	}
-
-	renderer_ctx.renderer_control = 0; //loop is terminated.
-}
-*/
-
 static void fetchBackgroundOffset(int video_mode) {
 	//update gfxBG2X, gfxBG2Y, gfxBG3X, gfxBG3Y
 	switch(video_mode) {
@@ -12452,8 +12421,7 @@ void CPUUpdateRegister(uint32_t address, uint16_t value)
 }
 
 void CPUInit(const char *biosFileName, bool useBiosFile)
-{
-	
+{	
 #ifdef MSB_FIRST
 	if(!cpuBiosSwapped)
    {
@@ -13065,6 +13033,20 @@ updateLoop:
 #if !THREADED_RENDERER
 		            	systemDrawScreen();
 #endif
+
+#if USE_FRAME_SKIP
+						++fs_count;
+
+						if(fs_type_b == 0) {
+							fs_draw = true;
+						} else {
+							if(fs_type_a > 0) {
+								fs_draw = (fs_count % (fs_type_b + 1));
+							} else {
+								fs_draw = ((fs_count % (fs_type_b + 1)) == 0);
+							}
+						}
+#endif
 		            	framedone = true;
 		        	}
 
@@ -13073,23 +13055,29 @@ updateLoop:
 				}
 				else
 				{
-					
-#if THREADED_RENDERER
-					postRender();
-#else					
-					bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
-					bool draw_sprites = R_DISPCNT_Screen_Display_OBJ;
-
-					memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
-					if(draw_sprites) gfxDrawSprites<0>();
-
-					if(renderfunc_type == 2) {
-						memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
-						if(draw_objwin) gfxDrawOBJWin<0>();
-					}
-					
-					GetRenderFunc<0>(renderfunc_mode, renderfunc_type)();
+#if USE_FRAME_SKIP
+					if(fs_draw) {
 #endif
+#if THREADED_RENDERER
+						postRender();
+#else					
+						bool draw_objwin = (graphics.layerEnable & 0x9000) == 0x9000;
+						bool draw_sprites = R_DISPCNT_Screen_Display_OBJ;
+
+						memset(RENDERER_LINE[Layer_OBJ], -1, 240 * sizeof(u32));	// erase all sprites
+						if(draw_sprites) gfxDrawSprites<0>();
+
+						if(renderfunc_type == 2) {
+							memset(RENDERER_LINE[Layer_WIN_OBJ], -1, 240 * sizeof(u32));	// erase all OBJ Win 
+							if(draw_objwin) gfxDrawOBJWin<0>();
+						}
+					
+						GetRenderFunc<0>(renderfunc_mode, renderfunc_type)();
+#endif
+#if USE_FRAME_SKIP					
+					}
+#endif
+
 					// entering H-Blank
 					io_registers[REG_DISPSTAT] |= 2;
 					UPDATE_REG(0x04, io_registers[REG_DISPSTAT]);
