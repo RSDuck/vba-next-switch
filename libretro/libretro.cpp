@@ -155,7 +155,10 @@ void retro_get_system_info(struct retro_system_info *info)
 {
    info->need_fullpath = false;
    info->valid_extensions = "gba";
-   info->library_version = "v1.0.2";
+#ifndef GIT_VERSION
+#define GIT_VERSION ""
+#endif
+   info->library_version = "v1.0.2" GIT_VERSION;
    info->library_name = "VBA Next";
    info->block_extract = false;
 }

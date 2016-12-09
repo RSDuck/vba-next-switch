@@ -82,6 +82,10 @@ endif
 
 TARGET_NAME := vba_next
 ENDIANNESS_DEFINES :=
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+	CXXFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
 
 ifeq ($(STATIC_LINKING),1)
 EXT=a
