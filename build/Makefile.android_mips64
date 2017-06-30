@@ -45,7 +45,7 @@ SOEXT  = .android_mips64.so
 
 STATIC_LINKING = 0
 platform       = android
-PLATDEFS       = -DANDROID -DINLINE=inline -DHAVE_STDINT_H -DBSPF_UNIX -DHAVE_INTTYPES -DLSB_FIRST
+PLATDEFS       = -DANDROID -DINLINE=inline -DBSPF_UNIX -DHAVE_STDINT_H -DHAVE_INTTYPES -DLSB_FIRST
 PLATCFLAGS     = -fpic -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers -no-canonical-prefixes -fomit-frame-pointer -funswitch-loops -finline-limit=300 -Wa,--noexecstack -Wformat -Werror=format-security
 PLATCXXFLAGS   = -fpic -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers -no-canonical-prefixes -fomit-frame-pointer -funswitch-loops -finline-limit=300 -Wa,--noexecstack -Wformat -Werror=format-security -fno-exceptions -fno-rtti
 PLATLDFLAGS    = -shared --sysroot=$(NDK_ROOT_DIR)/platforms/android-21/arch-mips64 -lgcc -no-canonical-prefixes -Wl,--no-undefined -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -lc -lm
@@ -63,7 +63,7 @@ RETROLDXFLAGS =
 #################
 # Final variables
 
-DEFINES  = $(PLATDEFS) $(RETRODEFS)
+DEFINES  = $(PLATDEFS) $(COREDEFINES) $(RETRODEFS)
 CFLAGS   = $(PLATCFLAGS) $(RETROCFLAGS) $(DEFINES) $(INCLUDES)
 CXXFLAGS = $(PLATCXXFLAGS) $(RETROCXXFLAGS) $(DEFINES) $(INCLUDES)
 LDFLAGS  = $(PLATLDFLAGS) $(RETROLDFLAGS)

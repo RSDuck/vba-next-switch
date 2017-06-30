@@ -1,4 +1,4 @@
-TARGET_NAME ?= vba_next
+TARGET_NAME ?= snes9x2010
 
 ifeq ($(STATIC_LINKING), 1)
   TARGET = $(TARGET_NAME)_libretro_$(platform).a
@@ -10,17 +10,27 @@ DEFINES  +=
 CFLAGS   += -Wall
 CXXFLAGS += -Wall
 LDFLAGS  +=
+OBJOUT   = -o 
+LINKOUT  = -o 
 
 OBJS    = $(SOURCES_C:.c=$(OBJEXT)) $(SOURCES_CXX:.cpp=$(OBJEXT))
 
+ifneq (,$(findstring msvc,$(platform)))
+	OBJOUT = -Fo
+	LINKOUT = -out:
+	LD = link.exe
+else
+	LD = $(CC)
+endif
+
 %$(OBJEXT): %.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+	$(CXX) -c $(OBJOUT)$@ $< $(INCFLAGS) $(CXXFLAGS)
 
 %$(OBJEXT): %.c
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c $(OBJOUT)$@ $< $(INCFLAGS) $(CFLAGS)
 
 %$(OBJEXT): %.S
-	$(CC_AS) -c -o $@ $< $(CFLAGS)
+	$(CC_AS) -c $(OBJOUT)$@ $< $(CFLAGS)
 
 all: $(TARGET)
 
@@ -28,7 +38,7 @@ $(TARGET): $(HEADERS) $(OBJS)
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJS)
 else
-	$(CC) -o $@ $(OBJS) $(LDFLAGS)
+	$(LD) $(LINKOUT)$@ $(OBJS) $(LDFLAGS)
 endif
 
 clean-objs:
