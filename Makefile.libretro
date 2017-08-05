@@ -331,6 +331,27 @@ else ifeq ($(platform), emscripten)
 	TARGET := $(TARGET_NAME)_libretro_$(platform).$(EXT)
    STATIC_LINKING = 1
 
+# Windows MSVC 2005 x86
+else ifeq ($(platform), windows_msvc2005_x86)
+	CC  = cl.exe
+	CXX = cl.exe
+
+PATH := $(shell IFS=$$'\n'; cygpath "$(VS80COMNTOOLS)../../VC/bin"):$(PATH)
+PATH := $(PATH):$(shell IFS=$$'\n'; cygpath "$(VS80COMNTOOLS)../IDE")
+INCLUDE := $(shell IFS=$$'\n'; cygpath "$(VS80COMNTOOLS)../../VC/include")
+LIB := $(shell IFS=$$'\n'; cygpath -w "$(VS80COMNTOOLS)../../VC/lib")
+BIN := $(shell IFS=$$'\n'; cygpath "$(VS80COMNTOOLS)../../VC/bin")
+
+WindowsSdkDir := $(INETSDK)
+
+export INCLUDE := $(INCLUDE);$(INETSDK)/Include;libretro-common/include/compat/msvc
+export LIB := $(LIB);$(WindowsSdkDir);$(INETSDK)/Lib
+TARGET := $(TARGET_NAME)_libretro.dll
+PSS_STYLE :=2
+LDFLAGS += -DLL
+CFLAGS += -D_CRT_SECURE_NO_DEPRECATE
+CXXFLAGS += -D_CRT_SECURE_NO_DEPRECATE
+
 # Windows
 else
 	EXT    ?= dll
@@ -350,8 +371,8 @@ ifeq ($(DEBUG), 1)
 	CFLAGS += -O0 -g
 	CXXFLAGS += -O0 -g
 else
-	CFLAGS += -O3
-	CXXFLAGS += -O3
+	CFLAGS += -O2 -DNDEBUG
+	CXXFLAGS += -O2 -DNDEBUG
 endif
 
 include build/Makefile.common
@@ -365,12 +386,6 @@ CXXFLAGS += $(fpic) $(DEFINES)
 
 LIBS :=
 
-%.o: %.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCFLAGS)
-
-%.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS) $(INCFLAGS)
-
 ifeq ($(platform), theos_ios)
 COMMON_FLAGS := -DIOS $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
 $(LIBRARY_NAME)_CFLAGS += $(CFLAGS) $(COMMON_FLAGS)
@@ -380,12 +395,30 @@ include $(THEOS_MAKE_PATH)/library.mk
 else
 all: $(TARGET)
 
+OBJOUT   = -o
+LINKOUT  = -o 
+
+ifneq (,$(findstring msvc,$(platform)))
+	OBJOUT = -Fo
+	LINKOUT = -out:
+	LD = link.exe
+else
+	LD = $(CC)
+endif
+
 $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
-	$(CXX) -o $@ $(SHARED) $(OBJECTS) $(LDFLAGS) $(LIBS)
+	$(CXX) $(LINKOUT)$@ $(SHARED) $(OBJECTS) $(LDFLAGS) $(LIBS)
 endif
+
+%.o: %.cpp
+	$(CXX) -c $(OBJOUT) $@ $< $(CXXFLAGS) $(INCFLAGS)
+
+%.o: %.c
+	$(CC) -c $(OBJOUT) $@ $< $(CFLAGS) $(INCFLAGS)
+
 
 clean-objs:
 	rm -f $(OBJECTS)
