@@ -1695,7 +1695,7 @@ static long stereo_buffer_read_samples( int16_t * out, long out_size )
         return out_size;
 }
 
-static void gba_to_gb_sound_parallel( int * __restrict addr, int * __restrict addr2 )
+static void gba_to_gb_sound_parallel( int * addr, int * addr2 )
 {
 	uint32_t addr1_table = *addr - 0x60;
 	uint32_t addr2_table = *addr2 - 0x60;
