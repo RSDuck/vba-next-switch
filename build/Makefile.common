@@ -3,6 +3,10 @@ INCFLAGS          := -I$(CORE_DIR) -I$(LIBRETRO_COMM_DIR)/include
 COREDEFINES        = -D__LIBRETRO__ -DINLINE=inline -DHAVE_HLE_BIOS
 OBJECTS_COND      :=
 
+ifneq (,$(findstring msvc2003,$(platform)))
+INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
+endif
+
 ifeq ($(FRONTEND_SUPPORTS_RGB565), 1)
 COREDEFINES      += -DFRONTEND_SUPPORTS_RGB565
 endif
