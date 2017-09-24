@@ -141,7 +141,7 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    struct retro_variable variables[] = {
-	  { "vbanext_bios", "Use bios (if available); enabled|disabled" },
+	  { "vbanext_bios", "Use bios if available (Restart); enabled|disabled" },
 #if USE_FRAME_SKIP
 	  { "vbanext_frameskip", "Frameskip; 0|1/3|1/2|1|2|3|4" },
 #endif
