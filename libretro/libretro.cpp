@@ -645,6 +645,58 @@ bool retro_load_game(const struct retro_game_info *game)
 
    gba_init();
 
+   struct retro_memory_descriptor descs[7];
+   struct retro_memory_map mmaps;
+
+   memset(descs, 0, sizeof(descs));
+
+   /* Map internal working RAM */
+   descs[0].ptr    = internalRAM;
+   descs[0].start  = 0x03000000;
+   descs[0].len    = 0x00008000;
+   descs[0].select = 0xFF000000;
+
+   /* Map working RAM */
+   descs[1].ptr    = workRAM;
+   descs[1].start  = 0x02000000;
+   descs[1].len    = 0x00040000;
+   descs[1].select = 0xFF000000;
+
+   /* Map save RAM */
+   descs[2].ptr    = libretro_save_buf;
+   descs[2].start  = 0x0E000000;
+   descs[2].len    = libretro_save_size;
+
+   /* Map VRAM */
+   descs[3].ptr    = vram;
+   descs[3].start  = 0x06000000;
+   descs[3].len    = 0x00018000;
+   descs[3].select = 0xFF000000;
+
+   /* Map palette RAM */
+   descs[4].ptr    = paletteRAM;
+   descs[4].start  = 0x05000000;
+   descs[4].len    = 0x00000400;
+   descs[4].select = 0xFF000000;
+
+   /* Map OAM */
+   descs[5].ptr    = oam;
+   descs[5].start  = 0x07000000;
+   descs[5].len    = 0x00000400;
+   descs[5].select = 0xFF000000;
+
+   /* Map mmapped I/O */
+   descs[6].ptr    = ioMem;
+   descs[6].start  = 0x04000000;
+   descs[6].len    = 0x00000400;
+
+   mmaps.descriptors = descs;
+   mmaps.num_descriptors = sizeof(descs) / sizeof(descs[0]);
+
+   bool yes = true;
+   environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &mmaps);
+   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &yes);
+
    return ret;
 }
 
