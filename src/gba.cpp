@@ -5647,7 +5647,7 @@ static  void thumb47(u32 opcode)
 		bus.armNextPC = bus.reg[15].I;
 		bus.reg[15].I += 4;
 		ARM_PREFETCH;		
-		CLOCKTICKS_UPDATE_TYPE32P ;
+      clockTicks = CLOCKTICKS_UPDATE_TYPE32P ;
 	}
 }
 
