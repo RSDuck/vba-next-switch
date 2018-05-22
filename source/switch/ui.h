@@ -19,7 +19,7 @@ typedef enum { stateRunning, stateFileselect, statePaused } UIState;
 void uiInit();
 void uiDeinit();
 
-void uiGetSelectedFile(char* out);
+void uiGetSelectedFile(char* out, int outLength);
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown);
 void uiSetState(UIState state);

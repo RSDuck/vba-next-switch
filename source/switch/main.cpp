@@ -90,8 +90,8 @@ static void adjust_save_ram() {
 		flashSaveMemory = libretro_save_buf;
 }
 
-void romPathWithExt(char *out, const char *ext) {
-	strcpy(out, currentRomPath);
+void romPathWithExt(char *out, int outBufferLen, const char *ext) {
+	strncpy(out, currentRomPath, outBufferLen);
 	int dotLoc = strlen(out);
 	while (dotLoc >= 0 && out[dotLoc] != '.') dotLoc--;
 
@@ -393,7 +393,7 @@ bool retro_load_game() {
 	gba_init();
 
 	char saveFileName[PATH_LENGTH];
-	romPathWithExt(saveFileName, "sav");
+	romPathWithExt(saveFileName, PATH_LENGTH, "sav");
 	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("loaded savefile %s", saveFileName);
 
 	return ret;
@@ -409,7 +409,7 @@ void retro_unload_game(void) {
 	g_video_frames = 0;
 
 	char saveFilename[PATH_LENGTH];
-	romPathWithExt(saveFilename, "sav");
+	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
 }
 
@@ -454,9 +454,6 @@ void audio_thread_main(void *) {
 	free(raw_data[1]);
 }
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CLAMP(v, s, t) MIN(t, MAX(s, v))
 void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
 	mutexLock(&audioLock);
 	if (audioTransferBufferUsed + length >= AUDIO_TRANSFERBUF_SIZE) {
@@ -616,7 +613,7 @@ int main(int argc, char *argv[]) {
 			case resultSaveState: {
 				mutexLock(&emulationLock);
 				char stateFilename[PATH_LENGTH];
-				romPathWithExt(stateFilename, "ram");
+				romPathWithExt(stateFilename, PATH_LENGTH, "ram");
 
 				u8 *buffer = (u8 *)malloc(serialize_size);
 
@@ -669,7 +666,7 @@ int main(int argc, char *argv[]) {
 			mutexLock(&emulationLock);
 
 			uiSetState(stateRunning);
-			uiGetSelectedFile(currentRomPath);
+			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			retro_load_game();
 
 			SetFrameskip(frameSkipValues[frameSkip]);

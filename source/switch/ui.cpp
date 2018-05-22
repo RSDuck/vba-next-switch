@@ -127,6 +127,8 @@ void uiDrawChar(u8* fb, u16 fbWidth, u16 fbHeight, char c, int x, int y, u8 r, u
 		return;
 	}
 
+	if (c & 0x80) c = '?';  // Unicode chars
+
 	unsigned char* data = asciiData[(int)c];
 	for (int cy = 0; cy < 8; cy++) {
 		if (y + cy < 0 || y + cy >= fbHeight) {
@@ -174,14 +176,15 @@ void uiDrawString(u8* fb, u16 fbWidth, u16 fbHeight, const char* string, int x, 
 	}
 }
 
-#define FILENAMEBUFFER_SIZE (1024 * 8)  // 8kb
+#define FILENAMEBUFFER_SIZE (1024 * 20)  // 20kb
+#define FILENAMES_COUNT_MAX 1024
 
 static UIState uiState = stateFileselect;
 static char* filenameBuffer = NULL;
-static char* filenames[256];
+static char* filenames[FILENAMES_COUNT_MAX];
 static int filenamesCount = 0;
 
-static char statusMessage[1024];
+static char statusMessage[FILENAMES_COUNT_MAX];
 static int statusMessageFadeout = 0;
 
 static char selectedPath[PATH_LENGTH] = {'\0'};
@@ -193,13 +196,14 @@ void uiStatusMsg(const char* format, ...) {
 	statusMessageFadeout = 240;
 	va_list args;
 	va_start(args, format);
-	vsprintf(statusMessage, format, args);
+	vsnprintf(statusMessage, sizeof(statusMessage) / sizeof(char), format, args);
 	va_end(args);
 
 	printf("Status message %s\n", statusMessage);
 }
 
 static void enterDirectory() {
+	filenamesCount = FILENAMES_COUNT_MAX;
 	getDirectoryContents(filenameBuffer, &filenames[0], &filenamesCount, currentDirectory, "gba");
 	cursor = 0;
 	scroll = 0;
@@ -219,13 +223,13 @@ static void enterPauseMenu() {
 
 void uiInit() {
 	filenameBuffer = (char*)malloc(FILENAMEBUFFER_SIZE);
-	strcpy(currentDirectory, "");
+	strncpy(currentDirectory, "", PATH_LENGTH);
 	enterDirectory();
 }
 
 void uiDeinit() { free(filenameBuffer); }
 
-void uiGetSelectedFile(char* out) { strcpy(out, selectedPath); }
+void uiGetSelectedFile(char* out, int outLength) { strncpy(out, selectedPath, outLength); }
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 	if (statusMessageFadeout > 0) {
@@ -254,10 +258,10 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 					snprintf(path, PATH_LENGTH, "%s/%s", currentDirectory, filenames[cursor]);
 
 				if (isDirectory(path)) {
-					strcpy(currentDirectory, path);
+					strncpy(currentDirectory, path, PATH_LENGTH);
 					enterDirectory();
 				} else {
-					strcpy(selectedPath, path);
+					strncpy(selectedPath, path, PATH_LENGTH);
 					return resultSelectedFile;
 				}
 			} else {
