@@ -577,6 +577,8 @@ int main(int argc, char *argv[]) {
 	threadCreate(&mainThread, threadFunc, NULL, 0x4000, 0x30, 0);
 	threadStart(&mainThread);
 
+	char saveFilename[PATH_LENGTH];
+
 	while (appletMainLoop() && running) {
 		u32 currentFBWidth, currentFBHeight;
 		u8 *currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
@@ -666,8 +668,11 @@ int main(int argc, char *argv[]) {
 			mutexLock(&emulationLock);
 
 			uiSetState(stateRunning);
+
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
-			retro_load_game();
+      romPathWithExt(saveFilename, "sav");
+
+      retro_load_game();
 
 			SetFrameskip(frameSkipValues[frameSkip]);
 
@@ -698,7 +703,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		mutexUnlock(&videoLock);
-
+		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
+			mutexLock(&emulationLock);
+			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
+			mutexUnlock(&emulationLock);
+		}
+		
 		gfxFlushBuffers();
 		gfxSwapBuffers();
 		gfxWaitForVsync();

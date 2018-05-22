@@ -153,6 +153,8 @@ int flashDeviceID = 0x1b;
 int flashManufacturerID = 0x32;
 int flashBank = 0;
 
+int autosaveCountdown = 0;
+
 static variable_desc flashSaveData3[] = {
   { &flashState, sizeof(int) },
   { &flashReadState, sizeof(int) },
@@ -243,11 +245,15 @@ void flashDelayedWrite(uint32_t address, uint8_t byte)
 {
   saveType = 2;
   cpuSaveGameFunc = flashWrite;
+  autosaveCountdown = BAT_UNUSED_FRAMES_BEFORE_SAVE;
   flashWrite(address, byte);
 }
 
 void flashWrite(uint32_t address, uint8_t byte)
 {
+	if(cpuSaveGameFunc == flashWrite)
+		autosaveCountdown = BAT_UNUSED_FRAMES_BEFORE_SAVE;
+
 	address &= 0xFFFF;
 	switch(flashState) {
 		case FLASH_READ_ARRAY:
@@ -439,6 +445,9 @@ void eepromWrite(u8 value)
 {
 	if(cpuDmaCount == 0)
 		return;
+	if(eepromInUse)
+		autosaveCountdown = BAT_UNUSED_FRAMES_BEFORE_SAVE;
+
 	int bit = value & 1;
 	switch(eepromMode) {
 		case EEPROM_IDLE:
@@ -480,6 +489,7 @@ void eepromWrite(u8 value)
 						eepromBits = 1;
 						eepromByte = 0;
 						eepromMode = EEPROM_WRITEDATA;
+					
 					} else {
 						eepromMode = EEPROM_READDATA;
 						eepromByte = 0;
@@ -534,6 +544,8 @@ void sramDelayedWrite(u32 address, u8 byte)
 
 void sramWrite(u32 address, u8 byte)
 {
+	if(cpuSaveGameFunc == sramWrite)
+		autosaveCountdown = BAT_UNUSED_FRAMES_BEFORE_SAVE;
 	flashSaveMemory[address & 0xFFFF] = byte;
 }
 
