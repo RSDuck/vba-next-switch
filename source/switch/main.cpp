@@ -680,12 +680,10 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		mutexUnlock(&videoLock);
-		if (emulationRunning && !emulationPaused) {
-			if(--autosaveCountdown == 0) {
-				mutexLock(&emulationLock);
-				if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
-				mutexUnlock(&emulationLock);
-			}
+		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
+			mutexLock(&emulationLock);
+			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
+			mutexUnlock(&emulationLock);
 		}
 		
 		gfxFlushBuffers();
