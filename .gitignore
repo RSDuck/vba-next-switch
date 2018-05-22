@@ -19,3 +19,5 @@ package.json
 *.nro
 *.nso
 *.pfs0
+
+build

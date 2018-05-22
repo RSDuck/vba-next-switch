@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <malloc.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,10 +42,19 @@ static bool running = true;
 char filename_bios[0x100] = {0};
 
 #define AUDIO_SAMPLERATE 48000
-#define AUDIO_BUFFER_COUNT 5
+#define AUDIO_BUFFER_COUNT 6
 #define AUDIO_BUFFER_SAMPLES (AUDIO_SAMPLERATE / 20)
 
 static u32 audioBufferSize;
+
+/*typedef struct {
+	bool enqueued;
+	AudioOutBuffer buffer;
+} QueueAudioBuffer;
+
+static QueueAudioBuffer audioBuffer[AUDIO_BUFFER_COUNT];
+static QueueAudioBuffer *audioBufferQueue[AUDIO_BUFFER_COUNT];
+static int audioBufferQueueNext = 0;*/
 
 static AudioOutBuffer audioBuffer[AUDIO_BUFFER_COUNT];
 
@@ -281,13 +291,6 @@ static void load_image_preferences(void) {
 	printf("mirroringEnable = %d.\n", mirroringEnable);
 }
 
-#define VIDEO_TOTAL_LENGTH 280896
-#define GBA_ARM7TDMI_FREQUENCY 0x1000000U
-
-float GBAAudioCalculateRatio(float inputSampleRate, float desiredFPS, float desiredSampleRate) {
-	return desiredSampleRate * GBA_ARM7TDMI_FREQUENCY / (VIDEO_TOTAL_LENGTH * desiredFPS * inputSampleRate);
-}
-
 static void gba_init(void) {
 	cpuSaveType = 0;
 	flashSize = 0x10000;
@@ -302,8 +305,7 @@ static void gba_init(void) {
 
 	doMirroring(mirroringEnable);
 
-	// double ratio = GBAAudioCalculateRatio(1, 59.8260982880808, 1);
-	soundSetSampleRate(AUDIO_SAMPLERATE + 100);
+	soundSetSampleRate(AUDIO_SAMPLERATE + 20);
 
 #if HAVE_HLE_BIOS
 	bool usebios = false;
@@ -414,16 +416,18 @@ void retro_unload_game(void) {
 }
 
 void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
-	AudioOutBuffer *outBuffer = NULL;
 	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
 		bool contains;
-		if (R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i], &contains)) && !contains) {
-			outBuffer = &audioBuffer[i];
+		if (/*!audioBuffer[i].enqueued && */R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i], &contains)) && !contains) {
+			AudioOutBuffer *outBuffer = &audioBuffer[i];
 			memcpy(outBuffer->buffer, finalWave, length * sizeof(u16));
 
 			outBuffer->data_size = length * sizeof(u16);
 
-			audoutAppendAudioOutBuffer(outBuffer);
+			/*audioBuffer[i].enqueued = true;
+
+			audioBufferQueue[audioBufferQueueNext++] = &audioBuffer[i];*/
+
 			break;
 		}
 	}
@@ -470,7 +474,9 @@ void systemMessage(const char *fmt, ...) {
 }
 
 void threadFunc(void *args) {
+	mutexLock(&emulationLock);
 	retro_init();
+	mutexUnlock(&emulationLock);
 	init_color_lut();
 
 	uiInit();
@@ -478,6 +484,7 @@ void threadFunc(void *args) {
 
 	while (running) {
 #define SECONDS_PER_TICKS (1.0 / 19200000)
+#define TARGET_FRAMETIME (1.0 / 59.8260982880808)
 		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
 		mutexLock(&emulationLock);
@@ -488,12 +495,28 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < 1.0 / 60.0) {
-			svcSleepThread((u64)((1.0 / 60.0 - (endTime - startTime)) * 1000000000) - 1000);
+		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & KEY_ZL)) {
+			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
 		}
+
+		/*int audioBuffersPlaying = 0;
+		for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
+			bool contained;
+			if (R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i].buffer, &contained))) audioBuffersPlaying += contained;
+		}
+		if ((audioBuffersPlaying == 0 && audioBufferQueueNext >= 2) || audioBuffersPlaying > 2) {
+			printf("audioBuffersPlaying %d\n", audioBuffersPlaying);
+			for (int i = 0; i < audioBufferQueueNext; i++) {
+				audioBufferQueue[i]->enqueued = false;
+				audoutAppendAudioOutBuffer(&audioBufferQueue[i]->buffer);
+			}
+			audioBufferQueueNext = 0;
+		}*/
 	}
 
+	mutexLock(&emulationLock);
 	retro_deinit();
+	mutexUnlock(&emulationLock);
 }
 
 int main(int argc, char *argv[]) {
@@ -508,11 +531,14 @@ int main(int argc, char *argv[]) {
 
 	audioBufferSize = (AUDIO_BUFFER_SAMPLES * 2 * sizeof(u16) + 0xfff) & ~0xfff;
 	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
-		audioBuffer[i].next = NULL;
-		audioBuffer[i].buffer = memalign(0x1000, audioBufferSize);
-		audioBuffer[i].buffer_size = audioBufferSize;
-		audioBuffer[i].data_size = 0;
-		audioBuffer[i].data_offset = 0;
+		AudioOutBuffer *buffer = &audioBuffer[i];
+		buffer->next = NULL;
+		buffer->buffer = memalign(0x1000, audioBufferSize);
+		buffer->buffer_size = audioBufferSize;
+		buffer->data_size = 0;
+		buffer->data_offset = 0;
+
+		//audioBuffer[i].enqueued = false;
 	}
 
 	audoutInitialize();
