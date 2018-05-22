@@ -44,19 +44,11 @@ char filename_bios[0x100] = {0};
 #define AUDIO_SAMPLERATE 48000
 #define AUDIO_BUFFER_COUNT 6
 #define AUDIO_BUFFER_SAMPLES (AUDIO_SAMPLERATE / 20)
+#define AUDIO_TRANSFERBUF_SIZE (AUDIO_BUFFER_SAMPLES * 4)
 
-static u32 audioBufferSize;
-
-/*typedef struct {
-	bool enqueued;
-	AudioOutBuffer buffer;
-} QueueAudioBuffer;
-
-static QueueAudioBuffer audioBuffer[AUDIO_BUFFER_COUNT];
-static QueueAudioBuffer *audioBufferQueue[AUDIO_BUFFER_COUNT];
-static int audioBufferQueueNext = 0;*/
-
-static AudioOutBuffer audioBuffer[AUDIO_BUFFER_COUNT];
+static int audioTransferBufferUsed = 0;
+static u32 *audioTransferBuffer;
+static Mutex audioLock;
 
 static unsigned libretro_save_size = sizeof(libretro_save_buf);
 
@@ -98,8 +90,8 @@ static void adjust_save_ram() {
 		flashSaveMemory = libretro_save_buf;
 }
 
-void romPathWithExt(char *out, const char *ext) {
-	strcpy(out, currentRomPath);
+void romPathWithExt(char *out, int outBufferLen, const char *ext) {
+	strncpy(out, currentRomPath, outBufferLen);
 	int dotLoc = strlen(out);
 	while (dotLoc >= 0 && out[dotLoc] != '.') dotLoc--;
 
@@ -305,7 +297,7 @@ static void gba_init(void) {
 
 	doMirroring(mirroringEnable);
 
-	soundSetSampleRate(AUDIO_SAMPLERATE + 20);
+	soundSetSampleRate(AUDIO_SAMPLERATE);
 
 #if HAVE_HLE_BIOS
 	bool usebios = false;
@@ -358,13 +350,19 @@ static const unsigned binds2[] = {RETRO_DEVICE_ID_JOYPAD_B,     RETRO_DEVICE_ID_
 				  RETRO_DEVICE_ID_JOYPAD_UP,    RETRO_DEVICE_ID_JOYPAD_DOWN,  RETRO_DEVICE_ID_JOYPAD_R,
 				  RETRO_DEVICE_ID_JOYPAD_L};*/
 
-static bool has_video_frame, has_audio_frame;
+static bool has_video_frame;
+static int audio_samples_written;
 
 void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
 	uiSetState(statePaused);
 	mutexUnlock(&emulationLock);
+
+	mutexLock(&audioLock);
+	memset(audioTransferBuffer, 0, AUDIO_TRANSFERBUF_SIZE * sizeof(u32));
+	audioTransferBufferUsed = AUDIO_TRANSFERBUF_SIZE;
+	mutexUnlock(&audioLock);
 }
 void unpause_emulation() {
 	mutexLock(&emulationLock);
@@ -382,11 +380,11 @@ void retro_run() {
 	mutexUnlock(&inputLock);
 
 	has_video_frame = false;
-	has_audio_frame = 0;
+	audio_samples_written = 0;
 	UpdateJoypad();
 	do {
 		CPULoop();
-	} while (!has_video_frame || !has_audio_frame);
+	} while (!has_video_frame);
 }
 
 bool retro_load_game() {
@@ -395,7 +393,7 @@ bool retro_load_game() {
 	gba_init();
 
 	char saveFileName[PATH_LENGTH];
-	romPathWithExt(saveFileName, "sav");
+	romPathWithExt(saveFileName, PATH_LENGTH, "sav");
 	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("loaded savefile %s", saveFileName);
 
 	return ret;
@@ -411,33 +409,62 @@ void retro_unload_game(void) {
 	g_video_frames = 0;
 
 	char saveFilename[PATH_LENGTH];
-	romPathWithExt(saveFilename, "sav");
+	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
 }
 
-void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
-	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
-		bool contains;
-		if (/*!audioBuffer[i].enqueued && */R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i], &contains)) && !contains) {
-			AudioOutBuffer *outBuffer = &audioBuffer[i];
-			memcpy(outBuffer->buffer, finalWave, length * sizeof(u16));
+void audio_thread_main(void *) {
+	AudioOutBuffer sources[2];
 
-			outBuffer->data_size = length * sizeof(u16);
+	u32 raw_data_size = (AUDIO_BUFFER_SAMPLES * sizeof(u32) + 0xfff) & ~0xfff;
+	u32 *raw_data[2];
+	for (int i = 0; i < 2; i++) {
+		raw_data[i] = (u32 *)memalign(0x1000, raw_data_size);
+		memset(raw_data[i], 0, raw_data_size);
 
-			/*audioBuffer[i].enqueued = true;
+		sources[i].next = 0;
+		sources[i].buffer = raw_data[i];
+		sources[i].buffer_size = raw_data_size;
+		sources[i].data_size = AUDIO_BUFFER_SAMPLES * sizeof(u32);
+		sources[i].data_offset = 0;
 
-			audioBufferQueue[audioBufferQueueNext++] = &audioBuffer[i];*/
-			audoutAppendAudioOutBuffer(&audioBuffer[i]);
-
-			break;
-		}
+		audoutAppendAudioOutBuffer(&sources[i]);
 	}
 
-	AudioOutBuffer *releasedBuffer[AUDIO_BUFFER_COUNT];
-	u32 releasedCount;
-	audoutGetReleasedAudioOutBuffer(&releasedBuffer[0], &releasedCount);
+	int offset = 0;
+	while (running) {
+		u32 count;
+		AudioOutBuffer *released;
+		audoutWaitPlayFinish(&released, &count, U64_MAX);
 
-	has_audio_frame = true;
+		mutexLock(&audioLock);
+
+		u32 size = (audioTransferBufferUsed < AUDIO_BUFFER_SAMPLES ? audioTransferBufferUsed : AUDIO_BUFFER_SAMPLES) * sizeof(u32);
+		memcpy(released->buffer, audioTransferBuffer, size);
+		released->data_size = size == 0 ? AUDIO_BUFFER_SAMPLES * sizeof(u32) : size;
+
+		audioTransferBufferUsed -= size / sizeof(u32);
+		memmove(audioTransferBuffer, audioTransferBuffer + (size / sizeof(u32)), audioTransferBufferUsed * sizeof(u32));
+
+		mutexUnlock(&audioLock);
+
+		audoutAppendAudioOutBuffer(released);
+	}
+	free(raw_data[0]);
+	free(raw_data[1]);
+}
+
+void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
+	mutexLock(&audioLock);
+	if (audioTransferBufferUsed + length >= AUDIO_TRANSFERBUF_SIZE) {
+		mutexUnlock(&audioLock);
+		return;
+	}
+
+	memcpy(audioTransferBuffer + audioTransferBufferUsed, finalWave, length * sizeof(s16));
+
+	audioTransferBufferUsed += length / 2;
+	mutexUnlock(&audioLock);
 
 	g_audio_frames += length / 2;
 }
@@ -530,20 +557,15 @@ int main(int argc, char *argv[]) {
 	gfxInitDefault();
 	gfxConfigureAutoResolutionDefault(true);
 
-	audioBufferSize = (AUDIO_BUFFER_SAMPLES * 2 * sizeof(u16) + 0xfff) & ~0xfff;
-	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) {
-		AudioOutBuffer *buffer = &audioBuffer[i];
-		buffer->next = NULL;
-		buffer->buffer = memalign(0x1000, audioBufferSize);
-		buffer->buffer_size = audioBufferSize;
-		buffer->data_size = 0;
-		buffer->data_offset = 0;
-
-		//audioBuffer[i].enqueued = false;
-	}
+	audioTransferBuffer = (u32 *)malloc(AUDIO_TRANSFERBUF_SIZE * sizeof(u32));
+	mutexInit(&audioLock);
 
 	audoutInitialize();
 	audoutStartAudioOut();
+
+	Thread audio_thread;
+	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 1);
+	threadStart(&audio_thread);
 
 	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
 	mutexInit(&videoLock);
@@ -593,7 +615,7 @@ int main(int argc, char *argv[]) {
 			case resultSaveState: {
 				mutexLock(&emulationLock);
 				char stateFilename[PATH_LENGTH];
-				romPathWithExt(stateFilename, "ram");
+				romPathWithExt(stateFilename, PATH_LENGTH, "ram");
 
 				u8 *buffer = (u8 *)malloc(serialize_size);
 
@@ -646,10 +668,11 @@ int main(int argc, char *argv[]) {
 			mutexLock(&emulationLock);
 
 			uiSetState(stateRunning);
-			uiGetSelectedFile(currentRomPath);
-			romPathWithExt(saveFilename, "sav");
 
-			retro_load_game();
+			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
+      romPathWithExt(saveFilename, "sav");
+
+      retro_load_game();
 
 			SetFrameskip(frameSkipValues[frameSkip]);
 
@@ -698,10 +721,13 @@ int main(int argc, char *argv[]) {
 
 	free(videoTransferBuffer);
 
-	for (int i = 0; i < AUDIO_BUFFER_COUNT; i++) free(audioBuffer[i].buffer);
+	threadWaitForExit(&audio_thread);
+	threadClose(&audio_thread);
 
 	audoutStopAudioOut();
 	audoutExit();
+
+	free(audioTransferBuffer);
 
 	gfxExit();
 

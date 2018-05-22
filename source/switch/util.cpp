@@ -30,20 +30,22 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
 	snprintf(slash, sizeof(slash), "%s/", directory);
 	DIR* dir = opendir(slash);
 
+	int maxFilenamesCount = *filenamesCount;
+
 	char* nextFilename = filenameBuffer;
 	*filenamesCount = 0;
 
 	addString(filenameBuffer, filenames, filenamesCount, &nextFilename, "..");
 
 	if (dir != NULL) {
-		for (int i = 0; i < 256; i++) {
+		for (int i = 0; i < maxFilenamesCount; i++) {
 			struct dirent* ent = readdir(dir);
 			if (ent == NULL) {
 				break;
 			}
 
 			char path[strlen(directory) + strlen(ent->d_name) + 2];
-			snprintf(path, strlen(directory) + strlen(ent->d_name) + 2, "%s/%s", directory, ent->d_name);
+			snprintf(path, sizeof(path) / sizeof(char), "%s/%s", directory, ent->d_name);
 			if (isDirectory(path)) {
 				addString(filenameBuffer, filenames, filenamesCount, &nextFilename, ent->d_name);
 			} else {
