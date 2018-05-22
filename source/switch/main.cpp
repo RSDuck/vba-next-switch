@@ -670,9 +670,9 @@ int main(int argc, char *argv[]) {
 			uiSetState(stateRunning);
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
-      romPathWithExt(saveFilename, "sav");
+			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 
-      retro_load_game();
+			retro_load_game();
 
 			SetFrameskip(frameSkipValues[frameSkip]);
 
@@ -708,7 +708,7 @@ int main(int argc, char *argv[]) {
 			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
 			mutexUnlock(&emulationLock);
 		}
-		
+
 		gfxFlushBuffers();
 		gfxSwapBuffers();
 		gfxWaitForVsync();
