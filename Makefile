@@ -46,7 +46,7 @@ ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -Ofast -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DNXLINK_STDIO -DTILED_RENDERING -DBRANCHLESS_GBA_GFX \
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DTILED_RENDERING -DBRANCHLESS_GBA_GFX \
 	-DUSE_FRAME_SKIP #-DTHREADED_RENDERER
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11

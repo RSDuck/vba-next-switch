@@ -427,6 +427,7 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
 			/*audioBuffer[i].enqueued = true;
 
 			audioBufferQueue[audioBufferQueueNext++] = &audioBuffer[i];*/
+			audoutAppendAudioOutBuffer(&audioBuffer[i]);
 
 			break;
 		}
