@@ -9,6 +9,8 @@
 #define EEPROM_READDATA2      3
 #define EEPROM_WRITEDATA      4
 
+#define BAT_UNUSED_FRAMES_BEFORE_SAVE 60
+
 enum {
 	IMAGE_UNKNOWN,
 	IMAGE_GBA
@@ -19,6 +21,8 @@ typedef struct {
 	void *address;
 	int size;
 } variable_desc;
+
+extern int autosaveCountdown;
 
 extern int flashSize;
 
