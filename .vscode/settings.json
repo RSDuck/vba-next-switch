@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "*.h": "c",
+        "*.inc": "z80-asm",
+        "*.asm": "z80-asm",
+        "*.cfg": "ini",
+        "*.shr": "glsl",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp",
+        "initializer_list": "cpp",
+        "type_traits": "cpp",
+        "iosfwd": "cpp"
+    }
+}
