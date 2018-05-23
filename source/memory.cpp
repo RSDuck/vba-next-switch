@@ -641,8 +641,6 @@ struct tm gba_time;
 
 static RTCCLOCKDATA rtcClockData;
 static bool rtcEnabled = true;
-// TODO: Is this right? <- Was false before but may just be a config that we can't set in this emulator
-// I don't see why anyone wouldn't want the clock though
 
 void SetGBATime()
 {
