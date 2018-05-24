@@ -30,7 +30,8 @@ static bool emulationPaused = false;
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
 static Mutex videoLock;
-static u16 *videoTransferBuffer;
+static u16 *videoTransferBuffer[2];
+static int videoTransferBackbuffer = 0;
 
 static Mutex inputLock;
 static u32 inputTransferKeysHeld;
@@ -487,7 +488,7 @@ void init_color_lut() {
 
 void systemDrawScreen() {
 	mutexLock(&videoLock);
-	memcpy(videoTransferBuffer, pix, sizeof(u16) * 256 * 160);
+	memcpy(videoTransferBuffer[videoTransferBackbuffer], pix, sizeof(u16) * 256 * 160);
 	mutexUnlock(&videoLock);
 
 	g_video_frames++;
@@ -567,7 +568,7 @@ int main(int argc, char *argv[]) {
 	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 1);
 	threadStart(&audio_thread);
 
-	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
+	for (int i = 0; i < 2; i++) videoTransferBuffer[i] = (u16 *)malloc(256 * 160 * sizeof(u16));
 	mutexInit(&videoLock);
 
 	mutexInit(&inputLock);
@@ -685,7 +686,12 @@ int main(int argc, char *argv[]) {
 		if (emulationRunning && !emulationPaused && keysDown & KEY_X) pause_emulation();
 
 		mutexLock(&videoLock);
+		int frontBuffer = videoTransferBackbuffer;
+		videoTransferBackbuffer ^= 1;
+		mutexUnlock(&videoLock);
+
 		if (emulationRunning && !emulationPaused) {
+			u16 *srcImage = videoTransferBuffer[frontBuffer];
 			unsigned scale = currentFBHeight / 160;
 			unsigned offsetX = currentFBWidth / 2 - (scale * 240) / 2;
 			unsigned offsetY = currentFBHeight / 2 - (scale * 160) / 2;
@@ -693,7 +699,7 @@ int main(int argc, char *argv[]) {
 				for (int x = 0; x < 240; x++) {
 					int idx0 = x * scale + offsetX + (y * scale + offsetY) * currentFBWidth;
 					int idx1 = (x + y * 256);
-					u32 val = bgr_555_to_rgb_888_table[videoTransferBuffer[idx1]];
+					u32 val = bgr_555_to_rgb_888_table[srcImage[idx1]];
 					for (unsigned j = 0; j < scale * currentFBWidth; j += currentFBWidth) {
 						for (unsigned i = 0; i < scale; i++) {
 							((u32 *)currentFB)[idx0 + i + j] = val;
@@ -702,7 +708,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-		mutexUnlock(&videoLock);
 		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
 			mutexLock(&emulationLock);
 			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
@@ -719,7 +724,7 @@ int main(int argc, char *argv[]) {
 
 	uiDeinit();
 
-	free(videoTransferBuffer);
+	for (int i = 0; i < 2; i++) free(videoTransferBuffer[i]);
 
 	threadWaitForExit(&audio_thread);
 	threadClose(&audio_thread);

@@ -10,6 +10,7 @@
         "xutility": "cpp",
         "initializer_list": "cpp",
         "type_traits": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "cmath": "cpp"
     }
 }
