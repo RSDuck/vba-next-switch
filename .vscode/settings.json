@@ -12,5 +12,11 @@
         "type_traits": "cpp",
         "iosfwd": "cpp",
         "cmath": "cpp"
-    }
+    },
+
+    "clang.completion.enable": true,
+    "clang.diagnostic.enable": true,
+    "clang.cxxflags": [
+        "-IC:\\devkitPro\\libnx\\include"
+    ]
 }

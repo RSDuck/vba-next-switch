@@ -14,24 +14,44 @@
 #include "../system.h"
 #include "../types.h"
 
+#include "util.h"
+#include "zoom.h"
+
 #include "ui.h"
 
 #include <switch.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
+
+enum { filterNearestInteger,
+       filterNearest,
+       filterBilinear,
+       filtersCount,
+};
+uint32_t scalingFilter = filterNearest;
+const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
 
 extern uint64_t joy;
 static bool can_dupe;
 unsigned device_type = 0;
 
+static u32 *upscaleBuffer = NULL;
+static int upscaleBufferSize = 0;
+
 static bool emulationRunning = false;
 static bool emulationPaused = false;
+
+static const char *stringsNoYes[] = {"No", "Yes"};
 
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
 static Mutex videoLock;
 static u16 *videoTransferBuffer[2];
 static int videoTransferBackbuffer = 0;
+static u32 *conversionBuffer;
 
 static Mutex inputLock;
 static u32 inputTransferKeysHeld;
@@ -56,7 +76,7 @@ static unsigned libretro_save_size = sizeof(libretro_save_buf);
 const char *frameSkipNames[] = {"No Frameskip", "1/3", "1/2", "1", "2", "3", "4"};
 const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
 
-static int frameSkip = 0;
+static uint32_t frameSkip = 0;
 
 int buttonMap[10] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L};
 
@@ -92,7 +112,7 @@ static void adjust_save_ram() {
 }
 
 void romPathWithExt(char *out, int outBufferLen, const char *ext) {
-	strncpy(out, currentRomPath, outBufferLen);
+	strcpy_safe(out, currentRomPath, outBufferLen);
 	int dotLoc = strlen(out);
 	while (dotLoc >= 0 && out[dotLoc] != '.') dotLoc--;
 
@@ -486,9 +506,17 @@ void init_color_lut() {
 	}
 }
 
+static inline u32 bbgr_555_to_rgb_888(u16 in) {
+	u8 r = (in >> 10) << 3;
+	u8 g = ((in >> 5) & 31) << 3;
+	u8 b = (in & 31) << 3;
+	return r | (g << 8) | (b << 16) | (255 << 24);
+}
+
 void systemDrawScreen() {
 	mutexLock(&videoLock);
-	memcpy(videoTransferBuffer[videoTransferBackbuffer], pix, sizeof(u16) * 256 * 160);
+	u16 *dstBuffer = videoTransferBuffer[videoTransferBackbuffer];
+	memcpy(dstBuffer, pix, sizeof(u16) * 256 * 160);
 	mutexUnlock(&videoLock);
 
 	g_video_frames++;
@@ -507,9 +535,6 @@ void threadFunc(void *args) {
 	retro_init();
 	mutexUnlock(&emulationLock);
 	init_color_lut();
-
-	uiInit();
-	uiSetState(stateFileselect);
 
 	while (running) {
 #define SECONDS_PER_TICKS (1.0 / 19200000)
@@ -554,6 +579,8 @@ int main(int argc, char *argv[]) {
 	nxlinkStdio();
 #endif
 
+	zoomInit(2048, 2048);
+
 	gfxInitResolutionDefault();
 	gfxInitDefault();
 	gfxConfigureAutoResolutionDefault(true);
@@ -565,22 +592,39 @@ int main(int argc, char *argv[]) {
 	audoutStartAudioOut();
 
 	Thread audio_thread;
-	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 1);
+	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 2);
 	threadStart(&audio_thread);
 
 	for (int i = 0; i < 2; i++) videoTransferBuffer[i] = (u16 *)malloc(256 * 160 * sizeof(u16));
+	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
 	mutexInit(&videoLock);
+
+	uint32_t showFrametime = 0;
+
+	uiInit();
+
+	uiAddSetting("Show avg. frametime", &showFrametime, 2, stringsNoYes);
+	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
+	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
+	uiFinaliseAndLoadSettings();
+
+	uiSetState(stateFileselect);
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
 
 	Thread mainThread;
-	threadCreate(&mainThread, threadFunc, NULL, 0x4000, 0x30, 0);
+	threadCreate(&mainThread, threadFunc, NULL, 0x4000, 0x30, 1);
 	threadStart(&mainThread);
 
 	char saveFilename[PATH_LENGTH];
 
+	double frameTimeSum = 0;
+	int frameTimeN = 0;
+
 	while (appletMainLoop() && running) {
+		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
+
 		u32 currentFBWidth, currentFBHeight;
 		u8 *currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
 		memset(currentFB, 0, sizeof(u32) * currentFBWidth * currentFBHeight);
@@ -593,8 +637,80 @@ int main(int argc, char *argv[]) {
 		inputTransferKeysHeld = keysHeld;
 		mutexUnlock(&inputLock);
 
+		mutexLock(&videoLock);
+		// mutexLock(&videoLock);
+		int frontBuffer = videoTransferBackbuffer;
+		videoTransferBackbuffer ^= 1;
+		mutexUnlock(&videoLock);
+
+		if (emulationRunning && !emulationPaused) {
+			u16 *srcImage16 = videoTransferBuffer[frontBuffer];
+			for (int i = 0; i < 256 * 160; i++) conversionBuffer[i] = bbgr_555_to_rgb_888(srcImage16[i]);
+
+			u32 *srcImage = conversionBuffer;
+
+			float scale = (float)currentFBHeight / 160.f;
+			int dstWidth = (int)(scale * 240.f);
+			int dstHeight = MIN(currentFBHeight, (int)(scale * 160.f));
+			int offsetX = currentFBWidth / 2 - dstWidth / 2;
+			if (scalingFilter == filterBilinear) {
+				int desiredSize = dstWidth * dstHeight * sizeof(u32);
+				if (upscaleBufferSize < desiredSize) {
+					upscaleBuffer = (u32 *)realloc(upscaleBuffer, desiredSize);
+					upscaleBufferSize = desiredSize;
+				}
+
+				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160,
+							   256 * sizeof(u32));
+
+				u32 *src = upscaleBuffer;
+				u32 *dst = ((u32 *)currentFB) + offsetX;
+				for (int i = 0; i < dstHeight; i++) {
+					memcpy(dst, src, dstWidth * sizeof(u32));
+					src += dstWidth;
+					dst += currentFBWidth;
+				}
+			} else if (scalingFilter == filterNearest) {
+				Surface srcSurface, dstSurface;
+				srcSurface.w = 240;
+				srcSurface.h = 160;
+				srcSurface.pixels = srcImage;
+				srcSurface.pitch = 256 * sizeof(u32);
+
+				dstSurface.w = (int)(scale * 240.f);
+				dstSurface.h = MIN(currentFBHeight, (int)(scale * 160.f));
+				dstSurface.pixels = ((u32 *)currentFB) + offsetX;
+				dstSurface.pitch = currentFBWidth * sizeof(u32);
+
+				zoomSurfaceRGBA(&srcSurface, &dstSurface, 0, 0, 0);
+			} else if (scalingFilter == filterNearestInteger) {
+				unsigned intScale = (unsigned)floor(scale);
+				unsigned offsetX = currentFBWidth / 2 - (intScale * 240) / 2;
+				unsigned offsetY = currentFBHeight / 2 - (intScale * 160) / 2;
+				for (int y = 0; y < 160; y++) {
+					for (int x = 0; x < 240; x++) {
+						int idx0 = x * intScale + offsetX + (y * intScale + offsetY) * currentFBWidth;
+						int idx1 = (x + y * 256);
+						u32 val = srcImage[idx1];
+						for (unsigned j = 0; j < intScale * currentFBWidth; j += currentFBWidth) {
+							for (unsigned i = 0; i < intScale; i++) {
+								((u32 *)currentFB)[idx0 + i + j] = val;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		bool actionStopEmulation = false;
 		bool actionStartEmulation = false;
+
+		if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
+			if (uiGetState() == stateSettings)
+				uiSetState(emulationRunning ? statePaused : stateFileselect);
+			else
+				uiSetState(stateSettings);
+		}
 
 		UIResult result;
 		switch ((result = uiLoop(currentFB, currentFBWidth, currentFBHeight, keysDown))) {
@@ -603,8 +719,12 @@ int main(int argc, char *argv[]) {
 				actionStartEmulation = true;
 				break;
 			case resultClose:
-				actionStopEmulation = true;
-				uiSetState(stateFileselect);
+				if (uiGetState() == statePaused) {
+					actionStopEmulation = true;
+					uiSetState(stateFileselect);
+				} else {
+					uiSetState(emulationRunning ? statePaused : stateFileselect);
+				}
 				break;
 			case resultExit:
 				actionStopEmulation = true;
@@ -646,13 +766,9 @@ int main(int argc, char *argv[]) {
 				free(buffer);
 				mutexUnlock(&emulationLock);
 			} break;
-			case resultIncFrameskip:
+			case resultSettingsChanged:
 				mutexLock(&emulationLock);
-				frameSkip = (frameSkip + 1) % (sizeof(frameSkipValues) / sizeof(frameSkipValues[0]));
-
-				uiStatusMsg("Changed frameskip to %s", frameSkipNames[frameSkip]);
 				SetFrameskip(frameSkipValues[frameSkip]);
-
 				mutexUnlock(&emulationLock);
 				break;
 			case resultNone:
@@ -685,33 +801,20 @@ int main(int argc, char *argv[]) {
 
 		if (emulationRunning && !emulationPaused && keysDown & KEY_X) pause_emulation();
 
-		mutexLock(&videoLock);
-		int frontBuffer = videoTransferBackbuffer;
-		videoTransferBackbuffer ^= 1;
-		mutexUnlock(&videoLock);
-
-		if (emulationRunning && !emulationPaused) {
-			u16 *srcImage = videoTransferBuffer[frontBuffer];
-			unsigned scale = currentFBHeight / 160;
-			unsigned offsetX = currentFBWidth / 2 - (scale * 240) / 2;
-			unsigned offsetY = currentFBHeight / 2 - (scale * 160) / 2;
-			for (int y = 0; y < 160; y++) {
-				for (int x = 0; x < 240; x++) {
-					int idx0 = x * scale + offsetX + (y * scale + offsetY) * currentFBWidth;
-					int idx1 = (x + y * 256);
-					u32 val = bgr_555_to_rgb_888_table[srcImage[idx1]];
-					for (unsigned j = 0; j < scale * currentFBWidth; j += currentFBWidth) {
-						for (unsigned i = 0; i < scale; i++) {
-							((u32 *)currentFB)[idx0 + i + j] = val;
-						}
-					}
-				}
-			}
-		}
 		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
 			mutexLock(&emulationLock);
 			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
 			mutexUnlock(&emulationLock);
+		}
+
+		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
+		frameTimeSum += endTime - startTime;
+
+		if (emulationRunning && !emulationPaused && showFrametime) {
+			char fpsBuffer[64];
+			snprintf(fpsBuffer, 64, "avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
+				 (endTime - startTime) * 1000.f);
+			uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 
 		gfxFlushBuffers();
@@ -724,6 +827,7 @@ int main(int argc, char *argv[]) {
 
 	uiDeinit();
 
+	free(conversionBuffer);
 	for (int i = 0; i < 2; i++) free(videoTransferBuffer[i]);
 
 	threadWaitForExit(&audio_thread);
@@ -735,6 +839,9 @@ int main(int argc, char *argv[]) {
 	free(audioTransferBuffer);
 
 	gfxExit();
+
+	zoomDeinit();
+	if (upscaleBuffer != NULL) free(upscaleBuffer);
 
 #ifdef NXLINK_STDIO
 	socketExit();

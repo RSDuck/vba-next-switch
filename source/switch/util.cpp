@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <stdio.h>
 #include <string.h>
 #include <sys/dirent.h>
-#include <algorithm>
 
 #include "util.h"
 
@@ -58,4 +58,13 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
 
 		closedir(dir);
 	}
+}
+
+void strcpy_safe(char* dst, const char* src, unsigned src_length) {
+	unsigned i = 0;
+	while (src[i] != '\0' && i < src_length - 2) {
+		dst[i] = src[i];
+		i++;
+	}
+	dst[i] = '\0';
 }

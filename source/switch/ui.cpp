@@ -3,9 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <vector>
 
 #include <switch.h>
+
+extern "C" {
+#include "ini/ini.h"
+}
 
 #include "../system.h"
 #include "../types.h"
@@ -176,8 +181,18 @@ void uiDrawString(u8* fb, u16 fbWidth, u16 fbHeight, const char* string, int x, 
 	}
 }
 
+struct Setting {
+	const char* name;
+	u32 valuesCount, *valueIdx;
+	const char** strValues;
+	char generatedString[256];
+	bool meta;
+};
+
 #define FILENAMEBUFFER_SIZE (1024 * 20)  // 20kb
 #define FILENAMES_COUNT_MAX 1024
+
+#define SETTINGS_MAX (128)
 
 static UIState uiState = stateFileselect;
 static char* filenameBuffer = NULL;
@@ -192,8 +207,28 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
+static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Exit"};
+
+static Setting* settings;
+static int settingsMetaStart = 0;
+static int settingsCount = 0;
+static char* settingStrings[SETTINGS_MAX];
+static bool settingsChanged = false;
+
+static const char* settingsPath = "vba-switch.ini";
+
+static void generateSettingString(int idx) {
+	Setting* setting = &settings[idx];
+	if (!setting->meta) {
+		snprintf(setting->generatedString, sizeof(setting->generatedString) - 1, "%s: %s", setting->name,
+			 setting->strValues[*setting->valueIdx]);
+	} else {
+		strcpy_safe(setting->generatedString, setting->name, sizeof(setting->generatedString));
+	}
+}
+
 void uiStatusMsg(const char* format, ...) {
-	statusMessageFadeout = 240;
+	statusMessageFadeout = 500;
 	va_list args;
 	va_start(args, format);
 	vsnprintf(statusMessage, sizeof(statusMessage) / sizeof(char), format, args);
@@ -205,31 +240,55 @@ void uiStatusMsg(const char* format, ...) {
 static void enterDirectory() {
 	filenamesCount = FILENAMES_COUNT_MAX;
 	getDirectoryContents(filenameBuffer, &filenames[0], &filenamesCount, currentDirectory, "gba");
-	cursor = 0;
-	scroll = 0;
-}
 
-static void enterPauseMenu() {
-	filenamesCount = 0;
-	char* nextFilename = filenameBuffer;
-	addString(filenameBuffer, filenames, &filenamesCount, &nextFilename, "Continue");
-	addString(filenameBuffer, filenames, &filenamesCount, &nextFilename, "Load Savestate");
-	addString(filenameBuffer, filenames, &filenamesCount, &nextFilename, "Write Savestate");
-	addString(filenameBuffer, filenames, &filenamesCount, &nextFilename, "Increase Frameskip");
-	addString(filenameBuffer, filenames, &filenamesCount, &nextFilename, "Exit");
 	cursor = 0;
 	scroll = 0;
 }
 
 void uiInit() {
 	filenameBuffer = (char*)malloc(FILENAMEBUFFER_SIZE);
-	strncpy(currentDirectory, "", PATH_LENGTH);
+	strcpy_safe(currentDirectory, "", PATH_LENGTH);
 	enterDirectory();
+
+	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
 }
 
-void uiDeinit() { free(filenameBuffer); }
+void uiDeinit() {
+	uiSaveSettings();
 
-void uiGetSelectedFile(char* out, int outLength) { strncpy(out, selectedPath, outLength); }
+	free(filenameBuffer);
+	free(settings);
+}
+
+void uiFinaliseAndLoadSettings() {
+	settingsMetaStart = settingsCount;
+
+	uiAddSetting("Exit", NULL, resultClose, NULL, true);
+
+	ini_t* cfg = ini_load(settingsPath);
+	if (cfg) {
+		for (int i = 0; i < settingsMetaStart; i++) {
+			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(i);
+		}
+
+		ini_free(cfg);
+	}
+}
+
+void uiSaveSettings() {
+	if (settingsChanged) {
+		FILE* f = fopen(settingsPath, "w");
+		if (f) {
+			fprintf(f, "[misc]\n");
+
+			for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
+
+			fclose(f);
+		}
+	}
+}
+
+void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 	if (statusMessageFadeout > 0) {
@@ -238,57 +297,29 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 		statusMessageFadeout -= 4;
 	}
 
-	if (uiState == stateFileselect || uiState == statePaused) {
-		if (keysDown & KEY_X) return resultExit;
-
-		if (keysDown & KEY_A) {
-			if (uiState == stateFileselect) {
-				char path[PATH_LENGTH] = {'\0'};
-
-				if (!strcmp(filenames[cursor], "..")) {
-					int length = strlen(currentDirectory);
-					for (int i = length - 1; i >= 0; i--) {
-						if (currentDirectory[i] == '/') {
-							strncpy(path, currentDirectory, i);
-							path[i] = '\0';
-							break;
-						}
-					}
-				} else
-					snprintf(path, PATH_LENGTH, "%s/%s", currentDirectory, filenames[cursor]);
-
-				if (isDirectory(path)) {
-					strncpy(currentDirectory, path, PATH_LENGTH);
-					enterDirectory();
-				} else {
-					strncpy(selectedPath, path, PATH_LENGTH);
-					return resultSelectedFile;
-				}
-			} else {
-				switch (cursor) {
-					case 0:
-						return resultUnpause;
-					case 1:
-						return resultLoadState;
-					case 2:
-						return resultSaveState;
-					case 3:
-						return resultIncFrameskip;
-					case 4:
-						return resultClose;
-				}
-			}
-		}
-
+	if (uiState != stateRunning) {
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
 		if (keysDown & KEY_UP) scrollAmount = -1;
 		if (keysDown & KEY_LEFT) scrollAmount = -5;
 		if (keysDown & KEY_RIGHT) scrollAmount = 5;
 
+		const char** menu = NULL;
+		int menuItemsCount;
+		if (uiState == stateSettings) {
+			menu = (const char**)settingStrings;
+			menuItemsCount = settingsCount;
+		} else if (uiState == statePaused) {
+			menu = pauseMenuItems;
+			menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
+		} else {
+			menu = (const char**)filenames;
+			menuItemsCount = filenamesCount;
+		}
+
 		if (scrollAmount > 0) {
 			for (int i = 0; i < scrollAmount; i++)
-				if (cursor < filenamesCount - 1) {
+				if (cursor < menuItemsCount - 1) {
 					cursor++;
 					if (cursor - scroll >= 60) {
 						scroll++;
@@ -305,29 +336,100 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 		}
 
 		int i = 0;
-		for (int j = scroll; j < filenamesCount; j++) {
+		for (int j = scroll; j < menuItemsCount; j++) {
 			u8 color = 255;
 			if (i + scroll == cursor) {
 				uiFill(fb, fbWidth, fbHeight, 0, i * 12, fbWidth / 2, 8, 255, 255, 255);
 				color = 0;
 			}
 
-			uiDrawString(fb, fbWidth, fbHeight, filenames[j], 0, i * 12, color, color, color);
+			uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 12, color, color, color);
 			i++;
 			if (i >= 60) {
 				break;
 			}
 		}
 
-		uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 12, 255, 255, 255);
+		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 12, 255, 255, 255);
+
+		if (keysDown & KEY_X) return resultExit;
+
+		if (keysDown & KEY_A || keysDown & KEY_B) {
+			if (uiState == stateFileselect) {
+				if (keysDown & KEY_B) cursor = 0;
+
+				char path[PATH_LENGTH] = {'\0'};
+
+				if (!strcmp(filenames[cursor], "..")) {
+					int length = strlen(currentDirectory);
+					for (int i = length - 1; i >= 0; i--) {
+						if (currentDirectory[i] == '/') {
+							strncpy(path, currentDirectory, i);
+							path[i] = '\0';
+							break;
+						}
+					}
+				} else
+					snprintf(path, PATH_LENGTH, "%s/%s", currentDirectory, filenames[cursor]);
+
+				if (isDirectory(path)) {
+					strcpy_safe(currentDirectory, path, PATH_LENGTH);
+					enterDirectory();
+				} else {
+					strcpy_safe(selectedPath, path, PATH_LENGTH);
+					return resultSelectedFile;
+				}
+			} else if (uiState == stateSettings) {
+				Setting* setting = &settings[cursor];
+
+				if (setting->meta) return (UIResult)setting->valuesCount;
+				*setting->valueIdx += (keysDown & KEY_A ? 1 : -1);
+				if (*setting->valueIdx == UINT32_MAX) *setting->valueIdx = setting->valuesCount - 1;
+				if (*setting->valueIdx >= setting->valuesCount) *setting->valueIdx = 0;
+
+				generateSettingString(cursor);
+
+				settingsChanged = true;
+
+				return resultSettingsChanged;
+			} else {
+				if (keysDown & KEY_B) return resultUnpause;
+
+				switch (cursor) {
+					case 0:
+						return resultUnpause;
+					case 1:
+						return resultLoadState;
+					case 2:
+						return resultSaveState;
+					case 3:
+						return resultClose;
+				}
+			}
+		}
 	}
 	return resultNone;
 }
 
 void uiSetState(UIState state) {
 	uiState = state;
-	if (state == statePaused)
-		enterPauseMenu();
-	else if (state == stateFileselect)
-		enterDirectory();
+
+	cursor = 0;
+	scroll = 0;
+}
+
+UIState uiGetState() { return uiState; }
+
+void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* strValues[], bool meta) {
+	settings[settingsCount].name = name;
+	settings[settingsCount].valueIdx = valueIdx;
+	settings[settingsCount].valuesCount = valuesCount;
+	settings[settingsCount].strValues = strValues;
+	settings[settingsCount].meta = meta;
+
+	settingStrings[settingsCount] = settings[settingsCount].generatedString;
+
+	generateSettingString(settingsCount);
+
+	settingsCount++;
 }

@@ -9,10 +9,11 @@ typedef enum {
 	resultNone,
 	resultLoadState,
 	resultSaveState,
-	resultIncFrameskip
+	resultSettingsChanged,
+	resultShowCredits
 } UIResult;
 
-typedef enum { stateRunning, stateFileselect, statePaused } UIState;
+typedef enum { stateRunning, stateFileselect, statePaused, stateSettings } UIState;
 
 #define PATH_LENGTH 512
 
@@ -23,6 +24,11 @@ void uiGetSelectedFile(char* out, int outLength);
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown);
 void uiSetState(UIState state);
+UIState uiGetState();
+
+void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* strValues[], bool meta = false);
+void uiFinaliseAndLoadSettings();
+void uiSaveSettings();
 
 void uiStatusMsg(const char* fmt, ...);
 
