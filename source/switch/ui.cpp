@@ -247,7 +247,7 @@ static void enterDirectory() {
 
 void uiInit() {
 	filenameBuffer = (char*)malloc(FILENAMEBUFFER_SIZE);
-	strcpy_safe(currentDirectory, "", PATH_LENGTH);
+	strcpy_safe(currentDirectory, "/switch/roms/gba/", PATH_LENGTH);
 	enterDirectory();
 
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
