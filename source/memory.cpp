@@ -637,8 +637,17 @@ typedef struct
 	u32 reserved3;
 } RTCCLOCKDATA;
 
+struct tm gba_time;
+
 static RTCCLOCKDATA rtcClockData;
-static bool rtcEnabled = false;
+static bool rtcEnabled = true;
+
+void SetGBATime()
+{
+    time_t long_time;
+    time(&long_time); /* Get time as long integer. */
+    gba_time = *localtime(&long_time); /* Convert to local time. */
+}
 
 void rtcEnable(bool e)
 {
@@ -676,135 +685,163 @@ static u8 toBCD(u8 value)
 	return h * 16 + l;
 };
 
-bool rtcWrite(u32 address, u16 value)
+
+bool rtcWrite(uint32_t address, uint16_t value)
 {
-	if(!rtcEnabled)
-		return false;
+    if (address == 0x80000c8) {
+        rtcClockData.byte2 = (uint8_t)value; // bit 0 = enable reading from 0x80000c4 c6 and c8
+    } else if (address == 0x80000c6) {
+        rtcClockData.byte1 = (uint8_t)value; // 0=read/1=write (for each of 4 low bits)
 
-	if(address == 0x80000c8)
-		rtcClockData.byte2 = (u8)value; // enable ?
-	else if(address == 0x80000c6)
-		rtcClockData.byte1 = (u8)value; // read/write
-	else if(address == 0x80000c4)
-	{
-		if(rtcClockData.byte2 & 1)
-		{
-			if(rtcClockData.state == IDLE && rtcClockData.byte0 == 1 && value == 5)
-			{
-				rtcClockData.state = COMMAND;
-				rtcClockData.bits = 0;
-				rtcClockData.command = 0;
-			}
-			else if(!(rtcClockData.byte0 & 1) && (value & 1))
-			{ // bit transfer
-				rtcClockData.byte0 = (u8)value;
-				switch(rtcClockData.state)
-				{
-					case COMMAND:
-						rtcClockData.command |= ((value & 2) >> 1) << (7-rtcClockData.bits);
-						rtcClockData.bits++;
-						if(rtcClockData.bits == 8)
-						{
-							rtcClockData.bits = 0;
-							switch(rtcClockData.command)
-							{
-								case 0x60:
-									// not sure what this command does but it doesn't take parameters
-									// maybe it is a reset or stop
-									rtcClockData.state = IDLE;
-									rtcClockData.bits = 0;
-									break;
-								case 0x62:
-									// this sets the control state but not sure what those values are
-									rtcClockData.state = READDATA;
-									rtcClockData.dataLen = 1;
-									break;
-								case 0x63:
-									rtcClockData.dataLen = 1;
-									rtcClockData.data[0] = 0x40;
-									rtcClockData.state = DATA;
-									break;
-								case 0x64:
-									break;
-								case 0x65:
-									{
-										struct tm *newtime;
-										time_t long_time;
+    } else if (address == 0x80000c4) // 4 bits of I/O Port Data (upper bits not used)
+    {
 
-										time( &long_time );                /* Get time as long integer. */
-										newtime = localtime( &long_time ); /* Convert to local time. */
+        // Boktai solar sensor
+        if (rtcClockData.byte1 == 0x07) {
+            if (value & 2) {
+                // reset counter to 0
+                rtcClockData.reserved[11] = 0;
+            }
 
-										rtcClockData.dataLen = 7;
-										rtcClockData.data[0] = toBCD(newtime->tm_year);
-										rtcClockData.data[1] = toBCD(newtime->tm_mon+1);
-										rtcClockData.data[2] = toBCD(newtime->tm_mday);
-										rtcClockData.data[3] = toBCD(newtime->tm_wday);
-										rtcClockData.data[4] = toBCD(newtime->tm_hour);
-										rtcClockData.data[5] = toBCD(newtime->tm_min);
-										rtcClockData.data[6] = toBCD(newtime->tm_sec);
-										rtcClockData.state = DATA;
-									}
-									break;
-								case 0x67:
-									{
-										struct tm *newtime;
-										time_t long_time;
+            if ((value & 1) && !(rtcClockData.reserved[10] & 1)) {
+                // increase counter, ready to do another read
+                if (rtcClockData.reserved[11] < 255) {
+                    rtcClockData.reserved[11]++;
+                } else {
+                    rtcClockData.reserved[11] = 0;
+                }
+            }
 
-										time( &long_time );                /* Get time as long integer. */
-										newtime = localtime( &long_time ); /* Convert to local time. */
+            rtcClockData.reserved[10] = value & rtcClockData.byte1;
+        }
 
-										rtcClockData.dataLen = 3;
-										rtcClockData.data[0] = toBCD(newtime->tm_hour);
-										rtcClockData.data[1] = toBCD(newtime->tm_min);
-										rtcClockData.data[2] = toBCD(newtime->tm_sec);
-										rtcClockData.state = DATA;
-									}
-									break;
-								default:
-									systemMessage(0, "Unknown RTC command %02x", rtcClockData.command);
-									rtcClockData.state = IDLE;
-									break;
-							}
-						}
-						break;
-					case DATA:
-						if(rtcClockData.byte1 & 2)
-						{
-						}
-						else
-						{
-							rtcClockData.byte0 = (rtcClockData.byte0 & ~2) |
-								((rtcClockData.data[rtcClockData.bits >> 3] >>
-								  (rtcClockData.bits & 7)) & 1)*2;
-							rtcClockData.bits++;
-							if(rtcClockData.bits == 8*rtcClockData.dataLen)
-							{
-								rtcClockData.bits = 0;
-								rtcClockData.state = IDLE;
-							}
-						}
-						break;
-					case READDATA:
-						if(!(rtcClockData.byte1 & 2)) {
-						} else {
-							rtcClockData.data[rtcClockData.bits >> 3] =
-								(rtcClockData.data[rtcClockData.bits >> 3] >> 1) |
-								((value << 6) & 128);
-							rtcClockData.bits++;
-							if(rtcClockData.bits == 8*rtcClockData.dataLen) {
-								rtcClockData.bits = 0;
-								rtcClockData.state = IDLE;
-							}
-						}
-						break;
-					default:
-						break;
-				}
-			} else
-				rtcClockData.byte0 = (u8)value;
-		}
-	}
-	return true;
+        // WarioWare Twisted rotation sensor
+        if (rtcClockData.byte1 == 0x0b) {
+            if (value & 2) {
+                // clock goes high in preperation for reading a bit
+                rtcClockData.reserved[11]--;
+            }
+
+            if (value & 1) {
+                // start ADC conversion
+                rtcClockData.reserved[11] = 15;
+            }
+
+            rtcClockData.byte0 = value & rtcClockData.byte1;
+        }
+
+        // Real Time Clock
+        if (rtcClockData.byte1 & 4) {
+            if (rtcClockData.state == IDLE && rtcClockData.byte0 == 1 && value == 5) {
+                rtcClockData.state = COMMAND;
+                rtcClockData.bits = 0;
+                rtcClockData.command = 0;
+            } else if (!(rtcClockData.byte0 & 1) && (value & 1)) // bit transfer
+            {
+                rtcClockData.byte0 = (uint8_t)value;
+
+                switch (rtcClockData.state) {
+                case COMMAND:
+                    rtcClockData.command |= ((value & 2) >> 1) << (7 - rtcClockData.bits);
+                    rtcClockData.bits++;
+
+                    if (rtcClockData.bits == 8) {
+                        rtcClockData.bits = 0;
+
+                        switch (rtcClockData.command) {
+                        case 0x60:
+                            // not sure what this command does but it doesn't take parameters
+                            // maybe it is a reset or stop
+                            rtcClockData.state = IDLE;
+                            rtcClockData.bits = 0;
+                            break;
+
+                        case 0x62:
+                            // this sets the control state but not sure what those values are
+                            rtcClockData.state = READDATA;
+                            rtcClockData.dataLen = 1;
+                            break;
+
+                        case 0x63:
+                            rtcClockData.dataLen = 1;
+                            rtcClockData.data[0] = 0x40;
+                            rtcClockData.state = DATA;
+                            break;
+
+                        case 0x64:
+                            break;
+
+                        case 0x65: {
+                            if (rtcEnabled)
+                                SetGBATime();
+
+                            rtcClockData.dataLen = 7;
+                            rtcClockData.data[0] = toBCD(gba_time.tm_year);
+                            rtcClockData.data[1] = toBCD(gba_time.tm_mon + 1);
+                            rtcClockData.data[2] = toBCD(gba_time.tm_mday);
+                            rtcClockData.data[3] = toBCD(gba_time.tm_wday);
+                            rtcClockData.data[4] = toBCD(gba_time.tm_hour);
+                            rtcClockData.data[5] = toBCD(gba_time.tm_min);
+                            rtcClockData.data[6] = toBCD(gba_time.tm_sec);
+                            rtcClockData.state = DATA;
+                        } break;
+
+                        case 0x67: {
+                            if (rtcEnabled)
+                                SetGBATime();
+
+                            rtcClockData.dataLen = 3;
+                            rtcClockData.data[0] = toBCD(gba_time.tm_hour);
+                            rtcClockData.data[1] = toBCD(gba_time.tm_min);
+                            rtcClockData.data[2] = toBCD(gba_time.tm_sec);
+                            rtcClockData.state = DATA;
+                        } break;
+
+                        default:
+                            rtcClockData.state = IDLE;
+                            break;
+                        }
+                    }
+
+                    break;
+
+                case DATA:
+                    if (rtcClockData.byte1 & 2) {
+                    } else if (rtcClockData.byte1 & 4) {
+                        rtcClockData.byte0 = (rtcClockData.byte0 & ~2) | ((rtcClockData.data[rtcClockData.bits >> 3] >> (rtcClockData.bits & 7)) & 1) * 2;
+                        rtcClockData.bits++;
+
+                        if (rtcClockData.bits == 8 * rtcClockData.dataLen) {
+                            rtcClockData.bits = 0;
+                            rtcClockData.state = IDLE;
+                        }
+                    }
+
+                    break;
+
+                case READDATA:
+                    if (!(rtcClockData.byte1 & 2)) {
+                    } else {
+                        rtcClockData.data[rtcClockData.bits >> 3] = (rtcClockData.data[rtcClockData.bits >> 3] >> 1) | ((value << 6) & 128);
+                        rtcClockData.bits++;
+
+                        if (rtcClockData.bits == 8 * rtcClockData.dataLen) {
+                            rtcClockData.bits = 0;
+                            rtcClockData.state = IDLE;
+                        }
+                    }
+
+                    break;
+
+                default:
+                    break;
+                }
+            } else
+                rtcClockData.byte0 = (uint8_t)value;
+        }
+    }
+
+    return true;
 }
 
 void rtcReset (void)
