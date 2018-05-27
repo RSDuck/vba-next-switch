@@ -38,6 +38,8 @@ extern uint64_t joy;
 static bool can_dupe;
 unsigned device_type = 0;
 
+static uint32_t disableAnalogStick = 0;
+
 static u32 *upscaleBuffer = NULL;
 static int upscaleBufferSize = 0;
 
@@ -78,7 +80,7 @@ const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
 
 static uint32_t frameSkip = 0;
 
-int buttonMap[10] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L};
+uint32_t buttonMap[10] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L};
 
 static bool scan_area(const uint8_t *data, unsigned size) {
 	for (unsigned i = 0; i < size; i++)
@@ -573,6 +575,24 @@ void threadFunc(void *args) {
 	mutexUnlock(&emulationLock);
 }
 
+static void applyConfig() {
+	mutexLock(&emulationLock);
+	SetFrameskip(frameSkipValues[frameSkip]);
+
+	if (!disableAnalogStick) {
+		buttonMap[4] = KEY_RIGHT;
+		buttonMap[5] = KEY_LEFT;
+		buttonMap[6] = KEY_UP;
+		buttonMap[7] = KEY_DOWN;
+	} else {
+		buttonMap[4] = KEY_DRIGHT;
+		buttonMap[5] = KEY_DLEFT;
+		buttonMap[6] = KEY_DUP;
+		buttonMap[7] = KEY_DDOWN;
+	}
+	mutexUnlock(&emulationLock);
+}
+
 int main(int argc, char *argv[]) {
 #ifdef NXLINK_STDIO
 	socketInitializeDefault();
@@ -606,7 +626,9 @@ int main(int argc, char *argv[]) {
 	uiAddSetting("Show avg. frametime", &showFrametime, 2, stringsNoYes);
 	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
+	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
 	uiFinaliseAndLoadSettings();
+	applyConfig();
 
 	uiSetState(stateFileselect);
 
@@ -767,9 +789,7 @@ int main(int argc, char *argv[]) {
 				mutexUnlock(&emulationLock);
 			} break;
 			case resultSettingsChanged:
-				mutexLock(&emulationLock);
-				SetFrameskip(frameSkipValues[frameSkip]);
-				mutexUnlock(&emulationLock);
+				applyConfig();
 				break;
 			case resultNone:
 			default:
