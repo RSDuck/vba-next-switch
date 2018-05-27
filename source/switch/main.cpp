@@ -381,6 +381,8 @@ void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
 	uiSetState(statePaused);
+	char saveFilename[PATH_LENGTH];
+	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote savefile %s", saveFilename);
 	mutexUnlock(&emulationLock);
 
