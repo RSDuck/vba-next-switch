@@ -39,6 +39,7 @@ static bool can_dupe;
 unsigned device_type = 0;
 
 static uint32_t disableAnalogStick = 0;
+static uint32_t switchRLButtons = 0;
 
 static u32 *upscaleBuffer = NULL;
 static int upscaleBufferSize = 0;
@@ -551,8 +552,12 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & KEY_ZL)) {
-			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
+		if (endTime - startTime < TARGET_FRAMETIME) {
+			if (switchRLButtons &&!(inputTransferKeysHeld & KEY_R)){
+				svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
+			} else if(!switchRLButtons && !(inputTransferKeysHeld & KEY_ZR)) {
+				svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
+			}
 		}
 
 		/*int audioBuffersPlaying = 0;
@@ -560,6 +565,7 @@ void threadFunc(void *args) {
 			bool contained;
 			if (R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i].buffer, &contained))) audioBuffersPlaying += contained;
 		}
+		
 		if ((audioBuffersPlaying == 0 && audioBufferQueueNext >= 2) || audioBuffersPlaying > 2) {
 			printf("audioBuffersPlaying %d\n", audioBuffersPlaying);
 			for (int i = 0; i < audioBufferQueueNext; i++) {
@@ -589,6 +595,14 @@ static void applyConfig() {
 		buttonMap[5] = KEY_DLEFT;
 		buttonMap[6] = KEY_DUP;
 		buttonMap[7] = KEY_DDOWN;
+	}
+
+	if (!switchRLButtons) {
+		buttonMap[8] = KEY_R;
+		buttonMap[9] = KEY_L;
+	} else {
+		buttonMap[8] = KEY_ZR;
+		buttonMap[9] = KEY_ZL;
 	}
 	mutexUnlock(&emulationLock);
 }
@@ -623,10 +637,11 @@ int main(int argc, char *argv[]) {
 
 	uiInit();
 
-	uiAddSetting("Show avg. frametime", &showFrametime, 2, stringsNoYes);
+	uiAddSetting("Show average frametime", &showFrametime, 2, stringsNoYes);
 	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
+	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
