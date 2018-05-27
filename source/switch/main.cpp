@@ -396,6 +396,7 @@ void unpause_emulation() {
 	emulationPaused = false;
 	uiSetState(stateRunning);
 	mutexUnlock(&emulationLock);
+	// TODO: Last button input in menu affects the game too.
 }
 
 void retro_run() {
@@ -421,7 +422,7 @@ bool retro_load_game() {
 
 	char saveFileName[PATH_LENGTH];
 	romPathWithExt(saveFileName, PATH_LENGTH, "sav");
-	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("loaded savefile %s", saveFileName);
+	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("Loaded savefile %s", saveFileName);
 
 	return ret;
 }
