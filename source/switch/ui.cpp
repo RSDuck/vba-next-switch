@@ -189,8 +189,8 @@ struct Setting {
 	bool meta;
 };
 
-#define FILENAMEBUFFER_SIZE (1024 * 20)  // 20kb
-#define FILENAMES_COUNT_MAX 1024
+#define FILENAMEBUFFER_SIZE (1024 * 32)  // 32kb
+#define FILENAMES_COUNT_MAX 2048
 
 #define SETTINGS_MAX (128)
 

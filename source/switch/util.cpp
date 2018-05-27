@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/dirent.h>
 
@@ -8,6 +9,8 @@
 struct alphabetize {
 	inline bool operator()(char* a, char* b) { return strcasecmp(a, b) < 0; }
 };
+
+static int sortAlpha(const void* a, const void* b) { return strcasecmp(*((const char**)a), *((const char**)b)); }
 
 bool isDirectory(char* path) {
 	DIR* dir = opendir(path);
@@ -58,6 +61,9 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
 
 		closedir(dir);
 	}
+
+	qsort(filenames + 1, (*filenamesCount) - 1,  // ".." should stay at the to
+	      sizeof(char*), &sortAlpha);
 }
 
 void strcpy_safe(char* dst, const char* src, unsigned src_length) {
