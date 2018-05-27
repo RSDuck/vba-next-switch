@@ -51,7 +51,7 @@ static const char *stringsNoYes[] = {"No", "Yes"};
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
 static Mutex videoLock;
-static u16 *videoTransferBuffer[2];
+static u16 *videoTransferBuffer;
 static int videoTransferBackbuffer = 0;
 static u32 *conversionBuffer;
 
@@ -517,8 +517,7 @@ static inline u32 bbgr_555_to_rgb_888(u16 in) {
 
 void systemDrawScreen() {
 	mutexLock(&videoLock);
-	u16 *dstBuffer = videoTransferBuffer[videoTransferBackbuffer];
-	memcpy(dstBuffer, pix, sizeof(u16) * 256 * 160);
+	memcpy(videoTransferBuffer, pix, sizeof(u16) * 256 * 160);
 	mutexUnlock(&videoLock);
 
 	g_video_frames++;
@@ -615,7 +614,7 @@ int main(int argc, char *argv[]) {
 	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 2);
 	threadStart(&audio_thread);
 
-	for (int i = 0; i < 2; i++) videoTransferBuffer[i] = (u16 *)malloc(256 * 160 * sizeof(u16));
+	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
 	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
 	mutexInit(&videoLock);
 
@@ -659,15 +658,10 @@ int main(int argc, char *argv[]) {
 		inputTransferKeysHeld = keysHeld;
 		mutexUnlock(&inputLock);
 
-		mutexLock(&videoLock);
-		// mutexLock(&videoLock);
-		int frontBuffer = videoTransferBackbuffer;
-		videoTransferBackbuffer ^= 1;
-		mutexUnlock(&videoLock);
-
 		if (emulationRunning && !emulationPaused) {
-			u16 *srcImage16 = videoTransferBuffer[frontBuffer];
-			for (int i = 0; i < 256 * 160; i++) conversionBuffer[i] = bbgr_555_to_rgb_888(srcImage16[i]);
+			mutexLock(&videoLock);
+
+			for (int i = 0; i < 256 * 160; i++) conversionBuffer[i] = bbgr_555_to_rgb_888(videoTransferBuffer[i]);
 
 			u32 *srcImage = conversionBuffer;
 
@@ -722,6 +716,8 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			}
+
+			mutexUnlock(&videoLock);
 		}
 
 		bool actionStopEmulation = false;
@@ -848,7 +844,7 @@ int main(int argc, char *argv[]) {
 	uiDeinit();
 
 	free(conversionBuffer);
-	for (int i = 0; i < 2; i++) free(videoTransferBuffer[i]);
+	free(videoTransferBuffer);
 
 	threadWaitForExit(&audio_thread);
 	threadClose(&audio_thread);
