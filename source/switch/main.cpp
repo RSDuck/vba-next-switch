@@ -565,7 +565,6 @@ void threadFunc(void *args) {
 			bool contained;
 			if (R_SUCCEEDED(audoutContainsAudioOutBuffer(&audioBuffer[i].buffer, &contained))) audioBuffersPlaying += contained;
 		}
-		
 		if ((audioBuffersPlaying == 0 && audioBufferQueueNext >= 2) || audioBuffersPlaying > 2) {
 			printf("audioBuffersPlaying %d\n", audioBuffersPlaying);
 			for (int i = 0; i < audioBufferQueueNext; i++) {
