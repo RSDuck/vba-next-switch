@@ -277,9 +277,9 @@ void uiFinaliseAndLoadSettings() {
 
 void uiSaveSettings() {
 	if (settingsChanged) {
-		FILE* f = fopen(settingsPath, "w");
+		FILE* f = fopen(settingsPath, "wt");
 		if (f) {
-			fprintf(f, "[misc]\n");
+			fprintf(f, "[Misc]\n");
 
 			for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
 
@@ -347,7 +347,7 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 		}
 
-		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 12, 255, 255, 255);
+		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 24, 255, 255, 255);
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -405,10 +405,10 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 		}
 	}
-	
+
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		uiDrawString(fb, fbWidth, fbHeight, statusMessage, 20, fbHeight - 40, fadeout, fadeout, fadeout);
+		uiDrawString(fb, fbWidth, fbHeight, statusMessage, 4, fbHeight - 12, fadeout, fadeout, fadeout);
 		statusMessageFadeout -= 4;
 	}
 
