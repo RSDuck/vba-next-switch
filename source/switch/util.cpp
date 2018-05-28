@@ -61,7 +61,9 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
 
 		closedir(dir);
 	}
-	qsort(filenames + 1, (*filenamesCount) - 1, sizeof(char*), &sortAlpha);
+
+	qsort(filenames + 1, (*filenamesCount) - 1,  // ".." should stay at the to
+	      sizeof(char*), &sortAlpha);
 }
 
 void strcpy_safe(char* dst, const char* src, unsigned src_length) {

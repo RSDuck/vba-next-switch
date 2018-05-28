@@ -629,9 +629,10 @@ int main(int argc, char *argv[]) {
 	threadCreate(&audio_thread, audio_thread_main, NULL, 0x10000, 0x2B, 2);
 	threadStart(&audio_thread);
 
-	videoTransferBuffer = (u16*)malloc(256 * 160 * sizeof(u16));
-	conversionBuffer = (u32*)malloc(256 * 160 * sizeof(u32));
-	mutexInit(&videoLock);
+	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
+	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
+
+  mutexInit(&videoLock);
 
 	uint32_t showFrametime = 0;
 
