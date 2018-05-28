@@ -653,10 +653,7 @@ int main(int argc, char *argv[]) {
 		hidScanInput();
 		u32 keysDown = hidKeysDown(CONTROLLER_P1_AUTO);
 		u32 keysHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
-
-		mutexLock(&inputLock);
-		inputTransferKeysHeld = keysHeld;
-		mutexUnlock(&inputLock);
+		u32 keysUp = hidKeysUp(CONTROLLER_P1_AUTO);
 
 		if (emulationRunning && !emulationPaused) {
 			mutexLock(&videoLock);
@@ -750,6 +747,7 @@ int main(int argc, char *argv[]) {
 				break;
 			case resultUnpause:
 				unpause_emulation();
+				keysDown = 0;
 			case resultLoadState:
 			case resultSaveState: {
 				mutexLock(&emulationLock);
@@ -791,6 +789,11 @@ int main(int argc, char *argv[]) {
 			default:
 				break;
 		}
+
+		mutexLock(&inputLock);
+		inputTransferKeysHeld |= keysDown;
+		inputTransferKeysHeld &= ~keysUp;
+		mutexUnlock(&inputLock);
 
 		if (actionStopEmulation && emulationRunning) {
 			mutexLock(&emulationLock);
