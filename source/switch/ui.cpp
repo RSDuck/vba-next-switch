@@ -277,9 +277,9 @@ void uiFinaliseAndLoadSettings() {
 
 void uiSaveSettings() {
 	if (settingsChanged) {
-		FILE* f = fopen(settingsPath, "w");
+		FILE* f = fopen(settingsPath, "wt");
 		if (f) {
-			fprintf(f, "[misc]\n");
+			fprintf(f, "[Misc]\n");
 
 			for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
 
@@ -291,12 +291,6 @@ void uiSaveSettings() {
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
-	if (statusMessageFadeout > 0) {
-		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		uiDrawString(fb, fbWidth, fbHeight, statusMessage, 20, fbHeight - 40, fadeout, fadeout, fadeout);
-		statusMessageFadeout -= 4;
-	}
-
 	if (uiState != stateRunning) {
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
@@ -335,22 +329,25 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 				}
 		}
 
+		uiFill(fb, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, 50, 50, 50);
+
 		int i = 0;
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u8 color = 255;
 			if (i + scroll == cursor) {
-				uiFill(fb, fbWidth, fbHeight, 0, i * 12, fbWidth / 2, 8, 255, 255, 255);
-				color = 0;
+				uiFill(fb, fbWidth, fbHeight, 0, i * 13, fbWidth / 2, 13, 33, 34, 39);
+				uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 13 + 2, 0, 255, 197);		
+			} else {
+				uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 13 + 2, color, color, color);
 			}
 
-			uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 12, color, color, color);
 			i++;
 			if (i >= 60) {
 				break;
 			}
 		}
 
-		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 12, 255, 255, 255);
+		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 24, 255, 255, 255);
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -408,6 +405,13 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 		}
 	}
+
+	if (statusMessageFadeout > 0) {
+		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
+		uiDrawString(fb, fbWidth, fbHeight, statusMessage, 4, fbHeight - 12, fadeout, fadeout, fadeout);
+		statusMessageFadeout -= 4;
+	}
+
 	return resultNone;
 }
 

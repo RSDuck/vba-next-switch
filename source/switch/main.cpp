@@ -39,6 +39,7 @@ static bool can_dupe;
 unsigned device_type = 0;
 
 static uint32_t disableAnalogStick = 0;
+static uint32_t switchRLButtons = 0;
 
 static u32 *upscaleBuffer = NULL;
 static int upscaleBufferSize = 0;
@@ -80,7 +81,7 @@ const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
 
 static uint32_t frameSkip = 0;
 
-uint32_t buttonMap[10] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L};
+uint32_t buttonMap[11] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L, KEY_ZR}; //Last element is speedhack button
 
 static bool scan_area(const uint8_t *data, unsigned size) {
 	for (unsigned i = 0; i < size; i++)
@@ -380,6 +381,9 @@ void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
 	uiSetState(statePaused);
+	char saveFilename[PATH_LENGTH];
+	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
+	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote save file.");
 	mutexUnlock(&emulationLock);
 
 	mutexLock(&audioLock);
@@ -392,6 +396,7 @@ void unpause_emulation() {
 	emulationPaused = false;
 	uiSetState(stateRunning);
 	mutexUnlock(&emulationLock);
+	// TODO: Last button input in menu affects the game too.
 }
 
 void retro_run() {
@@ -417,7 +422,7 @@ bool retro_load_game() {
 
 	char saveFileName[PATH_LENGTH];
 	romPathWithExt(saveFileName, PATH_LENGTH, "sav");
-	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("loaded savefile %s", saveFileName);
+	if (CPUReadBatteryFile(saveFileName)) uiStatusMsg("Loaded save file.");
 
 	return ret;
 }
@@ -433,7 +438,7 @@ void retro_unload_game(void) {
 
 	char saveFilename[PATH_LENGTH];
 	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
-	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
+	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote save file.");
 }
 
 void audio_thread_main(void *) {
@@ -550,7 +555,7 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & KEY_ZL)) {
+		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
 			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
 		}
 
@@ -589,6 +594,16 @@ static void applyConfig() {
 		buttonMap[6] = KEY_DUP;
 		buttonMap[7] = KEY_DDOWN;
 	}
+
+	if (!switchRLButtons) {
+		buttonMap[8] = KEY_R;
+		buttonMap[9] = KEY_L;
+		buttonMap[10] = KEY_ZR;
+	} else {
+		buttonMap[8] = KEY_ZR;
+		buttonMap[9] = KEY_ZL;
+		buttonMap[10] = KEY_R;
+	}
 	mutexUnlock(&emulationLock);
 }
 
@@ -616,16 +631,18 @@ int main(int argc, char *argv[]) {
 
 	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
 	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
-	mutexInit(&videoLock);
+
+  mutexInit(&videoLock);
 
 	uint32_t showFrametime = 0;
 
 	uiInit();
 
-	uiAddSetting("Show avg. frametime", &showFrametime, 2, stringsNoYes);
+	uiAddSetting("Show average frametime", &showFrametime, 2, stringsNoYes);
 	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
+	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
@@ -673,8 +690,7 @@ int main(int argc, char *argv[]) {
 					upscaleBufferSize = desiredSize;
 				}
 
-				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160,
-							   256 * sizeof(u32));
+				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160, 256 * sizeof(u32));
 
 				u32 *src = upscaleBuffer;
 				u32 *dst = ((u32 *)currentFB) + offsetX;
@@ -822,7 +838,7 @@ int main(int argc, char *argv[]) {
 
 		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
 			mutexLock(&emulationLock);
-			if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("wrote savefile %s", saveFilename);
+			CPUWriteBatteryFile(saveFilename);
 			mutexUnlock(&emulationLock);
 		}
 
@@ -831,8 +847,7 @@ int main(int argc, char *argv[]) {
 
 		if (emulationRunning && !emulationPaused && showFrametime) {
 			char fpsBuffer[64];
-			snprintf(fpsBuffer, 64, "avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
-				 (endTime - startTime) * 1000.f);
+			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f, (endTime - startTime) * 1000.f);
 			uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 

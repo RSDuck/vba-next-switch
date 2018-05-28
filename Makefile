@@ -36,6 +36,9 @@ SOURCES		:=	source source/switch/ini source/switch
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
+APP_TITLE	:=	VBA Next
+APP_AUTHOR	:=	RSDuck
+APP_VERSION	:=	0.5
 #ROMFS	:=	romfs
 
 #---------------------------------------------------------------------------------
