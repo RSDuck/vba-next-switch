@@ -615,6 +615,8 @@ int main(int argc, char *argv[]) {
 
 	zoomInit(2048, 2048);
 
+	romfsInit();
+
 	gfxInitResolutionDefault();
 	gfxInitDefault();
 	gfxConfigureAutoResolutionDefault(true);
@@ -873,6 +875,8 @@ int main(int argc, char *argv[]) {
 	free(audioTransferBuffer);
 
 	gfxExit();
+
+	romfsExit();
 
 	zoomDeinit();
 	if (upscaleBuffer != NULL) free(upscaleBuffer);

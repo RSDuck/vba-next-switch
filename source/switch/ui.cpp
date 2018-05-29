@@ -12,6 +12,8 @@ extern "C" {
 #include "ini/ini.h"
 }
 
+#include "image.h"
+
 #include "../system.h"
 #include "../types.h"
 #include "ui.h"
@@ -215,6 +217,8 @@ static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
 static bool settingsChanged = false;
 
+static Image magicarp;
+
 static const char* settingsPath = "vba-switch.ini";
 
 static void generateSettingString(int idx) {
@@ -251,9 +255,13 @@ void uiInit() {
 	enterDirectory();
 
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
+
+	imageLoad(&magicarp, "romfs:/karpador.png");
 }
 
 void uiDeinit() {
+	imageDeinit(&magicarp);
+
 	uiSaveSettings();
 
 	free(filenameBuffer);
@@ -336,7 +344,7 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			u8 color = 255;
 			if (i + scroll == cursor) {
 				uiFill(fb, fbWidth, fbHeight, 0, i * 13, fbWidth / 2, 13, 33, 34, 39);
-				uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 13 + 2, 0, 255, 197);		
+				uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 13 + 2, 0, 255, 197);
 			} else {
 				uiDrawString(fb, fbWidth, fbHeight, menu[j], 0, i * 13 + 2, color, color, color);
 			}
@@ -411,6 +419,8 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 		uiDrawString(fb, fbWidth, fbHeight, statusMessage, 4, fbHeight - 12, fadeout, fadeout, fadeout);
 		statusMessageFadeout -= 4;
 	}
+
+	imageDraw(fb, fbWidth, fbHeight, &magicarp, 0, 0);
 
 	return resultNone;
 }

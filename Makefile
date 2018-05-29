@@ -39,7 +39,7 @@ EXEFS_SRC	:=	exefs_src
 APP_TITLE	:=	VBA Next
 APP_AUTHOR	:=	RSDuck
 APP_VERSION	:=	0.5
-#ROMFS	:=	romfs
+ROMFS	:=	romfs
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -50,7 +50,7 @@ CFLAGS	:=	-g -Wall -Ofast -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DTILED_RENDERING -DBRANCHLESS_GBA_GFX \
-	-DUSE_FRAME_SKIP# -DNXLINK_STDIO#-DTHREADED_RENDERER
+	-DUSE_FRAME_SKIP -DNXLINK_STDIO#-DTHREADED_RENDERER
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
