@@ -81,7 +81,8 @@ const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
 
 static uint32_t frameSkip = 0;
 
-uint32_t buttonMap[11] = {KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L, KEY_ZR}; //Last element is speedhack button
+uint32_t buttonMap[11] = {KEY_A,  KEY_B,    KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT,
+			  KEY_UP, KEY_DOWN, KEY_R,     KEY_L,    KEY_ZR};  // Last element is speedhack button
 
 static bool scan_area(const uint8_t *data, unsigned size) {
 	for (unsigned i = 0; i < size; i++)
@@ -380,7 +381,7 @@ static int audio_samples_written;
 void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
-	uiSetState(statePaused);
+	uiPushState(statePaused);
 	char saveFilename[PATH_LENGTH];
 	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote save file.");
@@ -394,9 +395,8 @@ void pause_emulation() {
 void unpause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = false;
-	uiSetState(stateRunning);
+	uiPopState();
 	mutexUnlock(&emulationLock);
-	// TODO: Last button input in menu affects the game too.
 }
 
 void retro_run() {
@@ -634,7 +634,7 @@ int main(int argc, char *argv[]) {
 	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
 	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
 
-  mutexInit(&videoLock);
+	mutexInit(&videoLock);
 
 	uint32_t showFrametime = 0;
 
@@ -648,7 +648,7 @@ int main(int argc, char *argv[]) {
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
-	uiSetState(stateFileselect);
+	uiPushState(stateFileselect);
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
@@ -692,7 +692,8 @@ int main(int argc, char *argv[]) {
 					upscaleBufferSize = desiredSize;
 				}
 
-				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160, 256 * sizeof(u32));
+				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160,
+							   256 * sizeof(u32));
 
 				u32 *src = upscaleBuffer;
 				u32 *dst = ((u32 *)currentFB) + offsetX;
@@ -740,9 +741,9 @@ int main(int argc, char *argv[]) {
 
 		if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
 			if (uiGetState() == stateSettings)
-				uiSetState(emulationRunning ? statePaused : stateFileselect);
+				uiPopState();
 			else
-				uiSetState(stateSettings);
+				uiPushState(stateSettings);
 		}
 
 		UIResult result;
@@ -752,12 +753,8 @@ int main(int argc, char *argv[]) {
 				actionStartEmulation = true;
 				break;
 			case resultClose:
-				if (uiGetState() == statePaused) {
-					actionStopEmulation = true;
-					uiSetState(stateFileselect);
-				} else {
-					uiSetState(emulationRunning ? statePaused : stateFileselect);
-				}
+				uiPopState();
+				if (uiGetState() == stateRunning) uiPopState();
 				break;
 			case resultExit:
 				actionStopEmulation = true;
@@ -766,6 +763,7 @@ int main(int argc, char *argv[]) {
 			case resultUnpause:
 				unpause_emulation();
 				keysDown = 0;
+				break;
 			case resultLoadState:
 			case resultSaveState: {
 				mutexLock(&emulationLock);
@@ -821,7 +819,7 @@ int main(int argc, char *argv[]) {
 		if (actionStartEmulation) {
 			mutexLock(&emulationLock);
 
-			uiSetState(stateRunning);
+			uiPushState(stateRunning);
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
@@ -849,7 +847,8 @@ int main(int argc, char *argv[]) {
 
 		if (emulationRunning && !emulationPaused && showFrametime) {
 			char fpsBuffer[64];
-			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f, (endTime - startTime) * 1000.f);
+			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
+				 (endTime - startTime) * 1000.f);
 			uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 

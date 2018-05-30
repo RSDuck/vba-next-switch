@@ -47,7 +47,14 @@ void imageDraw(u8* fb, u16 fbWidth, u16 fbHeight, Image* image, int x, int y, in
         u8* fbLineStart = fbAddr;
 
 		for (int i = 0; i < imageWidth; i++) {
-			if (*(imageAddr + 3) == 255) *((u32*)fbAddr) = *((u32*)imageAddr);
+			u8 alpha = imageAddr[3];
+			u8 oneMinusAlpha = 255 - alpha;
+
+			fbAddr[0] = (imageAddr[0] * alpha) / 255 + (fbAddr[0] * oneMinusAlpha) / 255;
+			fbAddr[1] = (imageAddr[1] * alpha) / 255 + (fbAddr[1] * oneMinusAlpha) / 255;
+			fbAddr[2] = (imageAddr[2] * alpha) / 255 + (fbAddr[2] * oneMinusAlpha) / 255;
+			fbAddr[3] = 0xff;
+			
 			imageAddr += 4;
 			fbAddr += 4;
 		}

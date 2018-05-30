@@ -196,7 +196,6 @@ struct Setting {
 
 #define SETTINGS_MAX (128)
 
-static UIState uiState = stateFileselect;
 static char* filenameBuffer = NULL;
 static char* filenames[FILENAMES_COUNT_MAX];
 static int filenamesCount = 0;
@@ -217,7 +216,13 @@ static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
 static bool settingsChanged = false;
 
+#define UI_STATESTACK_MAX 4
+static UIState uiStateStack[UI_STATESTACK_MAX];
+static int uiStateStackCount = 0;
+
 static Image magicarp;
+
+static Image gbaImage;
 
 static const char* settingsPath = "vba-switch.ini";
 
@@ -257,10 +262,12 @@ void uiInit() {
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
 
 	imageLoad(&magicarp, "romfs:/karpador.png");
+	imageLoad(&gbaImage, "romfs:/gba.png");
 }
 
 void uiDeinit() {
 	imageDeinit(&magicarp);
+	imageDeinit(&gbaImage);
 
 	uiSaveSettings();
 
@@ -271,6 +278,7 @@ void uiDeinit() {
 void uiFinaliseAndLoadSettings() {
 	settingsMetaStart = settingsCount;
 
+	// uiAddSetting("Remap Buttons", NULL, result)
 	uiAddSetting("Exit", NULL, resultClose, NULL, true);
 
 	ini_t* cfg = ini_load(settingsPath);
@@ -299,7 +307,10 @@ void uiSaveSettings() {
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
 UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
-	if (uiState != stateRunning) {
+	UIState state = uiGetState();
+	if (state == stateRemapButtons) {
+		imageDraw(fb, fbWidth, fbHeight, &gbaImage, 0, 0);
+	} else if (uiGetState() != stateRunning) {
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
 		if (keysDown & KEY_UP) scrollAmount = -1;
@@ -308,10 +319,10 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 
 		const char** menu = NULL;
 		int menuItemsCount;
-		if (uiState == stateSettings) {
+		if (state == stateSettings) {
 			menu = (const char**)settingStrings;
 			menuItemsCount = settingsCount;
-		} else if (uiState == statePaused) {
+		} else if (state == statePaused) {
 			menu = pauseMenuItems;
 			menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
 		} else {
@@ -355,12 +366,12 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 		}
 
-		if (uiState == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 24, 255, 255, 255);
+		if (state == stateFileselect) uiDrawString(fb, fbWidth, fbHeight, currentDirectory, 4, fbHeight - 24, 255, 255, 255);
 
 		if (keysDown & KEY_X) return resultExit;
 
 		if (keysDown & KEY_A || keysDown & KEY_B) {
-			if (uiState == stateFileselect) {
+			if (state == stateFileselect) {
 				if (keysDown & KEY_B) cursor = 0;
 
 				char path[PATH_LENGTH] = {'\0'};
@@ -384,7 +395,7 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 					strcpy_safe(selectedPath, path, PATH_LENGTH);
 					return resultSelectedFile;
 				}
-			} else if (uiState == stateSettings) {
+			} else if (state == stateSettings) {
 				Setting* setting = &settings[cursor];
 
 				if (setting->meta) return (UIResult)setting->valuesCount;
@@ -425,14 +436,33 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 	return resultNone;
 }
 
-void uiSetState(UIState state) {
-	uiState = state;
+void uiPushState(UIState state) {
+	if (uiStateStackCount < UI_STATESTACK_MAX)
+		uiStateStack[uiStateStackCount++] = state;
+	else
+		printf("warning: push UI stack further than max\n");
 
 	cursor = 0;
 	scroll = 0;
 }
 
-UIState uiGetState() { return uiState; }
+void uiPopState() {
+	if (uiStateStackCount > 0)
+		uiStateStackCount--;
+	else
+		printf("warning: pop empty UI stack\n");
+
+	cursor = 0;
+	scroll = 0;
+}
+
+UIState uiGetState() {
+	if (uiStateStackCount == 0) {
+		printf("warning: uiGetState() for empty UI stack");
+		return stateFileselect;
+	}
+	return uiStateStack[uiStateStackCount - 1];
+}
 
 void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* strValues[], bool meta) {
 	settings[settingsCount].name = name;
