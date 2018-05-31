@@ -1,5 +1,7 @@
 #pragma once
 
+#include <switch/types.h>
+
 typedef enum {
     TITLES,
     CELLS

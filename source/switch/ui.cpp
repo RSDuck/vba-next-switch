@@ -224,7 +224,7 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 		drawRect(0, fbHeight, fbWidth, 70, MakeColor(50, 50, 50, 255));
 		drawRect((u32)((fbWidth - 1215) / 2), fbHeight - 70, 1215, 1, MakeColor(255, 255, 255, 255));
 
-		if (uiState == stateFileselect) drawText(font14, 60, fbHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
+		if (state == stateFileselect) drawText(font14, 60, fbHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
 
 		if (keysDown & KEY_X) return resultExit;
 
