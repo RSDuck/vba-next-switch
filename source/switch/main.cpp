@@ -512,7 +512,7 @@ int main(int argc, char *argv[]) {
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
 	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
-	uiAddSetting("Use dark theme?", &darkTheme, 2, stringsNoYes);
+	uiAddSetting("Use dark theme", &darkTheme, 2, stringsNoYes);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
@@ -607,12 +607,12 @@ int main(int argc, char *argv[]) {
 		bool actionStopEmulation = false;
 		bool actionStartEmulation = false;
 
-		if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
+		/*if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
 			if (uiGetState() == stateSettings)
 				uiPopState();
 			else
 				uiPushState(stateSettings);
-		}
+		}*/
 
 		UIResult result;
 		switch ((result = uiLoop(keysDown))) {
@@ -623,6 +623,13 @@ int main(int argc, char *argv[]) {
 			case resultClose:
 				uiPopState();
 				if (uiGetState() == stateRunning) uiPopState();
+				break;
+			case resultOpenSettings:
+				if (uiGetState() != stateRunning) {
+					uiPopState();
+					uiPushState(stateSettings);
+
+				}
 				break;
 			case resultExit:
 				actionStopEmulation = true;
@@ -668,8 +675,15 @@ int main(int argc, char *argv[]) {
 				free(buffer);
 				mutexUnlock(&emulationLock);
 			} break;
-			case resultSettingsChanged:
+			case resultSaveSettings:
 				applyConfig();
+				uiSaveSettings();
+				uiPopState();
+				uiPushState(statePaused);
+				break;
+			case resultCancelSettings:
+				uiPopState();
+				uiPushState(statePaused);
 				break;
 			case resultNone:
 			default:

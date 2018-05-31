@@ -22,14 +22,6 @@ extern "C" {
 #include "util.h"
 #include "colors.h"
 
-struct Setting {
-	const char* name;
-	u32 valuesCount, *valueIdx;
-	const char** strValues;
-	char generatedString[256];
-	bool meta;
-};
-
 #define FILENAMEBUFFER_SIZE (1024 * 32)  // 32kb
 #define FILENAMES_COUNT_MAX 2048
 
@@ -47,9 +39,10 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
-static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Exit"};
+static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
-static Setting* settings;
+Setting* settings;
+Setting* oldSettings;
 static int settingsMetaStart = 0;
 static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
@@ -124,7 +117,8 @@ void uiFinaliseAndLoadSettings() {
 	settingsMetaStart = settingsCount;
 
 	// uiAddSetting("Remap Buttons", NULL, result)
-	uiAddSetting("Exit", NULL, resultClose, NULL, true);
+	uiAddSetting("Save and return", NULL, resultSaveSettings, NULL, true);
+	uiAddSetting("Cancel", NULL, resultCancelSettings, NULL, true);
 
 	ini_t* cfg = ini_load(settingsPath);
 	if (cfg) {
@@ -206,7 +200,6 @@ UIResult uiLoop(u32 keysDown) {
 		}
 
 		for (int j = scroll; j < menuItemsCount; j++) {
-			u8 color = 255;
 			u32 h, w;
 			getTextDimensions(font16, menu[j], &w, &h);
 			u32 heightOffset = (40 - h) / 2;
@@ -278,7 +271,7 @@ UIResult uiLoop(u32 keysDown) {
 
 				settingsChanged = true;
 
-				return resultSettingsChanged;
+				return resultNone;
 			} else {
 				if (keysDown & KEY_B) return resultUnpause;
 
@@ -290,6 +283,8 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
+						return resultOpenSettings;
+					case 4:
 						return resultClose;
 				}
 			}
@@ -298,7 +293,6 @@ UIResult uiLoop(u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		u8 statusColor = !darkTheme ? 45 : 255;
 		drawText(font14, 60, currentFBHeight - 42, MakeColor(58, 225, 208, fadeout), statusMessage);
 		statusMessageFadeout -= 10;
 	}

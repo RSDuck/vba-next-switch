@@ -10,10 +10,24 @@ typedef enum {
 	resultLoadState,
 	resultSaveState,
 	resultSettingsChanged,
-	resultShowCredits
+	resultShowCredits,
+	resultOpenSettings,
+	resultSaveSettings,
+	resultCancelSettings
 } UIResult;
 
 typedef enum { stateRunning, stateFileselect, statePaused, stateSettings, stateRemapButtons } UIState;
+
+struct Setting {
+	const char* name;
+	u32 valuesCount, *valueIdx;
+	const char** strValues;
+	char generatedString[256];
+	bool meta;
+};
+
+extern Setting* settings;
+extern Setting* oldSettings;
 
 #define PATH_LENGTH 512
 
