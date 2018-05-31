@@ -177,7 +177,7 @@ UIResult uiLoop(u32 keysDown) {
 
 		drawRect(0, 0, currentFBWidth, currentFBHeight, !darkTheme ? SWWhiteBG : SWDarkGrey);
 
-		imageDraw(&logoSmall, 53, 21, 0, 0, 0);
+		imageDraw(&logoSmall, 52, 15, 0, 0, 0);
 
 		int i = 0;
 		int separator = 40;
@@ -298,7 +298,8 @@ UIResult uiLoop(u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, fadeout), statusMessage);
+		u8 statusColor = !darkTheme ? 45 : 255;
+		drawText(font14, 60, currentFBHeight - 42, MakeColor(58, 225, 208, fadeout), statusMessage);
 		statusMessageFadeout -= 10;
 	}
 
