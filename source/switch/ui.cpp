@@ -65,6 +65,8 @@ static Image magicarp;
 
 static Image gbaImage;
 
+static Image logoSmall;
+
 static const char* settingsPath = "vba-switch.ini";
 
 uint32_t darkTheme = 0;
@@ -104,11 +106,13 @@ void uiInit() {
 
 	imageLoad(&magicarp, "romfs:/karpador.png");
 	imageLoad(&gbaImage, "romfs:/gba.png");
+	imageLoad(&logoSmall, "romfs:/logoSmall.png");
 }
 
 void uiDeinit() {
 	imageDeinit(&magicarp);
 	imageDeinit(&gbaImage);
+	imageDeinit(&logoSmall);
 
 	uiSaveSettings();
 
@@ -172,6 +176,8 @@ UIResult uiLoop(u32 keysDown) {
 		}
 
 		drawRect(0, 0, currentFBWidth, currentFBHeight, !darkTheme ? SWWhiteBG : SWDarkGrey);
+
+		imageDraw(&logoSmall, 53, 21, 0, 0, 0);
 
 		int i = 0;
 		int separator = 40;
@@ -295,8 +301,6 @@ UIResult uiLoop(u32 keysDown) {
 		drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, fadeout), statusMessage);
 		statusMessageFadeout -= 10;
 	}
-
-	// imageDraw(fb, currentFBWidth, currentFBHeight, &magicarp, currentFBWidth - 60, currentFBHeight - 60);
 
 	return resultNone;
 }
