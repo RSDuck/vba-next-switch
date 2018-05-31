@@ -20,6 +20,7 @@ extern "C" {
 #include "../types.h"
 #include "ui.h"
 #include "util.h"
+#include "colors.h"
 
 struct Setting {
 	const char* name;
@@ -65,6 +66,8 @@ static Image magicarp;
 static Image gbaImage;
 
 static const char* settingsPath = "vba-switch.ini";
+
+uint32_t darkTheme = 0;
 
 static void generateSettingString(int idx) {
 	Setting* setting = &settings[idx];
@@ -168,7 +171,7 @@ UIResult uiLoop(u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
-		drawRect(0, 0, currentFBWidth, currentFBHeight, MakeColor(50, 50, 50, 255));
+		drawRect(0, 0, currentFBWidth, currentFBHeight, !darkTheme ? SWWhiteBG : SWDarkGrey);
 
 		int i = 0;
 		int separator = 40;
@@ -205,10 +208,10 @@ UIResult uiLoop(u32 keysDown) {
 			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) continue;
 
 			if (i + scroll == cursor) {
-				drawRect(0, i * separator + menuHSeparator, currentFBWidth / 1.25, separator, MakeColor(33, 34, 39, 255));
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(0, 255, 197, 255), menu[j]);
+				drawRect(0, i * separator + menuHSeparator, currentFBWidth / 1.25, separator, !darkTheme ? WHITE : SWOptionDarkHover);
+				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWOptionLightFocus : SWOptionDarkFocus, menu[j]);
 			} else {
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(color, color, color, 255),
+				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE,
 					 menu[j]);
 			}
 
@@ -224,12 +227,11 @@ UIResult uiLoop(u32 keysDown) {
 		char timeBuffer[64];
 		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour + 2, timeStruct->tm_min);
 
-		drawText(font24, currentFBWidth - 130, 45, MakeColor(255, 255, 255, 255), timeBuffer);
+		drawText(font24, currentFBWidth - 130, 45, !darkTheme ? SWDarkGrey : WHITE, timeBuffer);
 
-		drawRect(0, currentFBHeight, currentFBWidth, 70, MakeColor(50, 50, 50, 255));
-		drawRect((u32)((currentFBWidth - 1215) / 2), currentFBHeight - 70, 1215, 1, MakeColor(255, 255, 255, 255));
+		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, !darkTheme ? SWDarkGrey : WHITE);
 
-		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
+		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, !darkTheme ? SWDarkGrey : WHITE, currentDirectory);
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -290,8 +292,8 @@ UIResult uiLoop(u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		drawText(font14, 60, currentFBHeight - 20, MakeColor(255, 255, 255, fadeout), statusMessage);
-		statusMessageFadeout -= 4;
+		drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, fadeout), statusMessage);
+		statusMessageFadeout -= 10;
 	}
 
 	// imageDraw(fb, currentFBWidth, currentFBHeight, &magicarp, currentFBWidth - 60, currentFBHeight - 60);

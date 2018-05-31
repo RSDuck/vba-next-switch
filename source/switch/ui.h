@@ -31,6 +31,8 @@ void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* 
 void uiFinaliseAndLoadSettings();
 void uiSaveSettings();
 
+extern uint32_t darkTheme;
+
 void uiStatusMsg(const char* fmt, ...);
 
 #endif
