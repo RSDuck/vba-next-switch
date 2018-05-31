@@ -144,10 +144,10 @@ void uiSaveSettings() {
 
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
-UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
+UIResult uiLoop(u32 keysDown) {
 	UIState state = uiGetState();
 	if (state == stateRemapButtons) {
-		imageDraw(fb, fbWidth, fbHeight, &gbaImage, 0, 0);
+		//imageDraw(fb, currentFBWidth, currentFBHeight, &gbaImage, 0, 0);
 	} else if (uiGetState() != stateRunning) {
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
@@ -168,13 +168,13 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
-		drawRect(0, 0, fbWidth, fbHeight, MakeColor(50, 50, 50, 255));
+		drawRect(0, 0, currentFBWidth, currentFBHeight, MakeColor(50, 50, 50, 255));
 
 		int i = 0;
 		int separator = 40;
 		int menuHSeparator = 80;
 
-		rowsVisible = (fbHeight - 70 - menuHSeparator) / separator;
+		rowsVisible = (currentFBHeight - 70 - menuHSeparator) / separator;
 
 		if (scrollAmount > 0) {
 			for (int i = 0; i < scrollAmount; i++) {
@@ -202,10 +202,10 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			getTextDimensions(font16, menu[j], &w, &h);
 			u32 heightOffset = (40 - h) / 2;
 
-			if (i * separator + heightOffset + menuHSeparator > fbHeight - 85) continue;
+			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) continue;
 
 			if (i + scroll == cursor) {
-				drawRect(0, i * separator + menuHSeparator, fbWidth / 1.25, separator, MakeColor(33, 34, 39, 255));
+				drawRect(0, i * separator + menuHSeparator, currentFBWidth / 1.25, separator, MakeColor(33, 34, 39, 255));
 				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(0, 255, 197, 255), menu[j]);
 			} else {
 				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(color, color, color, 255),
@@ -224,12 +224,12 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 		char timeBuffer[64];
 		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour + 2, timeStruct->tm_min);
 
-		drawText(font24, fbWidth - 130, 45, MakeColor(255, 255, 255, 255), timeBuffer);
+		drawText(font24, currentFBWidth - 130, 45, MakeColor(255, 255, 255, 255), timeBuffer);
 
-		drawRect(0, fbHeight, fbWidth, 70, MakeColor(50, 50, 50, 255));
-		drawRect((u32)((fbWidth - 1215) / 2), fbHeight - 70, 1215, 1, MakeColor(255, 255, 255, 255));
+		drawRect(0, currentFBHeight, currentFBWidth, 70, MakeColor(50, 50, 50, 255));
+		drawRect((u32)((currentFBWidth - 1215) / 2), currentFBHeight - 70, 1215, 1, MakeColor(255, 255, 255, 255));
 
-		if (state == stateFileselect) drawText(font14, 60, fbHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
+		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -290,11 +290,11 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		drawText(font14, 60, fbHeight - 20, MakeColor(255, 255, 255, fadeout), statusMessage);
+		drawText(font14, 60, currentFBHeight - 20, MakeColor(255, 255, 255, fadeout), statusMessage);
 		statusMessageFadeout -= 4;
 	}
 
-	// imageDraw(fb, fbWidth, fbHeight, &magicarp, fbWidth - 60, fbHeight - 60);
+	// imageDraw(fb, currentFBWidth, currentFBHeight, &magicarp, currentFBWidth - 60, currentFBHeight - 60);
 
 	return resultNone;
 }

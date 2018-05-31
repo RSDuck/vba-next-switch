@@ -22,8 +22,9 @@
 #include "draw.h"
 #include "ui.h"
 
-u8 *framebuf;
-u32 framebuf_width;
+u8 *currentFB;
+u32 currentFBWidth;
+u32 currentFBHeight;
 
 #include <switch.h>
 
@@ -531,11 +532,8 @@ int main(int argc, char *argv[]) {
 	while (appletMainLoop() && running) {
 		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		u32 currentFBWidth, currentFBHeight;
-		u8 *currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
-		framebuf = currentFB;  // TODO make a global Frame Buffer
-		framebuf_width = currentFBWidth;
-		memset(currentFB, 0, sizeof(u32) * currentFBWidth * currentFBHeight);
+		currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
+		memset(currentFB, 0, 4 * currentFBWidth * currentFBHeight);
 
 		hidScanInput();
 		u32 keysDown = hidKeysDown(CONTROLLER_P1_AUTO);
@@ -616,7 +614,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		UIResult result;
-		switch ((result = uiLoop(currentFB, currentFBWidth, currentFBHeight, keysDown))) {
+		switch ((result = uiLoop(keysDown))) {
 			case resultSelectedFile:
 				actionStopEmulation = true;
 				actionStartEmulation = true;
@@ -722,6 +720,7 @@ int main(int argc, char *argv[]) {
 			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
 				 (endTime - startTime) * 1000.f);
       
+
 			//uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 

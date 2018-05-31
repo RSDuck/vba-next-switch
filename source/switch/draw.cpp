@@ -82,11 +82,13 @@ static void DrawGlyph(u32 x, u32 y, color_t clr, const glyph_t* glyph) {
 	const u8* data = glyph->data;
 	x += glyph->posX;
 	y -= glyph->posY;
+
 	for (u32 j = 0; j < glyph->height; j++) {
 		for (u32 i = 0; i < glyph->width; i++) {
-			clr.a = data[i];
-			if (!clr.a) continue;
-			DrawPixel(x + i, y + j, clr);
+			color_t modulatedColor = clr;
+			modulatedColor.a = ((u32)data[i] * (u32)clr.a) / 255;
+			if (!modulatedColor.a) continue;
+			DrawPixel(x + i, y + j, modulatedColor);
 		}
 		data += glyph->pitch;
 	}
@@ -250,28 +252,6 @@ void fontExit() {
 
 	if (s_font_libret == 0) {
 		FT_Done_FreeType(s_font_library);
-	}
-}
-
-void drawImage(int x, int y, int width, int height, const u8* image, ImageMode mode) {
-	int tmpx, tmpy;
-	int pos;
-	color_t current_color;
-
-	for (tmpy = 0; tmpy < height; tmpy++) {
-		for (tmpx = 0; tmpx < width; tmpx++) {
-			switch (mode) {
-				case IMAGE_MODE_RGB24:
-					pos = ((tmpy * width) + tmpx) * 3;
-					current_color = MakeColor(image[pos + 0], image[pos + 1], image[pos + 2], 255);
-					break;
-				case IMAGE_MODE_RGBA32:
-					pos = ((tmpy * width) + tmpx) * 4;
-					current_color = MakeColor(image[pos + 0], image[pos + 1], image[pos + 2], image[pos + 3]);
-					break;
-			}
-			DrawPixel(x + tmpx, y + tmpy, current_color);
-		}
 	}
 }
 

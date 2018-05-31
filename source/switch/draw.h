@@ -26,8 +26,9 @@
 #define font16 5
 #define font14 4
 
-extern u8* framebuf;
-extern u32 framebuf_width;
+extern u8* currentFB;
+extern u32 currentFBWidth;
+extern u32 currentFBHeight;
 
 // the following code is from nx-hbmenu
 // https://github.com/switchbrew/nx-hbmenu/blob/master/common/common.h#L63
@@ -48,14 +49,14 @@ static inline color_t MakeColor(u8 r, u8 g, u8 b, u8 a) {
 
 static inline void DrawPixel(u32 x, u32 y, color_t clr) {
 	if (x >= 1280 || y >= 720) return;
-	u32 off = (y * framebuf_width + x) * 4;
-	framebuf[off] = BlendColor(framebuf[off], clr.r, clr.a);
+	u32 off = (y * currentFBWidth + x) * 4;
+	currentFB[off] = BlendColor(currentFB[off], clr.r, clr.a);
 	off++;
-	framebuf[off] = BlendColor(framebuf[off], clr.g, clr.a);
+	currentFB[off] = BlendColor(currentFB[off], clr.g, clr.a);
 	off++;
-	framebuf[off] = BlendColor(framebuf[off], clr.b, clr.a);
+	currentFB[off] = BlendColor(currentFB[off], clr.b, clr.a);
 	off++;
-	framebuf[off] = 0xff;
+	currentFB[off] = 0xff;
 }
 
 static inline void Draw4PixelsRaw(u32 x, u32 y, color_t clr) {
@@ -63,8 +64,8 @@ static inline void Draw4PixelsRaw(u32 x, u32 y, color_t clr) {
 
 	u32 color = clr.r | (clr.g << 8) | (clr.b << 16) | (0xff << 24);
 	u128 val = color | ((u128)color << 32) | ((u128)color << 64) | ((u128)color << 96);
-	u32 off = (y * framebuf_width + x) * 4;
-	*((u128*)&framebuf[off]) = val;
+	u32 off = (y * currentFBWidth + x) * 4;
+	*((u128*)&currentFB[off]) = val;
 }
 
 Result textInit(void);
@@ -77,4 +78,3 @@ void drawPixel(u32 x, u32 y, color_t clr);
 void drawText(u32 font, u32 x, u32 y, color_t clr, const char* text);
 void drawTextTruncate(u32 font, u32 x, u32 y, color_t clr, const char* text, u32 max_width, const char* end_text);
 void getTextDimensions(u32 font, const char* text, u32* width_out, u32* height_out);
-void drawImage(int x, int y, int width, int height, const u8* image, ImageMode mode);

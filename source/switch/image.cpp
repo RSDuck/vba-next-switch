@@ -11,15 +11,15 @@ void imageLoad(Image* image, const char* filename) {
 
 void imageDeinit(Image* image) { stbi_image_free(image->data); }
 
-void imageDraw(u8* fb, u16 fbWidth, u16 fbHeight, Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight) {
-	if (fb == NULL) {
-		return;
-	}
+void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight) {
+	extern u8* currentFB;
+	extern u32 currentFBWidth;
+	extern u32 currentFBHeight;
 
 	if (imageWidth == 0) imageWidth = image->width;
 	if (imageHeight == 0) imageHeight = image->height;
 
-	if (x + imageWidth < 0 || y + imageHeight < 0 || x >= fbWidth || y >= fbHeight) {
+	if (x + imageWidth < 0 || y + imageHeight < 0 || x >= currentFBWidth || y >= currentFBHeight) {
 		return;
 	}
 
@@ -33,15 +33,15 @@ void imageDraw(u8* fb, u16 fbWidth, u16 fbHeight, Image* image, int x, int y, in
 		v -= x;
 	}
 
-	if (x + imageWidth >= fbWidth) {
-		imageWidth = fbWidth - x;
+	if (x + imageWidth >= currentFBWidth) {
+		imageWidth = currentFBWidth - x;
 	}
 
-	if (y + imageHeight >= fbHeight) {
-		imageHeight = fbHeight - y;
+	if (y + imageHeight >= currentFBHeight) {
+		imageHeight = currentFBHeight - y;
 	}
 
-	u8* fbAddr = fb + (x + y * fbWidth) * 4;
+	u8* fbAddr = currentFB + (x + y * currentFBWidth) * 4;
 	u8* imageAddr = image->data + (u + v * image->width) * 4;
 	for (int j = 0; j < imageHeight; j++) {
 		u8* fbLineStart = fbAddr;
@@ -54,11 +54,11 @@ void imageDraw(u8* fb, u16 fbWidth, u16 fbHeight, Image* image, int x, int y, in
 			fbAddr[1] = (imageAddr[1] * alpha) / 255 + (fbAddr[1] * oneMinusAlpha) / 255;
 			fbAddr[2] = (imageAddr[2] * alpha) / 255 + (fbAddr[2] * oneMinusAlpha) / 255;
 			fbAddr[3] = 0xff;
-			
+
 			imageAddr += 4;
 			fbAddr += 4;
 		}
 		imageAddr += u * 4;
-		fbAddr = fbLineStart + fbWidth * 4;
+		fbAddr = fbLineStart + currentFBWidth * 4;
 	}
 }
