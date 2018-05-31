@@ -58,6 +58,8 @@ static bool settingsChanged = false;
 static UIState uiStateStack[UI_STATESTACK_MAX];
 static int uiStateStackCount = 0;
 
+static int rowsVisible = 0;
+
 static Image magicarp;
 
 static Image gbaImage;
@@ -84,7 +86,7 @@ void uiStatusMsg(const char* format, ...) {
 
 static void enterDirectory() {
 	filenamesCount = FILENAMES_COUNT_MAX;
-	getDirectoryContents(filenameBuffer, &filenames[0], &filenamesCount, currentDirectory);
+	getDirectoryContents(filenameBuffer, &filenames[0], &filenamesCount, currentDirectory, "gba");
 
 	cursor = 0;
 	scroll = 0;
@@ -166,11 +168,19 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
+		drawRect(0, 0, fbWidth, fbHeight, MakeColor(50, 50, 50, 255));
+
+		int i = 0;
+		int separator = 40;
+		int menuHSeparator = 80;
+
+		rowsVisible = (fbHeight - 70 - menuHSeparator) / separator;
+
 		if (scrollAmount > 0) {
 			for (int i = 0; i < scrollAmount; i++) {
 				if (cursor < menuItemsCount - 1) {
 					cursor++;
-					if (cursor - scroll >= 60) {
+					if (cursor - scroll >= rowsVisible) {
 						scroll++;
 					}
 				}
@@ -186,11 +196,6 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 		}
 
-		drawRect(0, 0, fbWidth, fbHeight, MakeColor(50, 50, 50, 255));
-
-		int i = 0;
-		int separator = 40;
-		int menuHSeparator = 80;
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u8 color = 255;
 			u32 h, w;
@@ -208,7 +213,7 @@ UIResult uiLoop(u8* fb, u32 fbWidth, u32 fbHeight, u32 keysDown) {
 			}
 
 			i++;
-			if (i >= 60) break;
+			if (i >= rowsVisible) break;
 		}
 
 		u64 timestamp;

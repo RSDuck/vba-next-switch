@@ -1,13 +1,14 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
-#include <vector>
 #include <stdio.h>
+#include <vector>
+
 
 void addString(char* filenameBuffer, char** filenames, int* filenamesCount, char** nextFilename, const char* string);
 
 bool isDirectory(char* path);
-void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory);
+void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory, const char* extensionFilter);
 
 #include <string.h>
 
@@ -15,7 +16,7 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
     Usually I don't write comments to explain my functions, but since is a "safe" function,
     it's probably the best idea to do this "safe" thing from start to finish.
 
-    Why do I write such a long text? Because it's simply a bit frustrating that there's 
+    Why do I write such a long text? Because it's simply a bit frustrating that there's
     not such a function available in the standard library.
 
     Description:
