@@ -115,5 +115,4 @@ static const ini_t gbaover[256] = {
     {"Yoshi - Topsy-Turvy (USA)", "KYGE", 0, 1, 0, 0, 0},
     {"Yu-Gi-Oh! GX - Duel Academy (USA)", "BYGE", 0, 2, 0, 0, 1},
     {"Yu-Gi-Oh! - Ultimate Masters - 2006 (Europe)(En,Jp,Fr,De,Es,It)", "BY6P", 0, 2, 0, 0, 0},
-    {"Zoku Bokura no Taiyou - Taiyou Shounen Django (Japan)", "U32J", 0, 0, 1, 0, 0}
-};
+    {"Zoku Bokura no Taiyou - Taiyou Shounen Django (Japan)", "U32J", 0, 0, 1, 0, 0}};

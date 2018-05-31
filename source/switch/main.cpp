@@ -19,10 +19,10 @@
 #include "util.h"
 #include "zoom.h"
 
-#include "ui.h"
 #include "draw.h"
+#include "ui.h"
 
-u8* framebuf;
+u8 *framebuf;
 u32 framebuf_width;
 
 #include <switch.h>
@@ -34,20 +34,15 @@ u32 framebuf_width;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
-enum { 
-	filterNearestInteger,
+enum { filterNearestInteger,
 	filterNearest,
-    filterBilinear,
-    filtersCount,
+	filterBilinear,
+	filtersCount,
 };
 
 uint32_t scalingFilter = filterNearest;
 
-const char *filterStrNames[] = {
-	"Nearest Integer",
-	"Nearest Fullscreen",
-	"Bilinear Fullscreen(slow!)"
-};
+const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
 
 extern uint64_t joy;
 unsigned device_type = 0;
@@ -95,17 +90,8 @@ const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
 static uint32_t frameSkip = 0;
 
 uint32_t buttonMap[11] = {
-	KEY_A,
-	KEY_B,
-	KEY_MINUS,
-	KEY_PLUS,
-	KEY_RIGHT,
-	KEY_LEFT,
-	KEY_UP,
-	KEY_DOWN,
-	KEY_R,
-	KEY_L,
-	KEY_ZR //Speedhack Button
+    KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L,
+    KEY_ZR  // Speedhack Button
 };
 
 static bool has_video_frame;
@@ -123,38 +109,29 @@ static bool scan_area(const uint8_t *data, unsigned size) {
 	return false;
 }
 
-void systemMessage(const char *fmt, ...)
-{
+void systemMessage(const char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	va_end(ap);
 }
 
-static void adjust_save_ram()
-{
-	if (scan_area(libretro_save_buf, 512) && !scan_area(libretro_save_buf + 512, sizeof(libretro_save_buf) - 512))
-	{
+static void adjust_save_ram() {
+	if (scan_area(libretro_save_buf, 512) && !scan_area(libretro_save_buf + 512, sizeof(libretro_save_buf) - 512)) {
 		libretro_save_size = 512;
 		printf("Detecting EEprom 8kbit\n");
-	}
-	else if (scan_area(libretro_save_buf, 0x2000) && !scan_area(libretro_save_buf + 0x2000, sizeof(libretro_save_buf) - 0x2000))
-	{
+	} else if (scan_area(libretro_save_buf, 0x2000) && !scan_area(libretro_save_buf + 0x2000, sizeof(libretro_save_buf) - 0x2000)) {
 		libretro_save_size = 0x2000;
 		printf("Detecting EEprom 64kbit\n");
 	}
 
-	else if (scan_area(libretro_save_buf, 0x10000) && !scan_area(libretro_save_buf + 0x10000, sizeof(libretro_save_buf) - 0x10000))
-	{
+	else if (scan_area(libretro_save_buf, 0x10000) && !scan_area(libretro_save_buf + 0x10000, sizeof(libretro_save_buf) - 0x10000)) {
 		libretro_save_size = 0x10000;
 		printf("Detecting Flash 512kbit\n");
-	}
-	else if (scan_area(libretro_save_buf, 0x20000) && !scan_area(libretro_save_buf + 0x20000, sizeof(libretro_save_buf) - 0x20000))
-	{
+	} else if (scan_area(libretro_save_buf, 0x20000) && !scan_area(libretro_save_buf + 0x20000, sizeof(libretro_save_buf) - 0x20000)) {
 		libretro_save_size = 0x20000;
 		printf("Detecting Flash 1Mbit\n");
-	}
-	else
+	} else
 		printf("Did not detect any particular SRAM type.\n");
 
 	if (libretro_save_size == 512 || libretro_save_size == 0x2000)
@@ -163,8 +140,7 @@ static void adjust_save_ram()
 		flashSaveMemory = libretro_save_buf;
 }
 
-void romPathWithExt(char *out, int outBufferLen, const char *ext)
-{
+void romPathWithExt(char *out, int outBufferLen, const char *ext) {
 	strcpy_safe(out, currentRomPath, outBufferLen);
 	int dotLoc = strlen(out);
 	while (dotLoc >= 0 && out[dotLoc] != '.') dotLoc--;
@@ -173,8 +149,7 @@ void romPathWithExt(char *out, int outBufferLen, const char *ext)
 	for (int i = 0; i < extLen + 1; i++) out[dotLoc + 1 + i] = ext[i];
 }
 
-void retro_init(void)
-{
+void retro_init(void) {
 	memset(libretro_save_buf, 0xff, sizeof(libretro_save_buf));
 	adjust_save_ram();
 #if HAVE_HLE_BIOS
@@ -196,8 +171,7 @@ void retro_init(void)
 #endif
 }
 
-static void load_image_preferences(void)
-{
+static void load_image_preferences(void) {
 	char buffer[5];
 	buffer[0] = rom[0xac];
 	buffer[1] = rom[0xad];
@@ -208,19 +182,15 @@ static void load_image_preferences(void)
 	bool found = false;
 	int found_no = 0;
 
-	for (int i = 0; i < 256; i++)
-	{
-		if (!strcmp(gbaover[i].romid, buffer))
-		{
+	for (int i = 0; i < 256; i++) {
+		if (!strcmp(gbaover[i].romid, buffer)) {
 			found = true;
 			found_no = i;
 			break;
 		}
 	}
 
-	if (found)
-	{
-
+	if (found) {
 		enableRtc = gbaover[found_no].rtcEnabled;
 
 		if (gbaover[found_no].flashSize != 0)
@@ -234,8 +204,7 @@ static void load_image_preferences(void)
 	}
 }
 
-static void gba_init(void)
-{
+static void gba_init(void) {
 	cpuSaveType = 0;
 	flashSize = 0x10000;
 	enableRtc = false;
@@ -282,8 +251,7 @@ static void gba_init(void)
 	free(state_buf);
 }
 
-void retro_deinit(void)
-{
+void retro_deinit(void) {
 #if THREADED_RENDERER
 	ThreadedRendererStop();
 #endif
@@ -291,13 +259,9 @@ void retro_deinit(void)
 	CPUCleanUp();
 }
 
-void retro_reset(void)
-{
-	CPUReset();
-}
+void retro_reset(void) { CPUReset(); }
 
-void pause_emulation()
-{
+void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
 	uiSetState(statePaused);
@@ -312,8 +276,7 @@ void pause_emulation()
 	mutexUnlock(&audioLock);
 }
 
-void unpause_emulation()
-{
+void unpause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = false;
 	uiSetState(stateRunning);
@@ -321,8 +284,7 @@ void unpause_emulation()
 	// TODO: Last button input in menu affects the game too.
 }
 
-void retro_run()
-{
+void retro_run() {
 	mutexLock(&inputLock);
 	joy = 0;
 
@@ -335,15 +297,12 @@ void retro_run()
 	has_video_frame = false;
 	audio_samples_written = 0;
 	UpdateJoypad();
-	do
-	{
+	do {
 		CPULoop();
-	} 
-	while (!has_video_frame);
+	} while (!has_video_frame);
 }
 
-bool retro_load_game()
-{
+bool retro_load_game() {
 	int ret = CPULoadRom(currentRomPath);
 
 	gba_init();
@@ -355,8 +314,7 @@ bool retro_load_game()
 	return ret;
 }
 
-void retro_unload_game(void)
-{
+void retro_unload_game(void) {
 	printf("[VBA] Sync stats: Audio frames: %u, Video frames: %u, AF/VF: %.2f\n", g_audio_frames, g_video_frames,
 	       (float)g_audio_frames / g_video_frames);
 	g_audio_frames = 0;
@@ -367,14 +325,12 @@ void retro_unload_game(void)
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote save file.");
 }
 
-void audio_thread_main(void *)
-{
+void audio_thread_main(void *) {
 	AudioOutBuffer sources[2];
 
 	u32 raw_data_size = (AUDIO_BUFFER_SAMPLES * sizeof(u32) + 0xfff) & ~0xfff;
 	u32 *raw_data[2];
-	for (int i = 0; i < 2; i++)
-	{
+	for (int i = 0; i < 2; i++) {
 		raw_data[i] = (u32 *)memalign(0x1000, raw_data_size);
 		memset(raw_data[i], 0, raw_data_size);
 
@@ -387,8 +343,7 @@ void audio_thread_main(void *)
 		audoutAppendAudioOutBuffer(&sources[i]);
 	}
 
-	while (running)
-	{
+	while (running) {
 		u32 count;
 		AudioOutBuffer *released;
 		audoutWaitPlayFinish(&released, &count, U64_MAX);
@@ -411,11 +366,9 @@ void audio_thread_main(void *)
 	free(raw_data[1]);
 }
 
-void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
-{
+void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
 	mutexLock(&audioLock);
-	if (audioTransferBufferUsed + length >= AUDIO_TRANSFERBUF_SIZE)
-	{
+	if (audioTransferBufferUsed + length >= AUDIO_TRANSFERBUF_SIZE) {
 		mutexUnlock(&audioLock);
 		return;
 	}
@@ -428,8 +381,7 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length)
 	g_audio_frames += length / 2;
 }
 
-void systemDrawScreen()
-{
+void systemDrawScreen() {
 	mutexLock(&videoLock);
 	memcpy(videoTransferBuffer, pix, sizeof(u16) * 256 * 160);
 	mutexUnlock(&videoLock);
@@ -440,14 +392,10 @@ void systemDrawScreen()
 
 u32 bgr_555_to_rgb_888_table[32 * 32 * 32];
 
-void init_color_lut()
-{
-	for (u8 r5 = 0; r5 < 32; r5++)
-	{
-		for (u8 g5 = 0; g5 < 32; g5++)
-		{
-			for (u8 b5 = 0; b5 < 32; b5++)
-			{
+void init_color_lut() {
+	for (u8 r5 = 0; r5 < 32; r5++) {
+		for (u8 g5 = 0; g5 < 32; g5++) {
+			for (u8 b5 = 0; b5 < 32; b5++) {
 				u8 r8 = (u8)((r5 * 527 + 23) >> 6);
 				u8 g8 = (u8)((g5 * 527 + 23) >> 6);
 				u8 b8 = (u8)((b5 * 527 + 23) >> 6);
@@ -459,23 +407,20 @@ void init_color_lut()
 	}
 }
 
-static inline u32 bbgr_555_to_rgb_888(u16 in)
-{
+static inline u32 bbgr_555_to_rgb_888(u16 in) {
 	u8 r = (in >> 10) << 3;
 	u8 g = ((in >> 5) & 31) << 3;
 	u8 b = (in & 31) << 3;
 	return r | (g << 8) | (b << 16) | (255 << 24);
 }
 
-void threadFunc(void *args)
-{
+void threadFunc(void *args) {
 	mutexLock(&emulationLock);
 	retro_init();
 	mutexUnlock(&emulationLock);
 	init_color_lut();
 
-	while (running)
-	{
+	while (running) {
 		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
 		mutexLock(&emulationLock);
@@ -486,8 +431,7 @@ void threadFunc(void *args)
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10]))
-		{
+		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
 			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
 		}
 	}
@@ -497,33 +441,27 @@ void threadFunc(void *args)
 	mutexUnlock(&emulationLock);
 }
 
-static void applyConfig()
-{
+static void applyConfig() {
 	mutexLock(&emulationLock);
 	SetFrameskip(frameSkipValues[frameSkip]);
 
-	if (!disableAnalogStick)
-	{
+	if (!disableAnalogStick) {
 		buttonMap[4] = KEY_RIGHT;
 		buttonMap[5] = KEY_LEFT;
 		buttonMap[6] = KEY_UP;
 		buttonMap[7] = KEY_DOWN;
-	} else
-	{
+	} else {
 		buttonMap[4] = KEY_DRIGHT;
 		buttonMap[5] = KEY_DLEFT;
 		buttonMap[6] = KEY_DUP;
 		buttonMap[7] = KEY_DDOWN;
 	}
 
-	if (!switchRLButtons)
-	{
+	if (!switchRLButtons) {
 		buttonMap[8] = KEY_R;
 		buttonMap[9] = KEY_L;
 		buttonMap[10] = KEY_ZR;
-	}
-	else
-	{
+	} else {
 		buttonMap[8] = KEY_ZR;
 		buttonMap[9] = KEY_ZL;
 		buttonMap[10] = KEY_R;
@@ -531,8 +469,7 @@ static void applyConfig()
 	mutexUnlock(&emulationLock);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 #ifdef NXLINK_STDIO
 	socketInitializeDefault();
 	nxlinkStdio();
@@ -564,7 +501,7 @@ int main(int argc, char *argv[])
 	videoTransferBuffer = (u16 *)malloc(256 * 160 * sizeof(u16));
 	conversionBuffer = (u32 *)malloc(256 * 160 * sizeof(u32));
 
-  	mutexInit(&videoLock);
+	mutexInit(&videoLock);
 
 	uint32_t showFrametime = 0;
 
@@ -592,13 +529,12 @@ int main(int argc, char *argv[])
 	double frameTimeSum = 0;
 	int frameTimeN = 0;
 
-	while (appletMainLoop() && running)
-	{
+	while (appletMainLoop() && running) {
 		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
 		u32 currentFBWidth, currentFBHeight;
 		u8 *currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
-		framebuf = currentFB; //TODO make a global Frame Buffer
+		framebuf = currentFB;  // TODO make a global Frame Buffer
 		framebuf_width = currentFBWidth;
 		memset(currentFB, 0, sizeof(u32) * currentFBWidth * currentFBHeight);
 
@@ -606,8 +542,7 @@ int main(int argc, char *argv[])
 		u32 keysDown = hidKeysDown(CONTROLLER_P1_AUTO);
 		u32 keysUp = hidKeysUp(CONTROLLER_P1_AUTO);
 
-		if (emulationRunning && !emulationPaused)
-		{
+		if (emulationRunning && !emulationPaused) {
 			mutexLock(&videoLock);
 
 			for (int i = 0; i < 256 * 160; i++) conversionBuffer[i] = bbgr_555_to_rgb_888(videoTransferBuffer[i]);
@@ -618,30 +553,26 @@ int main(int argc, char *argv[])
 			int dstWidth = (int)(scale * 240.f);
 			int dstHeight = MIN(currentFBHeight, (u32)(scale * 160.f));
 			int offsetX = currentFBWidth / 2 - dstWidth / 2;
-			
-			if (scalingFilter == filterBilinear)
-			{
+
+			if (scalingFilter == filterBilinear) {
 				int desiredSize = dstWidth * dstHeight * sizeof(u32);
-				
-				if (upscaleBufferSize < desiredSize)
-				{
+
+				if (upscaleBufferSize < desiredSize) {
 					upscaleBuffer = (u32 *)realloc(upscaleBuffer, desiredSize);
 					upscaleBufferSize = desiredSize;
 				}
 
-				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160, 256 * sizeof(u32));
+				zoomResizeBilinear_RGB8888((u8 *)upscaleBuffer, dstWidth, dstHeight, (uint8_t *)srcImage, 240, 160,
+							   256 * sizeof(u32));
 
 				u32 *src = upscaleBuffer;
 				u32 *dst = ((u32 *)currentFB) + offsetX;
-				for (int i = 0; i < dstHeight; i++)
-				{
+				for (int i = 0; i < dstHeight; i++) {
 					memcpy(dst, src, dstWidth * sizeof(u32));
 					src += dstWidth;
 					dst += currentFBWidth;
 				}
-			}
-			else if (scalingFilter == filterNearest)
-			{
+			} else if (scalingFilter == filterNearest) {
 				Surface srcSurface, dstSurface;
 				srcSurface.w = 240;
 				srcSurface.h = 160;
@@ -654,23 +585,17 @@ int main(int argc, char *argv[])
 				dstSurface.pitch = currentFBWidth * sizeof(u32);
 
 				zoomSurfaceRGBA(&srcSurface, &dstSurface, 0, 0, 0);
-			}
-			else if (scalingFilter == filterNearestInteger)
-			{
+			} else if (scalingFilter == filterNearestInteger) {
 				unsigned intScale = (unsigned)floor(scale);
 				unsigned offsetX = currentFBWidth / 2 - (intScale * 240) / 2;
 				unsigned offsetY = currentFBHeight / 2 - (intScale * 160) / 2;
-				for (int y = 0; y < 160; y++)
-				{
-					for (int x = 0; x < 240; x++)
-					{
+				for (int y = 0; y < 160; y++) {
+					for (int x = 0; x < 240; x++) {
 						int idx0 = x * intScale + offsetX + (y * intScale + offsetY) * currentFBWidth;
 						int idx1 = (x + y * 256);
 						u32 val = srcImage[idx1];
-						for (unsigned j = 0; j < intScale * currentFBWidth; j += currentFBWidth)
-						{
-							for (unsigned i = 0; i < intScale; i++)
-							{
+						for (unsigned j = 0; j < intScale * currentFBWidth; j += currentFBWidth) {
+							for (unsigned i = 0; i < intScale; i++) {
 								((u32 *)currentFB)[idx0 + i + j] = val;
 							}
 						}
@@ -684,8 +609,7 @@ int main(int argc, char *argv[])
 		bool actionStopEmulation = false;
 		bool actionStartEmulation = false;
 
-		if (keysDown & KEY_MINUS && uiGetState() != stateRunning)
-		{  // hack, TODO: improve UI state machine
+		if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
 			if (uiGetState() == stateSettings)
 				uiSetState(emulationRunning ? statePaused : stateFileselect);
 			else
@@ -693,8 +617,7 @@ int main(int argc, char *argv[])
 		}
 
 		UIResult result;
-		switch ((result = uiLoop(currentFB, currentFBWidth, currentFBHeight, keysDown)))
-		{
+		switch ((result = uiLoop(currentFB, currentFBWidth, currentFBHeight, keysDown))) {
 			case resultSelectedFile:
 				actionStopEmulation = true;
 				actionStartEmulation = true;
@@ -715,49 +638,41 @@ int main(int argc, char *argv[])
 				unpause_emulation();
 				keysDown = 0;
 			case resultLoadState:
-			case resultSaveState:
-			{
+			case resultSaveState: {
 				mutexLock(&emulationLock);
 				char stateFilename[PATH_LENGTH];
 				romPathWithExt(stateFilename, PATH_LENGTH, "ram");
 
 				u8 *buffer = (u8 *)malloc(serialize_size);
 
-				if (result == resultLoadState)
-				{
+				if (result == resultLoadState) {
 					FILE *f = fopen(stateFilename, "rb");
-					
-					if (f)
-					{
-						if (fread(buffer, 1, serialize_size, f) != serialize_size || !CPUReadState(buffer, serialize_size))
+
+					if (f) {
+						if (fread(buffer, 1, serialize_size, f) != serialize_size ||
+						    !CPUReadState(buffer, serialize_size))
 							uiStatusMsg("Failed to read save state %s", stateFilename);
 
 						fclose(f);
-					}
-					else
+					} else
 						printf("Failed to open %s for read", stateFilename);
-				}
-				else
-				{
+				} else {
 					if (!CPUWriteState(buffer, serialize_size))
 						uiStatusMsg("Failed to write save state %s", stateFilename);
 
 					FILE *f = fopen(stateFilename, "wb");
-					
-					if (f)
-					{
+
+					if (f) {
 						if (fwrite(buffer, 1, serialize_size, f) != serialize_size)
 							printf("Failed to write to %s", stateFilename);
 						fclose(f);
-					}
-					else
+					} else
 						printf("Failed to open %s for write", stateFilename);
 				}
 
 				free(buffer);
 				mutexUnlock(&emulationLock);
-			}
-			break;
+			} break;
 			case resultSettingsChanged:
 				applyConfig();
 				break;
@@ -771,15 +686,13 @@ int main(int argc, char *argv[])
 		inputTransferKeysHeld &= ~keysUp;
 		mutexUnlock(&inputLock);
 
-		if (actionStopEmulation && emulationRunning)
-		{
+		if (actionStopEmulation && emulationRunning) {
 			mutexLock(&emulationLock);
 			retro_unload_game();
 			mutexUnlock(&emulationLock);
 		}
 
-		if (actionStartEmulation)
-		{
+		if (actionStartEmulation) {
 			mutexLock(&emulationLock);
 
 			uiSetState(stateRunning);
@@ -799,8 +712,7 @@ int main(int argc, char *argv[])
 
 		if (emulationRunning && !emulationPaused && keysDown & KEY_X) pause_emulation();
 
-		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0)
-		{
+		if (emulationRunning && !emulationPaused && --autosaveCountdown == 0) {
 			mutexLock(&emulationLock);
 			CPUWriteBatteryFile(saveFilename);
 			mutexUnlock(&emulationLock);
@@ -809,11 +721,11 @@ int main(int argc, char *argv[])
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 		frameTimeSum += endTime - startTime;
 
-		if (emulationRunning && !emulationPaused && showFrametime)
-		{
+		if (emulationRunning && !emulationPaused && showFrametime) {
 			char fpsBuffer[64];
-			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f, (endTime - startTime) * 1000.f);
-			//uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
+			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
+				 (endTime - startTime) * 1000.f);
+			// uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 
 		gfxFlushBuffers();
