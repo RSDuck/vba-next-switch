@@ -47,7 +47,8 @@ ROMFS	:=	romfs
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS	:=	-g -Wall -Ofast -ffunction-sections \
-			$(ARCH) $(DEFINES)
+			$(ARCH) $(DEFINES) \
+			`freetype-config --cflags`
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DTILED_RENDERING -DBRANCHLESS_GBA_GFX \
 	-DUSE_FRAME_SKIP -DNXLINK_STDIO#-DTHREADED_RENDERER
@@ -57,7 +58,7 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lnx
+LIBS	:= `freetype-config --libs`
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

@@ -28,7 +28,7 @@ void addString(char* filenameBuffer, char** filenames, int* filenamesCount, char
 	*nextFilename += strlen(string) + 1;
 }
 
-void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory, const char* extensionFilter) {
+void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory) {
 	char slash[strlen(directory) + 2];
 	snprintf(slash, sizeof(slash), "%s/", directory);
 	DIR* dir = opendir(slash);
@@ -53,7 +53,7 @@ void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenames
 				addString(filenameBuffer, filenames, filenamesCount, &nextFilename, ent->d_name);
 			} else {
 				const char* dot = strrchr(path, '.');
-				if (dot && dot != path && strcmp(dot + 1, extensionFilter) == 0) {
+				if (dot && dot != path && strcmp(dot + 1, "gba") == 0 || strcmp(dot + 1, "GBA") == 0) {
 					addString(filenameBuffer, filenames, filenamesCount, &nextFilename, ent->d_name);
 				}
 			}

@@ -2,11 +2,12 @@
 #define __UTIL_H__
 
 #include <vector>
+#include <stdio.h>
 
 void addString(char* filenameBuffer, char** filenames, int* filenamesCount, char** nextFilename, const char* string);
 
 bool isDirectory(char* path);
-void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory, const char* extensionFilter);
+void getDirectoryContents(char* filenameBuffer, char** filenames, int* filenamesCount, const char* directory);
 
 #include <string.h>
 
