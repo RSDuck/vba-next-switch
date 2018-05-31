@@ -264,7 +264,7 @@ void retro_reset(void) { CPUReset(); }
 void pause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = true;
-	uiSetState(statePaused);
+	uiPushState(statePaused);
 	char saveFilename[PATH_LENGTH];
 	romPathWithExt(saveFilename, PATH_LENGTH, "sav");
 	if (CPUWriteBatteryFile(saveFilename)) uiStatusMsg("Wrote save file.");
@@ -279,9 +279,8 @@ void pause_emulation() {
 void unpause_emulation() {
 	mutexLock(&emulationLock);
 	emulationPaused = false;
-	uiSetState(stateRunning);
+	uiPopState();
 	mutexUnlock(&emulationLock);
-	// TODO: Last button input in menu affects the game too.
 }
 
 void retro_run() {
@@ -515,7 +514,7 @@ int main(int argc, char *argv[]) {
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
-	uiSetState(stateFileselect);
+	uiPushState(stateFileselect);
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
@@ -611,9 +610,9 @@ int main(int argc, char *argv[]) {
 
 		if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
 			if (uiGetState() == stateSettings)
-				uiSetState(emulationRunning ? statePaused : stateFileselect);
+				uiPopState();
 			else
-				uiSetState(stateSettings);
+				uiPushState(stateSettings);
 		}
 
 		UIResult result;
@@ -623,12 +622,8 @@ int main(int argc, char *argv[]) {
 				actionStartEmulation = true;
 				break;
 			case resultClose:
-				if (uiGetState() == statePaused) {
-					actionStopEmulation = true;
-					uiSetState(stateFileselect);
-				} else {
-					uiSetState(emulationRunning ? statePaused : stateFileselect);
-				}
+				uiPopState();
+				if (uiGetState() == stateRunning) uiPopState();
 				break;
 			case resultExit:
 				actionStopEmulation = true;
@@ -637,6 +632,7 @@ int main(int argc, char *argv[]) {
 			case resultUnpause:
 				unpause_emulation();
 				keysDown = 0;
+				break;
 			case resultLoadState:
 			case resultSaveState: {
 				mutexLock(&emulationLock);
@@ -695,7 +691,7 @@ int main(int argc, char *argv[]) {
 		if (actionStartEmulation) {
 			mutexLock(&emulationLock);
 
-			uiSetState(stateRunning);
+			uiPushState(stateRunning);
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
@@ -725,7 +721,8 @@ int main(int argc, char *argv[]) {
 			char fpsBuffer[64];
 			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
 				 (endTime - startTime) * 1000.f);
-			// uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
+      
+			uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 
 		gfxFlushBuffers();
