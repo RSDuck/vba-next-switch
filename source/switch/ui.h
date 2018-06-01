@@ -27,7 +27,7 @@ struct Setting {
 };
 
 extern Setting* settings;
-extern Setting* oldSettings;
+extern Setting* tempSettings;
 
 #define PATH_LENGTH 512
 
@@ -44,6 +44,7 @@ UIState uiGetState();
 void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* strValues[], bool meta = false);
 void uiFinaliseAndLoadSettings();
 void uiSaveSettings();
+void uiCancelSettings();
 
 extern uint32_t darkTheme;
 

@@ -625,11 +625,7 @@ int main(int argc, char *argv[]) {
 				if (uiGetState() == stateRunning) uiPopState();
 				break;
 			case resultOpenSettings:
-				if (uiGetState() != stateRunning) {
-					uiPopState();
-					uiPushState(stateSettings);
-
-				}
+				uiPushState(stateSettings);
 				break;
 			case resultExit:
 				actionStopEmulation = true;
@@ -679,11 +675,11 @@ int main(int argc, char *argv[]) {
 				applyConfig();
 				uiSaveSettings();
 				uiPopState();
-				uiPushState(statePaused);
 				break;
 			case resultCancelSettings:
+				uiCancelSettings();
 				uiPopState();
-				uiPushState(statePaused);
+				//uiPushState(statePaused);
 				break;
 			case resultNone:
 			default:
@@ -734,8 +730,6 @@ int main(int argc, char *argv[]) {
 			char fpsBuffer[64];
 			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
 				 (endTime - startTime) * 1000.f);
-      
-
 			//uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 

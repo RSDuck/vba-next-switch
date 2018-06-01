@@ -43,7 +43,7 @@ static int scroll = 0;
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
 Setting* settings;
-Setting* oldSettings;
+Setting* tempSettings;
 static int settingsMetaStart = 0;
 static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
@@ -55,18 +55,14 @@ static int uiStateStackCount = 0;
 
 static int rowsVisible = 0;
 
-static Image magicarp;
-
 static Image gbaImage;
-
 static Image logoSmall;
 
 static const char* settingsPath = "vba-switch.ini";
 
 uint32_t darkTheme = 0;
 
-static void generateSettingString(int idx) {
-	Setting* setting = &settings[idx];
+static void generateSettingString(Setting *setting) {
 	if (!setting->meta) {
 		snprintf(setting->generatedString, sizeof(setting->generatedString) - 1, "%s: %s", setting->name,
 			 setting->strValues[*setting->valueIdx]);
@@ -98,17 +94,13 @@ void uiInit() {
 
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
 
-	imageLoad(&magicarp, "romfs:/karpador.png");
 	imageLoad(&gbaImage, "romfs:/gba.png");
 	imageLoad(&logoSmall, "romfs:/logoSmall.png");
 }
 
 void uiDeinit() {
-	imageDeinit(&magicarp);
 	imageDeinit(&gbaImage);
 	imageDeinit(&logoSmall);
-
-	uiSaveSettings();
 
 	free(filenameBuffer);
 	free(settings);
@@ -124,7 +116,7 @@ void uiFinaliseAndLoadSettings() {
 	ini_t* cfg = ini_load(settingsPath);
 	if (cfg) {
 		for (int i = 0; i < settingsMetaStart; i++) {
-			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(i);
+			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(&settings[i]);
 		}
 
 		ini_free(cfg);
@@ -132,21 +124,30 @@ void uiFinaliseAndLoadSettings() {
 }
 
 void uiSaveSettings() {
-	if (settingsChanged) {
-		FILE* f = fopen(settingsPath, "wt");
-		if (f) {
-			fprintf(f, "[Misc]\n");
+	settings = tempSettings;
+	
+	FILE* f = fopen(settingsPath, "wt");
+	if (f) {
+		fprintf(f, "[Misc]\n");
 
-			for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
+		for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
 
-			fclose(f);
-		}
+		fclose(f);
+	}
+}
+
+void uiCancelSettings() {
+	for (int i = 0; i < settingsMetaStart; i++) {
+		Setting *tempSetting = &tempSettings[i];
+		Setting *lastSetting = &settings[i];
+		//tempSetting->valueIdx = lastSetting->valueIdx;
+		memcpy(&tempSetting->valueIdx, &lastSetting->valueIdx, sizeof(tempSetting));
 	}
 }
 
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
-int lastDst = 80;
+static int lastDst = 80;
 
 UIResult uiLoop(u32 keysDown) {
 	UIState state = uiGetState();
@@ -201,17 +202,17 @@ UIResult uiLoop(u32 keysDown) {
 				}
 			}
 		}
-		int dst;
+
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u32 h, w;
 			getTextDimensions(font16, menu[j], &w, &h);
 			u32 heightOffset = (40 - h) / 2;
 
-			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) continue;
+			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) break;
 
 			if (i + scroll == cursor) {
-				dst = i * separator + menuHSeparator;
-				int delta = (dst - lastDst) / 3;
+				int dst = i * separator + menuHSeparator;
+				int delta = (dst - lastDst) / 2.2;
 				dst = floor(lastDst + delta);
 
 				drawRect(0, dst, currentFBWidth / 1.25, separator, !darkTheme ? WHITE : SWOptionDarkHover);
@@ -270,16 +271,14 @@ UIResult uiLoop(u32 keysDown) {
 					return resultSelectedFile;
 				}
 			} else if (state == stateSettings) {
-				Setting* setting = &settings[cursor];
+				Setting* setting = &tempSettings[cursor];
 
 				if (setting->meta) return (UIResult)setting->valuesCount;
 				*setting->valueIdx += (keysDown & KEY_A ? 1 : -1);
 				if (*setting->valueIdx == UINT32_MAX) *setting->valueIdx = setting->valuesCount - 1;
 				if (*setting->valueIdx >= setting->valuesCount) *setting->valueIdx = 0;
 
-				generateSettingString(cursor);
-
-				settingsChanged = true;
+				generateSettingString(setting);
 
 				return resultNone;
 			} else {
@@ -293,6 +292,7 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
+						tempSettings = settings;
 						return resultOpenSettings;
 					case 4:
 						return resultClose;
@@ -347,7 +347,7 @@ void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* 
 
 	settingStrings[settingsCount] = settings[settingsCount].generatedString;
 
-	generateSettingString(settingsCount);
+	generateSettingString(&settings[settingsCount]);
 
 	settingsCount++;
 }
