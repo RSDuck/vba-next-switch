@@ -514,7 +514,7 @@ int main(int argc, char *argv[]) {
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
 	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
 	//uiAddSetting("Use dark theme", &darkTheme, 2, stringsNoYes);
-	uiAddSetting("Use dark theme", &themeM, 2, themeOptions);
+	uiAddSetting("Theme", &themeM, 2, themeOptions);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
