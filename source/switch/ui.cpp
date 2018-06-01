@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <vector>
+#include <math.h> 
 
 #include <switch.h>
 
@@ -145,6 +146,8 @@ void uiSaveSettings() {
 
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
+int lastDst = 80;
+
 UIResult uiLoop(u32 keysDown) {
 	UIState state = uiGetState();
 	if (state == stateRemapButtons) {
@@ -198,7 +201,7 @@ UIResult uiLoop(u32 keysDown) {
 				}
 			}
 		}
-
+		int dst;
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u32 h, w;
 			getTextDimensions(font16, menu[j], &w, &h);
@@ -207,11 +210,18 @@ UIResult uiLoop(u32 keysDown) {
 			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) continue;
 
 			if (i + scroll == cursor) {
-				drawRect(0, i * separator + menuHSeparator, currentFBWidth / 1.25, separator, !darkTheme ? WHITE : SWOptionDarkHover);
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWOptionLightFocus : SWOptionDarkFocus, menu[j]);
+				dst = i * separator + menuHSeparator;
+				int delta = (dst - lastDst) / 3;
+				dst = floor(lastDst + delta);
+
+				drawRect(0, dst, currentFBWidth / 1.25, separator, !darkTheme ? WHITE : SWOptionDarkHover);
+				if (lastDst == dst)
+					drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWOptionLightFocus : SWOptionDarkFocus, menu[j]);
+				else
+					drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE, menu[j]);
+				lastDst = dst;
 			} else {
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE,
-					 menu[j]);
+				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE, menu[j]);
 			}
 
 			i++;
