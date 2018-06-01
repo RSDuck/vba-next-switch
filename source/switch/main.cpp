@@ -679,7 +679,6 @@ int main(int argc, char *argv[]) {
 			case resultCancelSettings:
 				uiCancelSettings();
 				uiPopState();
-				//uiPushState(statePaused);
 				break;
 			case resultNone:
 			default:

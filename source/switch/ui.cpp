@@ -137,11 +137,13 @@ void uiSaveSettings() {
 }
 
 void uiCancelSettings() {
-	for (int i = 0; i < settingsMetaStart; i++) {
-		Setting *tempSetting = &tempSettings[i];
-		Setting *lastSetting = &settings[i];
-		//tempSetting->valueIdx = lastSetting->valueIdx;
-		memcpy(&tempSetting->valueIdx, &lastSetting->valueIdx, sizeof(tempSetting));
+	ini_t* cfg = ini_load(settingsPath);
+	if (cfg) {
+		for (int i = 0; i < settingsMetaStart; i++) {
+			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(&settings[i]);
+		}
+
+		ini_free(cfg);
 	}
 }
 
