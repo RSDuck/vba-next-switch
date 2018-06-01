@@ -40,7 +40,7 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
-static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
+static const char *pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
 Setting* settings;
 Setting* tempSettings;
@@ -60,7 +60,7 @@ static Image logoSmall;
 
 static const char* settingsPath = "vba-switch.ini";
 
-uint32_t darkTheme = 0;
+uint32_t themeM = 0;
 
 static void generateSettingString(Setting *setting) {
 	if (!setting->meta) {
@@ -175,15 +175,15 @@ UIResult uiLoop(u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
-		drawRect(0, 0, currentFBWidth, currentFBHeight, !darkTheme ? SWWhiteBG : SWDarkGrey);
+		drawRect(0, 0, currentFBWidth, currentFBHeight, THEME.backgroundColor);
 
 		imageDraw(&logoSmall, 52, 15, 0, 0, 0);
 
 		int i = 0;
 		int separator = 40;
-		int menuHSeparator = 80;
+		int menuMarginTop = 80;
 
-		rowsVisible = (currentFBHeight - 70 - menuHSeparator) / separator;
+		rowsVisible = (currentFBHeight - 70 - menuMarginTop) / separator;
 
 		if (scrollAmount > 0) {
 			for (int i = 0; i < scrollAmount; i++) {
@@ -205,26 +205,29 @@ UIResult uiLoop(u32 keysDown) {
 			}
 		}
 
+		themeM ? setTheme(LIGHT) : setTheme(DARK); //TODO improve this...
+
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u32 h, w;
 			getTextDimensions(font16, menu[j], &w, &h);
 			u32 heightOffset = (40 - h) / 2;
+			u32 textMarginTop = heightOffset + menuMarginTop;
 
-			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) break;
+			if (i * separator + textMarginTop > currentFBHeight - 85) break;
 
 			if (i + scroll == cursor) {
-				int dst = i * separator + menuHSeparator;
+				int dst = i * separator + menuMarginTop;
 				int delta = (dst - lastDst) / 2.2;
 				dst = floor(lastDst + delta);
 
-				drawRect(0, dst, currentFBWidth / 1.25, separator, !darkTheme ? WHITE : SWOptionDarkHover);
+				drawRect(0, dst, currentFBWidth / 1.25, separator, THEME.textActiveBGColor);
 				if (lastDst == dst)
-					drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWOptionLightFocus : SWOptionDarkFocus, menu[j]);
+					drawText(font16, 60, i * separator + textMarginTop, THEME.textActiveColor, menu[j]);
 				else
-					drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE, menu[j]);
+					drawText(font16, 60, i * separator + textMarginTop, THEME.textColor, menu[j]);
 				lastDst = dst;
 			} else {
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, !darkTheme ? SWDarkGrey : WHITE, menu[j]);
+				drawText(font16, 60, i * separator + textMarginTop, THEME.textColor, menu[j]);
 			}
 
 			i++;
@@ -239,11 +242,11 @@ UIResult uiLoop(u32 keysDown) {
 		char timeBuffer[64];
 		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour + 2, timeStruct->tm_min);
 
-		drawText(font24, currentFBWidth - 130, 45, !darkTheme ? SWDarkGrey : WHITE, timeBuffer);
+		drawText(font24, currentFBWidth - 130, 45, THEME.textColor, timeBuffer);
 
-		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, !darkTheme ? SWDarkGrey : WHITE);
+		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, THEME.textColor);
 
-		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, !darkTheme ? SWDarkGrey : WHITE, currentDirectory);
+		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, THEME.textColor, currentDirectory);
 
 		if (keysDown & KEY_X) return resultExit;
 

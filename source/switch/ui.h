@@ -1,6 +1,8 @@
 #ifndef __UI_H__
 #define __UI_H__
 
+#include "theme.h"
+
 typedef enum {
 	resultSelectedFile,
 	resultClose,
@@ -46,7 +48,7 @@ void uiFinaliseAndLoadSettings();
 void uiSaveSettings();
 void uiCancelSettings();
 
-extern uint32_t darkTheme;
+extern uint32_t themeM;
 
 void uiStatusMsg(const char* fmt, ...);
 

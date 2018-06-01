@@ -44,6 +44,7 @@ enum { filterNearestInteger,
 uint32_t scalingFilter = filterNearest;
 
 const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
+const char *themeOptions[] = {"Dark", "Light"};
 
 extern uint64_t joy;
 unsigned device_type = 0;
@@ -512,7 +513,8 @@ int main(int argc, char *argv[]) {
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
 	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
-	uiAddSetting("Use dark theme", &darkTheme, 2, stringsNoYes);
+	//uiAddSetting("Use dark theme", &darkTheme, 2, stringsNoYes);
+	uiAddSetting("Use dark theme", &themeM, 2, themeOptions);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
