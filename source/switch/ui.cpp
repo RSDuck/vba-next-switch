@@ -6,11 +6,13 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <vector>
+#include <math.h> 
 
 #include <switch.h>
 
 extern "C" {
 #include "ini/ini.h"
+#include "localtime.h"
 }
 
 #include "draw.h"
@@ -20,14 +22,7 @@ extern "C" {
 #include "../types.h"
 #include "ui.h"
 #include "util.h"
-
-struct Setting {
-	const char* name;
-	u32 valuesCount, *valueIdx;
-	const char** strValues;
-	char generatedString[256];
-	bool meta;
-};
+#include "colors.h"
 
 #define FILENAMEBUFFER_SIZE (1024 * 32)  // 32kb
 #define FILENAMES_COUNT_MAX 2048
@@ -46,13 +41,13 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
-static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Exit"};
+static const char *pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
-static Setting* settings;
+Setting* settings;
+Setting* tempSettings;
 static int settingsMetaStart = 0;
 static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
-static bool settingsChanged = false;
 
 #define UI_STATESTACK_MAX 4
 static UIState uiStateStack[UI_STATESTACK_MAX];
@@ -60,14 +55,19 @@ static int uiStateStackCount = 0;
 
 static int rowsVisible = 0;
 
-static Image magicarp;
+static Image gbaImage, logoSmall;
 
-static Image gbaImage;
+Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight;
+
+u32 btnMargin = 0;
 
 static const char* settingsPath = "vba-switch.ini";
 
-static void generateSettingString(int idx) {
-	Setting* setting = &settings[idx];
+uint32_t themeM = 0;
+
+ColorSetId switchColorSetID;
+
+static void generateSettingString(Setting *setting) {
 	if (!setting->meta) {
 		snprintf(setting->generatedString, sizeof(setting->generatedString) - 1, "%s: %s", setting->name,
 			 setting->strValues[*setting->valueIdx]);
@@ -93,21 +93,37 @@ static void enterDirectory() {
 }
 
 void uiInit() {
+	setupLocalTimeOffset();
+
 	filenameBuffer = (char*)malloc(FILENAMEBUFFER_SIZE);
 	strcpy_safe(currentDirectory, "", PATH_LENGTH);
 	enterDirectory();
 
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
 
-	imageLoad(&magicarp, "romfs:/karpador.png");
 	imageLoad(&gbaImage, "romfs:/gba.png");
+	imageLoad(&logoSmall, "romfs:/logoSmall.png");
+	imageLoad(&btnADark, "romfs:/btnADark.png");
+	imageLoad(&btnALight, "romfs:/btnALight.png");
+	imageLoad(&btnBDark, "romfs:/btnBDark.png");
+	imageLoad(&btnBLight, "romfs:/btnBLight.png");
+	imageLoad(&btnXDark, "romfs:/btnXDark.png");
+	imageLoad(&btnXLight, "romfs:/btnXLight.png");
+	imageLoad(&btnYDark, "romfs:/btnYDark.png");
+	imageLoad(&btnYLight, "romfs:/btnYLight.png");
 }
 
 void uiDeinit() {
-	imageDeinit(&magicarp);
 	imageDeinit(&gbaImage);
-
-	uiSaveSettings();
+	imageDeinit(&logoSmall);
+	imageDeinit(&btnADark);
+	imageDeinit(&btnALight);
+	imageDeinit(&btnBDark);
+	imageDeinit(&btnBLight);
+	imageDeinit(&btnXDark);
+	imageDeinit(&btnXLight);
+	imageDeinit(&btnYDark);
+	imageDeinit(&btnYLight);
 
 	free(filenameBuffer);
 	free(settings);
@@ -117,12 +133,13 @@ void uiFinaliseAndLoadSettings() {
 	settingsMetaStart = settingsCount;
 
 	// uiAddSetting("Remap Buttons", NULL, result)
-	uiAddSetting("Exit", NULL, resultClose, NULL, true);
+	uiAddSetting("Save and return", NULL, resultSaveSettings, NULL, true);
+	uiAddSetting("Cancel", NULL, resultCancelSettings, NULL, true);
 
 	ini_t* cfg = ini_load(settingsPath);
 	if (cfg) {
 		for (int i = 0; i < settingsMetaStart; i++) {
-			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(i);
+			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(&settings[i]);
 		}
 
 		ini_free(cfg);
@@ -130,25 +147,45 @@ void uiFinaliseAndLoadSettings() {
 }
 
 void uiSaveSettings() {
-	if (settingsChanged) {
-		FILE* f = fopen(settingsPath, "wt");
-		if (f) {
-			fprintf(f, "[Misc]\n");
+	settings = tempSettings;
+	
+	FILE* f = fopen(settingsPath, "wt");
+	if (f) {
+		fprintf(f, "[Misc]\n");
 
-			for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
+		for (int i = 0; i < settingsMetaStart; i++) fprintf(f, "%s=%d\n", settings[i].name, *settings[i].valueIdx);
 
-			fclose(f);
+		fclose(f);
+	}
+}
+
+void uiCancelSettings() {
+	ini_t* cfg = ini_load(settingsPath);
+	if (cfg) {
+		for (int i = 0; i < settingsMetaStart; i++) {
+			if (ini_sget(cfg, "misc", settings[i].name, "%d", settings[i].valueIdx)) generateSettingString(&settings[i]);
 		}
+
+		ini_free(cfg);
 	}
 }
 
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
+static int lastDst = 80;
+
 UIResult uiLoop(u32 keysDown) {
 	UIState state = uiGetState();
 	if (state == stateRemapButtons) {
 		//imageDraw(fb, currentFBWidth, currentFBHeight, &gbaImage, 0, 0);
-	} else if (uiGetState() != stateRunning) {
+	} else if (uiGetState() != stateRunning) {	
+
+		if (themeM == switchTheme) setTheme((themeMode_t)switchColorSetID);
+		else if(themeM == lightTheme) setTheme(modeLight);
+		else setTheme(modeDark);
+
+		btnMargin = 0;
+
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
 		if (keysDown & KEY_UP) scrollAmount = -1;
@@ -168,13 +205,15 @@ UIResult uiLoop(u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
-		drawRect(0, 0, currentFBWidth, currentFBHeight, MakeColor(50, 50, 50, 255));
+		drawRect(0, 0, currentFBWidth, currentFBHeight, currentTheme.backgroundColor);
+
+		imageDraw(&logoSmall, 52, 15, 0, 0, 0);
 
 		int i = 0;
 		int separator = 40;
-		int menuHSeparator = 80;
+		int menuMarginTop = 80;
 
-		rowsVisible = (currentFBHeight - 70 - menuHSeparator) / separator;
+		rowsVisible = (currentFBHeight - 70 - menuMarginTop) / separator;
 
 		if (scrollAmount > 0) {
 			for (int i = 0; i < scrollAmount; i++) {
@@ -197,39 +236,63 @@ UIResult uiLoop(u32 keysDown) {
 		}
 
 		for (int j = scroll; j < menuItemsCount; j++) {
-			u8 color = 255;
 			u32 h, w;
 			getTextDimensions(font16, menu[j], &w, &h);
 			u32 heightOffset = (40 - h) / 2;
+			u32 textMarginTop = heightOffset + menuMarginTop;
 
-			if (i * separator + heightOffset + menuHSeparator > currentFBHeight - 85) continue;
+			if (i * separator + textMarginTop > currentFBHeight - 85) break;
 
 			if (i + scroll == cursor) {
-				drawRect(0, i * separator + menuHSeparator, currentFBWidth / 1.25, separator, MakeColor(33, 34, 39, 255));
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(0, 255, 197, 255), menu[j]);
+				int dst = i * separator + menuMarginTop;
+				int delta = (dst - lastDst) / 2.2;
+				dst = floor(lastDst + delta);
+
+				drawRect(0, dst, currentFBWidth / 1.25, separator, currentTheme.textActiveBGColor);
+				if (lastDst == dst)
+					drawText(font16, 60, i * separator + textMarginTop, currentTheme.textActiveColor, menu[j]);
+				else
+					drawText(font16, 60, i * separator + textMarginTop, currentTheme.textColor, menu[j]);
+				lastDst = dst;
 			} else {
-				drawText(font16, 60, i * separator + heightOffset + menuHSeparator, MakeColor(color, color, color, 255),
-					 menu[j]);
+				drawText(font16, 60, i * separator + textMarginTop, currentTheme.textColor, menu[j]);
 			}
 
 			i++;
 			if (i >= rowsVisible) break;
 		}
 
-		u64 timestamp;
-		timeGetCurrentTime(TimeType_UserSystemClock, &timestamp);
-		time_t tim = (time_t)timestamp;
-		struct tm* timeStruct = localtime(&tim);
+
+		struct tm* timeStruct = getRealLocalTime();
 
 		char timeBuffer[64];
-		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour + 2, timeStruct->tm_min);
+		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour, timeStruct->tm_min);
 
-		drawText(font24, currentFBWidth - 130, 45, MakeColor(255, 255, 255, 255), timeBuffer);
+		drawText(font24, currentFBWidth - 130, 45, currentTheme.textColor, timeBuffer);
 
-		drawRect(0, currentFBHeight, currentFBWidth, 70, MakeColor(50, 50, 50, 255));
-		drawRect((u32)((currentFBWidth - 1215) / 2), currentFBHeight - 70, 1215, 1, MakeColor(255, 255, 255, 255));
+		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, currentTheme.textColor);
 
-		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, MakeColor(255, 255, 255, 255), currentDirectory);
+		//UI Drawing routines
+		switch (state) {
+			case stateFileselect:
+				drawText(font16, 60, currentFBHeight - 43, currentTheme.textColor, currentDirectory);
+				uiDrawTipButton(buttonB, 1, "Back");
+				uiDrawTipButton(buttonA, 2, "Open");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
+				break;
+			case stateSettings:
+				uiDrawTipButton(buttonB, 1, "Cancel");
+				uiDrawTipButton(buttonA, 2, "OK");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
+				break;
+			case statePaused:
+				uiDrawTipButton(buttonB, 1, "Return Game");
+				uiDrawTipButton(buttonA, 2, "OK");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
+				break;
+			default:
+				break;
+		}
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -259,19 +322,20 @@ UIResult uiLoop(u32 keysDown) {
 					return resultSelectedFile;
 				}
 			} else if (state == stateSettings) {
-				Setting* setting = &settings[cursor];
+				if (keysDown & KEY_B) return resultCancelSettings;
+
+				Setting* setting = &tempSettings[cursor];
 
 				if (setting->meta) return (UIResult)setting->valuesCount;
 				*setting->valueIdx += (keysDown & KEY_A ? 1 : -1);
 				if (*setting->valueIdx == UINT32_MAX) *setting->valueIdx = setting->valuesCount - 1;
 				if (*setting->valueIdx >= setting->valuesCount) *setting->valueIdx = 0;
 
-				generateSettingString(cursor);
+				generateSettingString(setting);
 
-				settingsChanged = true;
-
-				return resultSettingsChanged;
+				return resultNone;
 			} else {
+
 				if (keysDown & KEY_B) return resultUnpause;
 
 				switch (cursor) {
@@ -282,6 +346,9 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
+						tempSettings = settings;
+						return resultOpenSettings;
+					case 4:
 						return resultClose;
 				}
 			}
@@ -290,11 +357,9 @@ UIResult uiLoop(u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		drawText(font14, 60, currentFBHeight - 20, MakeColor(255, 255, 255, fadeout), statusMessage);
-		statusMessageFadeout -= 4;
+		drawText(font16, 60, currentFBHeight - 43, MakeColor(58, 225, 208, fadeout), statusMessage);
+		statusMessageFadeout -= 10;
 	}
-
-	// imageDraw(fb, currentFBWidth, currentFBHeight, &magicarp, currentFBWidth - 60, currentFBHeight - 60);
 
 	return resultNone;
 }
@@ -336,7 +401,39 @@ void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* 
 
 	settingStrings[settingsCount] = settings[settingsCount].generatedString;
 
-	generateSettingString(settingsCount);
+	generateSettingString(&settings[settingsCount]);
 
 	settingsCount++;
+}
+
+void uiDrawTipButton(buttonType type, u32 pos, const char* text) {
+	u32 h, w;
+	getTextDimensions(font16, text, &w, &h);
+	h = (73 - h)  / 2;
+	
+	w += 25 + 13;
+	pos == 1 ? btnMargin = w + 60 : btnMargin += w + 40;
+	u32 x = currentFBWidth - btnMargin;
+	u32 y = currentFBHeight - 50;
+
+	switch (type) {
+		case buttonA:
+			imageDraw(&currentTheme.btnA, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
+			break;
+		case buttonB:
+			imageDraw(&currentTheme.btnB, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
+			break;
+		case buttonY:
+			imageDraw(&currentTheme.btnY, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
+			break;
+		case buttonX:
+			imageDraw(&currentTheme.btnX, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
+			break;
+		default:
+			break;
+	}
 }
