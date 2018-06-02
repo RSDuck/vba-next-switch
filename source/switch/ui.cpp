@@ -47,7 +47,6 @@ Setting* tempSettings;
 static int settingsMetaStart = 0;
 static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
-static bool settingsChanged = false;
 
 #define UI_STATESTACK_MAX 4
 static UIState uiStateStack[UI_STATESTACK_MAX];
@@ -55,8 +54,11 @@ static int uiStateStackCount = 0;
 
 static int rowsVisible = 0;
 
-static Image gbaImage;
-static Image logoSmall;
+static Image gbaImage, logoSmall;
+
+Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight;
+
+u32 btnMargin = 0;
 
 static const char* settingsPath = "vba-switch.ini";
 
@@ -99,11 +101,27 @@ void uiInit() {
 
 	imageLoad(&gbaImage, "romfs:/gba.png");
 	imageLoad(&logoSmall, "romfs:/logoSmall.png");
+	imageLoad(&btnADark, "romfs:/btnADark.png");
+	imageLoad(&btnALight, "romfs:/btnALight.png");
+	imageLoad(&btnBDark, "romfs:/btnBDark.png");
+	imageLoad(&btnBLight, "romfs:/btnBLight.png");
+	imageLoad(&btnXDark, "romfs:/btnXDark.png");
+	imageLoad(&btnXLight, "romfs:/btnXLight.png");
+	imageLoad(&btnYDark, "romfs:/btnYDark.png");
+	imageLoad(&btnYLight, "romfs:/btnYLight.png");
 }
 
 void uiDeinit() {
 	imageDeinit(&gbaImage);
 	imageDeinit(&logoSmall);
+	imageDeinit(&btnADark);
+	imageDeinit(&btnALight);
+	imageDeinit(&btnBDark);
+	imageDeinit(&btnBLight);
+	imageDeinit(&btnXDark);
+	imageDeinit(&btnXLight);
+	imageDeinit(&btnYDark);
+	imageDeinit(&btnYLight);
 
 	free(filenameBuffer);
 	free(settings);
@@ -161,6 +179,8 @@ UIResult uiLoop(u32 keysDown) {
 	} else if (uiGetState() != stateRunning) {	
 		if (useSwitchTheme) setTheme((themeMode)switchColorSetID);
 		else themeM ? setTheme(LIGHT) : setTheme(DARK); //TODO improve this...
+
+		btnMargin = 0;
 
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
@@ -250,7 +270,27 @@ UIResult uiLoop(u32 keysDown) {
 
 		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, THEME.textColor);
 
-		if (state == stateFileselect) drawText(font14, 60, currentFBHeight - 42, THEME.textColor, currentDirectory);
+		//UI Drawing routines
+		switch (state) {
+			case stateFileselect:
+				drawText(font16, 60, currentFBHeight - 43, THEME.textColor, currentDirectory);
+				uiDrawTipButton(B, 1, "Back");
+				uiDrawTipButton(A, 2, "Open");
+				uiDrawTipButton(X, 3, "Exit VBA Next");
+				break;
+			case stateSettings:
+				uiDrawTipButton(B, 1, "Cancel");
+				uiDrawTipButton(A, 2, "OK");
+				uiDrawTipButton(X, 3, "Exit VBA Next");
+				break;
+			case statePaused:
+				uiDrawTipButton(B, 1, "Return Game");
+				uiDrawTipButton(A, 2, "OK");
+				uiDrawTipButton(X, 3, "Exit VBA Next");
+				break;
+			default:
+				break;
+		}
 
 		if (keysDown & KEY_X) return resultExit;
 
@@ -293,6 +333,7 @@ UIResult uiLoop(u32 keysDown) {
 
 				return resultNone;
 			} else {
+
 				if (keysDown & KEY_B) return resultUnpause;
 
 				switch (cursor) {
@@ -314,7 +355,7 @@ UIResult uiLoop(u32 keysDown) {
 
 	if (statusMessageFadeout > 0) {
 		int fadeout = statusMessageFadeout > 255 ? 255 : statusMessageFadeout;
-		drawText(font14, 60, currentFBHeight - 42, MakeColor(58, 225, 208, fadeout), statusMessage);
+		drawText(font16, 60, currentFBHeight - 43, MakeColor(58, 225, 208, fadeout), statusMessage);
 		statusMessageFadeout -= 10;
 	}
 
@@ -361,4 +402,36 @@ void uiAddSetting(const char* name, u32* valueIdx, u32 valuesCount, const char* 
 	generateSettingString(&settings[settingsCount]);
 
 	settingsCount++;
+}
+
+void uiDrawTipButton(buttonType type, u32 pos, const char* text) {
+	u32 h, w;
+	getTextDimensions(font16, text, &w, &h);
+	h = (73 - h)  / 2;
+	
+	w += 25 + 13;
+	pos == 1 ? btnMargin = w + 60 : btnMargin += 40 + w;
+	u32 x = currentFBWidth - btnMargin;
+	u32 y = currentFBHeight - 50;
+
+	switch (type) {
+		case A:
+			imageDraw(&THEME.btnA, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			break;
+		case B:
+			imageDraw(&THEME.btnB, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			break;
+		case Y:
+			imageDraw(&THEME.btnY, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			break;
+		case X:
+			imageDraw(&THEME.btnX, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			break;
+		default:
+			break;
+	}
 }

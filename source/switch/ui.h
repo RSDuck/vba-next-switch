@@ -28,6 +28,13 @@ struct Setting {
 	bool meta;
 };
 
+enum buttonType {
+	A,
+	B,
+	Y,
+	X
+};
+
 extern Setting* settings;
 extern Setting* tempSettings;
 
@@ -51,8 +58,12 @@ void uiCancelSettings();
 extern uint32_t themeM;
 extern uint32_t useSwitchTheme;
 
+extern u32 btnMargin;
+
 extern ColorSetId switchColorSetID;
 
 void uiStatusMsg(const char* fmt, ...);
+
+void uiDrawTipButton(buttonType type, u32 pos, const char* text);
 
 #endif
