@@ -49,6 +49,9 @@ void uiSaveSettings();
 void uiCancelSettings();
 
 extern uint32_t themeM;
+extern uint32_t useSwitchTheme;
+
+extern ColorSetId switchColorSetID;
 
 void uiStatusMsg(const char* fmt, ...);
 

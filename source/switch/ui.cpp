@@ -61,6 +61,9 @@ static Image logoSmall;
 static const char* settingsPath = "vba-switch.ini";
 
 uint32_t themeM = 0;
+uint32_t useSwitchTheme = 1;
+
+ColorSetId switchColorSetID;
 
 static void generateSettingString(Setting *setting) {
 	if (!setting->meta) {
@@ -155,7 +158,10 @@ UIResult uiLoop(u32 keysDown) {
 	UIState state = uiGetState();
 	if (state == stateRemapButtons) {
 		//imageDraw(fb, currentFBWidth, currentFBHeight, &gbaImage, 0, 0);
-	} else if (uiGetState() != stateRunning) {
+	} else if (uiGetState() != stateRunning) {	
+		if (useSwitchTheme) setTheme((themeMode)switchColorSetID);
+		else themeM ? setTheme(LIGHT) : setTheme(DARK); //TODO improve this...
+
 		int scrollAmount = 0;
 		if (keysDown & KEY_DOWN) scrollAmount = 1;
 		if (keysDown & KEY_UP) scrollAmount = -1;
@@ -204,8 +210,6 @@ UIResult uiLoop(u32 keysDown) {
 				}
 			}
 		}
-
-		themeM ? setTheme(LIGHT) : setTheme(DARK); //TODO improve this...
 
 		for (int j = scroll; j < menuItemsCount; j++) {
 			u32 h, w;
