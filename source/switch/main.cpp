@@ -484,6 +484,7 @@ int main(int argc, char *argv[]) {
 	gfxInitDefault();
 	gfxConfigureAutoResolutionDefault(true);
 
+	setsysInitialize();
 	setsysGetColorSetId(&switchColorSetID);
 
 	plInitialize();
@@ -611,15 +612,8 @@ int main(int argc, char *argv[]) {
 		bool actionStopEmulation = false;
 		bool actionStartEmulation = false;
 
-		/*if (keysDown & KEY_MINUS && uiGetState() != stateRunning) {  // hack, TODO: improve UI state machine
-			if (uiGetState() == stateSettings)
-				uiPopState();
-			else
-				uiPushState(stateSettings);
-		}*/
-
 		UIResult result;
-		switch ((result = uiLoop(keysDown))) {
+		switch (result = uiLoop(keysDown)) {
 			case resultSelectedFile:
 				actionStopEmulation = true;
 				actionStartEmulation = true;

@@ -280,6 +280,8 @@ UIResult uiLoop(u32 keysDown) {
 					return resultSelectedFile;
 				}
 			} else if (state == stateSettings) {
+				if (keysDown & KEY_B) return resultCancelSettings;
+
 				Setting* setting = &tempSettings[cursor];
 
 				if (setting->meta) return (UIResult)setting->valuesCount;
