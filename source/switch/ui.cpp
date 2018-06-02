@@ -276,19 +276,19 @@ UIResult uiLoop(u32 keysDown) {
 		switch (state) {
 			case stateFileselect:
 				drawText(font16, 60, currentFBHeight - 43, currentTheme.textColor, currentDirectory);
-				uiDrawTipButton(B, 1, "Back");
-				uiDrawTipButton(A, 2, "Open");
-				uiDrawTipButton(X, 3, "Exit VBA Next");
+				uiDrawTipButton(buttonB, 1, "Back");
+				uiDrawTipButton(buttonA, 2, "Open");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 				break;
 			case stateSettings:
-				uiDrawTipButton(B, 1, "Cancel");
-				uiDrawTipButton(A, 2, "OK");
-				uiDrawTipButton(X, 3, "Exit VBA Next");
+				uiDrawTipButton(buttonB, 1, "Cancel");
+				uiDrawTipButton(buttonA, 2, "OK");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 				break;
 			case statePaused:
-				uiDrawTipButton(B, 1, "Return Game");
-				uiDrawTipButton(A, 2, "OK");
-				uiDrawTipButton(X, 3, "Exit VBA Next");
+				uiDrawTipButton(buttonB, 1, "Return Game");
+				uiDrawTipButton(buttonA, 2, "OK");
+				uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 				break;
 			default:
 				break;
@@ -412,24 +412,24 @@ void uiDrawTipButton(buttonType type, u32 pos, const char* text) {
 	h = (73 - h)  / 2;
 	
 	w += 25 + 13;
-	pos == 1 ? btnMargin = w + 60 : btnMargin += 40 + w;
+	pos == 1 ? btnMargin = w + 60 : btnMargin += w + 40;
 	u32 x = currentFBWidth - btnMargin;
 	u32 y = currentFBHeight - 50;
 
 	switch (type) {
-		case A:
+		case buttonA:
 			imageDraw(&currentTheme.btnA, x, y, 0, 0, 0);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
-		case B:
+		case buttonB:
 			imageDraw(&currentTheme.btnB, x, y, 0, 0, 0);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
-		case Y:
+		case buttonY:
 			imageDraw(&currentTheme.btnY, x, y, 0, 0, 0);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
-		case X:
+		case buttonX:
 			imageDraw(&currentTheme.btnX, x, y, 0, 0, 0);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;

@@ -29,10 +29,10 @@ struct Setting {
 };
 
 enum buttonType {
-	A,
-	B,
-	Y,
-	X
+	buttonA,
+	buttonB,
+	buttonY,
+	buttonX
 };
 
 extern Setting* settings;
