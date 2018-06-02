@@ -12,6 +12,7 @@
 
 extern "C" {
 #include "ini/ini.h"
+#include "localtime.h"
 }
 
 #include "draw.h"
@@ -93,6 +94,8 @@ static void enterDirectory() {
 }
 
 void uiInit() {
+	setupLocalTimeOffset();
+
 	filenameBuffer = (char*)malloc(FILENAMEBUFFER_SIZE);
 	strcpy_safe(currentDirectory, "", PATH_LENGTH);
 	enterDirectory();
@@ -259,12 +262,12 @@ UIResult uiLoop(u32 keysDown) {
 		}
 
 		u64 timestamp;
-		timeGetCurrentTime(TimeType_UserSystemClock, &timestamp);
-		time_t tim = (time_t)timestamp;
-		struct tm* timeStruct = localtime(&tim);
+		//timeGetCurrentTime(TimeType_UserSystemClock, &timestamp);
+		//time_t tim = (time_t)timestamp;
+		struct tm* timeStruct = getRealLocalTime(); //localtime(&tim);
 
 		char timeBuffer[64];
-		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour + 2, timeStruct->tm_min);
+		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour, timeStruct->tm_min);
 
 		drawText(font24, currentFBWidth - 130, 45, THEME.textColor, timeBuffer);
 
