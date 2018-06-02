@@ -35,7 +35,8 @@ u32 currentFBHeight;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
-enum { filterNearestInteger,
+enum {
+	filterNearestInteger,
 	filterNearest,
 	filterBilinear,
 	filtersCount,
@@ -44,7 +45,7 @@ enum { filterNearestInteger,
 uint32_t scalingFilter = filterNearest;
 
 const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
-const char *themeOptions[] = {"Dark", "Light"};
+const char *themeOptions[] = {"Switch", "Dark", "Light"};
 
 extern uint64_t joy;
 unsigned device_type = 0;
@@ -507,17 +508,13 @@ int main(int argc, char *argv[]) {
 
 	mutexInit(&videoLock);
 
-	uint32_t showFrametime = 0;
-
 	uiInit();
 
-	uiAddSetting("Show average frametime", &showFrametime, 2, stringsNoYes);
 	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
-	uiAddSetting("Switch R and L buttons to ZR and ZL (switches speedhack button too)", &switchRLButtons, 2, stringsNoYes);
-	uiAddSetting("Use Nintendo Switch theme", &useSwitchTheme, 2, stringsNoYes);
-	uiAddSetting("Theme", &themeM, 2, themeOptions);
+	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
+	uiAddSetting("Theme", &themeM, 3, themeOptions);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
 
@@ -532,11 +529,7 @@ int main(int argc, char *argv[]) {
 
 	char saveFilename[PATH_LENGTH];
 
-	double frameTimeSum = 0;
-	int frameTimeN = 0;
-
 	while (appletMainLoop() && running) {
-		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
 		currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
 		memset(currentFB, 0, 4 * currentFBWidth * currentFBHeight);
@@ -718,16 +711,6 @@ int main(int argc, char *argv[]) {
 			mutexLock(&emulationLock);
 			CPUWriteBatteryFile(saveFilename);
 			mutexUnlock(&emulationLock);
-		}
-
-		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
-		frameTimeSum += endTime - startTime;
-
-		if (emulationRunning && !emulationPaused && showFrametime) {
-			char fpsBuffer[64];
-			snprintf(fpsBuffer, 64, "Avg: %fms curr: %fms", (float)frameTimeSum / (float)(frameTimeN++) * 1000.f,
-				 (endTime - startTime) * 1000.f);
-			//uiDrawString(currentFB, currentFBWidth, currentFBHeight, fpsBuffer, 0, 8, 255, 255, 255);
 		}
 
 		gfxFlushBuffers();

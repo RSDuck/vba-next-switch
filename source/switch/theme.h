@@ -15,12 +15,18 @@ typedef struct {
 } theme_t;
 
 typedef enum {
-    LIGHT,
-    DARK,
-} themeMode;
+    modeLight,
+    modeDark,
+} themeMode_t;
+
+enum {
+	switchTheme,
+	darkTheme,
+	lightTheme
+};
 
 extern Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight;
 
-void setTheme(themeMode t);
+void setTheme(themeMode_t t);
 
-extern theme_t THEME;
+extern theme_t currentTheme;

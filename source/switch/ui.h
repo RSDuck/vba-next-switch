@@ -56,7 +56,6 @@ void uiSaveSettings();
 void uiCancelSettings();
 
 extern uint32_t themeM;
-extern uint32_t useSwitchTheme;
 
 extern u32 btnMargin;
 

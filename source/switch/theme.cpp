@@ -1,28 +1,28 @@
 #include "theme.h"
 
-void setTheme(themeMode t) {
+void setTheme(themeMode_t t) {
     switch (t) {
-        case LIGHT:
-            THEME.backgroundColor = MakeColor(239, 239, 239, 255);
-            THEME.textColor = MakeColor(45, 45, 45, 255);
-            THEME.textActiveColor = MakeColor(50, 80, 240, 255);
-            THEME.textActiveBGColor = MakeColor(253, 253, 253, 255);
-            THEME.btnA = btnADark;
-            THEME.btnB = btnBDark;
-            THEME.btnX = btnXDark;
-            THEME.btnY = btnYDark;
+        case modeLight:
+            currentTheme.backgroundColor = MakeColor(239, 239, 239, 255);
+            currentTheme.textColor = MakeColor(45, 45, 45, 255);
+            currentTheme.textActiveColor = MakeColor(50, 80, 240, 255);
+            currentTheme.textActiveBGColor = MakeColor(253, 253, 253, 255);
+            currentTheme.btnA = btnADark;
+            currentTheme.btnB = btnBDark;
+            currentTheme.btnX = btnXDark;
+            currentTheme.btnY = btnYDark;
             break;
-        case DARK:
-            THEME.backgroundColor = MakeColor(45, 45, 45, 255);
-            THEME.textColor = MakeColor(255, 255, 255, 255);
-            THEME.textActiveColor = MakeColor(0, 255, 197, 255);
-            THEME.textActiveBGColor = MakeColor(33, 34, 39, 255);
-            THEME.btnA = btnALight;
-            THEME.btnB = btnBLight;
-            THEME.btnX = btnXLight;
-            THEME.btnY = btnYLight;
+        case modeDark:
+            currentTheme.backgroundColor = MakeColor(45, 45, 45, 255);
+            currentTheme.textColor = MakeColor(255, 255, 255, 255);
+            currentTheme.textActiveColor = MakeColor(0, 255, 197, 255);
+            currentTheme.textActiveBGColor = MakeColor(33, 34, 39, 255);
+            currentTheme.btnA = btnALight;
+            currentTheme.btnB = btnBLight;
+            currentTheme.btnX = btnXLight;
+            currentTheme.btnY = btnYLight;
             break;        
     }
 }
 
-theme_t THEME;
+theme_t currentTheme;

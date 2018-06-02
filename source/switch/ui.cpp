@@ -64,7 +64,6 @@ u32 btnMargin = 0;
 static const char* settingsPath = "vba-switch.ini";
 
 uint32_t themeM = 0;
-uint32_t useSwitchTheme = 1;
 
 ColorSetId switchColorSetID;
 
@@ -180,8 +179,10 @@ UIResult uiLoop(u32 keysDown) {
 	if (state == stateRemapButtons) {
 		//imageDraw(fb, currentFBWidth, currentFBHeight, &gbaImage, 0, 0);
 	} else if (uiGetState() != stateRunning) {	
-		if (useSwitchTheme) setTheme((themeMode)switchColorSetID);
-		else themeM ? setTheme(LIGHT) : setTheme(DARK); //TODO improve this...
+
+		if (themeM == switchTheme) setTheme((themeMode_t)switchColorSetID);
+		else if(themeM == lightTheme) setTheme(modeLight);
+		else setTheme(modeDark);
 
 		btnMargin = 0;
 
@@ -204,7 +205,7 @@ UIResult uiLoop(u32 keysDown) {
 			menuItemsCount = filenamesCount;
 		}
 
-		drawRect(0, 0, currentFBWidth, currentFBHeight, THEME.backgroundColor);
+		drawRect(0, 0, currentFBWidth, currentFBHeight, currentTheme.backgroundColor);
 
 		imageDraw(&logoSmall, 52, 15, 0, 0, 0);
 
@@ -247,36 +248,34 @@ UIResult uiLoop(u32 keysDown) {
 				int delta = (dst - lastDst) / 2.2;
 				dst = floor(lastDst + delta);
 
-				drawRect(0, dst, currentFBWidth / 1.25, separator, THEME.textActiveBGColor);
+				drawRect(0, dst, currentFBWidth / 1.25, separator, currentTheme.textActiveBGColor);
 				if (lastDst == dst)
-					drawText(font16, 60, i * separator + textMarginTop, THEME.textActiveColor, menu[j]);
+					drawText(font16, 60, i * separator + textMarginTop, currentTheme.textActiveColor, menu[j]);
 				else
-					drawText(font16, 60, i * separator + textMarginTop, THEME.textColor, menu[j]);
+					drawText(font16, 60, i * separator + textMarginTop, currentTheme.textColor, menu[j]);
 				lastDst = dst;
 			} else {
-				drawText(font16, 60, i * separator + textMarginTop, THEME.textColor, menu[j]);
+				drawText(font16, 60, i * separator + textMarginTop, currentTheme.textColor, menu[j]);
 			}
 
 			i++;
 			if (i >= rowsVisible) break;
 		}
 
-		u64 timestamp;
-		//timeGetCurrentTime(TimeType_UserSystemClock, &timestamp);
-		//time_t tim = (time_t)timestamp;
-		struct tm* timeStruct = getRealLocalTime(); //localtime(&tim);
+
+		struct tm* timeStruct = getRealLocalTime();
 
 		char timeBuffer[64];
 		snprintf(timeBuffer, 64, "%02i:%02i", timeStruct->tm_hour, timeStruct->tm_min);
 
-		drawText(font24, currentFBWidth - 130, 45, THEME.textColor, timeBuffer);
+		drawText(font24, currentFBWidth - 130, 45, currentTheme.textColor, timeBuffer);
 
-		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, THEME.textColor);
+		drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, currentTheme.textColor);
 
 		//UI Drawing routines
 		switch (state) {
 			case stateFileselect:
-				drawText(font16, 60, currentFBHeight - 43, THEME.textColor, currentDirectory);
+				drawText(font16, 60, currentFBHeight - 43, currentTheme.textColor, currentDirectory);
 				uiDrawTipButton(B, 1, "Back");
 				uiDrawTipButton(A, 2, "Open");
 				uiDrawTipButton(X, 3, "Exit VBA Next");
@@ -419,20 +418,20 @@ void uiDrawTipButton(buttonType type, u32 pos, const char* text) {
 
 	switch (type) {
 		case A:
-			imageDraw(&THEME.btnA, x, y, 0, 0, 0);
-			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			imageDraw(&currentTheme.btnA, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case B:
-			imageDraw(&THEME.btnB, x, y, 0, 0, 0);
-			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			imageDraw(&currentTheme.btnB, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case Y:
-			imageDraw(&THEME.btnY, x, y, 0, 0, 0);
-			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			imageDraw(&currentTheme.btnY, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case X:
-			imageDraw(&THEME.btnX, x, y, 0, 0, 0);
-			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, THEME.textColor, text);
+			imageDraw(&currentTheme.btnX, x, y, 0, 0, 0);
+			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		default:
 			break;
