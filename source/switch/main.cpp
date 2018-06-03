@@ -35,11 +35,10 @@ u32 currentFBHeight;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
-enum {
-	filterNearestInteger,
-	filterNearest,
-	filterBilinear,
-	filtersCount,
+enum { filterNearestInteger,
+       filterNearest,
+       filterBilinear,
+       filtersCount,
 };
 
 uint32_t scalingFilter = filterNearest;
@@ -530,7 +529,6 @@ int main(int argc, char *argv[]) {
 	char saveFilename[PATH_LENGTH];
 
 	while (appletMainLoop() && running) {
-
 		currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
 		memset(currentFB, 0, 4 * currentFBWidth * currentFBHeight);
 
@@ -604,6 +602,8 @@ int main(int argc, char *argv[]) {
 
 		bool actionStopEmulation = false;
 		bool actionStartEmulation = false;
+
+		uiDraw(keysDown);
 
 		UIResult result;
 		switch (result = uiLoop(keysDown)) {
