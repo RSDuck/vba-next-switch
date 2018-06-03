@@ -57,7 +57,7 @@ static int rowsVisible = 0;
 
 static Image gbaImage, logoSmall;
 
-Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight;
+Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
 
 u32 btnMargin = 0;
 
@@ -103,6 +103,9 @@ void uiInit() {
 
 	imageLoad(&gbaImage, "romfs:/gba.png");
 	imageLoad(&logoSmall, "romfs:/logoSmall.png");
+	imageLoad(&splashWhite, "romfs:/splashWhite.png");
+	imageLoad(&splashBlack, "romfs:/splashBlack.png");
+
 	imageLoad(&btnADark, "romfs:/btnADark.png");
 	imageLoad(&btnALight, "romfs:/btnALight.png");
 	imageLoad(&btnBDark, "romfs:/btnBDark.png");
@@ -116,6 +119,9 @@ void uiInit() {
 void uiDeinit() {
 	imageDeinit(&gbaImage);
 	imageDeinit(&logoSmall);
+	imageDeinit(&splashWhite);
+	imageDeinit(&splashBlack);
+
 	imageDeinit(&btnADark);
 	imageDeinit(&btnALight);
 	imageDeinit(&btnBDark);
@@ -173,6 +179,8 @@ void uiCancelSettings() {
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
 static int lastDst = 80;
+static int splashTime = 120;
+u32 splashEnabled = 1;
 
 void uiDraw(u32 keysDown) {
 	UIState state = uiGetState();
@@ -209,7 +217,7 @@ void uiDraw(u32 keysDown) {
 
 	drawRect(0, 0, currentFBWidth, currentFBHeight, currentTheme.backgroundColor);
 
-	imageDraw(&logoSmall, 52, 15, 0, 0, 0);
+	imageDraw(&logoSmall, 52, 15);
 
 	int i = 0;
 	int separator = 40;
@@ -290,6 +298,11 @@ void uiDraw(u32 keysDown) {
 			break;
 		default:
 			break;
+	}
+
+	if (splashEnabled && splashTime > 0) {
+		imageDraw(&currentTheme.splashImage, 0, 0, splashTime * 255 / 120);
+		splashTime -= 5;
 	}
 }
 
@@ -421,19 +434,19 @@ void uiDrawTipButton(buttonType type, u32 pos, const char* text) {
 
 	switch (type) {
 		case buttonA:
-			imageDraw(&currentTheme.btnA, x, y, 0, 0, 0);
+			imageDraw(&currentTheme.btnA, x, y);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case buttonB:
-			imageDraw(&currentTheme.btnB, x, y, 0, 0, 0);
+			imageDraw(&currentTheme.btnB, x, y);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case buttonY:
-			imageDraw(&currentTheme.btnY, x, y, 0, 0, 0);
+			imageDraw(&currentTheme.btnY, x, y);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		case buttonX:
-			imageDraw(&currentTheme.btnX, x, y, 0, 0, 0);
+			imageDraw(&currentTheme.btnX, x, y);
 			drawText(font16, x + 25 + 13, currentFBHeight - 73 + h, currentTheme.textColor, text);
 			break;
 		default:

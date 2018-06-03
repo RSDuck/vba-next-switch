@@ -12,6 +12,7 @@ typedef struct {
     Image btnB;
     Image btnX;
     Image btnY;
+    Image splashImage;
 } theme_t;
 
 typedef enum {
@@ -25,7 +26,7 @@ enum {
 	lightTheme
 };
 
-extern Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight;
+extern Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
 
 void setTheme(themeMode_t t);
 
