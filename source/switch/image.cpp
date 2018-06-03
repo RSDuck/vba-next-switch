@@ -13,7 +13,7 @@ void imageDeinit(Image* image) { stbi_image_free(image->data); }
 
 #define CLAMP(v, s, t) ((((v) > (t) ? (t) : (v))) < (s) ? (s) : (v))
 
-void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight, u8 _alpha) {
+void imageDraw(Image* image, int x, int y, int _alpha, int u, int v, int imageWidth, int imageHeight) {
 	extern u8* currentFB;
 	extern u32 currentFBWidth;
 	extern u32 currentFBHeight;
