@@ -13,7 +13,7 @@ void imageDeinit(Image* image) { stbi_image_free(image->data); }
 
 #define CLAMP(v, s, t) ((((v) > (t) ? (t) : (v))) < (s) ? (s) : (v))
 
-void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight) {
+void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight, u8 _alpha) {
 	extern u8* currentFB;
 	extern u32 currentFBWidth;
 	extern u32 currentFBHeight;
@@ -54,7 +54,7 @@ void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int ima
 		u8* fbLineStart = fbAddr;
 
 		for (int i = 0; i < imageWidth; i++) {
-			u8 alpha = imageAddr[3];
+			u8 alpha = (imageAddr[3] * _alpha) / 255;;
 			u8 oneMinusAlpha = 255 - alpha;
 
 			fbAddr[0] = (imageAddr[0] * alpha) / 255 + (fbAddr[0] * oneMinusAlpha) / 255;

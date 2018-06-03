@@ -75,6 +75,6 @@ void fontExit();
 void drawRect(u32 x, u32 y, u32 w, u32 h, color_t color);
 void drawRectRaw(u32 x, u32 y, u32 w, u32 h, color_t color);
 void drawPixel(u32 x, u32 y, color_t clr);
-void drawText(u32 font, u32 x, u32 y, color_t clr, const char* text);
-void drawTextTruncate(u32 font, u32 x, u32 y, color_t clr, const char* text, u32 max_width, const char* end_text);
+void drawText(u32 font, u32 x, u32 y, color_t clr, const char* text, ...);
+void drawTextTruncate(u32 font, u32 x, u32 y, color_t clr, u32 max_width, const char* end_text, const char* text, ...);
 void getTextDimensions(u32 font, const char* text, u32* width_out, u32* height_out);

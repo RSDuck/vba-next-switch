@@ -180,9 +180,21 @@ static void drawText_(u32 font, u32 x, u32 y, color_t clr, const char* text, u32
 	}
 }
 
-void drawText(u32 font, u32 x, u32 y, color_t clr, const char* text) { drawText_(font, x, y, clr, text, 0, NULL); }
+void drawText(u32 font, u32 x, u32 y, color_t clr, const char* text, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, text);
+	vsnprintf(buffer, sizeof(buffer) / sizeof(char), text, args);
+	va_end(args);
+	drawText_(font, x, y, clr, buffer, 0, NULL);
+}
 
-void drawTextTruncate(u32 font, u32 x, u32 y, color_t clr, const char* text, u32 max_width, const char* end_text) {
+void drawTextTruncate(u32 font, u32 x, u32 y, color_t clr, u32 max_width, const char* end_text, const char* text, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, text);
+	vsnprintf(buffer, sizeof(buffer) / sizeof(char), text, args);
+	va_end(args);
 	drawText_(font, x, y, clr, text, max_width, end_text);
 }
 
