@@ -11,6 +11,7 @@ void setTheme(themeMode_t t) {
             currentTheme.btnB = btnBDark;
             currentTheme.btnX = btnXDark;
             currentTheme.btnY = btnYDark;
+            currentTheme.splashImage = splashWhite;
             break;
         case modeDark:
             currentTheme.backgroundColor = MakeColor(45, 45, 45, 255);
@@ -21,6 +22,7 @@ void setTheme(themeMode_t t) {
             currentTheme.btnB = btnBLight;
             currentTheme.btnX = btnXLight;
             currentTheme.btnY = btnYLight;
+            currentTheme.splashImage = splashBlack;
             break;        
     }
 }

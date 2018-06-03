@@ -65,4 +65,6 @@ void uiStatusMsg(const char* fmt, ...);
 
 void uiDrawTipButton(buttonType type, u32 pos, const char* text);
 
+void uiDraw(u32 keysDown);
+
 #endif
