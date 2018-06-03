@@ -11,6 +11,8 @@ void imageLoad(Image* image, const char* filename) {
 
 void imageDeinit(Image* image) { stbi_image_free(image->data); }
 
+#define CLAMP(v, s, t) ((((v) > (t) ? (t) : (v))) < (s) ? (s) : (v))
+
 void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int imageHeight) {
 	extern u8* currentFB;
 	extern u32 currentFBWidth;
@@ -18,6 +20,11 @@ void imageDraw(Image* image, int x, int y, int u, int v, int imageWidth, int ima
 
 	if (imageWidth == 0) imageWidth = image->width;
 	if (imageHeight == 0) imageHeight = image->height;
+
+	u = CLAMP(u, 0, image->width);
+	v = CLAMP(v, 0, image->height);
+	imageWidth = CLAMP(imageWidth, 0, image->width - u);
+	imageHeight = CLAMP(imageHeight, 0, image->height - v);
 
 	if (x + imageWidth < 0 || y + imageHeight < 0 || x >= currentFBWidth || y >= currentFBHeight) {
 		return;
