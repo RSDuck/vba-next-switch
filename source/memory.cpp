@@ -9,6 +9,10 @@
 #include "port.h"
 #include "system.h"
 
+extern "C" {
+#include "switch/localtime.h"
+}
+
 /*============================================================
 	UTIL
 ============================================================ */
@@ -154,6 +158,7 @@ int flashManufacturerID = 0x32;
 int flashBank = 0;
 
 int autosaveCountdown = 0;
+u32 rtcOffset = 0;
 
 static variable_desc flashSaveData3[] = {
   { &flashState, sizeof(int) },
@@ -644,9 +649,12 @@ static bool rtcEnabled = true;
 
 void SetGBATime()
 {
-    time_t long_time;
-    time(&long_time); /* Get time as long integer. */
-    gba_time = *localtime(&long_time); /* Convert to local time. */
+    gba_time = *getRealLocalTime();
+	if(rtcOffset <= 13)
+		gba_time.tm_hour += rtcOffset;
+	else 
+		gba_time.tm_hour -= rtcOffset - 13;
+	mktime(&gba_time);
 }
 
 void rtcEnable(bool e)
