@@ -23,6 +23,7 @@ typedef struct {
 } variable_desc;
 
 extern int autosaveCountdown;
+extern u32 rtcOffset;
 
 extern int flashSize;
 

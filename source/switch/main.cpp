@@ -44,6 +44,12 @@ static int upscaleBufferSize = 0;
 static bool emulationRunning = false;
 static bool emulationPaused = false;
 
+static const char *stringsNoYes[] = {"No", "Yes"};
+static const char *stringsRtcOffset[] = {"0 Hours",   "1 Hour",    "2 Hours",   "3 Hours",  "4 Hours",  "5 Hours",  "6 Hours",
+					 "7 Hours",   "8 Hours",   "9 Hours",   "10 Hours", "11 Hours", "12 Hours", "13 Hours",
+					 "-1 Hour", "-2 Hours", "-3 Hours", "-4 Hours", "-5 Hours", "-6 Hours", "-7 Hours",
+					 "-8 Hours",  "-9 Hours",  "-10 Hours",  "-11 Hours", "-12 Hours"};
+
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
 static Mutex videoLock;
@@ -487,6 +493,8 @@ int main(int argc, char *argv[]) {
 	mutexInit(&videoLock);
 
 	uiInit();
+
+	uiAddSetting("In game clock offset", &rtcOffset, 26, stringsRtcOffset);
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
