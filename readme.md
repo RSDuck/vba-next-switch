@@ -34,7 +34,7 @@ This leads of course to the problem that both threads, although locked to 60 Hz,
 
 ## Credits
 
-- @jakibaki and https://github.com/dene- who helped massively with their Pull Requests
-- VBA-M and libretro devs
-- shinyquagsire23 and Steveice10 for 3DSGBA
-- libnx devs
+- [jakibaki](https://github.com/jakibaki) and [dene-](https://github.com/dene-) who helped massively with their Pull Requests
+- VBA-M and [libretro devs](https://github.com/libretro/vba-next/graphs/contributors)
+- shinyquagsire23 and Steveice10 for [3DSGBA](https://github.com/shinyquagsire23/3DSGBA)
+- [libnx devs](https://github.com/switchbrew/libnx/graphs/contributors)
