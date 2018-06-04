@@ -22,8 +22,9 @@ typedef enum {
 
 enum { switchTheme, darkTheme, lightTheme };
 
-extern Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
+void themeInit();
+void themeDeinit();
 
-void setTheme(themeMode_t t);
+void themeSet(themeMode_t t);
 
 extern theme_t currentTheme;

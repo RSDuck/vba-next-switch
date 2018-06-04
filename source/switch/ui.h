@@ -30,15 +30,6 @@ struct Setting {
 
 enum buttonType { buttonA, buttonB, buttonY, buttonX };
 
-enum { filterNearestInteger,
-       filterNearest,
-       filterBilinear,
-       filtersCount,
-};
-
-extern Setting* settings;
-extern Setting* tempSettings;
-
 #define PATH_LENGTH 512
 
 void uiInit();
@@ -56,29 +47,11 @@ void uiFinaliseAndLoadSettings();
 void uiSaveSettings();
 void uiCancelSettings();
 
-extern uint32_t themeM;
-
-extern uint32_t disableAnalogStick;
-extern uint32_t switchRLButtons;
-
-extern uint32_t frameSkip;
-extern const int frameSkipValues[];
-
-extern const char* frameSkipNames[];
 extern const char* stringsNoYes[];
 
-extern uint32_t scalingFilter;
-
-extern u32 btnMargin;
-
-extern ColorSetId switchColorSetID;
-
 void uiStatusMsg(const char* fmt, ...);
-
 void uiDrawTipButton(buttonType type, u32 pos, const char* text);
 
 void uiDraw(u32 keysDown);
-
-extern void applyConfig();
 
 #endif

@@ -44,11 +44,25 @@ static int upscaleBufferSize = 0;
 static bool emulationRunning = false;
 static bool emulationPaused = false;
 
-static const char *stringsNoYes[] = {"No", "Yes"};
-static const char *stringsRtcOffset[] = {"0 Hours",   "1 Hour",    "2 Hours",   "3 Hours",  "4 Hours",  "5 Hours",  "6 Hours",
-					 "7 Hours",   "8 Hours",   "9 Hours",   "10 Hours", "11 Hours", "12 Hours", "13 Hours",
-					 "-1 Hour", "-2 Hours", "-3 Hours", "-4 Hours", "-5 Hours", "-6 Hours", "-7 Hours",
-					 "-8 Hours",  "-9 Hours",  "-10 Hours",  "-11 Hours", "-12 Hours"};
+static const char *stringsRtcOffset[] = {"0 Hours",  "1 Hour",   "2 Hours",   "3 Hours",   "4 Hours",  "5 Hours",  "6 Hours",
+					 "7 Hours",  "8 Hours",  "9 Hours",   "10 Hours",  "11 Hours", "12 Hours", "13 Hours",
+					 "-1 Hour",  "-2 Hours", "-3 Hours",  "-4 Hours",  "-5 Hours", "-6 Hours", "-7 Hours",
+					 "-8 Hours", "-9 Hours", "-10 Hours", "-11 Hours", "-12 Hours"};
+
+enum { filterNearestInteger,
+       filterNearest,
+       filterBilinear,
+       filtersCount,
+};
+static const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
+static uint32_t scalingFilter = filterNearest;
+
+static const char *frameSkipNames[] = {"No Frameskip", "1/3", "1/2", "1", "2", "3", "4"};
+static const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
+static uint32_t frameSkip = 0;
+
+static uint32_t disableAnalogStick = 0;
+static uint32_t switchRLButtons = 0;
 
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
@@ -427,7 +441,7 @@ void threadFunc(void *args) {
 	mutexUnlock(&emulationLock);
 }
 
-void applyConfig() {
+static void applyConfig() {
 	mutexLock(&emulationLock);
 	SetFrameskip(frameSkipValues[frameSkip]);
 
@@ -470,7 +484,6 @@ int main(int argc, char *argv[]) {
 	gfxConfigureAutoResolutionDefault(true);
 
 	setsysInitialize();
-	setsysGetColorSetId(&switchColorSetID);
 
 	plInitialize();
 	textInit();
@@ -494,7 +507,14 @@ int main(int argc, char *argv[]) {
 
 	uiInit();
 
+	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
+	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
+	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
+	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
 	uiAddSetting("In game clock offset", &rtcOffset, 26, stringsRtcOffset);
+
+	uiFinaliseAndLoadSettings();
+	applyConfig();
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
@@ -505,7 +525,16 @@ int main(int argc, char *argv[]) {
 
 	char saveFilename[PATH_LENGTH];
 
+	#ifdef NXLINK_STDIO
+	double frameTimeSum = 0;
+	int frameTimeFrames = 0;
+	#endif
+
 	while (appletMainLoop() && running) {
+		#ifdef NXLINK_STDIO
+		double frameStartTime = svcGetSystemTick() * SECONDS_PER_TICKS;
+		#endif
+
 		currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
 		memset(currentFB, 0, 4 * currentFBWidth * currentFBHeight);
 
@@ -689,6 +718,22 @@ int main(int argc, char *argv[]) {
 			CPUWriteBatteryFile(saveFilename);
 			mutexUnlock(&emulationLock);
 		}
+
+#if NXLINK_STDIO
+		// going to use this to debug the
+		double frameEndTime = svcGetSystemTick() * SECONDS_PER_TICKS;
+
+		double dt = frameEndTime - frameStartTime;
+		frameTimeSum += dt;
+		frameTimeFrames++;
+
+		if (frameTimeSum >= 1) {
+			printf("avg. frametime %fms\n", 1000.0 * (frameTimeSum / (double)frameTimeFrames));
+
+			frameTimeSum = 0;
+			frameTimeFrames = 0;
+		}
+#endif
 
 		gfxFlushBuffers();
 		gfxSwapBuffers();

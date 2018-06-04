@@ -43,11 +43,9 @@ static int scroll = 0;
 
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
-const char* filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
 Setting* settings;
-Setting* tempSettings;
 static int settingsMetaStart = 0;
 static int settingsCount = 0;
 static char* settingStrings[SETTINGS_MAX];
@@ -60,29 +58,18 @@ static int rowsVisible = 0;
 
 static Image gbaImage, logoSmall;
 
-Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
-
-u32 btnMargin = 0;
+static u32 btnMargin = 0;
 
 static const char* settingsPath = "vba-switch.ini";
 
-uint32_t themeM = 0;
-uint32_t disableAnalogStick = 0;
-uint32_t switchRLButtons = 0;
-const char* frameSkipNames[] = {"No Frameskip", "1/3", "1/2", "1", "2", "3", "4"};
-const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
-
 const char* stringsNoYes[] = {"No", "Yes"};
 
-uint32_t frameSkip = 0;
-
-uint32_t scalingFilter = filterNearest;
-
-ColorSetId switchColorSetID;
+static ColorSetId switchColorSetID;
+static uint32_t themeM = 0;
 
 static int lastDst = 80;
 static int splashTime = 240;
-u32 splashEnabled = 1;
+static u32 splashEnabled = 1;
 
 static void generateSettingString(Setting* setting) {
 	if (!setting->meta) {
@@ -118,46 +105,24 @@ void uiInit() {
 
 	settings = (Setting*)malloc(SETTINGS_MAX * sizeof(Setting));
 
+	themeInit();
+
 	imageLoad(&gbaImage, "romfs:/gba.png");
 	imageLoad(&logoSmall, "romfs:/logoSmall.png");
-	imageLoad(&splashWhite, "romfs:/splashWhite.png");
-	imageLoad(&splashBlack, "romfs:/splashBlack.png");
 
-	imageLoad(&btnADark, "romfs:/btnADark.png");
-	imageLoad(&btnALight, "romfs:/btnALight.png");
-	imageLoad(&btnBDark, "romfs:/btnBDark.png");
-	imageLoad(&btnBLight, "romfs:/btnBLight.png");
-	imageLoad(&btnXDark, "romfs:/btnXDark.png");
-	imageLoad(&btnXLight, "romfs:/btnXLight.png");
-	imageLoad(&btnYDark, "romfs:/btnYDark.png");
-	imageLoad(&btnYLight, "romfs:/btnYLight.png");
+	setsysGetColorSetId(&switchColorSetID);
 
-	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
-	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
-	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
-	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
 	uiAddSetting("Enable splash screen", &splashEnabled, 2, stringsNoYes);
 	uiAddSetting("Theme", &themeM, 3, themeOptions);
-	uiFinaliseAndLoadSettings();
-	applyConfig();
-
+	
 	uiPushState(stateFileselect);
 }
 
 void uiDeinit() {
+	themeDeinit();
+
 	imageDeinit(&gbaImage);
 	imageDeinit(&logoSmall);
-	imageDeinit(&splashWhite);
-	imageDeinit(&splashBlack);
-
-	imageDeinit(&btnADark);
-	imageDeinit(&btnALight);
-	imageDeinit(&btnBDark);
-	imageDeinit(&btnBLight);
-	imageDeinit(&btnXDark);
-	imageDeinit(&btnXLight);
-	imageDeinit(&btnYDark);
-	imageDeinit(&btnYLight);
 
 	free(filenameBuffer);
 	free(settings);
@@ -181,8 +146,6 @@ void uiFinaliseAndLoadSettings() {
 }
 
 void uiSaveSettings() {
-	settings = tempSettings;
-
 	FILE* f = fopen(settingsPath, "wt");
 	if (f) {
 		fprintf(f, "[Misc]\n");
@@ -212,11 +175,11 @@ void uiDraw(u32 keysDown) {
 	if (state == stateRunning) return;
 
 	if (themeM == switchTheme)
-		setTheme((themeMode_t)switchColorSetID);
+		themeSet((themeMode_t)switchColorSetID);
 	else if (themeM == lightTheme)
-		setTheme(modeLight);
+		themeSet(modeLight);
 	else
-		setTheme(modeDark);
+		themeSet(modeDark);
 
 	btnMargin = 0;
 
@@ -365,7 +328,7 @@ UIResult uiLoop(u32 keysDown) {
 			} else if (state == stateSettings) {
 				if (keysDown & KEY_B) return resultCancelSettings;
 
-				Setting* setting = &tempSettings[cursor];
+				Setting* setting = &settings[cursor];
 
 				if (setting->meta) return (UIResult)setting->valuesCount;
 				*setting->valueIdx += (keysDown & KEY_A ? 1 : -1);
@@ -386,7 +349,6 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
-						tempSettings = settings;
 						return resultOpenSettings;
 					case 4:
 						return resultClose;

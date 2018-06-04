@@ -1,6 +1,36 @@
 #include "theme.h"
 
-void setTheme(themeMode_t t) {
+static Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
+
+void themeInit() {
+	imageLoad(&btnADark, "romfs:/btnADark.png");
+	imageLoad(&btnALight, "romfs:/btnALight.png");
+	imageLoad(&btnBDark, "romfs:/btnBDark.png");
+	imageLoad(&btnBLight, "romfs:/btnBLight.png");
+	imageLoad(&btnXDark, "romfs:/btnXDark.png");
+	imageLoad(&btnXLight, "romfs:/btnXLight.png");
+	imageLoad(&btnYDark, "romfs:/btnYDark.png");
+	imageLoad(&btnYLight, "romfs:/btnYLight.png");
+
+	imageLoad(&splashWhite, "romfs:/splashWhite.png");
+	imageLoad(&splashBlack, "romfs:/splashBlack.png");
+}
+
+void themeDeinit() {
+	imageDeinit(&splashWhite);
+	imageDeinit(&splashBlack);
+
+	imageDeinit(&btnADark);
+	imageDeinit(&btnALight);
+	imageDeinit(&btnBDark);
+	imageDeinit(&btnBLight);
+	imageDeinit(&btnXDark);
+	imageDeinit(&btnXLight);
+	imageDeinit(&btnYDark);
+	imageDeinit(&btnYLight);
+}
+
+void themeSet(themeMode_t t) {
 	switch (t) {
 		case modeLight:
 			currentTheme.backgroundColor = MakeColor(239, 239, 239, 255);
