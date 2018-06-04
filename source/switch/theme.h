@@ -4,27 +4,23 @@
 #include "image.h"
 
 typedef struct {
-    color_t backgroundColor;
-    color_t textColor;
-    color_t textActiveColor;
-    color_t textActiveBGColor;
-    Image btnA;
-    Image btnB;
-    Image btnX;
-    Image btnY;
-    Image splashImage;
+	color_t backgroundColor;
+	color_t textColor;
+	color_t textActiveColor;
+	color_t textActiveBGColor;
+	Image btnA;
+	Image btnB;
+	Image btnX;
+	Image btnY;
+	Image splashImage;
 } theme_t;
 
 typedef enum {
-    modeLight,
-    modeDark,
+	modeLight,
+	modeDark,
 } themeMode_t;
 
-enum {
-	switchTheme,
-	darkTheme,
-	lightTheme
-};
+enum { switchTheme, darkTheme, lightTheme };
 
 extern Image btnADark, btnALight, btnBDark, btnBLight, btnXDark, btnXLight, btnYDark, btnYLight, splashWhite, splashBlack;
 
