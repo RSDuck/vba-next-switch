@@ -35,30 +35,14 @@ u32 currentFBHeight;
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
-enum { filterNearestInteger,
-       filterNearest,
-       filterBilinear,
-       filtersCount,
-};
-
-uint32_t scalingFilter = filterNearest;
-
-const char *filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
-const char *themeOptions[] = {"Switch", "Dark", "Light"};
-
 extern uint64_t joy;
 unsigned device_type = 0;
-
-static uint32_t disableAnalogStick = 0;
-static uint32_t switchRLButtons = 0;
 
 static u32 *upscaleBuffer = NULL;
 static int upscaleBufferSize = 0;
 
 static bool emulationRunning = false;
 static bool emulationPaused = false;
-
-static const char *stringsNoYes[] = {"No", "Yes"};
 
 static char currentRomPath[PATH_LENGTH] = {'\0'};
 
@@ -85,11 +69,6 @@ static u32 *audioTransferBuffer;
 static Mutex audioLock;
 
 static unsigned libretro_save_size = sizeof(libretro_save_buf);
-
-const char *frameSkipNames[] = {"No Frameskip", "1/3", "1/2", "1", "2", "3", "4"};
-const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
-
-static uint32_t frameSkip = 0;
 
 uint32_t buttonMap[11] = {
     KEY_A, KEY_B, KEY_MINUS, KEY_PLUS, KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_R, KEY_L,
@@ -442,7 +421,7 @@ void threadFunc(void *args) {
 	mutexUnlock(&emulationLock);
 }
 
-static void applyConfig() {
+void applyConfig() {
 	mutexLock(&emulationLock);
 	SetFrameskip(frameSkipValues[frameSkip]);
 
@@ -508,16 +487,6 @@ int main(int argc, char *argv[]) {
 	mutexInit(&videoLock);
 
 	uiInit();
-
-	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
-	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
-	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
-	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
-	uiAddSetting("Theme", &themeM, 3, themeOptions);
-	uiFinaliseAndLoadSettings();
-	applyConfig();
-
-	uiPushState(stateFileselect);
 
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);

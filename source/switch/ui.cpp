@@ -43,6 +43,9 @@ static int scroll = 0;
 
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
 
+const char* filterStrNames[] = {"Nearest Integer", "Nearest Fullscreen", "Bilinear Fullscreen(slow!)"};
+const char* themeOptions[] = {"Switch", "Dark", "Light"};
+
 Setting* settings;
 Setting* tempSettings;
 static int settingsMetaStart = 0;
@@ -64,6 +67,16 @@ u32 btnMargin = 0;
 static const char* settingsPath = "vba-switch.ini";
 
 uint32_t themeM = 0;
+uint32_t disableAnalogStick = 0;
+uint32_t switchRLButtons = 0;
+const char* frameSkipNames[] = {"No Frameskip", "1/3", "1/2", "1", "2", "3", "4"};
+const int frameSkipValues[] = {0, 0x13, 0x12, 0x1, 0x2, 0x3, 0x4};
+
+const char* stringsNoYes[] = {"No", "Yes"};
+
+uint32_t frameSkip = 0;
+
+uint32_t scalingFilter = filterNearest;
 
 ColorSetId switchColorSetID;
 
@@ -114,6 +127,16 @@ void uiInit() {
 	imageLoad(&btnXLight, "romfs:/btnXLight.png");
 	imageLoad(&btnYDark, "romfs:/btnYDark.png");
 	imageLoad(&btnYLight, "romfs:/btnYLight.png");
+
+	uiAddSetting("Screen scaling method", &scalingFilter, filtersCount, filterStrNames);
+	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
+	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
+	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
+	uiAddSetting("Theme", &themeM, 3, themeOptions);
+	uiFinaliseAndLoadSettings();
+	applyConfig();
+
+	uiPushState(stateFileselect);
 }
 
 void uiDeinit() {
@@ -179,7 +202,7 @@ void uiCancelSettings() {
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
 
 static int lastDst = 80;
-static int splashTime = 120;
+static int splashTime = 240;
 u32 splashEnabled = 1;
 
 void uiDraw(u32 keysDown) {
@@ -255,8 +278,8 @@ void uiDraw(u32 keysDown) {
 
 		if (i + scroll == cursor) {
 			float dst = i * separator + menuMarginTop;
-			//float delta = (dst - lastDst) / 2.2;
-			//dst = floor(lastDst + delta);
+			// float delta = (dst - lastDst) / 2.2;
+			// dst = floor(lastDst + delta);
 
 			drawRect(0, (u32)dst, currentFBWidth / 1.25, separator, currentTheme.textActiveBGColor);
 			if (lastDst == dst)
@@ -278,7 +301,7 @@ void uiDraw(u32 keysDown) {
 
 	drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, currentTheme.textColor);
 
-	// UI Drawing routines
+	// UI Buttom Bar Buttons Drawing routines
 	switch (state) {
 		case stateFileselect:
 			drawText(font16, 60, currentFBHeight - 43, currentTheme.textColor, currentDirectory);
@@ -301,7 +324,7 @@ void uiDraw(u32 keysDown) {
 	}
 
 	if (splashEnabled && splashTime > 0) {
-		imageDraw(&currentTheme.splashImage, 0, 0, splashTime * 255 / 120);
+		imageDraw(&currentTheme.splashImage, 0, 0, splashTime <= 120 ? splashTime * 255 / 120 : 255);
 		splashTime -= 5;
 	}
 }
