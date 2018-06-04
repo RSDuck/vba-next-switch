@@ -14,6 +14,7 @@
 #include "../sound.h"
 #include "../system.h"
 #include "../types.h"
+#include "../GBACheats.h"
 #include "gbaover.h"
 
 #include "util.h"
@@ -210,6 +211,8 @@ static void gba_init(void) {
 	flashSize = 0x10000;
 	enableRtc = false;
 	mirroringEnable = false;
+
+	cheatListInit();
 
 	load_image_preferences();
 
@@ -524,6 +527,7 @@ int main(int argc, char *argv[]) {
 	threadStart(&mainThread);
 
 	char saveFilename[PATH_LENGTH];
+	char cheatsFilename[PATH_LENGTH];
 
 	#ifdef NXLINK_STDIO
 	double frameTimeSum = 0;
@@ -621,6 +625,9 @@ int main(int argc, char *argv[]) {
 				uiPopState();
 				if (uiGetState() == stateRunning) uiPopState();
 				break;
+			case resultOpenCheats:
+				uiPushState(stateCheats);
+				break;
 			case resultOpenSettings:
 				uiPushState(stateSettings);
 				break;
@@ -677,6 +684,10 @@ int main(int argc, char *argv[]) {
 				uiCancelSettings();
 				uiPopState();
 				break;
+			case resultCloseCheats:
+				cheatsSaveCheatList(cheatsFilename);
+				uiPopState();
+				break;
 			case resultNone:
 			default:
 				break;
@@ -700,8 +711,10 @@ int main(int argc, char *argv[]) {
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
+			romPathWithExt(cheatsFilename, PATH_LENGTH, "txt");
 
 			retro_load_game();
+			cheatsLoadCheatList(cheatsFilename);
 
 			SetFrameskip(frameSkipValues[frameSkip]);
 

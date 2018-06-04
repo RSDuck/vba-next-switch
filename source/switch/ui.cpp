@@ -20,6 +20,7 @@ extern "C" {
 
 #include "../system.h"
 #include "../types.h"
+#include "../GBACheats.h"
 #include "colors.h"
 #include "ui.h"
 #include "util.h"
@@ -41,7 +42,7 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
-static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
+static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Cheats", "Settings", "Exit"};
 
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
@@ -194,6 +195,9 @@ void uiDraw(u32 keysDown) {
 	if (state == stateSettings) {
 		menu = (const char**)settingStrings;
 		menuItemsCount = settingsCount;
+	} else if (state == stateCheats) {
+		menu = (const char**)cheatsStringList;
+		menuItemsCount = cheatsNumber;
 	} else if (state == statePaused) {
 		menu = pauseMenuItems;
 		menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
@@ -273,6 +277,11 @@ void uiDraw(u32 keysDown) {
 			uiDrawTipButton(buttonA, 2, "Open");
 			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 			break;
+		case stateCheats:
+			uiDrawTipButton(buttonB, 1, "Cancel");
+			uiDrawTipButton(buttonA, 2, "Toggle Cheat");
+			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
+			break;
 		case stateSettings:
 			uiDrawTipButton(buttonB, 1, "Cancel");
 			uiDrawTipButton(buttonA, 2, "OK");
@@ -338,6 +347,13 @@ UIResult uiLoop(u32 keysDown) {
 				generateSettingString(setting);
 
 				return resultNone;
+			} else if (state == stateCheats) {
+				if (keysDown & KEY_B) return resultCloseCheats;
+				if(cheatsList[cursor].enabled)
+					cheatsDisable(cursor);
+				else
+					cheatsEnable(cursor);
+
 			} else {
 				if (keysDown & KEY_B) return resultUnpause;
 
@@ -349,8 +365,10 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
-						return resultOpenSettings;
+						return resultOpenCheats;
 					case 4:
+						return resultOpenSettings;
+					case 5:
 						return resultClose;
 				}
 			}

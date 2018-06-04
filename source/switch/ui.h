@@ -13,12 +13,14 @@ typedef enum {
 	resultSaveState,
 	resultSettingsChanged,
 	resultShowCredits,
+	resultOpenCheats,
+	resultCloseCheats,
 	resultOpenSettings,
 	resultSaveSettings,
 	resultCancelSettings
 } UIResult;
 
-typedef enum { stateRunning, stateFileselect, statePaused, stateSettings, stateRemapButtons } UIState;
+typedef enum { stateRunning, stateFileselect, statePaused, stateSettings, stateRemapButtons, stateCheats } UIState;
 
 struct Setting {
 	const char* name;

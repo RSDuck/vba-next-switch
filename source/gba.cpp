@@ -22,6 +22,8 @@
 #include "elf.h"
 #endif
 
+#define USE_CHEATS 1
+
 #define DEBUG_RENDERER_MODE0 1
 #define DEBUG_RENDERER_MODE1 1
 #define DEBUG_RENDERER_MODE2 1
@@ -13521,6 +13523,8 @@ updateLoop:
 #define CHEATS_32_BIT_WRITE           115
 
 CheatsData cheatsList[100];
+char* cheatsStringList[100];
+
 int cheatsNumber = 0;
 u32 rompatch2addr [4];
 u16 rompatch2val [4];
@@ -14652,6 +14656,18 @@ int cheatsCheckKeys(u32 keys, u32 extended)
   return ticks;
 }
 
+
+
+void cheatListUpdate(int x) {
+	sprintf(cheatsStringList[x], "%s (%s) Enabled: %d", cheatsList[x].desc, cheatsList[x].codestring, cheatsList[x].enabled);
+}
+
+void cheatListInit() {
+	for(int i = 0; i < 100; i++)
+		cheatsStringList[i] = (char*) malloc(100);
+}
+
+
 void cheatsAdd(const char *codeStr,
                const char *desc,
                u32 rawaddress,
@@ -14691,6 +14707,7 @@ void cheatsAdd(const char *codeStr,
       cheatsList[x].oldValue = CPUReadMemory(address);
       break;
     }
+	cheatListUpdate(x);
     cheatsNumber++;
   }
 }
@@ -14765,6 +14782,7 @@ void cheatsEnable(int i)
     cheatsList[i].enabled = true;
     mastercode = 0;
   }
+  cheatListUpdate(i);
 }
 
 void cheatsDisable(int i)
@@ -14792,6 +14810,7 @@ void cheatsDisable(int i)
     }
     cheatsList[i].enabled = false;
   }
+  cheatListUpdate(i);
 }
 
 bool cheatsVerifyCheatCode(const char *code, const char *desc)
@@ -16011,6 +16030,7 @@ bool cheatsLoadCheatList(const char *file)
       fread(&cheatsList[i].value, 1, sizeof(u32),f);
       fread(&cheatsList[i].oldValue, 1, sizeof(u32),f);
       fread(&cheatsList[i].codestring, 1, 20*sizeof(char),f);
+	  cheatListUpdate(i);
       if(fread(&cheatsList[i].desc, 1, 32*sizeof(char),f) != 32*sizeof(char)) {
         fclose(f);
         return false;
@@ -16057,6 +16077,7 @@ bool cheatsLoadCheatList(const char *file)
         cheatsCBAChangeEncryption(seed);
       }
     }
+	cheatListUpdate(i);
   }
   cheatsNumber = count;
   fclose(f);
