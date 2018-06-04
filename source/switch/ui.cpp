@@ -80,6 +80,10 @@ uint32_t scalingFilter = filterNearest;
 
 ColorSetId switchColorSetID;
 
+static int lastDst = 80;
+static int splashTime = 240;
+u32 splashEnabled = 1;
+
 static void generateSettingString(Setting* setting) {
 	if (!setting->meta) {
 		snprintf(setting->generatedString, sizeof(setting->generatedString) - 1, "%s: %s", setting->name,
@@ -132,6 +136,7 @@ void uiInit() {
 	uiAddSetting("Frameskip", &frameSkip, sizeof(frameSkipValues) / sizeof(frameSkipValues[0]), frameSkipNames);
 	uiAddSetting("Disable analog stick", &disableAnalogStick, 2, stringsNoYes);
 	uiAddSetting("L R -> ZL ZR", &switchRLButtons, 2, stringsNoYes);
+	uiAddSetting("Enable splash screen", &splashEnabled, 2, stringsNoYes);
 	uiAddSetting("Theme", &themeM, 3, themeOptions);
 	uiFinaliseAndLoadSettings();
 	applyConfig();
@@ -200,10 +205,6 @@ void uiCancelSettings() {
 }
 
 void uiGetSelectedFile(char* out, int outLength) { strcpy_safe(out, selectedPath, outLength); }
-
-static int lastDst = 80;
-static int splashTime = 240;
-u32 splashEnabled = 1;
 
 void uiDraw(u32 keysDown) {
 	UIState state = uiGetState();
@@ -323,8 +324,8 @@ void uiDraw(u32 keysDown) {
 			break;
 	}
 
-	if (splashEnabled && splashTime > 0) {
-		imageDraw(&currentTheme.splashImage, 0, 0, splashTime <= 120 ? splashTime * 255 / 120 : 255);
+	if (splashTime > 0) {
+		if (splashEnabled) imageDraw(&currentTheme.splashImage, 0, 0, splashTime <= 120 ? splashTime * 255 / 120 : 255);
 		splashTime -= 5;
 	}
 }
