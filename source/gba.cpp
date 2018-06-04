@@ -14659,7 +14659,11 @@ int cheatsCheckKeys(u32 keys, u32 extended)
 
 
 void cheatListUpdate(int x) {
-	sprintf(cheatsStringList[x], "%s (%s) Enabled: %d", cheatsList[x].desc, cheatsList[x].codestring, cheatsList[x].enabled);
+	if(cheatsList[x].enabled)
+		sprintf(cheatsStringList[x], "%s (%s) Status: Enabled", cheatsList[x].desc, cheatsList[x].codestring);
+	else
+		sprintf(cheatsStringList[x], "%s (%s) Status: Disabled", cheatsList[x].desc, cheatsList[x].codestring);
+
 }
 
 void cheatListInit() {
