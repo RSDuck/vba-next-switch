@@ -38,7 +38,7 @@ INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
 APP_TITLE	:=	VBA Next
 APP_AUTHOR	:=	RSDuck and Contributors
-APP_VERSION	:=	0.5
+APP_VERSION	:=	0.6
 ROMFS	:=	romfs
 
 #---------------------------------------------------------------------------------
