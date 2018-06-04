@@ -714,12 +714,14 @@ int main(int argc, char *argv[]) {
 			romPathWithExt(cheatsFilename, PATH_LENGTH, "txt");
 
 			retro_load_game();
-			cheatsLoadCheatList(cheatsFilename);
 
 			SetFrameskip(frameSkipValues[frameSkip]);
 
 			emulationRunning = true;
 			emulationPaused = false;
+
+			cheatsDeleteAll(false);
+			cheatsLoadCheatList(cheatsFilename);
 
 			mutexUnlock(&emulationLock);
 		}

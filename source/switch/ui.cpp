@@ -44,6 +44,8 @@ static int scroll = 0;
 
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Cheats", "Settings", "Exit"};
 
+static const char* emptyCheatItems[] = {"No Cheats installed, please read the GBAtemp-post for more information"};
+
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
 Setting* settings;
@@ -196,8 +198,13 @@ void uiDraw(u32 keysDown) {
 		menu = (const char**)settingStrings;
 		menuItemsCount = settingsCount;
 	} else if (state == stateCheats) {
-		menu = (const char**)cheatsStringList;
-		menuItemsCount = cheatsNumber;
+		if(cheatsNumber == 0) {
+			menu = emptyCheatItems;
+			menuItemsCount = 1;
+		} else {
+			menu = (const char**)cheatsStringList;
+			menuItemsCount = cheatsNumber;
+		}
 	} else if (state == statePaused) {
 		menu = pauseMenuItems;
 		menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
@@ -278,7 +285,7 @@ void uiDraw(u32 keysDown) {
 			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 			break;
 		case stateCheats:
-			uiDrawTipButton(buttonB, 1, "Cancel");
+			uiDrawTipButton(buttonB, 1, "Back");
 			uiDrawTipButton(buttonA, 2, "Toggle Cheat");
 			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 			break;
@@ -348,7 +355,7 @@ UIResult uiLoop(u32 keysDown) {
 
 				return resultNone;
 			} else if (state == stateCheats) {
-				if (keysDown & KEY_B) return resultCloseCheats;
+				if ((keysDown & KEY_B) || (cheatsNumber == 0)) return resultCloseCheats;
 				if(cheatsList[cursor].enabled)
 					cheatsDisable(cursor);
 				else
