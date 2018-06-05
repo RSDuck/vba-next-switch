@@ -48,8 +48,6 @@ static int scroll = 0;
 
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Cheats", "Settings", "Exit"};
 
-static const char* emptyCheatItems[] = {"Add a cheat with the plus-button"};
-
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
 Setting* settings;
