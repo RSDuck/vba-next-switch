@@ -685,7 +685,7 @@ int main(int argc, char *argv[]) {
 				uiPopState();
 				break;
 			case resultCloseCheats:
-				cheatsSaveCheatList(cheatsFilename);
+				cheatsWriteHumanReadable(cheatsFilename);
 				uiPopState();
 				break;
 			case resultNone:
@@ -721,7 +721,7 @@ int main(int argc, char *argv[]) {
 			emulationPaused = false;
 
 			cheatsDeleteAll(false);
-			cheatsLoadCheatList(cheatsFilename);
+			cheatsReadHumanReadable(cheatsFilename);
 
 			mutexUnlock(&emulationLock);
 		}
