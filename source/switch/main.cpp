@@ -720,7 +720,7 @@ int main(int argc, char *argv[]) {
 			emulationRunning = true;
 			emulationPaused = false;
 
-			cheatsDeleteAll(false);
+			cheatsDeleteAll(true);
 			cheatsReadHumanReadable(cheatsFilename);
 
 			mutexUnlock(&emulationLock);

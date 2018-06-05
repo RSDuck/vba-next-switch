@@ -6,7 +6,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <algorithm>
 #include <vector>
+#include <sstream>
+#include <iostream>
 
 #include <switch.h>
 
@@ -17,6 +20,7 @@ extern "C" {
 
 #include "draw.h"
 #include "image.h"
+#include "hbkbd.h"
 
 #include "../system.h"
 #include "../types.h"
@@ -44,7 +48,7 @@ static int scroll = 0;
 
 static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Cheats", "Settings", "Exit"};
 
-static const char* emptyCheatItems[] = {"No Cheats installed, please read the GBAtemp-post for more information"};
+static const char* emptyCheatItems[] = {"Add a cheat with the plus-button"};
 
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
@@ -118,6 +122,8 @@ void uiInit() {
 	uiAddSetting("Enable splash screen", &splashEnabled, 2, stringsNoYes);
 	uiAddSetting("Theme", &themeM, 3, themeOptions);
 	
+	hbkbd::init();
+
 	uiPushState(stateFileselect);
 }
 
@@ -198,13 +204,8 @@ void uiDraw(u32 keysDown) {
 		menu = (const char**)settingStrings;
 		menuItemsCount = settingsCount;
 	} else if (state == stateCheats) {
-		if(cheatsNumber == 0) {
-			menu = emptyCheatItems;
-			menuItemsCount = 1;
-		} else {
-			menu = (const char**)cheatsStringList;
-			menuItemsCount = cheatsNumber;
-		}
+		menu = (const char**)cheatsStringList;
+		menuItemsCount = cheatsNumber + 1;
 	} else if (state == statePaused) {
 		menu = pauseMenuItems;
 		menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
@@ -287,7 +288,8 @@ void uiDraw(u32 keysDown) {
 		case stateCheats:
 			uiDrawTipButton(buttonB, 1, "Back");
 			uiDrawTipButton(buttonA, 2, "Toggle Cheat");
-			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
+			uiDrawTipButton(buttonY, 3, "Delete Cheat");
+			uiDrawTipButton(buttonX, 4, "Exit VBA Next");
 			break;
 		case stateSettings:
 			uiDrawTipButton(buttonB, 1, "Cancel");
@@ -355,12 +357,31 @@ UIResult uiLoop(u32 keysDown) {
 
 				return resultNone;
 			} else if (state == stateCheats) {
-				if ((keysDown & KEY_B) || (cheatsNumber == 0)) return resultCloseCheats;
-				if(cheatsList[cursor].enabled)
-					cheatsDisable(cursor);
-				else
-					cheatsEnable(cursor);
+				if ((keysDown & KEY_B)) return resultCloseCheats;
 
+				if (cursor < cheatsNumber) {
+					if(cheatsList[cursor].enabled)
+						cheatsDisable(cursor);
+					else
+						cheatsEnable(cursor);
+				} else {
+					std::istringstream iss(hbkbd::keyboard("Enter the gameshark cheat") );
+					std::string cheatFirstPart;
+					std::string cheatSecondPart;
+					iss >> cheatFirstPart >> cheatSecondPart;
+					if(cheatFirstPart.length() > 8 || cheatSecondPart.length() > 8) {
+						uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
+						return resultNone;
+					}
+					cheatFirstPart = std::string( 8 - cheatFirstPart.length(), '0').append(cheatFirstPart);
+        			cheatSecondPart = std::string( 8 - cheatSecondPart.length(), '0').append(cheatSecondPart);
+					std::string fullCheat = cheatFirstPart.append(cheatSecondPart);
+					std::transform(fullCheat.begin(), fullCheat.end(),fullCheat.begin(), ::toupper);
+
+					std::cout << fullCheat << std::endl;
+					cheatsAddGSACode(fullCheat.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), true);
+				}
+				
 			} else {
 				if (keysDown & KEY_B) return resultUnpause;
 
@@ -378,6 +399,10 @@ UIResult uiLoop(u32 keysDown) {
 					case 5:
 						return resultClose;
 				}
+			}
+		} else if (keysDown & KEY_Y) {
+			if (state == stateCheats && cursor < cheatsNumber) {
+				cheatsDelete(cursor, true);
 			}
 		}
 	}
