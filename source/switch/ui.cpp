@@ -261,7 +261,7 @@ void uiDraw(u32 keysDown) {
 
 	struct tm* timeStruct = getRealLocalTime();
 
-	drawText(font24, currentFBWidth - 130, 45, currentTheme.textColor, "%02i:%02i", timeStruct->tm_hour, timeStruct->tm_min);
+	drawText(font16, currentFBWidth - 115, 35, currentTheme.textColor, "%02i:%02i", timeStruct->tm_hour, timeStruct->tm_min);
 
 	drawRect((u32)((currentFBWidth - 1220) / 2), currentFBHeight - 73, 1220, 1, currentTheme.textColor);
 
