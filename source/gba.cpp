@@ -8,6 +8,7 @@
 
 #include "system.h"
 #include "globals.h"
+#include "switch/ui.h"
 
 #ifdef __CELLOS_LV2__
 #include <ppu_intrinsics.h>
@@ -21,6 +22,8 @@
 #ifdef ELF
 #include "elf.h"
 #endif
+
+#define USE_CHEATS 1
 
 #define DEBUG_RENDERER_MODE0 1
 #define DEBUG_RENDERER_MODE1 1
@@ -13520,7 +13523,9 @@ updateLoop:
 #define CHEATS_16_BIT_WRITE           114
 #define CHEATS_32_BIT_WRITE           115
 
-CheatsData cheatsList[100];
+CheatsData cheatsList[CHEAT_LIST_SIZE-1];
+char* cheatsStringList[CHEAT_LIST_SIZE];
+
 int cheatsNumber = 0;
 u32 rompatch2addr [4];
 u16 rompatch2val [4];
@@ -14652,6 +14657,30 @@ int cheatsCheckKeys(u32 keys, u32 extended)
   return ticks;
 }
 
+
+
+void cheatListUpdate() {
+	for(int x = 0; x < cheatsNumber; x++) {
+		if(cheatsList[x].enabled)
+			snprintf(cheatsStringList[x], CHEAT_LIST_ENTRY_SIZE, "%s (%s) Status: Enabled", cheatsList[x].desc, cheatsList[x].codestring);
+		else
+			snprintf(cheatsStringList[x], CHEAT_LIST_ENTRY_SIZE, "%s (%s) Status: Disabled", cheatsList[x].desc, cheatsList[x].codestring);
+	}
+	snprintf(cheatsStringList[cheatsNumber], CHEAT_LIST_ENTRY_SIZE, "Add Cheat");
+}
+
+void cheatListInit() {
+	for(int i = 0; i < CHEAT_LIST_SIZE; i++)
+		cheatsStringList[i] = (char*) malloc(CHEAT_LIST_ENTRY_SIZE);
+	snprintf(cheatsStringList[0], CHEAT_LIST_ENTRY_SIZE, "Add Cheat");
+}
+
+void cheatListDeinit() {
+	for(int i = 0; i < CHEAT_LIST_SIZE; i++)
+		free(cheatsStringList[i]);
+}
+
+
 void cheatsAdd(const char *codeStr,
                const char *desc,
                u32 rawaddress,
@@ -14692,6 +14721,7 @@ void cheatsAdd(const char *codeStr,
       break;
     }
     cheatsNumber++;
+	cheatListUpdate();
   }
 }
 
@@ -14749,6 +14779,7 @@ void cheatsDelete(int number, bool restore)
              (cheatsNumber-x-1));
     }
     cheatsNumber--;
+	cheatListUpdate();
   }
 }
 
@@ -14765,6 +14796,7 @@ void cheatsEnable(int i)
     cheatsList[i].enabled = true;
     mastercode = 0;
   }
+  cheatListUpdate();
 }
 
 void cheatsDisable(int i)
@@ -14792,6 +14824,7 @@ void cheatsDisable(int i)
     }
     cheatsList[i].enabled = false;
   }
+  cheatListUpdate();
 }
 
 bool cheatsVerifyCheatCode(const char *code, const char *desc)
@@ -14925,6 +14958,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
   if(strlen(code) != 16) {
     // wrong cheat
     systemMessage("Invalid GSA code. Format is XXXXXXXXYYYYYYYY");
+	uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
     return;
   }
 
@@ -14933,6 +14967,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
     if(!CHEAT_IS_HEX(code[i])) {
       // wrong cheat
       systemMessage("Invalid GSA code. Format is XXXXXXXXYYYYYYYY");
+	  uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
       return;
     }
   }
@@ -14963,10 +14998,12 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
     }
     cheatsAdd(code, desc, address, address & 0x0FFFFFFF, value, v3 ? 257 : 256,
               UNKNOWN_CODE);
+	cheatsList[cheatsNumber-1].v3 = v3;
     return;
   }
   if(isMultilineWithData(cheatsNumber-1)) {
     cheatsAdd(code, desc, address, address, value, v3 ? 257 : 256, UNKNOWN_CODE);
+	cheatsList[cheatsNumber-1].v3 = v3;
     return;
   }
   if(v3) {
@@ -15402,6 +15439,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
       break;
     }
   }
+  cheatsList[cheatsNumber-1].v3 = v3;
 }
 
 bool cheatsImportGSACodeFile(const char *name, int game, bool v3)
@@ -16016,6 +16054,7 @@ bool cheatsLoadCheatList(const char *file)
         return false;
       }
     }
+	cheatListUpdate();
   }
 
   bool firstCodeBreaker = true;
@@ -16060,6 +16099,7 @@ bool cheatsLoadCheatList(const char *file)
   }
   cheatsNumber = count;
   fclose(f);
+  cheatListUpdate();
   return true;
 }
 
