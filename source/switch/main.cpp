@@ -685,7 +685,7 @@ int main(int argc, char *argv[]) {
 				uiPopState();
 				break;
 			case resultCloseCheats:
-				cheatsWriteHumanReadable(cheatsFilename);
+				cheatsSaveCheatList(cheatsFilename);
 				uiPopState();
 				break;
 			case resultNone:
@@ -711,7 +711,7 @@ int main(int argc, char *argv[]) {
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
-			romPathWithExt(cheatsFilename, PATH_LENGTH, "txt");
+			romPathWithExt(cheatsFilename, PATH_LENGTH, "cht");
 
 			retro_load_game();
 
@@ -721,7 +721,7 @@ int main(int argc, char *argv[]) {
 			emulationPaused = false;
 
 			cheatsDeleteAll(true);
-			cheatsReadHumanReadable(cheatsFilename);
+			cheatsLoadCheatList(cheatsFilename);
 
 			mutexUnlock(&emulationLock);
 		}

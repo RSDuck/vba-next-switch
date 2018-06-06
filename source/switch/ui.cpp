@@ -363,21 +363,22 @@ UIResult uiLoop(u32 keysDown) {
 					else
 						cheatsEnable(cursor);
 				} else {
-					std::istringstream iss(hbkbd::keyboard("Enter the gameshark cheat") );
-					std::string cheatFirstPart;
-					std::string cheatSecondPart;
-					iss >> cheatFirstPart >> cheatSecondPart;
-					if(cheatFirstPart.length() > 8 || cheatSecondPart.length() > 8) {
-						uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
-						return resultNone;
-					}
-					cheatFirstPart = std::string( 8 - cheatFirstPart.length(), '0').append(cheatFirstPart);
-        			cheatSecondPart = std::string( 8 - cheatSecondPart.length(), '0').append(cheatSecondPart);
-					std::string fullCheat = cheatFirstPart.append(cheatSecondPart);
-					std::transform(fullCheat.begin(), fullCheat.end(),fullCheat.begin(), ::toupper);
+					std::string cheatCode = hbkbd::keyboard("Enter the gameshark cheat");
+					cheatCode.erase(remove_if(cheatCode.begin(), cheatCode.end(), isspace), cheatCode.end());
+					std::transform(cheatCode.begin(), cheatCode.end(),cheatCode.begin(), ::toupper);
 
-					std::cout << fullCheat << std::endl;
-					cheatsAddGSACode(fullCheat.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), true);
+					if(cheatCode.length() == 16) {
+						// Gameshark v3
+						cheatsAddGSACode(cheatCode.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), true);
+					} else if(cheatCode.length() == 12) {
+						// Gameshark v1/2
+						cheatCode.insert(8, "0000");
+						cheatsAddGSACode(cheatCode.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), false);
+					} else {
+						uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
+					}
+
+					std::cout << cheatCode << std::endl;
 				}
 				
 			} else {
