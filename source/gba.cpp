@@ -14993,10 +14993,12 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
     }
     cheatsAdd(code, desc, address, address & 0x0FFFFFFF, value, v3 ? 257 : 256,
               UNKNOWN_CODE);
+	cheatsList[cheatsNumber-1].v3 = v3;
     return;
   }
   if(isMultilineWithData(cheatsNumber-1)) {
     cheatsAdd(code, desc, address, address, value, v3 ? 257 : 256, UNKNOWN_CODE);
+	cheatsList[cheatsNumber-1].v3 = v3;
     return;
   }
   if(v3) {
@@ -15432,6 +15434,7 @@ void cheatsAddGSACode(const char *code, const char *desc, bool v3)
       break;
     }
   }
+  cheatsList[cheatsNumber-1].v3 = v3;
 }
 
 bool cheatsImportGSACodeFile(const char *name, int game, bool v3)

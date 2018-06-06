@@ -6,6 +6,7 @@ struct CheatsData {
   int size;
   int status;
   bool enabled;
+  bool v3;
   uint32_t rawaddress;
   uint32_t address;
   uint32_t value;
@@ -30,6 +31,8 @@ void cheatsWriteHalfWord(uint32_t address, uint16_t value);
 void cheatsWriteByte(uint32_t address, uint8_t value);
 int cheatsCheckKeys(uint32_t keys, uint32_t extended);
 void cheatListInit();
+void cheatsReadHumanReadable(const char *file);	
+void cheatsWriteHumanReadable(const char *file);
 
 extern int cheatsNumber;
 extern CheatsData cheatsList[100];
