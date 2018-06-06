@@ -376,9 +376,11 @@ UIResult uiLoop(u32 keysDown) {
 						cheatsAddGSACode(cheatCode.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), false);
 					} else {
 						uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
+						return resultNone;
 					}
-
-					std::cout << cheatCode << std::endl;
+					#ifdef NXLINK_STDIO
+					printf("Added cheat code: %s", cheatCode.c_str());
+					#endif
 				}
 				
 			} else {
