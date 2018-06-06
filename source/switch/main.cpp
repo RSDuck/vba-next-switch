@@ -77,6 +77,9 @@ static u32 inputTransferKeysHeld;
 
 static Mutex emulationLock;
 
+static CondVar requestFrameCond;
+static Mutex requestFrameLock;
+
 static bool running = true;
 
 char filename_bios[0x100] = {0};
@@ -409,9 +412,10 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
-			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
-		}
+		if (!(inputTransferKeysHeld & buttonMap[10])) condvarWaitTimeout(&requestFrameCond, TARGET_FRAMETIME * 1000000000);
+		/*if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
+			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000));
+		}*/
 	}
 
 	mutexLock(&emulationLock);
@@ -501,6 +505,9 @@ int main(int argc, char *argv[]) {
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
 
+	mutexInit(&requestFrameLock);
+	condvarInit(&requestFrameCond, &requestFrameLock);
+
 	Thread mainThread;
 	threadCreate(&mainThread, threadFunc, NULL, 0x4000, 0x30, 1);
 	threadStart(&mainThread);
@@ -549,6 +556,8 @@ int main(int argc, char *argv[]) {
 				bgr555src += 8;
 				rgba8888dst += 8 * 4;
 			}
+
+			condvarWakeOne(&requestFrameCond);
 
 			u32 *srcImage = conversionBuffer;
 
