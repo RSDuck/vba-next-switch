@@ -35,7 +35,9 @@ void cheatsReadHumanReadable(const char *file);
 void cheatsWriteHumanReadable(const char *file);
 
 extern int cheatsNumber;
-extern CheatsData cheatsList[100];
-extern char* cheatsStringList[101];
+#define CHEAT_LIST_SIZE 100
+#define CHEAT_LIST_ENTRY_SIZE 100
+extern CheatsData cheatsList[CHEAT_LIST_SIZE-1];
+extern char* cheatsStringList[CHEAT_LIST_SIZE];
 
 #endif // CHEATS_H

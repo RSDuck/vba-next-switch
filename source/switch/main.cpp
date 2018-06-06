@@ -212,8 +212,6 @@ static void gba_init(void) {
 	enableRtc = false;
 	mirroringEnable = false;
 
-	cheatListInit();
-
 	load_image_preferences();
 
 	if (flashSize == 0x10000 || flashSize == 0x20000) flashSetSize(flashSize);
@@ -492,6 +490,7 @@ int main(int argc, char *argv[]) {
 	textInit();
 	fontInit();
 	timeInitialize();
+	cheatListInit();
 
 	audioTransferBuffer = (u32 *)malloc(AUDIO_TRANSFERBUF_SIZE * sizeof(u32));
 	mutexInit(&audioLock);

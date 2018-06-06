@@ -13523,8 +13523,8 @@ updateLoop:
 #define CHEATS_16_BIT_WRITE           114
 #define CHEATS_32_BIT_WRITE           115
 
-CheatsData cheatsList[100];
-char* cheatsStringList[101];
+CheatsData cheatsList[CHEAT_LIST_SIZE-1];
+char* cheatsStringList[CHEAT_LIST_SIZE];
 
 int cheatsNumber = 0;
 u32 rompatch2addr [4];
@@ -14662,17 +14662,17 @@ int cheatsCheckKeys(u32 keys, u32 extended)
 void cheatListUpdate() {
 	for(int x = 0; x < cheatsNumber; x++) {
 		if(cheatsList[x].enabled)
-			sprintf(cheatsStringList[x], "%s (%s) Status: Enabled", cheatsList[x].desc, cheatsList[x].codestring);
+			snprintf(cheatsStringList[x], CHEAT_LIST_ENTRY_SIZE, "%s (%s) Status: Enabled", cheatsList[x].desc, cheatsList[x].codestring);
 		else
-			sprintf(cheatsStringList[x], "%s (%s) Status: Disabled", cheatsList[x].desc, cheatsList[x].codestring);
+			snprintf(cheatsStringList[x], CHEAT_LIST_ENTRY_SIZE, "%s (%s) Status: Disabled", cheatsList[x].desc, cheatsList[x].codestring);
 	}
-	sprintf(cheatsStringList[cheatsNumber], "Add Cheat");
+	snprintf(cheatsStringList[cheatsNumber], CHEAT_LIST_ENTRY_SIZE, "Add Cheat");
 }
 
 void cheatListInit() {
-	for(int i = 0; i < 101; i++)
-		cheatsStringList[i] = (char*) malloc(100);
-	sprintf(cheatsStringList[0], "Add Cheat");
+	for(int i = 0; i < CHEAT_LIST_SIZE; i++)
+		cheatsStringList[i] = (char*) malloc(CHEAT_LIST_ENTRY_SIZE);
+	snprintf(cheatsStringList[0], CHEAT_LIST_ENTRY_SIZE, "Add Cheat");
 }
 
 
