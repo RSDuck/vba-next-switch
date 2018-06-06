@@ -759,6 +759,7 @@ int main(int argc, char *argv[]) {
 
 	uiDeinit();
 
+	cheatListDeinit();
 	free(conversionBuffer);
 	free(videoTransferBuffer);
 

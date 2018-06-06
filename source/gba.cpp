@@ -14675,6 +14675,11 @@ void cheatListInit() {
 	snprintf(cheatsStringList[0], CHEAT_LIST_ENTRY_SIZE, "Add Cheat");
 }
 
+void cheatListDeinit() {
+	for(int i = 0; i < CHEAT_LIST_SIZE; i++)
+		free(cheatsStringList[i]);
+}
+
 
 void cheatsAdd(const char *codeStr,
                const char *desc,
