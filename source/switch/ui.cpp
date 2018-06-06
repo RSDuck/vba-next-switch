@@ -379,7 +379,7 @@ UIResult uiLoop(u32 keysDown) {
 						return resultNone;
 					}
 					#ifdef NXLINK_STDIO
-					printf("Added cheat code: %s", cheatCode.c_str());
+					printf("Added cheat code: %s\n", cheatCode.c_str());
 					#endif
 				}
 				
