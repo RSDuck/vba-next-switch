@@ -400,7 +400,6 @@ void threadFunc(void *args) {
 	mutexLock(&emulationLock);
 	retro_init();
 	mutexUnlock(&emulationLock);
-	init_color_lut();
 
 	while (running) {
 		double startTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
