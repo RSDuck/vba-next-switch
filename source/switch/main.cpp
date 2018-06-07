@@ -7,6 +7,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <arm_neon.h>
+
 #include "../gba.h"
 #include "../globals.h"
 #include "../memory.h"
@@ -14,6 +16,7 @@
 #include "../sound.h"
 #include "../system.h"
 #include "../types.h"
+#include "../GBACheats.h"
 #include "gbaover.h"
 
 #include "util.h"
@@ -74,6 +77,9 @@ static Mutex inputLock;
 static u32 inputTransferKeysHeld;
 
 static Mutex emulationLock;
+
+static CondVar requestFrameCond;
+static Mutex requestFrameLock;
 
 static bool running = true;
 
@@ -390,30 +396,6 @@ void systemDrawScreen() {
 	has_video_frame = true;
 }
 
-u32 bgr_555_to_rgb_888_table[32 * 32 * 32];
-
-void init_color_lut() {
-	for (u8 r5 = 0; r5 < 32; r5++) {
-		for (u8 g5 = 0; g5 < 32; g5++) {
-			for (u8 b5 = 0; b5 < 32; b5++) {
-				u8 r8 = (u8)((r5 * 527 + 23) >> 6);
-				u8 g8 = (u8)((g5 * 527 + 23) >> 6);
-				u8 b8 = (u8)((b5 * 527 + 23) >> 6);
-				u32 bgr555 = (r5 << 10) | (g5 << 5) | b5;
-				u32 bgr888 = r8 | (g8 << 8) | (b8 << 16) | (255 << 24);
-				bgr_555_to_rgb_888_table[bgr555] = bgr888;
-			}
-		}
-	}
-}
-
-static inline u32 bbgr_555_to_rgb_888(u16 in) {
-	u8 r = (in >> 10) << 3;
-	u8 g = ((in >> 5) & 31) << 3;
-	u8 b = (in & 31) << 3;
-	return r | (g << 8) | (b << 16) | (255 << 24);
-}
-
 void threadFunc(void *args) {
 	mutexLock(&emulationLock);
 	retro_init();
@@ -431,9 +413,10 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
-			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000 - 100));
-		}
+		if (!(inputTransferKeysHeld & buttonMap[10])) condvarWaitTimeout(&requestFrameCond, TARGET_FRAMETIME * 1000000000);
+		/*if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
+			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000));
+		}*/
 	}
 
 	mutexLock(&emulationLock);
@@ -469,7 +452,11 @@ static void applyConfig() {
 	mutexUnlock(&emulationLock);
 }
 
+u32 __nx_applet_PerformanceConfiguration[2] = {/*0x92220008*/ /*0x20004*/ /*0x92220007*/ 0x92220007, 0x92220007};
+
 int main(int argc, char *argv[]) {
+	appletSetScreenShotPermission(1);
+
 #ifdef NXLINK_STDIO
 	socketInitializeDefault();
 	nxlinkStdio();
@@ -489,6 +476,7 @@ int main(int argc, char *argv[]) {
 	textInit();
 	fontInit();
 	timeInitialize();
+	cheatListInit();
 
 	audioTransferBuffer = (u32 *)malloc(AUDIO_TRANSFERBUF_SIZE * sizeof(u32));
 	mutexInit(&audioLock);
@@ -519,21 +507,25 @@ int main(int argc, char *argv[]) {
 	mutexInit(&inputLock);
 	mutexInit(&emulationLock);
 
+	mutexInit(&requestFrameLock);
+	condvarInit(&requestFrameCond, &requestFrameLock);
+
 	Thread mainThread;
 	threadCreate(&mainThread, threadFunc, NULL, 0x4000, 0x30, 1);
 	threadStart(&mainThread);
 
 	char saveFilename[PATH_LENGTH];
+	char cheatsFilename[PATH_LENGTH];
 
-	#ifdef NXLINK_STDIO
+#ifdef NXLINK_STDIO
 	double frameTimeSum = 0;
 	int frameTimeFrames = 0;
-	#endif
+#endif
 
 	while (appletMainLoop() && running) {
-		#ifdef NXLINK_STDIO
+#ifdef NXLINK_STDIO
 		double frameStartTime = svcGetSystemTick() * SECONDS_PER_TICKS;
-		#endif
+#endif
 
 		currentFB = gfxGetFramebuffer(&currentFBWidth, &currentFBHeight);
 		memset(currentFB, 0, 4 * currentFBWidth * currentFBHeight);
@@ -545,7 +537,30 @@ int main(int argc, char *argv[]) {
 		if (emulationRunning && !emulationPaused) {
 			mutexLock(&videoLock);
 
-			for (int i = 0; i < 256 * 160; i++) conversionBuffer[i] = bbgr_555_to_rgb_888(videoTransferBuffer[i]);
+			u16 *bgr555src = videoTransferBuffer;
+			u8 *rgba8888dst = (u8 *)conversionBuffer;
+
+			uint16x8_t maskR = vdupq_n_u16(0x7c00);
+			uint16x8_t maskG = vdupq_n_u16(0x3e0);
+			uint16x8_t maskB = vdupq_n_u16(0x1f);
+			uint8x8_t alphaFull = vdup_n_u8(255);
+
+			for (int i = 0; i < 256 * 160 / 8; i++) {
+				uint16x8_t bgr555 = vld1q_u16(bgr555src);
+
+				uint8x8x4_t rgba8888;
+				rgba8888.val[0] = vmovn_u16(vshrq_n_u16(vandq_u16(bgr555, maskR), 7));
+				rgba8888.val[1] = vmovn_u16(vshrq_n_u16(vandq_u16(bgr555, maskG), 2));
+				rgba8888.val[2] = vmovn_u16(vshlq_n_u16(vandq_u16(bgr555, maskB), 3));
+				rgba8888.val[3] = alphaFull;
+
+				vst4_u8(rgba8888dst, rgba8888);
+
+				bgr555src += 8;
+				rgba8888dst += 8 * 4;
+			}
+
+			condvarWakeOne(&requestFrameCond);
 
 			u32 *srcImage = conversionBuffer;
 
@@ -589,17 +604,19 @@ int main(int argc, char *argv[]) {
 				unsigned intScale = (unsigned)floor(scale);
 				unsigned offsetX = currentFBWidth / 2 - (intScale * 240) / 2;
 				unsigned offsetY = currentFBHeight / 2 - (intScale * 160) / 2;
+
+				u32 *dst = ((u32 *)currentFB) + offsetX + offsetY * currentFBWidth;
 				for (int y = 0; y < 160; y++) {
 					for (int x = 0; x < 240; x++) {
-						int idx0 = x * intScale + offsetX + (y * intScale + offsetY) * currentFBWidth;
-						int idx1 = (x + y * 256);
-						u32 val = srcImage[idx1];
+						u32 val = srcImage[x + y * 256];
 						for (unsigned j = 0; j < intScale * currentFBWidth; j += currentFBWidth) {
 							for (unsigned i = 0; i < intScale; i++) {
-								((u32 *)currentFB)[idx0 + i + j] = val;
+								dst[i + j] = val;
 							}
 						}
+						dst += intScale;
 					}
+					dst = ((u32 *)currentFB) + offsetX + (y * intScale + offsetY) * currentFBWidth;
 				}
 			}
 
@@ -620,6 +637,9 @@ int main(int argc, char *argv[]) {
 			case resultClose:
 				uiPopState();
 				if (uiGetState() == stateRunning) uiPopState();
+				break;
+			case resultOpenCheats:
+				uiPushState(stateCheats);
 				break;
 			case resultOpenSettings:
 				uiPushState(stateSettings);
@@ -677,6 +697,10 @@ int main(int argc, char *argv[]) {
 				uiCancelSettings();
 				uiPopState();
 				break;
+			case resultCloseCheats:
+				cheatsWriteHumanReadable(cheatsFilename);
+				uiPopState();
+				break;
 			case resultNone:
 			default:
 				break;
@@ -700,6 +724,7 @@ int main(int argc, char *argv[]) {
 
 			uiGetSelectedFile(currentRomPath, PATH_LENGTH);
 			romPathWithExt(saveFilename, PATH_LENGTH, "sav");
+			romPathWithExt(cheatsFilename, PATH_LENGTH, "txt");
 
 			retro_load_game();
 
@@ -707,6 +732,9 @@ int main(int argc, char *argv[]) {
 
 			emulationRunning = true;
 			emulationPaused = false;
+
+			cheatsDeleteAll(true);
+			cheatsReadHumanReadable(cheatsFilename);
 
 			mutexUnlock(&emulationLock);
 		}
@@ -745,6 +773,7 @@ int main(int argc, char *argv[]) {
 
 	uiDeinit();
 
+	cheatListDeinit();
 	free(conversionBuffer);
 	free(videoTransferBuffer);
 

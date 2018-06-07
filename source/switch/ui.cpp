@@ -6,7 +6,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <algorithm>
 #include <vector>
+#include <sstream>
+#include <iostream>
 
 #include <switch.h>
 
@@ -17,9 +20,11 @@ extern "C" {
 
 #include "draw.h"
 #include "image.h"
+#include "hbkbd.h"
 
 #include "../system.h"
 #include "../types.h"
+#include "../GBACheats.h"
 #include "colors.h"
 #include "ui.h"
 #include "util.h"
@@ -41,7 +46,7 @@ static char currentDirectory[PATH_LENGTH] = {'\0'};
 static int cursor = 0;
 static int scroll = 0;
 
-static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Settings", "Exit"};
+static const char* pauseMenuItems[] = {"Continue", "Load Savestate", "Write Savestate", "Cheats", "Settings", "Exit"};
 
 const char* themeOptions[] = {"Switch", "Dark", "Light"};
 
@@ -115,6 +120,8 @@ void uiInit() {
 	uiAddSetting("Enable splash screen", &splashEnabled, 2, stringsNoYes);
 	uiAddSetting("Theme", &themeM, 3, themeOptions);
 	
+	hbkbd::init();
+
 	uiPushState(stateFileselect);
 }
 
@@ -194,6 +201,9 @@ void uiDraw(u32 keysDown) {
 	if (state == stateSettings) {
 		menu = (const char**)settingStrings;
 		menuItemsCount = settingsCount;
+	} else if (state == stateCheats) {
+		menu = (const char**)cheatsStringList;
+		menuItemsCount = cheatsNumber + 1;
 	} else if (state == statePaused) {
 		menu = pauseMenuItems;
 		menuItemsCount = sizeof(pauseMenuItems) / sizeof(pauseMenuItems[0]);
@@ -273,6 +283,12 @@ void uiDraw(u32 keysDown) {
 			uiDrawTipButton(buttonA, 2, "Open");
 			uiDrawTipButton(buttonX, 3, "Exit VBA Next");
 			break;
+		case stateCheats:
+			uiDrawTipButton(buttonB, 1, "Back");
+			uiDrawTipButton(buttonA, 2, "Toggle Cheat");
+			uiDrawTipButton(buttonY, 3, "Delete Cheat");
+			uiDrawTipButton(buttonX, 4, "Exit VBA Next");
+			break;
 		case stateSettings:
 			uiDrawTipButton(buttonB, 1, "Cancel");
 			uiDrawTipButton(buttonA, 2, "OK");
@@ -338,6 +354,35 @@ UIResult uiLoop(u32 keysDown) {
 				generateSettingString(setting);
 
 				return resultNone;
+			} else if (state == stateCheats) {
+				if ((keysDown & KEY_B)) return resultCloseCheats;
+
+				if (cursor < cheatsNumber) {
+					if(cheatsList[cursor].enabled)
+						cheatsDisable(cursor);
+					else
+						cheatsEnable(cursor);
+				} else {
+					std::string cheatCode = hbkbd::keyboard("Enter the gameshark cheat");
+					cheatCode.erase(remove_if(cheatCode.begin(), cheatCode.end(), isspace), cheatCode.end());
+					std::transform(cheatCode.begin(), cheatCode.end(),cheatCode.begin(), ::toupper);
+
+					if(cheatCode.length() == 16) {
+						// Gameshark v3
+						cheatsAddGSACode(cheatCode.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), true);
+					} else if(cheatCode.length() == 12) {
+						// Gameshark v1/2
+						cheatCode.insert(8, "0000");
+						cheatsAddGSACode(cheatCode.c_str(), hbkbd::keyboard("Enter a description for the cheat").c_str(), false);
+					} else {
+						uiStatusMsg("Invalid cheat-code. Are you sure this is a gameshark-code?");
+						return resultNone;
+					}
+					#ifdef NXLINK_STDIO
+					printf("Added cheat code: %s\n", cheatCode.c_str());
+					#endif
+				}
+				
 			} else {
 				if (keysDown & KEY_B) return resultUnpause;
 
@@ -349,10 +394,16 @@ UIResult uiLoop(u32 keysDown) {
 					case 2:
 						return resultSaveState;
 					case 3:
-						return resultOpenSettings;
+						return resultOpenCheats;
 					case 4:
+						return resultOpenSettings;
+					case 5:
 						return resultClose;
 				}
+			}
+		} else if (keysDown & KEY_Y) {
+			if (state == stateCheats && cursor < cheatsNumber) {
+				cheatsDelete(cursor, true);
 			}
 		}
 	}
