@@ -28,6 +28,11 @@ bool utilIsGBAImage(const char * file)
 
 		if(p != NULL)
       {
+		char p_lower[strlen(p)];
+		for(int i = 0; i < strlen(p); i++)
+			p_lower[i] = tolower(p[i]);
+		p = p_lower;
+
          if(
                !strcasecmp(p, ".agb") ||
                !strcasecmp(p, ".gba") ||
