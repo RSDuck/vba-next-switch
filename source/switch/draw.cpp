@@ -15,6 +15,8 @@
 
 #include "draw.h"
 
+#include <arm_neon.h>
+
 static FT_Error s_font_libret = 1;
 static FT_Error s_font_facesret[FONT_FACES_MAX];
 static FT_Library s_font_library;
@@ -268,17 +270,62 @@ void fontExit() {
 }
 
 void drawRect(u32 x, u32 y, u32 w, u32 h, color_t color) {
-	for (u32 j = y; j < y + h; j++) {
-		for (u32 i = x; i < x + w; i++) {
-			DrawPixel(i, j, color);
+	if (x + w > currentFBWidth) w = (x + w) - currentFBWidth;
+	if (y + h > currentFBHeight) h = (y + h) - currentFBHeight;
+
+	u32 mulR = (u32)color.r * (u32)color.a;
+	u32 mulG = (u32)color.g * (u32)color.a;
+	u32 mulB = (u32)color.b * (u32)color.a;
+	u32 oneMinusAlpha = 255 - color.a;
+
+	uint16x8_t alpha = vdupq_n_u16((u16)color.a);
+
+	uint16x8_t vR = vdupq_n_u16((u16)mulR);
+	uint16x8_t vG = vdupq_n_u16((u16)mulG);
+	uint16x8_t vB = vdupq_n_u16((u16)mulB);
+
+	uint16x8_t vOneMinusA = vdupq_n_u16(oneMinusAlpha);
+	uint8x8_t fullAlpha = vdup_n_u8(255);
+
+	u8* dst = currentFB + ((x + y * currentFBWidth) * 4);
+	for (u32 j = 0; j < h; j++) {
+		for (u32 i = 0; i < w / 8; i++) {
+			uint8x8x4_t screenPixels = vld4_u8(&dst[i * 8 * 4]);
+			screenPixels.val[0] =
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[0]), vOneMinusA), vR), 7));
+			screenPixels.val[1] =
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[1]), vOneMinusA), vG), 7));
+			screenPixels.val[2] =
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[2]), vOneMinusA), vB), 7));
+			screenPixels.val[3] = fullAlpha;
+
+			vst4_u8(&dst[i * 8 * 4], screenPixels);
 		}
+
+		for (u32 i = (w / 8) * 8; i < ((w + 4) / 8) * 8; i++) {
+			dst[i + 0] = (dst[i + 0] * oneMinusAlpha + mulR) / 255;
+			dst[i + 1] = (dst[i + 1] * oneMinusAlpha + mulG) / 255;
+			dst[i + 2] = (dst[i + 2] * oneMinusAlpha + mulB) / 255;
+			dst[i + 3] = 255;
+		}
+
+		dst += currentFBWidth * 4;
 	}
 }
 
 void drawRectRaw(u32 x, u32 y, u32 w, u32 h, color_t color) {
-	for (u32 j = y; j < y + h; j++) {
-		for (u32 i = x; i < x + w; i += 4) {
-			Draw4PixelsRaw(i, j, color);
+	if (x + w > currentFBWidth) w = (x + w) - currentFBWidth;
+	if (y + h > currentFBHeight) h = (y + h) - currentFBHeight;
+
+	u32 color32 = color.r | (color.g << 8) | (color.b << 16) | (0xff << 24);
+	u128 val = color32 | ((u128)color32 << 32) | ((u128)color32 << 64) | ((u128)color32 << 96);
+
+	u32* dst = (u32*)(currentFB + (y * currentFBWidth + x) * 4);
+	for (u32 j = 0; j < h; j++) {
+		for (u32 i = 0; i < w; i += 4) {
+			*((u128*)&dst[i]) = val;
 		}
+
+		dst += currentFBWidth;
 	}
 }

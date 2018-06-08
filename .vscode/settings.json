@@ -17,6 +17,8 @@
     "clang.completion.enable": true,
     "clang.diagnostic.enable": true,
     "clang.cxxflags": [
-        "-IC:\\devkitPro\\libnx\\include"
+        "-IC:\\devkitPro\\libnx\\include",
+        "-IC:\\devkitPro\\portlibs\\switch\\include",
+        "-IC:\\devkitPro\\portlibs\\switch\\include\\freetype2"
     ]
 }
