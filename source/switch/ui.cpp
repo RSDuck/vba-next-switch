@@ -119,8 +119,6 @@ void uiInit() {
 
 	uiAddSetting("Enable splash screen", &splashEnabled, 2, stringsNoYes);
 	uiAddSetting("Theme", &themeM, 3, themeOptions);
-	
-	hbkbd::init();
 
 	uiPushState(stateFileselect);
 }
@@ -189,6 +187,8 @@ void uiDraw(u32 keysDown) {
 		themeSet(modeDark);
 
 	btnMargin = 0;
+
+	hbkbd::init();
 
 	int scrollAmount = 0;
 	if (keysDown & KEY_DOWN) scrollAmount = 1;
