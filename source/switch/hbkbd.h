@@ -37,7 +37,9 @@
 #include <vector>
 
 #define CUSTOM_PATH_LEN 49
-#define FASTSCROLL_WAIT 1.5e8
+#define FASTSCROLL_WAIT 0.15
+#define FASTSCROLL_ACCL 0.8
+#define FASTSCROLL_MAX_VEL 0.05
 
 class HbkbdButton : public Clickable {
        public:
@@ -76,7 +78,7 @@ namespace hbkbd {
 void init(void);
 void exit(void);
 size_t count(void);
-void hid(size_t& currentEntry);
+void hid(size_t& currentEntry, float dt);
 std::string keyboard(const std::string& suggestion);
 }  // namespace hbkbd
 

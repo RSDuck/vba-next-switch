@@ -40,109 +40,124 @@ static const std::string letters = "1234567890@qwertyuiop+asdfghjkl_:zxcvbnm,.-/
 static std::vector<HbkbdButton*> buttons;
 static size_t prevSelectedButtonIndex;
 
+static float keyRepeatWait;
+static float keyRepeatWaitLength;
+
 size_t hbkbd::count(void) { return buttons.size(); }
 
-void hbkbd::hid(size_t& currentEntry) {
+void hbkbd::hid(size_t& currentEntry, float dt) {
 	static const size_t columns = 11;
 
 	u64 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
 	bool sleep = false;
 
-	if (kHeld & KEY_LEFT) {
-		switch (currentEntry) {
-			case 0:		   // 1
-			case columns:      // q
-			case columns * 2:  // a
-			case columns * 3:  // z
-			case INDEX_CAPS:
-				break;
-			case INDEX_BACK:  // back -> @
-				currentEntry = columns - 1;
-				break;
-			case INDEX_RETURN:  // return -> +
-				currentEntry = columns * 2 - 1;
-				break;
-			case INDEX_OK:  // OK -> space
-				currentEntry = INDEX_SPACE;
-				break;
-			case INDEX_SPACE:  // space -> caps
-				currentEntry = INDEX_CAPS;
-				break;
-			default:
-				currentEntry--;
+	u64 kUp = hidKeysUp(CONTROLLER_P1_AUTO);
+	if (kUp & KEY_LEFT || kUp & KEY_RIGHT || kUp & KEY_DOWN || kUp & KEY_UP) {
+		keyRepeatWaitLength = FASTSCROLL_WAIT;
+		keyRepeatWait = 0.f;
+	}
+
+	keyRepeatWait -= dt;
+
+	if (keyRepeatWait <= 0.f) {
+		if (kHeld & KEY_LEFT) {
+			switch (currentEntry) {
+				case 0:		   // 1
+				case columns:      // q
+				case columns * 2:  // a
+				case columns * 3:  // z
+				case INDEX_CAPS:
+					break;
+				case INDEX_BACK:  // back -> @
+					currentEntry = columns - 1;
+					break;
+				case INDEX_RETURN:  // return -> +
+					currentEntry = columns * 2 - 1;
+					break;
+				case INDEX_OK:  // OK -> space
+					currentEntry = INDEX_SPACE;
+					break;
+				case INDEX_SPACE:  // space -> caps
+					currentEntry = INDEX_CAPS;
+					break;
+				default:
+					currentEntry--;
+			}
+			sleep = true;
+		} else if (kHeld & KEY_RIGHT) {
+			switch (currentEntry) {
+				case 10:  // @ -> back
+					currentEntry = INDEX_BACK;
+					break;
+				case 21:  // + -> return
+				case 32:  // : -> return
+					currentEntry = INDEX_RETURN;
+					break;
+				case 43:	   // /-> OK
+				case INDEX_SPACE:  // space -> OK
+					currentEntry = INDEX_OK;
+					break;
+				case INDEX_CAPS:  // caps -> space
+					currentEntry = INDEX_SPACE;
+					break;
+				case INDEX_BACK:
+				case INDEX_RETURN:
+				case INDEX_OK:
+					break;
+				default:
+					currentEntry++;
+			}
+			sleep = true;
+		} else if (kHeld & KEY_UP) {
+			switch (currentEntry) {
+				case 0 ... 10:  // 1 to @
+				case INDEX_BACK:
+					break;
+				case INDEX_CAPS:  // caps -> x
+					currentEntry = 34;
+					break;
+				case INDEX_SPACE:  // space -> .
+					currentEntry = 41;
+					break;
+				case INDEX_RETURN:  // return -> back
+					currentEntry = INDEX_BACK;
+					break;
+				case INDEX_OK:  // OK -> return
+					currentEntry = INDEX_RETURN;
+					break;
+				default:
+					currentEntry -= 11;
+			}
+			sleep = true;
+		} else if (kHeld & KEY_DOWN) {
+			switch (currentEntry) {
+				case INDEX_CAPS:
+				case INDEX_SPACE:
+				case INDEX_OK:
+					break;
+				case 33 ... 35:  // z x c -> caps
+					currentEntry = INDEX_CAPS;
+					break;
+				case 36 ... 43:  // v b n m , . - / -> space
+					currentEntry = INDEX_SPACE;
+					break;
+				case INDEX_BACK:  // back -> return
+					currentEntry = INDEX_RETURN;
+					break;
+				case INDEX_RETURN:  // return -> OK
+					currentEntry = INDEX_OK;
+					break;
+				default:
+					currentEntry += 11;
+			}
+			sleep = true;
 		}
-		sleep = true;
-	} else if (kHeld & KEY_RIGHT) {
-		switch (currentEntry) {
-			case 10:  // @ -> back
-				currentEntry = INDEX_BACK;
-				break;
-			case 21:  // + -> return
-			case 32:  // : -> return
-				currentEntry = INDEX_RETURN;
-				break;
-			case 43:	   // /-> OK
-			case INDEX_SPACE:  // space -> OK
-				currentEntry = INDEX_OK;
-				break;
-			case INDEX_CAPS:  // caps -> space
-				currentEntry = INDEX_SPACE;
-				break;
-			case INDEX_BACK:
-			case INDEX_RETURN:
-			case INDEX_OK:
-				break;
-			default:
-				currentEntry++;
-		}
-		sleep = true;
-	} else if (kHeld & KEY_UP) {
-		switch (currentEntry) {
-			case 0 ... 10:  // 1 to @
-			case INDEX_BACK:
-				break;
-			case INDEX_CAPS:  // caps -> x
-				currentEntry = 34;
-				break;
-			case INDEX_SPACE:  // space -> .
-				currentEntry = 41;
-				break;
-			case INDEX_RETURN:  // return -> back
-				currentEntry = INDEX_BACK;
-				break;
-			case INDEX_OK:  // OK -> return
-				currentEntry = INDEX_RETURN;
-				break;
-			default:
-				currentEntry -= 11;
-		}
-		sleep = true;
-	} else if (kHeld & KEY_DOWN) {
-		switch (currentEntry) {
-			case INDEX_CAPS:
-			case INDEX_SPACE:
-			case INDEX_OK:
-				break;
-			case 33 ... 35:  // z x c -> caps
-				currentEntry = INDEX_CAPS;
-				break;
-			case 36 ... 43:  // v b n m , . - / -> space
-				currentEntry = INDEX_SPACE;
-				break;
-			case INDEX_BACK:  // back -> return
-				currentEntry = INDEX_RETURN;
-				break;
-			case INDEX_RETURN:  // return -> OK
-				currentEntry = INDEX_OK;
-				break;
-			default:
-				currentEntry += 11;
-		}
-		sleep = true;
 	}
 
 	if (sleep) {
-		svcSleepThread(FASTSCROLL_WAIT);
+		keyRepeatWait = keyRepeatWaitLength;
+		keyRepeatWaitLength *= FASTSCROLL_ACCL;
+		if(keyRepeatWaitLength < FASTSCROLL_MAX_VEL) keyRepeatWait = FASTSCROLL_MAX_VEL;
 	}
 }
 
@@ -152,31 +167,34 @@ void hbkbd::init(void) {
 	// fill with the above characters
 	for (size_t i = 0; i < 4; i++) {
 		for (size_t j = 0; j < 11; j++) {
-			HbkbdButton* button =
-			    new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * j, starty + (buttonSpacing + height) * i,
-					    normalWidth, height, currentTheme.keyboardKeyBackgroundColor, currentTheme.textColor, letters.substr(i * 11 + j, 1), true);
+			HbkbdButton* button = new HbkbdButton(
+			    marginlr + (buttonSpacing + normalWidth) * j, starty + (buttonSpacing + height) * i, normalWidth, height,
+			    currentTheme.keyboardKeyBackgroundColor, currentTheme.textColor, letters.substr(i * 11 + j, 1), true);
 			buttons.push_back(button);
 		}
 	}
 
-	HbkbdButton* backspace = new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty, bigWidth, height, currentTheme.keyboardSPKeyBackgroundColor,
-						 currentTheme.keyboardSPKeyTextColor, "←", true);
+	HbkbdButton* backspace = new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty, bigWidth, height,
+						 currentTheme.keyboardSPKeyBackgroundColor, currentTheme.keyboardSPKeyTextColor, "←", true);
 	buttons.push_back(backspace);
 
-	HbkbdButton* returnb = new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty + height + 4, bigWidth, height * 2 + 4,
-					       currentTheme.keyboardSPKeyBackgroundColor, currentTheme.keyboardSPKeyTextColor, "return", true);
+	HbkbdButton* returnb =
+	    new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty + height + 4, bigWidth, height * 2 + 4,
+			    currentTheme.keyboardSPKeyBackgroundColor, currentTheme.keyboardSPKeyTextColor, "return", true);
 	buttons.push_back(returnb);
 
-	HbkbdButton* ok = new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty + height * 3 + 4 * 3, bigWidth,
-					  height * 2 + 4, currentTheme.keyboardOKKeyBackgroundColor, currentTheme.keyboardOKKeyTextColor, "OK", true);
+	HbkbdButton* ok =
+	    new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 11, starty + height * 3 + 4 * 3, bigWidth, height * 2 + 4,
+			    currentTheme.keyboardOKKeyBackgroundColor, currentTheme.keyboardOKKeyTextColor, "OK", true);
 	buttons.push_back(ok);
 
 	HbkbdButton* caps = new HbkbdButton(marginlr + buttonSpacing + normalWidth, starty + height * 4 + 4 * 4, normalWidth, height,
 					    currentTheme.keyboardSPKeyBackgroundColor, currentTheme.textColor, "⇧", true);
 	buttons.push_back(caps);
 
-	HbkbdButton* spacebar = new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 3, starty + height * 4 + 4 * 4,
-						normalWidth * 8 + buttonSpacing * 7, height, currentTheme.keyboardSPKeyBackgroundColor, currentTheme.textColor, "space", true);
+	HbkbdButton* spacebar =
+	    new HbkbdButton(marginlr + (buttonSpacing + normalWidth) * 3, starty + height * 4 + 4 * 4, normalWidth * 8 + buttonSpacing * 7,
+			    height, currentTheme.keyboardSPKeyBackgroundColor, currentTheme.textColor, "space", true);
 	buttons.push_back(spacebar);
 
 	// set first button as selected
@@ -219,16 +237,26 @@ static bool logic(std::string& str, size_t i) {
 	return false;
 }
 
+#define SECONDS_PER_TICKS (1.0 / 19200000)
+
 std::string hbkbd::keyboard(const std::string& suggestion) {
 	size_t index;
 	std::string str;
 
+	keyRepeatWait = 0.0;
+	keyRepeatWaitLength = FASTSCROLL_WAIT;
+
+	double lastTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 	while (appletMainLoop() && !(hidKeysDown(CONTROLLER_P1_AUTO) & KEY_B)) {
+		double time = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
+		double dt = time - lastTime;
+		lastTime = time;
+
 		hidScanInput();
 		index = prevSelectedButtonIndex;
 
 		// handle keys
-		hid(index);
+		hid(index, dt);
 		if (index != prevSelectedButtonIndex) {
 			buttons.at(prevSelectedButtonIndex)->selected(false);
 			buttons.at(prevSelectedButtonIndex)->invertColors();
@@ -246,10 +274,10 @@ std::string hbkbd::keyboard(const std::string& suggestion) {
 
 		currentFB = gfxGetFramebuffer(&currentFBWidth, NULL);
 
-        drawRect(0, 0, 1280, 270, COLOR_GREY_DARK);
+		drawRect(0, 0, 1280, 270, COLOR_GREY_DARK);
 
-		drawRect(marginlr, 140, 1280 - marginlr * 2, 84, COLOR_GREY_MEDIUM);  // Text input background
-		drawRect(0, starty - margintb, 1280, 450, currentTheme.keyboardBackgroundColor);	 // Keyboard background
+		drawRect(marginlr, 140, 1280 - marginlr * 2, 84, COLOR_GREY_MEDIUM);		  // Text input background
+		drawRect(0, starty - margintb, 1280, 450, currentTheme.keyboardBackgroundColor);  // Keyboard background
 
 		u32 texth;
 		getTextDimensions(font24, " ", NULL, &texth);
@@ -280,7 +308,7 @@ std::string hbkbd::keyboard(const std::string& suggestion) {
 			buttons.at(i)->draw();
 		}
 
-        uiDrawTipButton(buttonB, 1, "Cancel");
+		uiDrawTipButton(buttonB, 1, "Cancel");
 		uiDrawTipButton(buttonA, 2, "Enter");
 
 		gfxFlushBuffers();
