@@ -302,11 +302,12 @@ void drawRect(u32 x, u32 y, u32 w, u32 h, color_t color) {
 			vst4_u8(&dst[i * 8 * 4], screenPixels);
 		}
 
-		for (u32 i = (w / 8) * 8; i < ((w + 4) / 8) * 8; i++) {
-			dst[i + 0] = (dst[i + 0] * oneMinusAlpha + mulR) / 255;
-			dst[i + 1] = (dst[i + 1] * oneMinusAlpha + mulG) / 255;
-			dst[i + 2] = (dst[i + 2] * oneMinusAlpha + mulB) / 255;
-			dst[i + 3] = 255;
+		for (u32 i = (w / 8) * 8; i < w; i++) {
+			int baseIdx = i * 4;
+			dst[baseIdx + 0] = (dst[baseIdx + 0] * oneMinusAlpha + mulR) / 255;
+			dst[baseIdx + 1] = (dst[baseIdx + 1] * oneMinusAlpha + mulG) / 255;
+			dst[baseIdx + 2] = (dst[baseIdx + 2] * oneMinusAlpha + mulB) / 255;
+			dst[baseIdx + 3] = 255;
 		}
 
 		dst += currentFBWidth * 4;
