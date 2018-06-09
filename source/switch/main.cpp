@@ -413,9 +413,6 @@ void threadFunc(void *args) {
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
 		if (!(inputTransferKeysHeld & buttonMap[10])) condvarWaitTimeout(&requestFrameCond, TARGET_FRAMETIME * 1000000000);
-		/*if (endTime - startTime < TARGET_FRAMETIME && !(inputTransferKeysHeld & buttonMap[10])) {
-			svcSleepThread((u64)fabs((TARGET_FRAMETIME - (endTime - startTime)) * 1000000000));
-		}*/
 	}
 
 	mutexLock(&emulationLock);
