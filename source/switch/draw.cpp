@@ -292,11 +292,11 @@ void drawRect(u32 x, u32 y, u32 w, u32 h, color_t color) {
 		for (u32 i = 0; i < w / 8; i++) {
 			uint8x8x4_t screenPixels = vld4_u8(&dst[i * 8 * 4]);
 			screenPixels.val[0] =
-			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[0]), vOneMinusA), vR), 7));
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[0]), vOneMinusA), vR), 8));
 			screenPixels.val[1] =
-			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[1]), vOneMinusA), vG), 7));
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[1]), vOneMinusA), vG), 8));
 			screenPixels.val[2] =
-			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[2]), vOneMinusA), vB), 7));
+			    vmovn_u16(vshrq_n_u16(vaddq_u16(vmulq_u16(vmovl_u8(screenPixels.val[2]), vOneMinusA), vB), 8));
 			screenPixels.val[3] = fullAlpha;
 
 			vst4_u8(&dst[i * 8 * 4], screenPixels);
@@ -304,9 +304,9 @@ void drawRect(u32 x, u32 y, u32 w, u32 h, color_t color) {
 
 		for (u32 i = (w / 8) * 8; i < w; i++) {
 			int baseIdx = i * 4;
-			dst[baseIdx + 0] = (dst[baseIdx + 0] * oneMinusAlpha + mulR) / 255;
-			dst[baseIdx + 1] = (dst[baseIdx + 1] * oneMinusAlpha + mulG) / 255;
-			dst[baseIdx + 2] = (dst[baseIdx + 2] * oneMinusAlpha + mulB) / 255;
+			dst[baseIdx + 0] = ((u32)dst[baseIdx + 0] * oneMinusAlpha + mulR) >> 8;
+			dst[baseIdx + 1] = ((u32)dst[baseIdx + 1] * oneMinusAlpha + mulG) >> 8;
+			dst[baseIdx + 2] = ((u32)dst[baseIdx + 2] * oneMinusAlpha + mulB) >> 8;
 			dst[baseIdx + 3] = 255;
 		}
 
