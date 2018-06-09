@@ -11,7 +11,8 @@
         "initializer_list": "cpp",
         "type_traits": "cpp",
         "iosfwd": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "locale": "cpp"
     },
 
     "clang.completion.enable": true,
