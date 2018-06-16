@@ -36,9 +36,13 @@ extern u32 currentFBHeight;
 #define COLOR_GREY_MEDIUM MakeColor(94, 94, 94, 255)
 #define COLOR_GREY_LIGHT MakeColor(138, 138, 138, 255)
 
-#define font24 7
-#define font16 5
-#define font14 4
+enum
+{
+	font24 = 7,
+	font16 = 5,
+	font14 = 4,
+	fontSizesCount = 3
+};
 
 extern u8* currentFB;
 extern u32 currentFBWidth;

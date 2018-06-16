@@ -34,7 +34,7 @@ u32 currentFBHeight;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define SECONDS_PER_TICKS (1.0 / 19200000)
-#define TARGET_FRAMETIME (1.0 / 59.8260982880808)
+#define TARGET_FRAMETIME (1.0 / 60.0)
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
@@ -225,7 +225,7 @@ static void gba_init(void) {
 
 	doMirroring(mirroringEnable);
 
-	soundSetSampleRate(AUDIO_SAMPLERATE);
+	soundSetSampleRate(AUDIO_SAMPLERATE + 10); // slight oversampling makes the sound better
 
 #if HAVE_HLE_BIOS
 	bool usebios = false;
@@ -556,6 +556,8 @@ int main(int argc, char *argv[]) {
 				rgba8888dst += 8 * 4;
 			}
 
+			mutexUnlock(&videoLock);
+
 			condvarWakeOne(&requestFrameCond);
 
 			u32 *srcImage = conversionBuffer;
@@ -615,8 +617,6 @@ int main(int argc, char *argv[]) {
 					dst = ((u32 *)currentFB) + offsetX + (y * intScale + offsetY) * currentFBWidth;
 				}
 			}
-
-			mutexUnlock(&videoLock);
 		}
 
 		bool actionStopEmulation = false;
@@ -758,7 +758,7 @@ int main(int argc, char *argv[]) {
 			frameTimeFrames = 0;
 		}
 #endif
-
+		
 		gfxFlushBuffers();
 		gfxSwapBuffers();
 		gfxWaitForVsync();
