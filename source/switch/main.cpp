@@ -9,6 +9,7 @@
 
 #include <arm_neon.h>
 
+#include "../GBACheats.h"
 #include "../gba.h"
 #include "../globals.h"
 #include "../memory.h"
@@ -16,8 +17,8 @@
 #include "../sound.h"
 #include "../system.h"
 #include "../types.h"
-#include "../GBACheats.h"
 #include "gbaover.h"
+
 
 #include "util.h"
 #include "zoom.h"
@@ -34,7 +35,11 @@ u32 currentFBHeight;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define SECONDS_PER_TICKS (1.0 / 19200000)
-#define TARGET_FRAMETIME (1.0 / 60.0)
+#define TARGET_FPS (16777216.0 / 280896.0)
+#define TARGET_FRAMETIME (1.0 / TARGET_FPS)
+#define TARGET_FRAMETIME_us (u64)(TARGET_FRAMETIME * 1000000000)
+#define TARGET_FRAMETIME_TICKS (u64)(TARGET_FRAMETIME * 19200000)
+#define TICKS_PER_us (1000000000ul / 19200000ul)
 
 uint8_t libretro_save_buf[0x20000 + 0x2000]; /* Workaround for broken-by-design GBA save semantics. */
 
@@ -225,7 +230,7 @@ static void gba_init(void) {
 
 	doMirroring(mirroringEnable);
 
-	soundSetSampleRate(AUDIO_SAMPLERATE + 10); // slight oversampling makes the sound better
+	soundSetSampleRate(AUDIO_SAMPLERATE + 10);  // slight oversampling makes the sound better
 
 #if HAVE_HLE_BIOS
 	bool usebios = false;
@@ -384,6 +389,8 @@ void systemOnWriteDataToSoundBuffer(int16_t *finalWave, int length) {
 	audioTransferBufferUsed += length / 2;
 	mutexUnlock(&audioLock);
 
+	audio_samples_written += length / 2;
+
 	g_audio_frames += length / 2;
 }
 
@@ -412,7 +419,7 @@ void threadFunc(void *args) {
 
 		double endTime = (double)svcGetSystemTick() * SECONDS_PER_TICKS;
 
-		if (!(inputTransferKeysHeld & buttonMap[10])) condvarWaitTimeout(&requestFrameCond, TARGET_FRAMETIME * 1000000000);
+		if (!(inputTransferKeysHeld & buttonMap[10])) condvarWaitTimeout(&requestFrameCond, TARGET_FRAMETIME_us);
 	}
 
 	mutexLock(&emulationLock);
@@ -462,9 +469,7 @@ int main(int argc, char *argv[]) {
 
 	romfsInit();
 
-	gfxInitResolutionDefault();
 	gfxInitDefault();
-	gfxConfigureAutoResolutionDefault(true);
 
 	setsysInitialize();
 
@@ -758,7 +763,7 @@ int main(int argc, char *argv[]) {
 			frameTimeFrames = 0;
 		}
 #endif
-		
+
 		gfxFlushBuffers();
 		gfxSwapBuffers();
 		gfxWaitForVsync();
