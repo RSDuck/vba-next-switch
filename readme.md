@@ -22,6 +22,8 @@ Needs [libnx](https://github.com/switchbrew/libnx) and [devkitPro](http://devkit
 
 ## Speed hack
 
+NOTE: some things don't apply anymore or were inaccurate observations
+
 Before implementing this "speed hack" the emulator had regular slowdowns. Although I found out about these things by myself, these things might be common knowledge to emulator devs. These were the things which apparently slowed the emulator down:
 - The thread/core it's running on
 - The VSync

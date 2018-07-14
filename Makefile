@@ -51,7 +51,7 @@ CFLAGS	:=	-g -Wall -Ofast -ffunction-sections \
 			`freetype-config --cflags`
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DTILED_RENDERING -DBRANCHLESS_GBA_GFX \
-	-DUSE_FRAME_SKIP -DNXLINK_STDIO#-DTHREADED_RENDERER
+	-DUSE_FRAME_SKIP #-DNXLINK_STDIO#-DTHREADED_RENDERER
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
