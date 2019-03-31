@@ -1,5 +1,7 @@
 # VBA Next/VBA-M for Switch
 
+**Please stop using this, you have now far better options available. I recommend switching to the execellent and more accurate [mGBA](http://mgba.io/) which is available both in standalone form, as well as via [Retroarch](https://www.libretro.com/). But if you want to continue using vba-next, consider using the offical Retroarch core, which is reguarly updated and features more options than this frontend.**
+
 <img style="float: right;" src="icon.jpg">
 
 A VBA-M port for Nintendo Switch. It's based of the [libretro port](https://github.com/libretro/vba-next)(the actual emulator) and
